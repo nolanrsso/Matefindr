@@ -298,6 +298,67 @@
     header{margin:10px 14px 0}
     h1{font-size:clamp(72px,22vw,140px)}
   }
+
+  /* Bigger nav on large screens */
+  @media (min-width:1100px){
+    header{margin:20px 44px 0;padding:14px 22px;border-radius:22px}
+    .brand{font-size:24px;gap:14px}
+    .brand .mark{width:44px;height:44px}
+    .brand .mark svg{width:36px !important;height:40px !important}
+    .brand .word{font-size:26px !important;letter-spacing:-.3px !important;margin:-9px !important;width:auto !important}
+    .login{padding:12px 18px;font-size:15px;border-radius:13px;gap:10px}
+    .login .dot{width:8px;height:8px}
+  }
+
+  /* Auth modal */
+  .auth-backdrop{
+    position:fixed;inset:0;z-index:60;display:none;
+    background:rgba(8,5,22,.62);backdrop-filter:blur(8px) saturate(120%);
+    -webkit-backdrop-filter:blur(8px) saturate(120%);
+    align-items:center;justify-content:center;
+    animation:authIn .18s ease-out;
+  }
+  .auth-backdrop[data-open="true"]{display:flex}
+  @keyframes authIn{from{opacity:0}to{opacity:1}}
+  .auth-card{
+    position:relative;width:min(92vw,420px);
+    padding:30px 28px 26px;border-radius:22px;
+    background:linear-gradient(180deg, rgba(30,22,62,.92), rgba(18,12,42,.94));
+    border:1px solid var(--stroke-2);
+    box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04) inset, 0 0 80px rgba(145,70,255,.25);
+    color:#fff;text-align:center;
+    animation:authCardIn .25s cubic-bezier(.2,.7,.3,1);
+  }
+  @keyframes authCardIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+  .auth-card .auth-close{
+    position:absolute;top:12px;right:12px;width:32px;height:32px;
+    display:grid;place-items:center;border-radius:9px;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid var(--stroke);
+    color:var(--ink-dim);transition:.15s ease;
+  }
+  .auth-card .auth-close:hover{background:rgba(255,255,255,.10);color:#fff}
+  .auth-card h2{
+    font-family:"Clash Display",sans-serif;font-weight:700;
+    font-size:24px;margin:0 0 6px;letter-spacing:-.01em;
+    background:linear-gradient(180deg,#fff 0%,#d9c6ff 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .auth-card .auth-sub{color:var(--ink-dim);font-size:13.5px;margin:0 0 20px}
+  .auth-list{display:flex;flex-direction:column;gap:10px}
+  .auth-btn{
+    display:flex;align-items:center;gap:12px;
+    padding:13px 16px;border-radius:13px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--stroke-2);
+    color:#fff;font-family:inherit;font-size:14.5px;font-weight:600;
+    cursor:pointer;text-decoration:none;text-align:left;
+    transition:.18s ease;
+  }
+  .auth-btn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+  .auth-btn svg{flex:0 0 auto}
+  .auth-btn .lbl{flex:1}
+  .auth-btn--discord{background:linear-gradient(180deg, rgba(145,70,255,.25), rgba(107,43,255,.18));border-color:rgba(145,70,255,.45)}
+  .auth-btn--discord:hover{background:linear-gradient(180deg, rgba(145,70,255,.4), rgba(107,43,255,.28));border-color:rgba(145,70,255,.65);box-shadow:0 0 30px rgba(145,70,255,.35)}
 </style>
 </head>
 <body>
@@ -344,9 +405,34 @@
       <span class="word" style="width: 92px; font-size: 22px; letter-spacing: -0.2px; padding: 0px; margin: -9.23071px">Tindord</span>
     </a>
     <nav class="nav" aria-label="Navigation">
-      <a href="#" class="login"><span class="dot"></span><span data-i18n="login">Se connecter</span></a>
+      <a href="#" class="login" id="loginBtn"><span class="dot"></span><span data-i18n="login">Se connecter</span></a>
     </nav>
   </header>
+
+  <!-- Auth modal -->
+  <div class="auth-backdrop" id="authModal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <button class="auth-close" id="authClose" type="button" aria-label="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <h2 id="authTitle" data-i18n="auth_title">Se connecter</h2>
+      <p class="auth-sub" data-i18n="auth_sub">Choisis ta méthode préférée</p>
+      <div class="auth-list">
+        <button class="auth-btn auth-btn--discord" id="authDiscord" type="button">
+          <svg width="22" height="17" viewBox="0 0 71 55" fill="currentColor" aria-hidden="true"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/></svg>
+          <span class="lbl" data-i18n="auth_discord">Continuer avec Discord</span>
+        </button>
+        <button class="auth-btn" id="authGoogle" type="button">
+          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+          <span class="lbl" data-i18n="auth_google">Continuer avec Google</span>
+        </button>
+        <button class="auth-btn" id="authEmail" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="lbl" data-i18n="auth_email">Continuer avec un email</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <a href="https://discord.gg/NkW4uMmQR" target="_blank" rel="noopener" class="corner-ctrl corner-ctrl--discord" id="joinCorner" aria-label="Rejoindre le Discord" title="Rejoindre le Discord">
     <svg width="22" height="17" viewBox="0 0 71 55" fill="currentColor" aria-hidden="true" style="stroke-width: 3px; width: 22px; height: 15px"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/></svg>
@@ -817,24 +903,34 @@
 
     const I18N = {
       FR: {
-        login:   'Se connecter',
-        badge:   'Bêta ouverte · <b>+10 000 membres</b> sur Discord',
-        tagline: 'Trouve un <span class="accent">Mate</span> pas juste un random',
-        sub:     '<b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer',
-        cta:     'Rejoindre avec Discord',
-        online:  '2 428 en ligne',
-        tags:    'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres',
-        footer:  'EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE',
+        login:        'Se connecter',
+        badge:        'Bêta ouverte · <b>+10 000 membres</b> sur Discord',
+        tagline:      'Trouve un <span class="accent">Mate</span> pas juste un random',
+        sub:          '<b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer',
+        cta:          'Rejoindre avec Discord',
+        online:       '2 428 en ligne',
+        tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres',
+        footer:       'EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE',
+        auth_title:   'Se connecter',
+        auth_sub:     'Choisis ta méthode préférée',
+        auth_discord: 'Continuer avec Discord',
+        auth_google:  'Continuer avec Google',
+        auth_email:   'Continuer avec un email',
       },
       EN: {
-        login:   'Sign in',
-        badge:   'Open beta · <b>+10,000 members</b> on Discord',
-        tagline: 'Find a <span class="accent">Mate</span>, not just a random',
-        sub:     '<b>Swipe</b> Discord profiles, <b>Like</b> the gems you fancy<br><b>Match</b> and game on',
-        cta:     'Join with Discord',
-        online:  '2,428 online',
-        tags:    'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Dating',
-        footer:  'POP THE BUBBLES — WHO KNOWS WHAT THEY MIGHT BE HIDING',
+        login:        'Sign in',
+        badge:        'Open beta · <b>+10,000 members</b> on Discord',
+        tagline:      'Find a <span class="accent">Mate</span>, not just a random',
+        sub:          '<b>Swipe</b> Discord profiles, <b>Like</b> the gems you fancy<br><b>Match</b> and game on',
+        cta:          'Join with Discord',
+        online:       '2,428 online',
+        tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Dating',
+        footer:       'POP THE BUBBLES — WHO KNOWS WHAT THEY MIGHT BE HIDING',
+        auth_title:   'Sign in',
+        auth_sub:     'Pick your preferred method',
+        auth_discord: 'Continue with Discord',
+        auth_google:  'Continue with Google',
+        auth_email:   'Continue with email',
       },
     };
 
@@ -881,6 +977,48 @@
       { duration: 220, easing: 'ease-out' }
     );
   });
+
+  // ===== Auth modal =====
+  (() => {
+    const modal = document.getElementById('authModal');
+    const trigger = document.getElementById('loginBtn');
+    const closeBtn = document.getElementById('authClose');
+
+    // OAuth URLs — replace YOUR_*_CLIENT_ID with real Client IDs.
+    const REDIRECT = location.origin + location.pathname;
+    const DISCORD_URL = 'https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&response_type=code&scope=identify%20email&redirect_uri=' + encodeURIComponent(REDIRECT);
+    const GOOGLE_URL  = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_GOOGLE_CLIENT_ID&response_type=code&scope=openid%20email%20profile&redirect_uri=' + encodeURIComponent(REDIRECT);
+
+    function open(){
+      modal.setAttribute('data-open', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+    function close(){
+      modal.setAttribute('data-open', 'false');
+      document.body.style.overflow = '';
+    }
+
+    trigger.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.getAttribute('data-open') === 'true') close();
+    });
+
+    document.getElementById('authDiscord').addEventListener('click', () => { window.location.href = DISCORD_URL; });
+    document.getElementById('authGoogle').addEventListener('click',  () => { window.location.href = GOOGLE_URL; });
+    document.getElementById('authEmail').addEventListener('click',   () => {
+      const email = prompt(document.documentElement.lang === 'en' ? 'Your email address:' : 'Ton adresse email :');
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert(document.documentElement.lang === 'en'
+          ? 'Magic link sent to ' + email + ' (demo)'
+          : 'Lien magique envoyé à ' + email + ' (démo)');
+        close();
+      } else if (email !== null) {
+        alert(document.documentElement.lang === 'en' ? 'Invalid email.' : 'Email invalide.');
+      }
+    });
+  })();
 </script>
 </body>
 </html>
