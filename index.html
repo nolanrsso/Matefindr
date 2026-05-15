@@ -359,6 +359,56 @@
   .auth-btn .lbl{flex:1}
   .auth-btn--discord{background:linear-gradient(180deg, rgba(145,70,255,.25), rgba(107,43,255,.18));border-color:rgba(145,70,255,.45)}
   .auth-btn--discord:hover{background:linear-gradient(180deg, rgba(145,70,255,.4), rgba(107,43,255,.28));border-color:rgba(145,70,255,.65);box-shadow:0 0 30px rgba(145,70,255,.35)}
+
+  /* Auth views — providers <-> email */
+  .auth-view{display:none}
+  .auth-card[data-view="providers"] .auth-view--providers{display:block}
+  .auth-card[data-view="email"] .auth-view--email{display:block;animation:authViewIn .22s ease-out}
+  @keyframes authViewIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+  .auth-back{
+    position:absolute;top:12px;left:12px;width:32px;height:32px;
+    display:grid;place-items:center;border-radius:9px;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid var(--stroke);
+    color:var(--ink-dim);transition:.15s ease;
+  }
+  .auth-back:hover{background:rgba(255,255,255,.10);color:#fff;transform:translateX(-2px)}
+  .auth-form{display:flex;flex-direction:column;gap:12px;text-align:left;margin-top:6px}
+  .auth-field{display:flex;flex-direction:column;gap:6px}
+  .auth-field label{font-size:12.5px;font-weight:600;color:var(--ink-dim);letter-spacing:.02em}
+  .auth-input{
+    width:100%;box-sizing:border-box;
+    padding:13px 14px;border-radius:12px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--stroke-2);
+    color:#fff;font-family:inherit;font-size:14.5px;
+    transition:.18s ease;outline:none;
+  }
+  .auth-input::placeholder{color:var(--ink-mute)}
+  .auth-input:focus{border-color:rgba(145,70,255,.6);background:rgba(255,255,255,.07);box-shadow:0 0 0 4px rgba(145,70,255,.18)}
+  .auth-input.invalid{border-color:#FF4FA0;box-shadow:0 0 0 4px rgba(255,79,160,.18)}
+  .auth-row{display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
+  .auth-row label{display:inline-flex;align-items:center;gap:7px;color:var(--ink-dim);cursor:pointer;user-select:none}
+  .auth-row input[type="checkbox"]{accent-color:#9146FF;width:14px;height:14px}
+  .auth-row a{color:var(--pink);text-decoration:none;font-weight:600}
+  .auth-row a:hover{text-decoration:underline}
+  .auth-submit{
+    margin-top:4px;padding:14px 16px;border-radius:13px;border:none;cursor:pointer;
+    background:linear-gradient(180deg,#A65BFF 0%, #6B2BFF 100%);
+    color:#fff;font-family:inherit;font-weight:700;font-size:15px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.12) inset, 0 6px 18px rgba(107,43,255,.45), 0 0 30px rgba(145,70,255,.35);
+    transition:transform .15s ease, box-shadow .2s ease;
+  }
+  .auth-submit:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(255,255,255,.16) inset, 0 8px 22px rgba(107,43,255,.55), 0 0 40px rgba(145,70,255,.5)}
+  .auth-submit:active{transform:translateY(0)}
+  .auth-footer{margin-top:14px;font-size:13px;color:var(--ink-dim);text-align:center}
+  .auth-footer a{color:var(--pink);text-decoration:none;font-weight:600}
+  .auth-footer a:hover{text-decoration:underline}
+  .auth-msg{
+    margin-top:10px;padding:10px 12px;border-radius:10px;font-size:13px;
+    background:rgba(59,209,124,.12);border:1px solid rgba(59,209,124,.35);color:#9CF0BD;
+    display:none;
+  }
+  .auth-msg[data-show="true"]{display:block;animation:authViewIn .22s ease-out}
 </style>
 </head>
 <body>
@@ -411,10 +461,16 @@
 
   <!-- Auth modal -->
   <div class="auth-backdrop" id="authModal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <div class="auth-card">
+    <div class="auth-card" id="authCard" data-view="providers">
       <button class="auth-close" id="authClose" type="button" aria-label="Fermer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
+      <button class="auth-back" id="authBack" type="button" aria-label="Retour" style="display:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+
+      <!-- View 1: provider list -->
+      <div class="auth-view auth-view--providers">
       <h2 id="authTitle" data-i18n="auth_title">Se connecter</h2>
       <p class="auth-sub" data-i18n="auth_sub">Choisis ta méthode préférée</p>
       <div class="auth-list">
@@ -430,6 +486,30 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
           <span class="lbl" data-i18n="auth_email">Continuer avec un email</span>
         </button>
+      </div>
+      </div>
+
+      <!-- View 2: email form -->
+      <div class="auth-view auth-view--email">
+        <h2 data-i18n="email_title">Connexion par email</h2>
+        <p class="auth-sub" data-i18n="email_sub">Entre tes identifiants pour continuer</p>
+        <form class="auth-form" id="emailForm" novalidate>
+          <div class="auth-field">
+            <label for="emailInput" data-i18n="email_label">Adresse email</label>
+            <input class="auth-input" id="emailInput" type="email" autocomplete="email" required placeholder="toi@exemple.com" />
+          </div>
+          <div class="auth-field">
+            <label for="pwInput" data-i18n="pw_label">Mot de passe</label>
+            <input class="auth-input" id="pwInput" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••" />
+          </div>
+          <div class="auth-row">
+            <label><input type="checkbox" id="emailRemember" checked /><span data-i18n="remember">Se souvenir de moi</span></label>
+            <a href="#" id="emailForgot" data-i18n="forgot">Mot de passe oublié ?</a>
+          </div>
+          <button class="auth-submit" type="submit" data-i18n="email_submit">Se connecter</button>
+        </form>
+        <div class="auth-msg" id="emailMsg" data-show="false"></div>
+        <p class="auth-footer"><span data-i18n="no_account">Pas encore de compte ?</span> <a href="#" id="emailSwitch" data-i18n="signup">S'inscrire</a></p>
       </div>
     </div>
   </div>
@@ -916,6 +996,24 @@
         auth_discord: 'Continuer avec Discord',
         auth_google:  'Continuer avec Google',
         auth_email:   'Continuer avec un email',
+        email_title:  'Connexion par email',
+        email_sub:    'Entre tes identifiants pour continuer',
+        email_label:  'Adresse email',
+        pw_label:     'Mot de passe',
+        remember:     'Se souvenir de moi',
+        forgot:       'Mot de passe oublié ?',
+        email_submit: 'Se connecter',
+        no_account:   'Pas encore de compte ?',
+        signup:       "S'inscrire",
+        signup_title: 'Créer un compte',
+        signup_sub:   'Rejoins Tindord en 30 secondes',
+        signup_submit:'Créer mon compte',
+        has_account:  'Déjà inscrit ?',
+        sign_in:      'Se connecter',
+        msg_signed:   'Connexion réussie. Bienvenue !',
+        msg_created:  'Compte créé. Bienvenue sur Tindord !',
+        msg_invalid:  'Email ou mot de passe invalide.',
+        msg_short_pw: 'Le mot de passe doit faire au moins 6 caractères.',
       },
       EN: {
         login:        'Sign in',
@@ -931,6 +1029,24 @@
         auth_discord: 'Continue with Discord',
         auth_google:  'Continue with Google',
         auth_email:   'Continue with email',
+        email_title:  'Sign in with email',
+        email_sub:    'Enter your credentials to continue',
+        email_label:  'Email address',
+        pw_label:     'Password',
+        remember:     'Remember me',
+        forgot:       'Forgot password?',
+        email_submit: 'Sign in',
+        no_account:   'No account yet?',
+        signup:       'Sign up',
+        signup_title: 'Create an account',
+        signup_sub:   'Join Tindord in 30 seconds',
+        signup_submit:'Create my account',
+        has_account:  'Already a member?',
+        sign_in:      'Sign in',
+        msg_signed:   'Signed in. Welcome!',
+        msg_created:  'Account created. Welcome to Tindord!',
+        msg_invalid:  'Invalid email or password.',
+        msg_short_pw: 'Password must be at least 6 characters.',
       },
     };
 
@@ -1007,17 +1123,88 @@
 
     document.getElementById('authDiscord').addEventListener('click', () => { window.location.href = DISCORD_URL; });
     document.getElementById('authGoogle').addEventListener('click',  () => { window.location.href = GOOGLE_URL; });
-    document.getElementById('authEmail').addEventListener('click',   () => {
-      const email = prompt(document.documentElement.lang === 'en' ? 'Your email address:' : 'Ton adresse email :');
-      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        alert(document.documentElement.lang === 'en'
-          ? 'Magic link sent to ' + email + ' (demo)'
-          : 'Lien magique envoyé à ' + email + ' (démo)');
-        close();
-      } else if (email !== null) {
-        alert(document.documentElement.lang === 'en' ? 'Invalid email.' : 'Email invalide.');
-      }
+
+    // ----- Email view -----
+    const card        = document.getElementById('authCard');
+    const backBtn     = document.getElementById('authBack');
+    const emailBtn    = document.getElementById('authEmail');
+    const emailForm   = document.getElementById('emailForm');
+    const emailInput  = document.getElementById('emailInput');
+    const pwInput     = document.getElementById('pwInput');
+    const emailMsg    = document.getElementById('emailMsg');
+    const emailSwitch = document.getElementById('emailSwitch');
+    const emailForgot = document.getElementById('emailForgot');
+
+    let mode = 'signin'; // 'signin' | 'signup'
+
+    function t(key){
+      const code = (document.documentElement.lang || 'fr').toUpperCase();
+      const dict = (window.__I18N_FOR_AUTH && window.__I18N_FOR_AUTH[code]) || null;
+      return dict && dict[key] ? dict[key] : key;
+    }
+    // expose I18N for t() — populated in select() lifecycle. Fallback dict:
+    window.__I18N_FOR_AUTH = I18N;
+
+    function setView(view){
+      card.setAttribute('data-view', view);
+      backBtn.style.display = view === 'email' ? 'grid' : 'none';
+      emailMsg.setAttribute('data-show', 'false');
+      if (view === 'email') setTimeout(() => emailInput.focus(), 80);
+    }
+    function setMode(next){
+      mode = next;
+      const isSignup = mode === 'signup';
+      const card2 = card;
+      // update labels via i18n keys depending on mode
+      card2.querySelector('.auth-view--email h2').textContent      = t(isSignup ? 'signup_title' : 'email_title');
+      card2.querySelector('.auth-view--email .auth-sub').textContent= t(isSignup ? 'signup_sub'   : 'email_sub');
+      card2.querySelector('.auth-submit').textContent              = t(isSignup ? 'signup_submit': 'email_submit');
+      card2.querySelector('.auth-footer span').textContent         = t(isSignup ? 'has_account'  : 'no_account');
+      emailSwitch.textContent                                       = t(isSignup ? 'sign_in'      : 'signup');
+      pwInput.autocomplete = isSignup ? 'new-password' : 'current-password';
+      emailMsg.setAttribute('data-show', 'false');
+    }
+
+    emailBtn.addEventListener('click', () => setView('email'));
+    backBtn.addEventListener('click',  () => { setView('providers'); setMode('signin'); });
+    emailSwitch.addEventListener('click', (e) => { e.preventDefault(); setMode(mode === 'signin' ? 'signup' : 'signin'); });
+
+    emailForgot.addEventListener('click', (e) => {
+      e.preventDefault();
+      const v = (emailInput.value || '').trim();
+      if (!v) { emailInput.focus(); emailInput.classList.add('invalid'); return; }
+      showMsg(t('msg_signed').replace(/[.!]$/, '') + ' — ' + (document.documentElement.lang === 'en' ? 'reset link sent to ' : 'lien envoyé à ') + v, true);
     });
+
+    function showMsg(text, ok){
+      emailMsg.textContent = text;
+      emailMsg.setAttribute('data-show', 'true');
+      emailMsg.style.background = ok ? 'rgba(59,209,124,.12)' : 'rgba(255,79,160,.12)';
+      emailMsg.style.borderColor = ok ? 'rgba(59,209,124,.35)' : 'rgba(255,79,160,.45)';
+      emailMsg.style.color = ok ? '#9CF0BD' : '#FFB1D2';
+    }
+
+    emailForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const pw    = pwInput.value;
+      const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      emailInput.classList.toggle('invalid', !okEmail);
+      pwInput.classList.toggle('invalid', pw.length < 6);
+
+      if (!okEmail) { showMsg(t('msg_invalid'), false); return; }
+      if (pw.length < 6) { showMsg(t('msg_short_pw'), false); return; }
+
+      // Demo: persist a fake session (no backend)
+      try {
+        localStorage.setItem('tindord_user', JSON.stringify({ email, mode, ts: Date.now() }));
+      } catch(_){}
+      showMsg(mode === 'signup' ? t('msg_created') : t('msg_signed'), true);
+      setTimeout(() => { close(); setView('providers'); setMode('signin'); emailForm.reset(); }, 1100);
+    });
+
+    // Reset to providers view whenever modal reopens
+    trigger.addEventListener('click', () => { setView('providers'); setMode('signin'); emailForm.reset(); });
   })();
 </script>
 </body>
