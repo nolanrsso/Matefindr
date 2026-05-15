@@ -322,7 +322,116 @@
 
   /* Hide bubble-only landing extras on non-landing screens (decluttering) */
   body:not([data-screen="landing"]) .corner-ctrl--discord{display:none}
-  body:not([data-screen="landing"]) #langSwitch{bottom:14px;right:14px}
+  body[data-auth="in"] #langSwitch{display:none}
+  body[data-auth="out"] #msgFab,
+  body[data-screen="landing"] #msgFab{display:none}
+
+  /* Floating Messages FAB (bottom-right when logged-in) */
+  .msg-fab{
+    position:fixed;right:18px;bottom:18px;z-index:24;
+    width:60px;height:60px;border-radius:20px;border:none;
+    display:grid;place-items:center;cursor:pointer;color:#fff;
+    background:linear-gradient(140deg, #5865F2 0%, #404EED 100%);
+    box-shadow:0 14px 36px rgba(64,78,237,.45), 0 0 0 1px rgba(255,255,255,.10) inset;
+    transition:transform .2s ease, box-shadow .25s ease;
+  }
+  .msg-fab:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 18px 44px rgba(64,78,237,.6), 0 0 0 1px rgba(255,255,255,.15) inset}
+  .msg-fab .fab-badge{
+    position:absolute;top:-4px;right:-4px;
+    min-width:22px;height:22px;padding:0 6px;border-radius:11px;
+    background:#FF4FA0;color:#fff;font-size:12px;font-weight:800;
+    display:grid;place-items:center;border:2px solid #0D0B1E;
+  }
+
+  /* Messages slide-out panel */
+  .msg-panel{
+    position:fixed;top:0;right:0;bottom:0;width:min(92vw,400px);z-index:60;
+    background:rgba(20,20,25,.95);
+    border-left:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(24px) saturate(150%);
+    -webkit-backdrop-filter:blur(24px) saturate(150%);
+    box-shadow:-30px 0 80px rgba(0,0,0,.55);
+    transform:translateX(100%);transition:transform .3s cubic-bezier(.2,.7,.3,1);
+    display:flex;flex-direction:column;color:#fff;
+  }
+  .msg-panel[data-open="true"]{transform:translateX(0)}
+  .msg-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .msg-head h3{margin:0;font-family:"Clash Display",sans-serif;font-weight:700;font-size:20px;letter-spacing:-.01em}
+  .msg-close{
+    width:32px;height:32px;border-radius:9px;cursor:pointer;
+    display:grid;place-items:center;color:#b9bbbe;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+    transition:.16s ease;
+  }
+  .msg-close:hover{color:#fff;background:rgba(255,255,255,.10)}
+  .msg-list{flex:1 1 auto;overflow-y:auto;padding:8px}
+  .msg-list .msg-empty{padding:40px 20px;text-align:center;color:#8b8c92;font-size:13.5px;line-height:1.5}
+  .msg-item{
+    all:unset;display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;
+    padding:10px 12px;border-radius:12px;cursor:pointer;
+    transition:.14s ease;position:relative;
+  }
+  .msg-item:hover{background:rgba(255,255,255,.04)}
+  .msg-item.active{background:rgba(255,255,255,.06)}
+  .msg-item .avi{
+    width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:18px;color:#fff;
+    flex:0 0 auto;
+  }
+  .msg-item .info{flex:1 1 auto;min-width:0}
+  .msg-item .info .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .msg-item .info .top b{font-size:14.5px;font-weight:700}
+  .msg-item .info .top .t{color:#8b8c92;font-size:11.5px;font-weight:500}
+  .msg-item .info p{margin:2px 0 0;color:#b9bbbe;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .msg-item .dot{
+    position:absolute;right:14px;bottom:14px;
+    width:9px;height:9px;border-radius:50%;background:#FF4FA0;box-shadow:0 0 8px #FF4FA0;
+  }
+  .msg-item.read .dot{display:none}
+
+  /* Chat view (inside the panel) */
+  .msg-chat{display:none;flex:1 1 auto;flex-direction:column}
+  .msg-panel[data-view="chat"] .msg-list{display:none}
+  .msg-panel[data-view="chat"] .msg-chat{display:flex}
+  .msg-chat-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+  .msg-back{
+    width:30px;height:30px;border-radius:8px;cursor:pointer;display:grid;place-items:center;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#b9bbbe;
+    transition:.16s ease;
+  }
+  .msg-back:hover{background:rgba(255,255,255,.08);color:#fff}
+  .msg-chat-head .avi{
+    width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:16px;color:#fff;
+  }
+  .msg-chat-head b{font-size:14.5px;font-weight:700;display:block}
+  .msg-chat-head small{color:#8b8c92;font-size:11.5px}
+  .msg-chat-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .msg-bubble{
+    max-width:78%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;
+    word-break:break-word;
+  }
+  .msg-bubble.them{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:4px}
+  .msg-bubble.me  {align-self:flex-end;background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;border-bottom-right-radius:4px;box-shadow:0 6px 18px rgba(64,78,237,.35)}
+  .msg-input{
+    display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);
+  }
+  .msg-input input{
+    flex:1 1 auto;padding:11px 14px;border-radius:12px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);
+    color:#fff;font-family:inherit;font-size:14px;outline:none;
+    transition:.18s ease;
+  }
+  .msg-input input:focus{border-color:rgba(88,101,242,.6);background:rgba(255,255,255,.07);box-shadow:0 0 0 4px rgba(88,101,242,.16)}
+  .msg-input button{
+    padding:0 16px;border-radius:12px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;font-weight:700;font-size:13.5px;
+    transition:.16s ease;
+  }
+  .msg-input button:hover{transform:translateY(-1px)}
 
   /* Account chip in header */
   .account-chip{
@@ -349,41 +458,57 @@
     align-items:center;justify-content:center;padding:30px 24px 30px;
   }
   .onb-card{
-    width:min(92vw,520px);
-    padding:34px 32px 28px;border-radius:24px;
-    background:linear-gradient(180deg, rgba(28,22,58,.78), rgba(18,12,42,.78));
-    border:1px solid var(--stroke-2);
-    backdrop-filter:blur(22px) saturate(150%);
-    -webkit-backdrop-filter:blur(22px) saturate(150%);
-    box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04) inset, 0 0 80px rgba(145,70,255,.18);
+    width:min(94vw,720px);
+    padding:42px 44px 34px;border-radius:28px;
+    background:rgba(22,22,28,.82);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(28px) saturate(140%);
+    -webkit-backdrop-filter:blur(28px) saturate(140%);
+    box-shadow:0 40px 100px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.03) inset;
     color:#fff;text-align:center;
-    animation:authCardIn .25s cubic-bezier(.2,.7,.3,1);
+    animation:authCardIn .35s cubic-bezier(.2,.7,.3,1);
   }
-  .onb-progress{display:flex;gap:6px;margin:0 auto 24px;width:fit-content}
+  .onb-progress{display:flex;gap:6px;margin:0 auto 28px;width:fit-content}
   .onb-progress span{
-    width:42px;height:4px;border-radius:2px;background:rgba(255,255,255,.10);
-    transition:.25s ease;
+    width:52px;height:4px;border-radius:2px;background:rgba(255,255,255,.08);
+    transition:.3s ease;
   }
-  .onb-progress span.done{background:linear-gradient(90deg,#FF7EB6,#9146FF)}
+  .onb-progress span.done{background:linear-gradient(90deg,#FF7EB6,#9146FF,#5BE9FF)}
   .onb-step h2{
     font-family:"Clash Display",sans-serif;font-weight:700;
-    font-size:26px;letter-spacing:-.01em;margin:0 0 6px;
+    font-size:32px;letter-spacing:-.015em;margin:0 0 8px;
     background:linear-gradient(180deg,#fff 0%,#d9c6ff 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
-  .onb-step .sub{color:var(--ink-dim);font-size:14px;margin:0 0 22px}
-  .onb-options{display:grid;gap:12px;margin-bottom:20px}
+  .onb-step .sub{color:#b9bbbe;font-size:15px;margin:0 0 28px}
+  .onb-options{display:grid;gap:12px;margin-bottom:26px}
   .onb-options.three{grid-template-columns:repeat(3,1fr)}
-  .onb-opt{
-    padding:18px 14px;border-radius:14px;cursor:pointer;
-    background:rgba(255,255,255,.04);border:1.5px solid var(--stroke-2);
-    color:#fff;font-family:inherit;font-weight:600;font-size:14px;
-    display:flex;flex-direction:column;align-items:center;gap:6px;
-    transition:.16s ease;
+  .onb-options.four{grid-template-columns:repeat(2,1fr)}
+  .onb-options.genders{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:640px){
+    .onb-card{padding:32px 22px 24px}
+    .onb-step h2{font-size:26px}
+    .onb-options.genders{grid-template-columns:repeat(2,1fr)}
   }
-  .onb-opt:hover{background:rgba(255,255,255,.08);transform:translateY(-2px)}
-  .onb-opt.selected{background:rgba(145,70,255,.18);border-color:rgba(145,70,255,.65);box-shadow:0 0 30px rgba(145,70,255,.30)}
-  .onb-opt .emoji{font-size:32px;line-height:1}
+  .onb-opt{
+    padding:20px 12px;border-radius:16px;cursor:pointer;
+    background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.08);
+    color:#fff;font-family:inherit;font-weight:600;font-size:14px;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    transition:transform .16s ease, background .18s ease, border-color .18s ease, box-shadow .25s ease;
+    position:relative;overflow:hidden;
+  }
+  .onb-opt::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;opacity:0;
+    background:linear-gradient(135deg, rgba(255,126,182,.16), rgba(91,233,255,.16));
+    transition:opacity .25s ease;
+  }
+  .onb-opt:hover{background:rgba(255,255,255,.06);transform:translateY(-3px);border-color:rgba(255,255,255,.18)}
+  .onb-opt:hover::before{opacity:1}
+  .onb-opt.selected{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.35);box-shadow:0 0 0 4px rgba(255,255,255,.06), 0 10px 28px rgba(0,0,0,.35)}
+  .onb-opt.selected::before{opacity:1;background:linear-gradient(135deg, rgba(255,126,182,.25), rgba(91,233,255,.25))}
+  .onb-opt > *{position:relative;z-index:1}
+  .onb-opt .emoji{font-size:36px;line-height:1}
   .onb-opt .label{font-size:13.5px}
   .onb-age{
     width:100%;box-sizing:border-box;
@@ -629,41 +754,64 @@
   .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
   .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
 
-  /* My-status floating control on swipe screen */
+  /* My-status floating control — bottom-LEFT, neutral aesthetic */
   .my-status{
-    position:fixed;top:80px;right:18px;z-index:22;
-    display:flex;align-items:center;gap:10px;
-    padding:8px 14px 8px 8px;border-radius:999px;
-    background:rgba(255,255,255,.05);border:1px solid var(--stroke-2);
-    backdrop-filter:blur(18px) saturate(140%);
-    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    position:fixed;left:18px;bottom:18px;z-index:22;
+    display:none;align-items:center;gap:10px;
+    padding:7px 14px 7px 7px;border-radius:999px;
+    background:rgba(22,22,28,.78);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(20px) saturate(140%);
+    -webkit-backdrop-filter:blur(20px) saturate(140%);
     cursor:pointer;color:#fff;font-size:13px;font-weight:600;
+    transition:transform .18s ease, background .18s ease, border-color .18s ease;
+    box-shadow:0 10px 28px rgba(0,0,0,.45);
+  }
+  .my-status:hover{background:rgba(28,28,34,.88);border-color:rgba(255,255,255,.14);transform:translateY(-1px)}
+  .my-status .ms-emoji{
+    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
     transition:.18s ease;
   }
-  .my-status:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
-  .my-status .ms-emoji{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:linear-gradient(135deg,#FF7EB6,#9146FF);box-shadow:0 4px 14px rgba(145,70,255,.4)}
-  body[data-screen="swipe"] .my-status{display:flex}
-  body:not([data-screen="swipe"]) .my-status{display:none}
+  /* Subtle per-mode accent line (no full violet background) */
+  .my-status[data-look="chill"] .ms-emoji{box-shadow:0 0 0 1.5px rgba(255,182,110,.7)}
+  .my-status[data-look="game"]  .ms-emoji{box-shadow:0 0 0 1.5px rgba(91,233,255,.7)}
+  .my-status[data-look="now"]   .ms-emoji{box-shadow:0 0 0 1.5px rgba(3,209,0,.8)}
+  .my-status[data-look="sleep"] .ms-emoji{box-shadow:0 0 0 1.5px rgba(145,70,255,.6)}
+  body[data-screen="swipe"] .my-status{display:inline-flex}
 
+  /* Popover — clean dark, no violet */
   .ms-pop{
-    position:fixed;top:130px;right:18px;z-index:23;
-    padding:8px;border-radius:14px;min-width:200px;
-    background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(20,16,46,.94));
-    border:1px solid var(--stroke-2);
-    backdrop-filter:blur(22px) saturate(150%);
-    box-shadow:0 18px 50px rgba(0,0,0,.5);
-    display:none;
+    position:fixed;left:18px;bottom:78px;z-index:23;
+    padding:8px;border-radius:16px;min-width:240px;
+    background:rgba(22,22,28,.92);
+    border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(24px) saturate(150%);
+    -webkit-backdrop-filter:blur(24px) saturate(150%);
+    box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset;
+    display:none;transform-origin:bottom left;
   }
-  .ms-pop[data-open="true"]{display:block;animation:authViewIn .18s ease-out}
+  .ms-pop[data-open="true"]{display:block;animation:msPopIn .18s ease-out}
+  @keyframes msPopIn{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
   .ms-pop button{
     all:unset;display:flex;align-items:center;gap:12px;width:100%;
-    padding:10px 12px;border-radius:9px;cursor:pointer;
-    font-size:13.5px;color:var(--ink-dim);font-weight:600;box-sizing:border-box;
-    transition:.12s ease;
+    padding:10px 12px;border-radius:11px;cursor:pointer;
+    font-size:13.5px;color:#dcddde;font-weight:600;box-sizing:border-box;
+    transition:.14s ease;
   }
-  .ms-pop button:hover{background:rgba(255,255,255,.06);color:#fff}
-  .ms-pop button.selected{background:rgba(145,70,255,.18);color:#fff}
-  .ms-pop button .emo{font-size:20px}
+  .ms-pop button:hover{background:rgba(255,255,255,.05);color:#fff}
+  .ms-pop button.selected{background:rgba(255,255,255,.07);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+  .ms-pop button .emo{
+    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);flex:0 0 auto;
+  }
+  .ms-pop button[data-val="chill"] .emo{box-shadow:0 0 0 1.5px rgba(255,182,110,.65)}
+  .ms-pop button[data-val="game"]  .emo{box-shadow:0 0 0 1.5px rgba(91,233,255,.65)}
+  .ms-pop button[data-val="now"]   .emo{box-shadow:0 0 0 1.5px rgba(3,209,0,.75)}
+  .ms-pop button[data-val="sleep"] .emo{box-shadow:0 0 0 1.5px rgba(145,70,255,.55)}
+  .ms-pop button .lbl{display:flex;flex-direction:column}
+  .ms-pop button .lbl small{font-weight:500;color:#8b8c92;font-size:11.5px}
   .swipe-empty{
     text-align:center;color:var(--ink-dim);font-size:15px;padding:40px 20px;
   }
@@ -993,10 +1141,15 @@
       <div class="onb-step" data-step="1">
         <h2 data-i18n="onb_q1">Tu es ?</h2>
         <p class="sub" data-i18n="onb_q1_sub">Cette info aide à proposer les bonnes rencontres</p>
-        <div class="onb-options three" id="onbGender">
+        <div class="onb-options genders" id="onbGender">
           <button type="button" class="onb-opt" data-val="male"><span class="emoji">👨</span><span class="label" data-i18n="gender_male">Homme</span></button>
           <button type="button" class="onb-opt" data-val="female"><span class="emoji">👩</span><span class="label" data-i18n="gender_female">Femme</span></button>
-          <button type="button" class="onb-opt" data-val="other"><span class="emoji">✨</span><span class="label" data-i18n="gender_other">Autre</span></button>
+          <button type="button" class="onb-opt" data-val="nonbinary"><span class="emoji">🧑</span><span class="label" data-i18n="gender_nb">Non-binaire</span></button>
+          <button type="button" class="onb-opt" data-val="trans_m"><span class="emoji">⚧️</span><span class="label" data-i18n="gender_trans_m">Trans homme</span></button>
+          <button type="button" class="onb-opt" data-val="trans_f"><span class="emoji">⚧️</span><span class="label" data-i18n="gender_trans_f">Trans femme</span></button>
+          <button type="button" class="onb-opt" data-val="fluid"><span class="emoji">🌈</span><span class="label" data-i18n="gender_fluid">Genderfluid</span></button>
+          <button type="button" class="onb-opt" data-val="agender"><span class="emoji">✨</span><span class="label" data-i18n="gender_agender">Agender</span></button>
+          <button type="button" class="onb-opt" data-val="other"><span class="emoji">💭</span><span class="label" data-i18n="gender_other">Préfère pas dire</span></button>
         </div>
         <div class="onb-actions">
           <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
@@ -1018,7 +1171,7 @@
       <div class="onb-step" data-step="3" hidden>
         <h2 data-i18n="onb_q3">Tu cherches quoi ?</h2>
         <p class="sub" data-i18n="onb_q3_sub">Tu pourras changer plus tard dans ton profil</p>
-        <div class="onb-options" id="onbLooking" style="grid-template-columns:repeat(2,1fr)">
+        <div class="onb-options four" id="onbLooking">
           <button type="button" class="onb-opt" data-val="chill"><span class="emoji">🛋️</span><span class="label" data-i18n="look_chill">Chill</span></button>
           <button type="button" class="onb-opt" data-val="game"><span class="emoji">🎮</span><span class="label" data-i18n="look_game">Une game</span></button>
           <button type="button" class="onb-opt" data-val="now"><span class="emoji">⌨️</span><span class="label" data-i18n="look_now">Mate maintenant</span></button>
@@ -1036,16 +1189,16 @@
        SWIPE deck
        ============================================================ -->
   <section id="screen-swipe" class="screen">
-    <!-- Floating "my status" — change what I'm looking for non-stop -->
-    <button class="my-status" id="myStatusBtn" type="button" aria-label="Changer mon statut">
+    <!-- Floating "my status" — bottom-left, change what I'm looking for at any time -->
+    <button class="my-status" id="myStatusBtn" type="button" aria-label="Changer mon statut" data-look="game">
       <span class="ms-emoji" id="myStatusEmoji">🎮</span>
       <span id="myStatusLabel" data-i18n="look_game">Une game</span>
     </button>
     <div class="ms-pop" id="myStatusPop" data-open="false" role="menu">
-      <button type="button" data-val="chill"><span class="emo">🛋️</span><span data-i18n="look_chill">Chill</span></button>
-      <button type="button" data-val="game"><span class="emo">🎮</span><span data-i18n="look_game">Une game</span></button>
-      <button type="button" data-val="now"><span class="emo">⌨️</span><span data-i18n="look_now">Mate maintenant</span></button>
-      <button type="button" data-val="sleep"><span class="emo">💤</span><span data-i18n="look_sleep">Sleepcall</span></button>
+      <button type="button" data-val="chill"><span class="emo">🛋️</span><span class="lbl"><b data-i18n="look_chill">Chill</b><small data-i18n="look_chill_sub">Détente, discussions</small></span></button>
+      <button type="button" data-val="game"><span class="emo">🎮</span><span class="lbl"><b data-i18n="look_game">Une game</b><small data-i18n="look_game_sub">Tryhard ou casual</small></span></button>
+      <button type="button" data-val="now"><span class="emo">⌨️</span><span class="lbl"><b data-i18n="look_now">Mate maintenant</b><small data-i18n="look_now_sub">Dispo immédiatement</small></span></button>
+      <button type="button" data-val="sleep"><span class="emo">💤</span><span class="lbl"><b data-i18n="look_sleep">Sleepcall</b><small data-i18n="look_sleep_sub">Voix douce pour s'endormir</small></span></button>
     </div>
 
     <div class="swipe-stage">
@@ -1106,6 +1259,36 @@
     <span class="t-ico" id="toastIco">🎵</span>
     <div class="t-body"><b id="toastTitle">—</b><span id="toastSub">—</span></div>
   </div>
+
+  <!-- Messages floating button + slide-out panel (auth=in only) -->
+  <button class="msg-fab" id="msgFab" type="button" aria-label="Messages">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    <span class="fab-badge" id="msgFabBadge">2</span>
+  </button>
+
+  <aside class="msg-panel" id="msgPanel" data-open="false" data-view="list" aria-label="Messages">
+    <div class="msg-head">
+      <h3 data-i18n="msg_title">Messages</h3>
+      <button class="msg-close" id="msgClose" type="button" aria-label="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="msg-list" id="msgList"></div>
+    <div class="msg-chat" id="msgChat">
+      <div class="msg-chat-head">
+        <button class="msg-back" id="msgBack" type="button" aria-label="Retour">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="avi" id="msgChatAvi">A</div>
+        <div><b id="msgChatName">—</b><small id="msgChatSub">—</small></div>
+      </div>
+      <div class="msg-chat-body" id="msgChatBody"></div>
+      <form class="msg-input" id="msgInput">
+        <input type="text" id="msgInputField" placeholder="Écris un message…" autocomplete="off" />
+        <button type="submit" data-i18n="msg_send">Envoyer</button>
+      </form>
+    </div>
+  </aside>
 </main>
 
 <script>
@@ -1556,11 +1739,23 @@
         onb_q3_sub:   'Tu pourras changer plus tard dans ton profil',
         gender_male:  'Homme',
         gender_female:'Femme',
-        gender_other: 'Autre',
+        gender_nb:    'Non-binaire',
+        gender_trans_m:'Trans homme',
+        gender_trans_f:'Trans femme',
+        gender_fluid: 'Genderfluid',
+        gender_agender:'Agender',
+        gender_other: 'Préfère pas dire',
         look_chill:   'Chill',
         look_game:    'Une game',
         look_now:     'Mate maintenant',
         look_sleep:   'Sleepcall',
+        look_chill_sub:'Détente, discussions',
+        look_game_sub: 'Tryhard ou casual',
+        look_now_sub:  'Dispo immédiatement',
+        look_sleep_sub:"Voix douce pour s'endormir",
+        msg_title:    'Messages',
+        msg_send:     'Envoyer',
+        msg_empty:    "Aucune conversation pour l'instant. Like des profils pour matcher !",
         joined_on:    'A rejoint Tindord le',
         nitro:        'NITRO',
         continue:     'Continuer',
@@ -1617,11 +1812,23 @@
         onb_q3_sub:   'You can change this later in your profile',
         gender_male:  'Male',
         gender_female:'Female',
-        gender_other: 'Other',
+        gender_nb:    'Non-binary',
+        gender_trans_m:'Trans man',
+        gender_trans_f:'Trans woman',
+        gender_fluid: 'Genderfluid',
+        gender_agender:'Agender',
+        gender_other: 'Prefer not to say',
         look_chill:   'Chill',
         look_game:    'A game',
         look_now:     'Mate now',
         look_sleep:   'Sleepcall',
+        look_chill_sub:'Hang out & chat',
+        look_game_sub: 'Sweaty or casual',
+        look_now_sub:  'Available right now',
+        look_sleep_sub:'Soft voice for falling asleep',
+        msg_title:    'Messages',
+        msg_send:     'Send',
+        msg_empty:    'No conversations yet. Like profiles to match!',
         joined_on:    'Joined Tindord on',
         nitro:        'NITRO',
         continue:     'Continue',
@@ -2222,6 +2429,8 @@
     const LOOK_EMO = { chill:'🛋️', game:'🎮', now:'⌨️', sleep:'💤' };
     function refreshMyStatusUI(){
       const cur = (state.profile && state.profile.looking) || 'game';
+      const btn = document.getElementById('myStatusBtn');
+      btn.setAttribute('data-look', cur);
       document.getElementById('myStatusEmoji').textContent = LOOK_EMO[cur] || '🎮';
       const lbl = document.getElementById('myStatusLabel');
       lbl.setAttribute('data-i18n', 'look_' + cur);
@@ -2252,6 +2461,119 @@
     // Make sure the status pill is correct as soon as we land on swipe
     if (document.body.getAttribute('data-screen') === 'swipe') refreshMyStatusUI();
 
+    // ---------- Messages panel ----------
+    const CONVOS = [
+      { id:'alex', name:'Alex',  tag:'alex',     c1:'#FF7EB6', c2:'#9146FF', initial:'A', last:'Yo, on tryhard CS ce soir ?',    t:'14:23', unread:true,
+        msgs:[
+          {who:'them', text:'Yo, on tryhard CS ce soir ?', t:'14:23'},
+          {who:'them', text:'Faceit lvl 8 ici, t\'es chaud ?', t:'14:24'},
+        ] },
+      { id:'lea',   name:'Léa',  tag:'leah_',    c1:'#5BE9FF', c2:'#9146FF', initial:'L', last:'On lance Stardew ?', t:'13:48', unread:true,
+        msgs:[
+          {who:'them', text:'Salut !', t:'13:46'},
+          {who:'me',   text:'Hey ça va ?', t:'13:47'},
+          {who:'them', text:'On lance Stardew ?', t:'13:48'},
+        ] },
+      { id:'sam',   name:'Sam',  tag:'sam.exe',  c1:'#3BD17C', c2:'#5BE9FF', initial:'S', last:'Match it !', t:'hier', unread:false,
+        msgs:[
+          {who:'them', text:'Heyyy on a matché !', t:'hier 22:01'},
+          {who:'me',   text:'Carrément 👀', t:'hier 22:03'},
+          {who:'them', text:'Match it !', t:'hier 22:03'},
+        ] },
+    ];
+
+    const panel = document.getElementById('msgPanel');
+    const fab   = document.getElementById('msgFab');
+    const fabBadge = document.getElementById('msgFabBadge');
+    const listEl = document.getElementById('msgList');
+    const chatBody = document.getElementById('msgChatBody');
+    const msgInput = document.getElementById('msgInput');
+    const msgInputField = document.getElementById('msgInputField');
+    let activeConvo = null;
+
+    function renderMsgList(){
+      const unread = CONVOS.filter(c => c.unread).length;
+      if (unread > 0) { fabBadge.textContent = unread; fabBadge.style.display = 'grid'; }
+      else fabBadge.style.display = 'none';
+      if (!CONVOS.length) {
+        listEl.innerHTML = `<p class="msg-empty">${tx('msg_empty')}</p>`;
+        return;
+      }
+      listEl.innerHTML = '';
+      CONVOS.forEach(c => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'msg-item' + (c.unread ? '' : ' read');
+        el.dataset.id = c.id;
+        el.innerHTML = `
+          <div class="avi" style="background:linear-gradient(135deg, ${c.c1}, ${c.c2})">${c.initial}</div>
+          <div class="info">
+            <div class="top"><b>${c.name}</b><span class="t">${c.t}</span></div>
+            <p>${c.last}</p>
+          </div>
+          ${c.unread ? '<span class="dot"></span>' : ''}`;
+        el.addEventListener('click', () => openConvo(c.id));
+        listEl.appendChild(el);
+      });
+    }
+
+    function openConvo(id){
+      const c = CONVOS.find(x => x.id === id);
+      if (!c) return;
+      activeConvo = c;
+      c.unread = false;
+      panel.setAttribute('data-view', 'chat');
+      document.getElementById('msgChatAvi').style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
+      document.getElementById('msgChatAvi').textContent = c.initial;
+      document.getElementById('msgChatName').textContent = c.name;
+      document.getElementById('msgChatSub').textContent = '@' + c.tag;
+      chatBody.innerHTML = c.msgs.map(m => `<div class="msg-bubble ${m.who}">${escapeHtml(m.text)}</div>`).join('');
+      chatBody.scrollTop = chatBody.scrollHeight;
+      setTimeout(() => msgInputField.focus(), 200);
+      renderMsgList();
+    }
+    function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+    fab.addEventListener('click', () => {
+      panel.setAttribute('data-open', 'true');
+      panel.setAttribute('data-view', 'list');
+      renderMsgList();
+    });
+    document.getElementById('msgClose').addEventListener('click', () => panel.setAttribute('data-open', 'false'));
+    document.getElementById('msgBack').addEventListener('click', () => { panel.setAttribute('data-view', 'list'); activeConvo = null; });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && panel.getAttribute('data-open') === 'true') {
+        if (panel.getAttribute('data-view') === 'chat') panel.setAttribute('data-view', 'list');
+        else panel.setAttribute('data-open', 'false');
+      }
+    });
+    msgInput.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = msgInputField.value.trim();
+      if (!v || !activeConvo) return;
+      const t = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      activeConvo.msgs.push({ who:'me', text:v, t });
+      activeConvo.last = v;
+      activeConvo.t    = t;
+      msgInputField.value = '';
+      const el = document.createElement('div');
+      el.className = 'msg-bubble me';
+      el.textContent = v;
+      chatBody.appendChild(el);
+      chatBody.scrollTop = chatBody.scrollHeight;
+      // Simulate a reply after a short delay
+      setTimeout(() => {
+        const replies = ['Trop bien !', 'Carrément 🔥', 'Ok ça marche', 'Mdr', 'On y va alors ?'];
+        const r = replies[Math.floor(Math.random()*replies.length)];
+        const t2 = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+        activeConvo.msgs.push({ who:'them', text:r, t:t2 });
+        activeConvo.last = r; activeConvo.t = t2;
+        const e2 = document.createElement('div'); e2.className = 'msg-bubble them'; e2.textContent = r;
+        chatBody.appendChild(e2); chatBody.scrollTop = chatBody.scrollHeight;
+      }, 900 + Math.random()*900);
+    });
+    renderMsgList();
+
     // ---------- Account screen ----------
     function renderAccount(){
       const u = state.user || {};
@@ -2261,7 +2583,7 @@
       const avi = document.getElementById('accAvatar');
       if (u.avatarUrl) avi.innerHTML = `<img src="${u.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
       else { avi.textContent = (u.displayName || u.email || 'T').charAt(0).toUpperCase(); avi.style.background = 'linear-gradient(135deg,#FF7EB6,#9146FF)'; }
-      document.getElementById('accGender').textContent  = ({ male:tx('gender_male'), female:tx('gender_female'), other:tx('gender_other') }[p.gender] || '—');
+      document.getElementById('accGender').textContent  = ({ male:tx('gender_male'), female:tx('gender_female'), nonbinary:tx('gender_nb'), trans_m:tx('gender_trans_m'), trans_f:tx('gender_trans_f'), fluid:tx('gender_fluid'), agender:tx('gender_agender'), other:tx('gender_other') }[p.gender] || '—');
       document.getElementById('accAge').textContent     = p.age || '—';
       document.getElementById('accLooking').textContent = ({ chill:tx('look_chill'), game:tx('look_game'), sleep:tx('look_sleep') }[p.looking] || '—');
       document.getElementById('accBio').value           = p.bio || '';
