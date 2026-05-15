@@ -650,7 +650,7 @@
   .swipe-toast .t-body b{display:block;font-weight:700;font-size:14px}
   .swipe-toast .t-body span{color:var(--ink-dim);font-size:12.5px}
 
-  .swipe-wrap{position:relative;width:min(92vw,380px);height:min(calc(100vh - 295px),580px)}
+  .swipe-wrap{position:relative;width:min(92vw,380px);height:min(calc(100vh - 240px),620px)}
 
   /* Discord-style profile card */
   .swipe-card{
@@ -783,37 +783,28 @@
   .swipe-card .badge-stamp.like {right:18px;color:#03d100;border-color:#03d100;transform:rotate(-12deg);text-shadow:0 0 14px rgba(3,209,0,.6)}
   .swipe-card .badge-stamp.nope {left:18px;color:#ff008c;border-color:#ff008c;transform:rotate(12deg);text-shadow:0 0 14px rgba(255,0,140,.6)}
 
-  /* Swipe toolbar — quick access to likes, filter, music + stats */
+  /* Swipe toolbar — floating bottom-left, vertical stack */
   .swipe-tools{
-    display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:nowrap;
-    padding:8px 14px;border-radius:18px;background:rgba(28,29,34,.78);
-    border:1px solid rgba(255,255,255,.06);backdrop-filter:blur(8px);
-    flex:0 0 auto;overflow:hidden;
+    position:fixed;left:18px;bottom:18px;z-index:22;
+    display:none;flex-direction:column;gap:8px;align-items:flex-start;
+    padding:10px;border-radius:18px;background:rgba(22,22,28,.78);
+    border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px) saturate(140%);
+    -webkit-backdrop-filter:blur(20px) saturate(140%);
+    box-shadow:0 10px 28px rgba(0,0,0,.45);
   }
+  body[data-screen="swipe"] .swipe-tools{display:flex}
   .stool-btn{
-    display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;
+    display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:14px;
     border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
     color:#fff;font-family:inherit;cursor:pointer;transition:.16s ease;
+    width:100%;justify-content:flex-start;
   }
-  .stool-btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.07);border-color:rgba(145,70,255,.5)}
-  .stool-ico{font-size:18px;line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+  .stool-btn:hover{background:rgba(255,255,255,.07);border-color:rgba(145,70,255,.5);transform:translateX(2px)}
+  .stool-ico{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);flex:0 0 auto}
   .stool-lbl{display:flex;flex-direction:column;line-height:1.1;text-align:left}
   .stool-lbl b{font-family:"Clash Display",sans-serif;font-weight:700;font-size:13px}
   .stool-lbl small{font-size:9.5px;color:#b9bbbe;text-transform:uppercase;letter-spacing:.06em}
-  .stool-stats{
-    display:flex;gap:10px;align-items:center;padding:0 6px 0 14px;
-    border-left:1px solid rgba(255,255,255,.08);font-size:11.5px;color:#dcddde;
-  }
-  .stool-stats b{color:#fff;font-weight:700;margin-right:2px}
-  @media (max-width:640px){
-    .swipe-tools{padding:6px 8px;gap:6px}
-    .stool-btn{padding:6px 10px}
-    .stool-lbl b{font-size:12px}
-    .stool-stats{display:none}
-  }
-  @media (max-height:700px){
-    .stool-stats{display:none}
-  }
+  .stool-stats{display:none}
 
   /* Action buttons — blended with the "draggable gradient icon" aesthetic */
   .swipe-actions{display:flex;gap:22px;align-items:center;justify-content:center}
@@ -846,20 +837,21 @@
 
   /* My-status floating control — bottom-LEFT, neutral aesthetic */
   .my-status{
-    position:fixed;left:18px;bottom:18px;z-index:22;
-    display:none;align-items:center;gap:10px;
-    padding:7px 14px 7px 7px;border-radius:999px;
-    background:rgba(22,22,28,.78);
-    border:1px solid rgba(255,255,255,.08);
+    position:fixed;right:18px;bottom:88px;z-index:23;
+    display:none;align-items:center;justify-content:center;
+    width:48px;height:48px;padding:0;border-radius:50%;
+    background:rgba(22,22,28,.85);
+    border:1px solid rgba(255,255,255,.10);
     backdrop-filter:blur(20px) saturate(140%);
     -webkit-backdrop-filter:blur(20px) saturate(140%);
-    cursor:pointer;color:#fff;font-size:13px;font-weight:600;
+    cursor:pointer;color:#fff;font-size:0;
     transition:transform .18s ease, background .18s ease, border-color .18s ease;
     box-shadow:0 10px 28px rgba(0,0,0,.45);
   }
-  .my-status:hover{background:rgba(28,28,34,.88);border-color:rgba(255,255,255,.14);transform:translateY(-1px)}
+  .my-status:hover{background:rgba(28,28,34,.95);border-color:rgba(255,255,255,.20);transform:translateY(-2px) scale(1.05)}
+  .my-status #myStatusLabel{display:none}
   .my-status .ms-emoji{
-    width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;
+    width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:18px;
     background:rgba(255,255,255,.06);
     border:1px solid rgba(255,255,255,.12);
     transition:.18s ease;
@@ -873,7 +865,7 @@
 
   /* Popover — clean dark, no violet */
   .ms-pop{
-    position:fixed;left:18px;bottom:78px;z-index:23;
+    position:fixed;right:18px;bottom:148px;z-index:24;
     padding:8px;border-radius:16px;min-width:240px;
     background:rgba(22,22,28,.92);
     border:1px solid rgba(255,255,255,.10);
@@ -1708,9 +1700,8 @@
       <!-- Tabs bar -->
       <div class="acc-tabs" id="accTabs">
         <button type="button" class="acc-tab-btn active" data-tab="profil">🪪 Profil</button>
-        <button type="button" class="acc-tab-btn" data-tab="bulles">🫧 Bulles</button>
+        <button type="button" class="acc-tab-btn" data-tab="bulles">🫧 Bulles & Comptes</button>
         <button type="button" class="acc-tab-btn" data-tab="boost">✨ Boost</button>
-        <button type="button" class="acc-tab-btn" data-tab="comptes">🔗 Comptes</button>
         <button type="button" class="acc-tab-btn" data-tab="infos">🌐 Infos</button>
       </div>
 
@@ -1767,6 +1758,29 @@
           <button type="button" class="acc-orb-add" id="accOrbAdd">+</button>
         </div>
         <div class="acc-orb-grid" id="accOrbGrid"></div>
+
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:18px 0 12px" />
+        <h3 style="margin-bottom:8px" data-i18n="acc_socials">🔗 Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:12px">(les bulles passent par ces connexions)</small></h3>
+        <div class="acc-social">
+          <div class="acc-social-row" data-kind="instagram">
+            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
+            <span class="so-name">Instagram</span>
+            <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
+            <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
+          </div>
+          <div class="acc-social-row" data-kind="tiktok">
+            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
+            <span class="so-name">TikTok</span>
+            <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
+            <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
+          </div>
+          <div class="acc-social-row" data-kind="spotify">
+            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
+            <span class="so-name">Spotify</span>
+            <input type="text" id="socSp" placeholder="username" autocomplete="off" />
+            <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
+          </div>
+        </div>
       </div>
 
       <!-- ✨ Boost-only options -->
@@ -1812,31 +1826,6 @@
           </div>
           <div class="gif-stage" id="gifStage" aria-label="Zone de placement des GIFs">
             <div class="gif-stage-card"><span>👤</span><small>Ta carte</small></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Social connections -->
-      <div class="acc-section acc-tab" data-tab="comptes" hidden>
-        <h3 data-i18n="acc_socials">Comptes liés</h3>
-        <div class="acc-social">
-          <div class="acc-social-row" data-kind="instagram">
-            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
-            <span class="so-name">Instagram</span>
-            <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
-            <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
-          </div>
-          <div class="acc-social-row" data-kind="tiktok">
-            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
-            <span class="so-name">TikTok</span>
-            <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
-            <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
-          </div>
-          <div class="acc-social-row" data-kind="spotify">
-            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
-            <span class="so-name">Spotify</span>
-            <input type="text" id="socSp" placeholder="username" autocomplete="off" />
-            <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
           </div>
         </div>
       </div>
@@ -3213,6 +3202,20 @@
       _spotifyTokenExp = Date.now() + (d.expires_in - 60) * 1000;
       return _spotifyToken;
     }
+    /* iTunes Search API — fallback pour les previews 30s (Spotify CC renvoie souvent null) */
+    const _itunesCache = new Map();
+    async function itunesPreview(artist, name){
+      const key = ((artist||'') + '|' + (name||'')).toLowerCase().trim();
+      if (_itunesCache.has(key)) return _itunesCache.get(key);
+      try {
+        const q = encodeURIComponent(((artist||'') + ' ' + (name||'')).trim());
+        const resp = await fetch('https://itunes.apple.com/search?term=' + q + '&entity=song&limit=1&media=music');
+        const d = await resp.json();
+        const url = d.results?.[0]?.previewUrl || null;
+        _itunesCache.set(key, url);
+        return url;
+      } catch { _itunesCache.set(key, null); return null; }
+    }
     async function searchSpotifyTracks(query, limit=6){
       const token = await getSpotifyToken();
       const resp = await fetch(
@@ -3220,13 +3223,17 @@
         { headers:{ Authorization:'Bearer ' + token } }
       );
       const d = await resp.json();
-      return (d.tracks?.items || []).map(t => ({
+      const items = (d.tracks?.items || []).map(t => ({
         name:       t.name,
         artist:     t.artists?.[0]?.name || '',
         cover:      t.album?.images?.[2]?.url || t.album?.images?.[0]?.url || null,
         previewUrl: t.preview_url,
         durationMs: t.duration_ms,
       }));
+      await Promise.all(items.map(async t => {
+        if (!t.previewUrl) t.previewUrl = await itunesPreview(t.artist, t.name);
+      }));
+      return items;
     }
     let _spotifyAudio = null;
 
@@ -3349,11 +3356,17 @@
           playUrl(o.previewUrl, o.title, '30s preview');
         } else {
           showToast('⏳', o.title, 'Chargement…');
-          searchSpotifyTracks(o.title, 1).then(results => {
-            const r = results[0];
-            if (!r?.previewUrl) { showToast('🎵', o.title, o.sub || 'Pas de preview'); el.classList.remove('playing'); return; }
-            playUrl(r.previewUrl, r.name, r.artist);
-          }).catch(() => { showToast('🎵', o.title, o.sub || ''); el.classList.remove('playing'); });
+          (async () => {
+            try {
+              const results = await searchSpotifyTracks(o.title, 1);
+              let r = results[0];
+              if (r?.previewUrl) { playUrl(r.previewUrl, r.name, r.artist); return; }
+              const itu = await itunesPreview(r?.artist || '', r?.name || o.title);
+              if (itu) { playUrl(itu, r?.name || o.title, r?.artist || ''); return; }
+              showToast('🎵', o.title, o.sub || 'Pas de preview');
+              el.classList.remove('playing');
+            } catch { showToast('🎵', o.title, o.sub || ''); el.classList.remove('playing'); }
+          })();
         }
       }
     }
