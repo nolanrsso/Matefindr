@@ -541,11 +541,11 @@
     position:relative;z-index:2;flex:1 1 auto;flex-direction:column;
     align-items:center;justify-content:center;padding:20px 24px 30px;gap:18px;
   }
-  /* Stage = card + floating bubbles around it */
+  /* Stage = card + floating bubbles further around it */
   .swipe-stage{
     position:relative;
-    width:min(96vw,620px);
-    height:min(78vh,640px);
+    width:min(98vw,820px);
+    height:min(80vh,680px);
     display:grid;place-items:center;
     pointer-events:none;
   }
@@ -555,31 +555,50 @@
   }
   .swipe-stage .orbit .orb{
     position:absolute;display:grid;place-items:center;
-    width:64px;height:64px;border-radius:50%;
-    background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
-    border:1px solid rgba(255,255,255,.16);
+    width:78px;height:78px;border-radius:22px;
+    background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+    border:1px solid rgba(255,255,255,.10);
     backdrop-filter:blur(14px);
     -webkit-backdrop-filter:blur(14px);
-    box-shadow:0 12px 30px rgba(13,11,30,.5), 0 0 0 1px rgba(255,255,255,.05) inset;
+    box-shadow:0 14px 34px rgba(13,11,30,.55), 0 0 0 1px rgba(255,255,255,.04) inset;
     cursor:pointer;pointer-events:auto;
-    transition:transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s ease;
+    transition:transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s ease, border-color .25s ease;
     animation:orbFloat 6s ease-in-out infinite;
     overflow:hidden;
+    color:#fff;
   }
-  .swipe-stage .orbit .orb:hover{transform:translateY(-4px) scale(1.08);box-shadow:0 16px 40px rgba(145,70,255,.45), 0 0 0 1px rgba(255,255,255,.2) inset}
-  .swipe-stage .orbit .orb img{width:100%;height:100%;object-fit:cover}
-  .swipe-stage .orbit .orb .ico{font-size:26px}
-  .swipe-stage .orbit .orb[data-kind="voice"]{background:linear-gradient(180deg, #9146FF, #4400ff)}
-  .swipe-stage .orbit .orb[data-kind="voice"].playing{box-shadow:0 0 0 3px rgba(145,70,255,.6), 0 0 30px rgba(145,70,255,.7);animation:voicePulse 1s ease-in-out infinite}
-  @keyframes voicePulse{0%,100%{box-shadow:0 0 0 3px rgba(145,70,255,.5), 0 0 24px rgba(145,70,255,.6)}50%{box-shadow:0 0 0 6px rgba(145,70,255,.25), 0 0 40px rgba(145,70,255,.85)}}
-  @keyframes orbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-  /* 8 orbit positions */
-  .orbit .orb:nth-child(1){top:6%;   left:2%;   animation-delay:-.4s}
-  .orbit .orb:nth-child(2){top:22%;  right:0;   animation-delay:-1.2s}
-  .orbit .orb:nth-child(3){top:50%;  left:-2%;  animation-delay:-.8s}
-  .orbit .orb:nth-child(4){top:60%;  right:-1%; animation-delay:-2.2s}
-  .orbit .orb:nth-child(5){bottom:14%;left:6%;  animation-delay:-1.6s}
-  .orbit .orb:nth-child(6){bottom:4%; right:8%; animation-delay:-3s}
+  .swipe-stage .orbit .orb:hover{transform:translateY(-5px) scale(1.06);border-color:rgba(255,255,255,.28)}
+  .swipe-stage .orbit .orb svg{width:38px;height:38px}
+  .swipe-stage .orbit .orb .ico{font-size:30px}
+  .swipe-stage .orbit .orb .tag{
+    position:absolute;bottom:5px;left:5px;right:5px;
+    text-align:center;font-size:9.5px;font-weight:700;letter-spacing:.04em;
+    text-transform:uppercase;color:#fff;
+    text-shadow:0 1px 6px rgba(0,0,0,.7);
+    pointer-events:none;
+  }
+  /* Kind-specific tinted backgrounds (no more identical grey orbs) */
+  .swipe-stage .orbit .orb[data-kind="voice"]{background:linear-gradient(135deg, #5865F2, #9146FF);border-color:rgba(145,70,255,.45);box-shadow:0 14px 34px rgba(88,101,242,.4)}
+  .swipe-stage .orbit .orb[data-kind="music"]{background:linear-gradient(135deg, #1DB954, #0a8043);border-color:rgba(29,185,84,.4);box-shadow:0 14px 34px rgba(29,185,84,.35)}
+  .swipe-stage .orbit .orb[data-kind="anime"]{background:linear-gradient(135deg, #FF7EB6, #C026D3);border-color:rgba(192,38,211,.45);box-shadow:0 14px 34px rgba(192,38,211,.35)}
+  .swipe-stage .orbit .orb[data-kind="game"] {background:linear-gradient(135deg, #FFB66E, #FF4FA0);border-color:rgba(255,79,160,.45);box-shadow:0 14px 34px rgba(255,79,160,.35)}
+  .swipe-stage .orbit .orb[data-kind="voice"].playing{animation:voicePulse 1s ease-in-out infinite}
+  @keyframes voicePulse{0%,100%{box-shadow:0 0 0 3px rgba(145,70,255,.5), 0 0 24px rgba(145,70,255,.6)}50%{box-shadow:0 0 0 6px rgba(145,70,255,.25), 0 0 50px rgba(145,70,255,.95)}}
+  @keyframes orbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  /* 6 orbit positions — further from the card (stage is now wider) */
+  .orbit .orb:nth-child(1){top:6%;   left:0;    animation-delay:-.4s}
+  .orbit .orb:nth-child(2){top:18%;  right:0;   animation-delay:-1.2s}
+  .orbit .orb:nth-child(3){top:48%;  left:0;    animation-delay:-.8s}
+  .orbit .orb:nth-child(4){top:56%;  right:0;   animation-delay:-2.2s}
+  .orbit .orb:nth-child(5){bottom:6%;left:8%;   animation-delay:-1.6s}
+  .orbit .orb:nth-child(6){bottom:6%;right:8%;  animation-delay:-3s}
+  @media (max-width:780px){
+    .swipe-stage{width:96vw;height:78vh}
+    .orbit .orb{width:60px;height:60px;border-radius:18px}
+    .orbit .orb svg{width:28px;height:28px}
+    .orbit .orb .ico{font-size:22px}
+    .orbit .orb .tag{font-size:8.5px}
+  }
 
   /* Toast for orb clicks */
   .swipe-toast{
@@ -818,6 +837,91 @@
     text-align:center;color:var(--ink-dim);font-size:15px;padding:40px 20px;
   }
   .swipe-empty h3{color:#fff;font-family:"Clash Display",sans-serif;font-size:22px;margin:0 0 6px}
+
+  /* ===== Account screen — new sections ===== */
+  .acc-section{padding:14px 0;border-top:1px solid rgba(255,255,255,.06);margin-top:8px}
+  .acc-section:first-child{border-top:none;margin-top:0}
+  .acc-section h3{
+    margin:0 0 12px;font-family:"Clash Display",sans-serif;font-weight:700;font-size:16px;letter-spacing:.02em;
+    color:#fff;display:flex;align-items:center;gap:8px;
+  }
+  .acc-section h3 .pill{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(255,126,182,.18);color:#FFB1D2;letter-spacing:.08em;text-transform:uppercase}
+  .acc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){ .acc-grid2{grid-template-columns:1fr} }
+  .acc-input, .acc-select{
+    width:100%;box-sizing:border-box;padding:12px 14px;border-radius:11px;outline:none;
+    background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);
+    color:#fff;font-family:inherit;font-size:14px;
+    transition:.18s ease;
+  }
+  .acc-input:focus, .acc-select:focus{border-color:rgba(145,70,255,.6);background:rgba(255,255,255,.07);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
+  .acc-select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23b9bbbe' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer}
+  .acc-select option{background:#1a1a20;color:#fff}
+
+  /* Language toggle */
+  .acc-langs{display:flex;gap:8px}
+  .acc-langs button{
+    flex:1;padding:10px 14px;border-radius:10px;cursor:pointer;
+    background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);
+    color:#dcddde;font-family:inherit;font-weight:700;font-size:13.5px;
+    transition:.16s ease;
+  }
+  .acc-langs button:hover{background:rgba(255,255,255,.08);color:#fff}
+  .acc-langs button.active{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 0 0 3px rgba(255,255,255,.05)}
+
+  /* Social connections */
+  .acc-social{display:flex;flex-direction:column;gap:10px}
+  .acc-social-row{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  }
+  .acc-social-row .so-ico{
+    width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;color:#fff;
+  }
+  .acc-social-row[data-kind="instagram"] .so-ico{background:linear-gradient(135deg,#f9ce34 0%,#ee2a7b 50%,#6228d7 100%)}
+  .acc-social-row[data-kind="tiktok"]    .so-ico{background:#000;border:1px solid rgba(255,255,255,.10)}
+  .acc-social-row[data-kind="spotify"]   .so-ico{background:#1DB954}
+  .acc-social-row .so-name{flex:0 0 auto;font-size:13px;font-weight:700;width:78px}
+  .acc-social-row input{
+    flex:1 1 auto;padding:9px 12px;border-radius:9px;outline:none;
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    color:#fff;font-family:inherit;font-size:13.5px;
+  }
+  .acc-social-row input:focus{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.07)}
+  .acc-social-row button{
+    padding:9px 14px;border-radius:9px;cursor:pointer;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    color:#fff;font-family:inherit;font-weight:700;font-size:12.5px;
+    transition:.16s ease;
+  }
+  .acc-social-row button:hover{background:rgba(255,255,255,.12)}
+  .acc-social-row button.connected{background:rgba(59,209,124,.18);border-color:rgba(59,209,124,.4);color:#9CF0BD}
+
+  /* Mini profile preview (mirrors a swipe-card at smaller size) */
+  .preview-card{
+    width:100%;max-width:340px;margin:6px auto 0;border-radius:18px;overflow:hidden;
+    background:#1c1d22;border:1px solid rgba(255,255,255,.06);
+    box-shadow:0 18px 40px rgba(0,0,0,.5);
+  }
+  .preview-card .pb{height:64px;background:linear-gradient(135deg,#5865F2,#9146FF);position:relative}
+  .preview-card .pa{
+    position:absolute;left:14px;top:38px;width:64px;height:64px;border-radius:50%;padding:4px;
+    background:#1c1d22;display:grid;place-items:center;
+  }
+  .preview-card .pa .av{
+    width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:22px;color:#fff;
+    background:linear-gradient(135deg,#FF7EB6,#9146FF);
+  }
+  .preview-card .pa .av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+  .preview-card .pbody{padding:30px 14px 14px;color:#fff}
+  .preview-card .pn{display:flex;align-items:baseline;gap:6px}
+  .preview-card .pn b{font-family:"Clash Display",sans-serif;font-weight:700;font-size:18px}
+  .preview-card .pn span{color:#b9bbbe;font-size:14px}
+  .preview-card .ph{color:#b9bbbe;font-size:12px;margin:2px 0 8px}
+  .preview-card .pbio{font-size:12.5px;color:#dcddde;line-height:1.45;background:rgba(255,255,255,.04);padding:8px 10px;border-radius:8px}
+  .preview-card .pchips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+  .preview-card .pchips span{font-size:10.5px;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#dcddde}
 
   /* ===== Account screen ===== */
   #screen-account{
@@ -1218,7 +1322,8 @@
   </section>
 
   <!-- ============================================================
-       ACCOUNT — view + edit bio
+       ACCOUNT — view + full edit (pseudo, bio, music, game, anime,
+       socials, language) + live preview
        ============================================================ -->
   <section id="screen-account" class="screen">
     <div class="acc-card">
@@ -1230,21 +1335,137 @@
         </div>
       </div>
 
-      <div class="acc-field">
-        <label data-i18n="acc_gender">Genre</label>
-        <div class="val" id="accGender">—</div>
+      <!-- Editable fields -->
+      <div class="acc-section">
+        <h3 data-i18n="acc_edit">Modifier mon profil</h3>
+        <div class="acc-grid2">
+          <div class="acc-field">
+            <label data-i18n="acc_pseudo">Pseudo</label>
+            <input class="acc-input" id="accPseudo" type="text" maxlength="32" placeholder="Tindord_user" />
+          </div>
+          <div class="acc-field">
+            <label data-i18n="acc_looking">Je cherche</label>
+            <select class="acc-select" id="accLookSel">
+              <option value="chill">🛋️ Chill</option>
+              <option value="game">🎮 Une game</option>
+              <option value="now">⌨️ Mate maintenant</option>
+              <option value="sleep">💤 Sleepcall</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="acc-field" style="margin-top:12px">
+          <label data-i18n="acc_bio">Bio</label>
+          <textarea id="accBio" maxlength="280" placeholder="Parle un peu de toi…"></textarea>
+        </div>
+
+        <div class="acc-grid2" style="margin-top:12px">
+          <div class="acc-field">
+            <label data-i18n="acc_music">🎵 Musique préférée</label>
+            <select class="acc-select" id="accMusic">
+              <option value="">— aucune —</option>
+              <option>Sicko Mode · Travis Scott</option>
+              <option>Sweater Weather · The Neighbourhood</option>
+              <option>Bad Habits · Ed Sheeran</option>
+              <option>Industry Baby · Lil Nas X</option>
+              <option>Lover · Taylor Swift</option>
+              <option>Drown · Cuco</option>
+              <option>lofi beats · ChilledCow</option>
+              <option>Mo Bamba · Sheck Wes</option>
+              <option>Mind Mischief · Tame Impala</option>
+              <option>Bury a Friend · Billie Eilish</option>
+            </select>
+          </div>
+          <div class="acc-field">
+            <label data-i18n="acc_game">🎮 Jeu préféré</label>
+            <select class="acc-select" id="accGame">
+              <option value="">— aucun —</option>
+              <option>Counter-Strike 2</option>
+              <option>Valorant</option>
+              <option>League of Legends</option>
+              <option>Apex Legends</option>
+              <option>Minecraft</option>
+              <option>Stardew Valley</option>
+              <option>Elden Ring</option>
+              <option>Phasmophobia</option>
+              <option>Rocket League</option>
+              <option>Overwatch 2</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="acc-field" style="margin-top:12px">
+          <label data-i18n="acc_anime">📺 Anime / Série préférée</label>
+          <select class="acc-select" id="accAnime">
+            <option value="">— aucun —</option>
+            <option>One Piece</option>
+            <option>Demon Slayer</option>
+            <option>Jujutsu Kaisen</option>
+            <option>Attack on Titan</option>
+            <option>Cowboy Bebop</option>
+            <option>Your Name</option>
+            <option>Mushishi</option>
+            <option>Berserk</option>
+            <option>Studio Ghibli</option>
+            <option>Junji Ito</option>
+          </select>
+        </div>
       </div>
-      <div class="acc-field">
-        <label data-i18n="acc_age">Âge</label>
-        <div class="val" id="accAge">—</div>
+
+      <!-- Profile preview -->
+      <div class="acc-section">
+        <h3 data-i18n="acc_preview">Aperçu de ton profil <span class="pill">LIVE</span></h3>
+        <div class="preview-card" id="accPreview">
+          <div class="pb"></div>
+          <div class="pa"><div class="av" id="prevAv">?</div></div>
+          <div class="pbody">
+            <div class="pn"><b id="prevName">—</b><span id="prevAge"></span></div>
+            <div class="ph" id="prevHandle">@—</div>
+            <div class="pbio" id="prevBio">—</div>
+            <div class="pchips" id="prevChips"></div>
+          </div>
+        </div>
       </div>
-      <div class="acc-field">
-        <label data-i18n="acc_looking">Je cherche</label>
-        <div class="val" id="accLooking">—</div>
+
+      <!-- Social connections -->
+      <div class="acc-section">
+        <h3 data-i18n="acc_socials">Comptes liés</h3>
+        <div class="acc-social">
+          <div class="acc-social-row" data-kind="instagram">
+            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
+            <span class="so-name">Instagram</span>
+            <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
+            <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
+          </div>
+          <div class="acc-social-row" data-kind="tiktok">
+            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
+            <span class="so-name">TikTok</span>
+            <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
+            <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
+          </div>
+          <div class="acc-social-row" data-kind="spotify">
+            <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
+            <span class="so-name">Spotify</span>
+            <input type="text" id="socSp" placeholder="username" autocomplete="off" />
+            <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
+          </div>
+        </div>
       </div>
-      <div class="acc-field">
-        <label data-i18n="acc_bio">Bio</label>
-        <textarea id="accBio" maxlength="280" placeholder="Parle un peu de toi…"></textarea>
+
+      <!-- Language -->
+      <div class="acc-section">
+        <h3 data-i18n="acc_lang">Langue</h3>
+        <div class="acc-langs" id="accLangs">
+          <button type="button" data-val="FR">🇫🇷 Français</button>
+          <button type="button" data-val="EN">🇬🇧 English</button>
+        </div>
+      </div>
+
+      <!-- Display-only -->
+      <div class="acc-section">
+        <h3 data-i18n="acc_account">Infos compte</h3>
+        <div class="acc-field"><label data-i18n="acc_gender">Genre</label><div class="val" id="accGender">—</div></div>
+        <div class="acc-field"><label data-i18n="acc_age">Âge</label><div class="val" id="accAge">—</div></div>
       </div>
 
       <div class="acc-actions">
@@ -1811,6 +2032,17 @@
         acc_age:      'Âge',
         acc_looking:  'Je cherche',
         acc_bio:      'Bio',
+        acc_edit:     'Modifier mon profil',
+        acc_pseudo:   'Pseudo',
+        acc_music:    '🎵 Musique préférée',
+        acc_game:     '🎮 Jeu préféré',
+        acc_anime:    '📺 Anime / Série préférée',
+        acc_preview:  'Aperçu de ton profil',
+        acc_socials:  'Comptes liés',
+        acc_lang:     'Langue',
+        acc_account:  'Infos compte',
+        connect:      'Connecter',
+        connected:    'Connecté ✓',
         save:         'Enregistrer',
         back_to_swipe:'← Retour aux profils',
         logout:       'Se déconnecter',
@@ -1884,6 +2116,17 @@
         acc_age:      'Age',
         acc_looking:  'Looking for',
         acc_bio:      'Bio',
+        acc_edit:     'Edit my profile',
+        acc_pseudo:   'Username',
+        acc_music:    '🎵 Favorite track',
+        acc_game:     '🎮 Favorite game',
+        acc_anime:    '📺 Favorite anime / show',
+        acc_preview:  'Profile preview',
+        acc_socials:  'Linked accounts',
+        acc_lang:     'Language',
+        acc_account:  'Account info',
+        connect:      'Connect',
+        connected:    'Connected ✓',
         save:         'Save',
         back_to_swipe:'← Back to swipe',
         logout:       'Sign out',
@@ -2278,12 +2521,8 @@
         renderOrbs(null);
         return;
       }
-      // Render up to 3 cards stacked, top card last in DOM = on top visually
-      const end = Math.min(deckIdx + 3, PROFILES.length);
-      for (let i = end - 1; i >= deckIdx; i--){
-        const card = buildCard(PROFILES[i], i === deckIdx);
-        wrap.appendChild(card);
-      }
+      // Only one profile visible at a time — single top card
+      wrap.appendChild(buildCard(PROFILES[deckIdx], true));
       renderOrbs(PROFILES[deckIdx]);
     }
     function activityIcon(type){
@@ -2347,6 +2586,13 @@
       return c;
     }
 
+    /* SVG icons used inside each orb (so all orbs of the same kind look identical) */
+    const ORB_SVG = {
+      music: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 17V5l12-2v12"/><circle cx="6" cy="17" r="3"/><circle cx="18" cy="15" r="3"/></svg>',
+      voice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M9 21h6"/></svg>',
+      anime: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 9l-4.6 4 1.6 6L12 16.8 7 19l1.6-6L4 9l6.1-.2L12 3z"/></svg>',
+      game:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><circle cx="15.5" cy="12" r="1" fill="currentColor"/><circle cx="17.5" cy="14" r="1" fill="currentColor"/><path d="M8 11h4M10 9v4"/></svg>',
+    };
     /* Render the orb constellation around the top card */
     function renderOrbs(p){
       const orbit = document.getElementById('swipeOrbit');
@@ -2357,11 +2603,15 @@
         el.type = 'button';
         el.className = 'orb';
         el.dataset.kind = o.kind;
-        el.innerHTML = `<span class="ico">${o.emoji || '🎵'}</span>`;
+        el.title = `${o.title} · ${o.sub || ''}`;
+        // Short label (game/music/anime title trimmed) underneath
+        const short = (o.title || '').length > 12 ? o.title.slice(0, 11) + '…' : (o.title || '');
+        el.innerHTML = `${ORB_SVG[o.kind] || ORB_SVG.music}<span class="tag">${escapeHtmlMini(short)}</span>`;
         el.addEventListener('click', (ev) => { ev.stopPropagation(); playOrb(o, el); });
         orbit.appendChild(el);
       });
     }
+    function escapeHtmlMini(s){ return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
     /* Toast + media playback for an orb */
     let _voice = null;
@@ -2636,14 +2886,103 @@
       }
       document.getElementById('accGender').textContent  = ({ male:tx('gender_male'), female:tx('gender_female'), nonbinary:tx('gender_nb'), trans_m:tx('gender_trans_m'), trans_f:tx('gender_trans_f'), fluid:tx('gender_fluid'), agender:tx('gender_agender'), other:tx('gender_other') }[p.gender] || '—');
       document.getElementById('accAge').textContent     = p.age || '—';
-      document.getElementById('accLooking').textContent = ({ chill:tx('look_chill'), game:tx('look_game'), sleep:tx('look_sleep') }[p.looking] || '—');
-      document.getElementById('accBio').value           = p.bio || '';
+      document.getElementById('accPseudo').value = u.displayName || '';
+      document.getElementById('accBio').value    = p.bio || '';
+      document.getElementById('accLookSel').value = p.looking || 'game';
+      document.getElementById('accMusic').value   = p.music || '';
+      document.getElementById('accGame').value    = p.game  || '';
+      document.getElementById('accAnime').value   = p.anime || '';
+      const s = u.socials || {};
+      document.getElementById('socIg').value = s.instagram || '';
+      document.getElementById('socTt').value = s.tiktok    || '';
+      document.getElementById('socSp').value = s.spotify   || '';
+      [['Ig','instagram'],['Tt','tiktok'],['Sp','spotify']].forEach(([k,key]) => {
+        const btn = document.getElementById('soc' + k + 'Btn');
+        const has = !!(s[key]);
+        btn.textContent = has ? tx('connected') : tx('connect');
+        btn.classList.toggle('connected', has);
+      });
+      const cur = (document.documentElement.lang || 'fr').toUpperCase();
+      document.querySelectorAll('#accLangs button').forEach(b => b.classList.toggle('active', b.dataset.val === cur));
+      refreshAccountPreview();
     }
+    function refreshAccountPreview(){
+      const u = state.user || {};
+      const p = state.profile || {};
+      const pseudo = (document.getElementById('accPseudo').value || u.displayName || 'Tindord_user').trim();
+      const bio    = (document.getElementById('accBio').value || '').trim() || '—';
+      const look   = document.getElementById('accLookSel').value;
+      const music  = document.getElementById('accMusic').value;
+      const game   = document.getElementById('accGame').value;
+      const anime  = document.getElementById('accAnime').value;
+      const av = document.getElementById('prevAv');
+      if (u.avatarUrl) { av.innerHTML = `<img src="${u.avatarUrl}">`; av.style.background = 'none'; }
+      else { av.textContent = (pseudo || 'T').charAt(0).toUpperCase(); av.style.background = 'linear-gradient(135deg,#FF7EB6,#9146FF)'; }
+      document.getElementById('prevName').textContent = pseudo;
+      document.getElementById('prevAge').textContent  = p.age ? '· ' + p.age : '';
+      document.getElementById('prevHandle').textContent = u.discordTag ? '@' + u.discordTag : (u.email || '');
+      document.getElementById('prevBio').textContent = bio;
+      const chips = [];
+      const lookLabel = { chill:'🛋️ ' + tx('look_chill'), game:'🎮 ' + tx('look_game'), now:'⌨️ ' + tx('look_now'), sleep:'💤 ' + tx('look_sleep') }[look];
+      if (lookLabel) chips.push(lookLabel);
+      if (music) chips.push('🎵 ' + music);
+      if (game)  chips.push('🎮 ' + game);
+      if (anime) chips.push('📺 ' + anime);
+      document.getElementById('prevChips').innerHTML = chips.map(c => `<span>${escapeHtmlMini(c)}</span>`).join('');
+    }
+    ['accPseudo','accBio','accLookSel','accMusic','accGame','accAnime'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input',  refreshAccountPreview);
+      el.addEventListener('change', refreshAccountPreview);
+    });
+    // Social connect buttons
+    function bindSocial(btnId, inputId, key){
+      const btn = document.getElementById(btnId), input = document.getElementById(inputId);
+      btn.addEventListener('click', () => {
+        const v = input.value.trim().replace(/^@/, '');
+        state.user = state.user || {};
+        state.user.socials = state.user.socials || {};
+        if (state.user.socials[key]) {
+          delete state.user.socials[key];
+          input.value = '';
+          btn.textContent = tx('connect');
+          btn.classList.remove('connected');
+        } else if (v) {
+          state.user.socials[key] = v;
+          btn.textContent = tx('connected');
+          btn.classList.add('connected');
+        }
+        save();
+      });
+    }
+    bindSocial('socIgBtn', 'socIg', 'instagram');
+    bindSocial('socTtBtn', 'socTt', 'tiktok');
+    bindSocial('socSpBtn', 'socSp', 'spotify');
+    // Language toggle in account
+    document.getElementById('accLangs').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-val]');
+      if (!b) return;
+      const li = document.querySelector(`#langSwitch .ls-menu li[data-code="${b.dataset.val}"]`);
+      if (li) li.click();
+      else document.documentElement.lang = b.dataset.val.toLowerCase();
+      document.querySelectorAll('#accLangs button').forEach(x => x.classList.toggle('active', x.dataset.val === b.dataset.val));
+      refreshAccountPreview();
+    });
+
     document.getElementById('accountChip').addEventListener('click', (e) => { e.preventDefault(); setScreen('account'); });
     document.getElementById('accSave').addEventListener('click', () => {
       state.profile = state.profile || { gender:null, age:null, looking:null };
-      state.profile.bio = document.getElementById('accBio').value.trim();
+      state.profile.bio     = document.getElementById('accBio').value.trim();
+      state.profile.looking = document.getElementById('accLookSel').value;
+      state.profile.music   = document.getElementById('accMusic').value || null;
+      state.profile.game    = document.getElementById('accGame').value  || null;
+      state.profile.anime   = document.getElementById('accAnime').value || null;
+      const pseudo = document.getElementById('accPseudo').value.trim();
+      if (pseudo) { state.user = state.user || {}; state.user.displayName = pseudo; }
       save();
+      updateChip();
+      refreshMyStatusUI();
       const msg = document.getElementById('accMsg');
       msg.textContent = tx('saved');
       msg.setAttribute('data-show', 'true');
