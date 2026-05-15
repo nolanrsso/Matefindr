@@ -476,13 +476,15 @@
     transition:.3s ease;
   }
   .onb-progress span.done{background:linear-gradient(90deg,#FF7EB6,#9146FF,#5BE9FF)}
+  .onb-step{text-align:center}
   .onb-step h2{
     font-family:"Clash Display",sans-serif;font-weight:700;
     font-size:32px;letter-spacing:-.015em;margin:0 0 8px;
     background:linear-gradient(180deg,#fff 0%,#d9c6ff 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-align:center;
   }
-  .onb-step .sub{color:#b9bbbe;font-size:15px;margin:0 0 28px}
+  .onb-step .sub{color:#b9bbbe;font-size:15px;margin:0 0 28px;text-align:center}
   .onb-options{display:grid;gap:12px;margin-bottom:26px}
   .onb-options.three{grid-template-columns:repeat(3,1fr)}
   .onb-options.four{grid-template-columns:repeat(2,1fr)}
@@ -1257,19 +1259,14 @@
         <span class="done"></span><span></span><span></span>
       </div>
 
-      <!-- Step 1: gender -->
+      <!-- Step 1: pronouns -->
       <div class="onb-step" data-step="1">
-        <h2 data-i18n="onb_q1">Tu es ?</h2>
+        <h2 data-i18n="onb_q1">Tes pronoms ?</h2>
         <p class="sub" data-i18n="onb_q1_sub">Cette info aide à proposer les bonnes rencontres</p>
-        <div class="onb-options genders" id="onbGender">
-          <button type="button" class="onb-opt" data-val="male"><span class="emoji">👨</span><span class="label" data-i18n="gender_male">Homme</span></button>
-          <button type="button" class="onb-opt" data-val="female"><span class="emoji">👩</span><span class="label" data-i18n="gender_female">Femme</span></button>
-          <button type="button" class="onb-opt" data-val="nonbinary"><span class="emoji">🧑</span><span class="label" data-i18n="gender_nb">Non-binaire</span></button>
-          <button type="button" class="onb-opt" data-val="trans_m"><span class="emoji">⚧️</span><span class="label" data-i18n="gender_trans_m">Trans homme</span></button>
-          <button type="button" class="onb-opt" data-val="trans_f"><span class="emoji">⚧️</span><span class="label" data-i18n="gender_trans_f">Trans femme</span></button>
-          <button type="button" class="onb-opt" data-val="fluid"><span class="emoji">🌈</span><span class="label" data-i18n="gender_fluid">Genderfluid</span></button>
-          <button type="button" class="onb-opt" data-val="agender"><span class="emoji">✨</span><span class="label" data-i18n="gender_agender">Agender</span></button>
-          <button type="button" class="onb-opt" data-val="other"><span class="emoji">💭</span><span class="label" data-i18n="gender_other">Préfère pas dire</span></button>
+        <div class="onb-options three" id="onbGender">
+          <button type="button" class="onb-opt" data-val="il"><span class="emoji">🙋‍♂️</span><span class="label">Il</span></button>
+          <button type="button" class="onb-opt" data-val="elle"><span class="emoji">🙋‍♀️</span><span class="label">Elle</span></button>
+          <button type="button" class="onb-opt" data-val="autre"><span class="emoji">✨</span><span class="label" data-i18n="pronoun_autre">Préciser</span></button>
         </div>
         <div class="onb-actions">
           <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
@@ -2012,8 +2009,9 @@
         msg_invalid:  'Email ou mot de passe invalide.',
         msg_short_pw: 'Le mot de passe doit faire au moins 6 caractères.',
         my_account:   'Mon compte',
-        onb_q1:       'Tu es ?',
-        onb_q1_sub:   'Cette info aide à proposer les bonnes rencontres',
+        onb_q1:       'Tes pronoms ?',
+        onb_q1_sub:   'Choisis tes pronoms pour de meilleures suggestions',
+        pronoun_autre:'Préciser',
         onb_q2:       'Quel âge as-tu ?',
         onb_q2_sub:   'Tu dois avoir 16 ans ou plus',
         onb_q3:       'Tu cherches quoi ?',
@@ -2096,8 +2094,9 @@
         msg_invalid:  'Invalid email or password.',
         msg_short_pw: 'Password must be at least 6 characters.',
         my_account:   'My account',
-        onb_q1:       'You are?',
-        onb_q1_sub:   'This helps us suggest the right matches',
+        onb_q1:       'Your pronouns?',
+        onb_q1_sub:   'Choose your pronouns for better suggestions',
+        pronoun_autre:'Specify',
         onb_q2:       'How old are you?',
         onb_q2_sub:   'You must be 16 or older',
         onb_q3:       'What are you looking for?',
@@ -2903,7 +2902,7 @@
         avi.textContent = (u.displayName || u.email || 'T').charAt(0).toUpperCase();
         avi.style.background = 'linear-gradient(135deg,#FF7EB6,#9146FF)';
       }
-      document.getElementById('accGender').textContent  = ({ male:tx('gender_male'), female:tx('gender_female'), nonbinary:tx('gender_nb'), trans_m:tx('gender_trans_m'), trans_f:tx('gender_trans_f'), fluid:tx('gender_fluid'), agender:tx('gender_agender'), other:tx('gender_other') }[p.gender] || '—');
+      document.getElementById('accGender').textContent  = ({ il:'Il', elle:'Elle', autre:'Préciser / Autre', male:'Il', female:'Elle', nonbinary:'Iel', other:'Autre' }[p.gender] || '—');
       document.getElementById('accAge').textContent     = p.age || '—';
       document.getElementById('accPseudo').value = u.displayName || '';
       document.getElementById('accBio').value    = p.bio || '';
