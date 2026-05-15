@@ -744,6 +744,12 @@
     padding:5px 10px;border-radius:999px;font-size:11.5px;font-weight:600;
     background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#dcddde;
   }
+  .swipe-card .me-chip{
+    font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;
+    background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
+    letter-spacing:.06em;box-shadow:0 3px 10px rgba(145,70,255,.45);
+    vertical-align:middle;
+  }
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
     background:#2b2d31;border-radius:10px;padding:10px 12px;
@@ -2526,17 +2532,51 @@
         ] },
     ];
     let deckIdx = 0;
+
+    function buildUserProfile(){
+      const u = state.user || {};
+      const p = state.profile || {};
+      if (!u.displayName && !u.email && !u.discordTag) return null;
+      const orbs = [];
+      if (p.music) orbs.push({kind:'music', title:p.music, sub:'Ta musique', emoji:'🎵'});
+      if (p.game)  orbs.push({kind:'game',  title:p.game,  sub:'Ton jeu', emoji:'🎮'});
+      if (p.anime) orbs.push({kind:'anime', title:p.anime, sub:'Ton anime', emoji:'📺'});
+      return {
+        name: u.displayName || u.email?.split('@')[0] || 'Moi',
+        tag: u.discordTag || 'moi',
+        age: p.age || '',
+        looking: p.looking || 'game',
+        status: 'online',
+        nitro: !!u.decorationUrl,
+        joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
+        activity: {type:'game', title:'Tindord', sub:'Swipe en cours…'},
+        games: [p.game].filter(Boolean),
+        bio: p.bio || '✏️ Complète ton profil dans Mon compte !',
+        common: {friends:0, servers:0},
+        c1:'#FF7EB6', c2:'#9146FF',
+        initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
+        avatarUrl: u.avatarUrl || null,
+        bannerUrl: u.bannerUrl || null,
+        decorationUrl: u.decorationUrl || null,
+        orbs,
+        isMe: true,
+      };
+    }
+
     function ensureDeck(){
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
-      if (deckIdx >= PROFILES.length) {
+      const myP = buildUserProfile();
+      const offset = myP ? 1 : 0;
+      const total = PROFILES.length + offset;
+      if (deckIdx >= total) {
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
         renderOrbs(null);
         return;
       }
-      // Only one profile visible at a time — single top card
-      wrap.appendChild(buildCard(PROFILES[deckIdx], true));
-      renderOrbs(PROFILES[deckIdx]);
+      const p = (myP && deckIdx === 0) ? myP : PROFILES[deckIdx - offset];
+      wrap.appendChild(buildCard(p, true));
+      renderOrbs(p);
     }
     function activityIcon(type){
       if (type === 'call')  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5be9ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>`;
@@ -2557,18 +2597,29 @@
         c.style.opacity = '0.85';
       }
       const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), now:tx('look_now'), sleep:tx('look_sleep') }[p.looking] || p.looking;
+      const bannerStyle = p.bannerUrl
+        ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
+        : '';
+      const aviInner = p.avatarUrl
+        ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="${p.name}">`
+        : p.initial;
+      const aviStyle = p.avatarUrl ? '' : `style="background:linear-gradient(135deg,${p.c1},${p.c2})"`;
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
-        <div class="banner"></div>
+        <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         <div class="avatar-wrap${p.nitro ? ' nitro' : ''}">
-          <div class="avi" style="background:linear-gradient(135deg, ${p.c1}, ${p.c2})">${p.initial}</div>
+          <div class="avi" ${aviStyle}>${aviInner}</div>
           <span class="status-dot ${p.status}"></span>
         </div>
         ${p.nitro ? `<span class="nitro-badge">${tx('nitro')}</span>` : ''}
         <div class="body">
           <div>
-            <div class="name-row"><span class="name">${p.name}</span><span class="age">${p.age}</span></div>
+            <div class="name-row">
+              <span class="name">${p.name}</span>
+              ${p.age ? `<span class="age">${p.age}</span>` : ''}
+              ${p.isMe ? '<span class="me-chip">👤 Moi</span>' : ''}
+            </div>
             <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
             <div class="joined">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -2580,15 +2631,11 @@
             <div class="icon">${activityIcon(p.activity.type)}</div>
             <div class="lbl"><b>${p.activity.title}</b><span>${p.activity.sub}</span></div>
           </div>
-          <div class="meta">
-            ${p.games.map(g => `<span class="chip">🎮 ${g}</span>`).join('')}
-          </div>
-          <div class="bio">
-            <b>Bio</b>${p.bio}
-          </div>
+          ${p.games.length ? `<div class="meta">${p.games.map(g => `<span class="chip">🎮 ${g}</span>`).join('')}</div>` : ''}
+          <div class="bio"><b>Bio</b>${p.bio}</div>
           <div class="common">
-            <span><b>${p.common.friends}</b> ami${p.common.friends > 1 ? 's' : ''} en commun</span>
-            <span><b>${p.common.servers}</b> serveur${p.common.servers > 1 ? 's' : ''} en commun</span>
+            <span>👥 <b>${p.common.friends}</b> ami${p.common.friends > 1 ? 's' : ''} en commun</span>
+            <span>🏠 <b>${p.common.servers}</b> serveur${p.common.servers > 1 ? 's' : ''} en commun</span>
           </div>
         </div>
         <div class="lookfor" data-look="${p.looking}" title="${lookLabel}">${LOOK_EMOJI[p.looking] || '🎮'}</div>
