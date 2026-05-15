@@ -547,7 +547,7 @@
   .swipe-stage{
     position:relative;
     width:min(98vw,920px);
-    flex:1 1 auto;min-height:0;overflow:hidden;
+    flex:1 1 auto;min-height:0;overflow:visible;
     display:grid;place-items:center;
     pointer-events:none;
   }
@@ -569,11 +569,25 @@
     border:1.5px solid rgba(255,255,255,.22);
     backdrop-filter:blur(18px) saturate(150%);
     -webkit-backdrop-filter:blur(18px) saturate(150%);
-    box-shadow:0 20px 48px rgba(13,11,30,.7), 0 0 0 1px rgba(255,255,255,.07) inset;
+    box-shadow:0 0 30px 6px rgba(255,255,255,.18), 0 18px 40px rgba(13,11,30,.65), 0 0 0 1px rgba(255,255,255,.08) inset;
     cursor:pointer;pointer-events:auto;
     transition:transform .22s cubic-bezier(.2,.7,.3,1), box-shadow .22s ease, border-color .22s ease;
-    color:#fff;position:relative;overflow:hidden;
+    color:#fff;position:relative;overflow:visible;
   }
+  /* Soft outer halo glow — drawn behind the orb */
+  .swipe-stage .orbit .orb::after{
+    content:"";position:absolute;inset:-22px;border-radius:50%;
+    background:radial-gradient(circle, var(--orb-glow,rgba(255,255,255,.35)) 0%, transparent 62%);
+    filter:blur(8px);
+    z-index:-1;pointer-events:none;opacity:.85;
+    animation:orbGlowPulse 3.2s ease-in-out infinite;
+  }
+  @keyframes orbGlowPulse{
+    0%,100%{opacity:.7;transform:scale(1)}
+    50%    {opacity:1;transform:scale(1.08)}
+  }
+  /* Need a clipping wrapper for the cover image since orb is now overflow:visible */
+  .swipe-stage .orbit .orb > .orb-cover{clip-path:circle(50%)}
   /* Inner specular shimmer */
   .swipe-stage .orbit .orb::before{
     content:"";position:absolute;inset:0;border-radius:50%;
@@ -585,10 +599,10 @@
   .swipe-stage .orbit .orb svg{width:38px;height:38px;position:relative;z-index:2;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
   .swipe-stage .orbit .orb .orb-cover{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;z-index:2}
   /* Kind-specific vibrant gradients */
-  .swipe-stage .orbit .orb[data-kind="voice"]{background:linear-gradient(145deg,#7289DA,#5865F2,#9146FF);border-color:rgba(145,70,255,.58);box-shadow:0 20px 48px rgba(88,101,242,.55), 0 0 0 1px rgba(255,255,255,.07) inset}
-  .swipe-stage .orbit .orb[data-kind="music"]{background:linear-gradient(145deg,#1ed760,#1DB954,#0e7a38);border-color:rgba(29,185,84,.55);box-shadow:0 20px 48px rgba(29,185,84,.52), 0 0 0 1px rgba(255,255,255,.07) inset}
-  .swipe-stage .orbit .orb[data-kind="anime"]{background:linear-gradient(145deg,#FF9CC0,#FF7EB6,#b020b8);border-color:rgba(192,38,211,.55);box-shadow:0 20px 48px rgba(192,38,211,.52), 0 0 0 1px rgba(255,255,255,.07) inset}
-  .swipe-stage .orbit .orb[data-kind="game"] {background:linear-gradient(145deg,#FFD080,#FFB66E,#FF4FA0);border-color:rgba(255,79,160,.55);box-shadow:0 20px 48px rgba(255,79,160,.52), 0 0 0 1px rgba(255,255,255,.07) inset}
+  .swipe-stage .orbit .orb[data-kind="voice"]{--orb-glow:rgba(88,101,242,.75);background:linear-gradient(145deg,#7289DA,#5865F2,#9146FF);border-color:rgba(145,70,255,.58);box-shadow:0 0 36px 8px rgba(88,101,242,.55), 0 18px 40px rgba(88,101,242,.5), 0 0 0 1px rgba(255,255,255,.07) inset}
+  .swipe-stage .orbit .orb[data-kind="music"]{--orb-glow:rgba(29,185,84,.7);background:linear-gradient(145deg,#1ed760,#1DB954,#0e7a38);border-color:rgba(29,185,84,.55);box-shadow:0 0 36px 8px rgba(29,185,84,.5), 0 18px 40px rgba(29,185,84,.45), 0 0 0 1px rgba(255,255,255,.07) inset}
+  .swipe-stage .orbit .orb[data-kind="anime"]{--orb-glow:rgba(192,38,211,.7);background:linear-gradient(145deg,#FF9CC0,#FF7EB6,#b020b8);border-color:rgba(192,38,211,.55);box-shadow:0 0 36px 8px rgba(192,38,211,.5), 0 18px 40px rgba(192,38,211,.45), 0 0 0 1px rgba(255,255,255,.07) inset}
+  .swipe-stage .orbit .orb[data-kind="game"] {--orb-glow:rgba(255,79,160,.7);background:linear-gradient(145deg,#FFD080,#FFB66E,#FF4FA0);border-color:rgba(255,79,160,.55);box-shadow:0 0 36px 8px rgba(255,79,160,.5), 0 18px 40px rgba(255,79,160,.45), 0 0 0 1px rgba(255,255,255,.07) inset}
   .swipe-stage .orbit .orb[data-kind="voice"].playing{animation:voicePulse 1s ease-in-out infinite}
   @keyframes voicePulse{
     0%,100%{box-shadow:0 0 0 4px rgba(145,70,255,.5), 0 0 32px rgba(145,70,255,.75)}
@@ -1305,7 +1319,7 @@
   }
   .acc-orb-del:hover{background:#ff4f80;border-color:#ff4f80;color:#fff}
   /* film kind for swipe orbit */
-  .swipe-stage .orbit .orb[data-kind="film"]{background:linear-gradient(145deg,#a78bfa,#7c3aed,#4c1d95);border-color:rgba(124,58,237,.55);box-shadow:0 20px 48px rgba(124,58,237,.52), 0 0 0 1px rgba(255,255,255,.07) inset}
+  .swipe-stage .orbit .orb[data-kind="film"]{--orb-glow:rgba(124,58,237,.7);background:linear-gradient(145deg,#a78bfa,#7c3aed,#4c1d95);border-color:rgba(124,58,237,.55);box-shadow:0 0 36px 8px rgba(124,58,237,.5), 0 18px 40px rgba(124,58,237,.45), 0 0 0 1px rgba(255,255,255,.07) inset}
 
   /* Auth modal */
   .auth-backdrop{
