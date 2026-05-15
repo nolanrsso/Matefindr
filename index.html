@@ -414,6 +414,65 @@
     position:relative;z-index:2;flex:1 1 auto;flex-direction:column;
     align-items:center;justify-content:center;padding:20px 24px 30px;gap:18px;
   }
+  /* Stage = card + floating bubbles around it */
+  .swipe-stage{
+    position:relative;
+    width:min(96vw,620px);
+    height:min(78vh,640px);
+    display:grid;place-items:center;
+    pointer-events:none;
+  }
+  .swipe-stage .swipe-wrap{pointer-events:auto}
+  .swipe-stage .orbit{
+    position:absolute;inset:0;pointer-events:none;
+  }
+  .swipe-stage .orbit .orb{
+    position:absolute;display:grid;place-items:center;
+    width:64px;height:64px;border-radius:50%;
+    background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+    border:1px solid rgba(255,255,255,.16);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 12px 30px rgba(13,11,30,.5), 0 0 0 1px rgba(255,255,255,.05) inset;
+    cursor:pointer;pointer-events:auto;
+    transition:transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s ease;
+    animation:orbFloat 6s ease-in-out infinite;
+    overflow:hidden;
+  }
+  .swipe-stage .orbit .orb:hover{transform:translateY(-4px) scale(1.08);box-shadow:0 16px 40px rgba(145,70,255,.45), 0 0 0 1px rgba(255,255,255,.2) inset}
+  .swipe-stage .orbit .orb img{width:100%;height:100%;object-fit:cover}
+  .swipe-stage .orbit .orb .ico{font-size:26px}
+  .swipe-stage .orbit .orb[data-kind="voice"]{background:linear-gradient(180deg, #9146FF, #4400ff)}
+  .swipe-stage .orbit .orb[data-kind="voice"].playing{box-shadow:0 0 0 3px rgba(145,70,255,.6), 0 0 30px rgba(145,70,255,.7);animation:voicePulse 1s ease-in-out infinite}
+  @keyframes voicePulse{0%,100%{box-shadow:0 0 0 3px rgba(145,70,255,.5), 0 0 24px rgba(145,70,255,.6)}50%{box-shadow:0 0 0 6px rgba(145,70,255,.25), 0 0 40px rgba(145,70,255,.85)}}
+  @keyframes orbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  /* 8 orbit positions */
+  .orbit .orb:nth-child(1){top:6%;   left:2%;   animation-delay:-.4s}
+  .orbit .orb:nth-child(2){top:22%;  right:0;   animation-delay:-1.2s}
+  .orbit .orb:nth-child(3){top:50%;  left:-2%;  animation-delay:-.8s}
+  .orbit .orb:nth-child(4){top:60%;  right:-1%; animation-delay:-2.2s}
+  .orbit .orb:nth-child(5){bottom:14%;left:6%;  animation-delay:-1.6s}
+  .orbit .orb:nth-child(6){bottom:4%; right:8%; animation-delay:-3s}
+
+  /* Toast for orb clicks */
+  .swipe-toast{
+    position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);
+    padding:12px 18px;border-radius:14px;
+    background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(20,16,46,.92));
+    border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(18px) saturate(140%);
+    color:#fff;font-size:14px;font-weight:600;
+    display:flex;align-items:center;gap:10px;
+    box-shadow:0 18px 50px rgba(0,0,0,.55);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:60;max-width:90vw;
+  }
+  .swipe-toast[data-show="true"]{opacity:1;transform:translateX(-50%) translateY(0)}
+  .swipe-toast .t-ico{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;background:rgba(255,255,255,.08)}
+  .swipe-toast .t-body b{display:block;font-weight:700;font-size:14px}
+  .swipe-toast .t-body span{color:var(--ink-dim);font-size:12.5px}
+
   .swipe-wrap{position:relative;width:min(92vw,380px);height:min(72vh,600px)}
 
   /* Discord-style profile card */
@@ -435,16 +494,41 @@
   }
   .swipe-card:active{cursor:grabbing}
   .swipe-card .banner{
-    height:90px;background:linear-gradient(135deg, var(--c1,#5865F2), var(--c2,#9146FF));
-    position:relative;flex:0 0 auto;
+    height:120px;background:linear-gradient(135deg, var(--c1,#5865F2) 0%, var(--c2,#9146FF) 100%);
+    position:relative;flex:0 0 auto;overflow:hidden;
+  }
+  .swipe-card .banner::after{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(120% 80% at 30% 30%, rgba(255,255,255,.18), transparent 60%);
+    pointer-events:none;
   }
   .swipe-card .avatar-wrap{
-    position:absolute;left:18px;top:48px;width:96px;height:96px;border-radius:50%;
-    padding:6px;background:#1c1d22;display:grid;place-items:center;
+    position:absolute;left:20px;top:64px;width:108px;height:108px;border-radius:50%;
+    padding:7px;background:#1c1d22;display:grid;place-items:center;
   }
   .swipe-card .avatar-wrap .avi{
     width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
-    font-family:"Clash Display",sans-serif;font-weight:800;font-size:38px;color:#fff;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:40px;color:#fff;
+    position:relative;z-index:2;
+  }
+  /* Nitro decoration — animated rainbow conic ring on top of the avatar */
+  .swipe-card .avatar-wrap.nitro::before{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,#FF7EB6,#9146FF,#5BE9FF,#3BD17C,#FFB66E,#FF4FA0,#FF7EB6);
+    animation:nitroSpin 6s linear infinite;
+    z-index:0;
+  }
+  .swipe-card .avatar-wrap.nitro::after{
+    content:"";position:absolute;inset:5px;border-radius:50%;background:#1c1d22;z-index:1;
+  }
+  @keyframes nitroSpin{to{transform:rotate(360deg)}}
+  .swipe-card .nitro-badge{
+    position:absolute;left:108px;top:128px;
+    background:linear-gradient(135deg,#FF7EB6,#9146FF);
+    color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;
+    padding:3px 7px;border-radius:6px;
+    box-shadow:0 4px 14px rgba(145,70,255,.5);
+    z-index:3;
   }
   .swipe-card .status-dot{
     position:absolute;right:4px;bottom:4px;width:24px;height:24px;border-radius:50%;
@@ -456,9 +540,25 @@
   .swipe-card .status-dot.offline{background:#747f8d}
 
   .swipe-card .body{
-    flex:1 1 auto;padding:60px 18px 18px;display:flex;flex-direction:column;gap:14px;
-    overflow:hidden;
+    flex:1 1 auto;padding:64px 18px 60px;display:flex;flex-direction:column;gap:12px;
+    overflow:hidden;position:relative;
   }
+  .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
+  .swipe-card .joined svg{opacity:.7}
+
+  /* Looking-for badge — bottom-right of the card */
+  .swipe-card .lookfor{
+    position:absolute;right:14px;bottom:14px;
+    width:46px;height:46px;border-radius:50%;
+    display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(135deg,#FF7EB6,#9146FF);
+    box-shadow:0 8px 22px rgba(145,70,255,.5), 0 0 0 3px #1c1d22, 0 0 0 4px rgba(255,255,255,.08);
+    z-index:4;
+  }
+  .swipe-card .lookfor[data-look="chill"]{background:linear-gradient(135deg,#FFB66E,#FF7EB6)}
+  .swipe-card .lookfor[data-look="game"] {background:linear-gradient(135deg,#5BE9FF,#9146FF)}
+  .swipe-card .lookfor[data-look="now"]  {background:linear-gradient(135deg,#e6ff00,#03d100)}
+  .swipe-card .lookfor[data-look="sleep"]{background:linear-gradient(135deg,#9146FF,#6B2BFF)}
   .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:24px;letter-spacing:-.01em}
   .swipe-card .age{color:#b9bbbe;font-weight:600;font-size:18px}
@@ -528,6 +628,42 @@
   .swipe-actions.dir-right .swipe-btn--yes::before{opacity:1}
   .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
   .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
+
+  /* My-status floating control on swipe screen */
+  .my-status{
+    position:fixed;top:80px;right:18px;z-index:22;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(255,255,255,.05);border:1px solid var(--stroke-2);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    cursor:pointer;color:#fff;font-size:13px;font-weight:600;
+    transition:.18s ease;
+  }
+  .my-status:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+  .my-status .ms-emoji{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:linear-gradient(135deg,#FF7EB6,#9146FF);box-shadow:0 4px 14px rgba(145,70,255,.4)}
+  body[data-screen="swipe"] .my-status{display:flex}
+  body:not([data-screen="swipe"]) .my-status{display:none}
+
+  .ms-pop{
+    position:fixed;top:130px;right:18px;z-index:23;
+    padding:8px;border-radius:14px;min-width:200px;
+    background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(20,16,46,.94));
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 18px 50px rgba(0,0,0,.5);
+    display:none;
+  }
+  .ms-pop[data-open="true"]{display:block;animation:authViewIn .18s ease-out}
+  .ms-pop button{
+    all:unset;display:flex;align-items:center;gap:12px;width:100%;
+    padding:10px 12px;border-radius:9px;cursor:pointer;
+    font-size:13.5px;color:var(--ink-dim);font-weight:600;box-sizing:border-box;
+    transition:.12s ease;
+  }
+  .ms-pop button:hover{background:rgba(255,255,255,.06);color:#fff}
+  .ms-pop button.selected{background:rgba(145,70,255,.18);color:#fff}
+  .ms-pop button .emo{font-size:20px}
   .swipe-empty{
     text-align:center;color:var(--ink-dim);font-size:15px;padding:40px 20px;
   }
@@ -882,9 +1018,10 @@
       <div class="onb-step" data-step="3" hidden>
         <h2 data-i18n="onb_q3">Tu cherches quoi ?</h2>
         <p class="sub" data-i18n="onb_q3_sub">Tu pourras changer plus tard dans ton profil</p>
-        <div class="onb-options three" id="onbLooking">
+        <div class="onb-options" id="onbLooking" style="grid-template-columns:repeat(2,1fr)">
           <button type="button" class="onb-opt" data-val="chill"><span class="emoji">🛋️</span><span class="label" data-i18n="look_chill">Chill</span></button>
           <button type="button" class="onb-opt" data-val="game"><span class="emoji">🎮</span><span class="label" data-i18n="look_game">Une game</span></button>
+          <button type="button" class="onb-opt" data-val="now"><span class="emoji">⌨️</span><span class="label" data-i18n="look_now">Mate maintenant</span></button>
           <button type="button" class="onb-opt" data-val="sleep"><span class="emoji">💤</span><span class="label" data-i18n="look_sleep">Sleepcall</span></button>
         </div>
         <div class="onb-actions">
@@ -899,7 +1036,22 @@
        SWIPE deck
        ============================================================ -->
   <section id="screen-swipe" class="screen">
-    <div class="swipe-wrap" id="swipeWrap"></div>
+    <!-- Floating "my status" — change what I'm looking for non-stop -->
+    <button class="my-status" id="myStatusBtn" type="button" aria-label="Changer mon statut">
+      <span class="ms-emoji" id="myStatusEmoji">🎮</span>
+      <span id="myStatusLabel" data-i18n="look_game">Une game</span>
+    </button>
+    <div class="ms-pop" id="myStatusPop" data-open="false" role="menu">
+      <button type="button" data-val="chill"><span class="emo">🛋️</span><span data-i18n="look_chill">Chill</span></button>
+      <button type="button" data-val="game"><span class="emo">🎮</span><span data-i18n="look_game">Une game</span></button>
+      <button type="button" data-val="now"><span class="emo">⌨️</span><span data-i18n="look_now">Mate maintenant</span></button>
+      <button type="button" data-val="sleep"><span class="emo">💤</span><span data-i18n="look_sleep">Sleepcall</span></button>
+    </div>
+
+    <div class="swipe-stage">
+      <div class="orbit" id="swipeOrbit" aria-hidden="true"></div>
+      <div class="swipe-wrap" id="swipeWrap"></div>
+    </div>
     <div class="swipe-actions">
       <button class="swipe-btn swipe-btn--no" id="swipeNo" type="button" aria-label="Passer">
         <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#fff" stroke-width="3.5"><path d="M17 17 L33 33 M33 17 L17 33"/></svg>
@@ -948,6 +1100,12 @@
       <div class="acc-msg" id="accMsg" data-show="false"></div>
     </div>
   </section>
+
+  <!-- Floating toast for orb interactions -->
+  <div class="swipe-toast" id="swipeToast" data-show="false" role="status" aria-live="polite">
+    <span class="t-ico" id="toastIco">🎵</span>
+    <div class="t-body"><b id="toastTitle">—</b><span id="toastSub">—</span></div>
+  </div>
 </main>
 
 <script>
@@ -1401,7 +1559,10 @@
         gender_other: 'Autre',
         look_chill:   'Chill',
         look_game:    'Une game',
+        look_now:     'Mate maintenant',
         look_sleep:   'Sleepcall',
+        joined_on:    'A rejoint Tindord le',
+        nitro:        'NITRO',
         continue:     'Continuer',
         back:         'Retour',
         onb_finish:   'Découvrir Tindord',
@@ -1459,7 +1620,10 @@
         gender_other: 'Other',
         look_chill:   'Chill',
         look_game:    'A game',
+        look_now:     'Mate now',
         look_sleep:   'Sleepcall',
+        joined_on:    'Joined Tindord on',
+        nitro:        'NITRO',
         continue:     'Continue',
         back:         'Back',
         onb_finish:   'Discover Tindord',
@@ -1675,7 +1839,7 @@
     function setScreen(name){
       document.body.setAttribute('data-screen', name);
       if (name === 'account') renderAccount();
-      if (name === 'swipe')   ensureDeck();
+      if (name === 'swipe')   { ensureDeck(); refreshMyStatusUI(); }
     }
     function setAuth(on){
       document.body.setAttribute('data-auth', on ? 'in' : 'out');
@@ -1736,17 +1900,123 @@
     });
 
     // ---------- Swipe deck ----------
+    // Mock profiles. Each has nitro flag, joinedOn date, and an `orbs` array
+    // — bubbles that orbit the card. Click an orb to hear/see its content.
     const PROFILES = [
-      { name:'Alex',  tag:'alex',     age:21, gender:'male',   looking:'game',  status:'online', activity:{type:'game',  title:'CS2',         sub:'En partie — Dust2 16-12'}, games:['CS2','Valorant','Apex'],     bio:'Faceit lvl 8, on tryhard ?',                  common:{friends:3, servers:2}, c1:'#FF7EB6', c2:'#9146FF', initial:'A' },
-      { name:'Léa',   tag:'leah_',    age:19, gender:'female', looking:'chill', status:'idle',   activity:{type:'music', title:'Spotify',     sub:'Sweater Weather · The Neighbourhood'}, games:['Stardew','Hades'], bio:'Stardew & AC, binôme cosy 🌱',                common:{friends:1, servers:4}, c1:'#5BE9FF', c2:'#9146FF', initial:'L' },
-      { name:'Mo',    tag:'mo.zzz',   age:23, gender:'male',   looking:'sleep', status:'dnd',    activity:{type:'call',  title:'Dans un appel', sub:'Voicechat — Tindord Chill'}, games:['Minecraft','Rocket League'], bio:'Insomniaque. Sleepcall ce soir ?',     common:{friends:0, servers:1}, c1:'#FFB66E', c2:'#FF4FA0', initial:'M' },
-      { name:'Sam',   tag:'sam.exe',  age:20, gender:'other',  looking:'game',  status:'online', activity:{type:'game',  title:'League of Legends', sub:'File d\'attente — Solo/Duo'}, games:['LoL','TFT'], bio:'Main support, je carry les mid 🙃',           common:{friends:5, servers:3}, c1:'#3BD17C', c2:'#5BE9FF', initial:'S' },
-      { name:'Nora',  tag:'noraaa',   age:22, gender:'female', looking:'chill', status:'online', activity:{type:'game',  title:'Phasmophobia', sub:'En partie depuis 23 min'}, games:['Phasmo','Stardew'], bio:"Films d'horreur + popcorn, t'es chaud ?",      common:{friends:2, servers:2}, c1:'#A65BFF', c2:'#FF7EB6', initial:'N' },
-      { name:'Theo',  tag:'theo_apex',age:25, gender:'male',   looking:'game',  status:'online', activity:{type:'game',  title:'Apex Legends', sub:'En partie ranked'}, games:['Apex','Warzone'], bio:'Predator EU. Cherche duo sérieux.',                common:{friends:4, servers:1}, c1:'#FF4FA0', c2:'#9146FF', initial:'T' },
-      { name:'Iris',  tag:'iris_zzz', age:18, gender:'female', looking:'sleep', status:'idle',   activity:{type:'call',  title:'Dans un appel', sub:'2 personnes'}, games:['Minecraft'], bio:'Voix douce, sleepcall calme ☁️',                common:{friends:1, servers:5}, c1:'#5BE9FF', c2:'#FF7EB6', initial:'I' },
-      { name:'Kai',   tag:'kai.lofi', age:24, gender:'other',  looking:'chill', status:'online', activity:{type:'music', title:'Spotify',     sub:'lofi hip hop radio — beats'}, games:['Disco Elysium'], bio:'Lecture, lo-fi, débats jusqu\'à 4h.',          common:{friends:0, servers:6}, c1:'#9146FF', c2:'#3BD17C', initial:'K' },
-      { name:'Zoé',   tag:'zoe.dia',  age:21, gender:'female', looking:'game',  status:'online', activity:{type:'game',  title:'Valorant',    sub:'Ranked — Diamond II'}, games:['Valorant','Overwatch'], bio:'Diamond mais je rage pas (trop)',           common:{friends:6, servers:2}, c1:'#FF7EB6', c2:'#FFB66E', initial:'Z' },
-      { name:'Hugo',  tag:'hugo.rev', age:26, gender:'male',   looking:'chill', status:'dnd',    activity:{type:'game',  title:'Elden Ring',  sub:'Boss : Malenia'}, games:['Resident Evil','Elden Ring'], bio:'Marathon Resi 4, stream le soir.',     common:{friends:2, servers:3}, c1:'#6B2BFF', c2:'#5BE9FF', initial:'H' },
+      { name:'Alex', tag:'alex', age:21, gender:'male', looking:'game', status:'online', nitro:true,
+        joinedOn:'14 oct. 2025',
+        activity:{type:'game', title:'CS2', sub:'En partie — Dust2 16-12'},
+        games:['CS2','Valorant','Apex'], bio:'Faceit lvl 8, on tryhard ?',
+        common:{friends:3, servers:2}, c1:'#FF7EB6', c2:'#9146FF', initial:'A',
+        orbs:[
+          {kind:'music', title:'Sicko Mode',         sub:'Travis Scott',     emoji:'🎵', voice:null},
+          {kind:'voice', title:'Note vocale',        sub:"« Yo c'est Alex »", emoji:'🎤', voice:"Yo, c'est Alex. On tryhard CS ce soir ?"},
+          {kind:'game',  title:'Counter-Strike 2',    sub:'2 134 h de jeu',   emoji:'🎮'},
+          {kind:'anime', title:'One Piece',           sub:'Anime préféré',     emoji:'📺'},
+          {kind:'music', title:'Mo Bamba',           sub:'Sheck Wes',         emoji:'🎵'},
+          {kind:'game',  title:'Valorant',            sub:'Immortal 2',        emoji:'🎮'},
+        ] },
+      { name:'Léa', tag:'leah_', age:19, gender:'female', looking:'chill', status:'idle', nitro:true,
+        joinedOn:'2 sept. 2025',
+        activity:{type:'music', title:'Spotify', sub:'Sweater Weather · The Neighbourhood'},
+        games:['Stardew','Hades'], bio:'Stardew & Animal Crossing, binôme cosy 🌱',
+        common:{friends:1, servers:4}, c1:'#5BE9FF', c2:'#9146FF', initial:'L',
+        orbs:[
+          {kind:'music', title:'Sweater Weather',    sub:'The Neighbourhood', emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Salut toi »",     emoji:'🎤', voice:"Coucou, moi c'est Léa, ravie de te rencontrer !"},
+          {kind:'anime', title:'Studio Ghibli',       sub:'Pokoyo, Totoro',    emoji:'📺'},
+          {kind:'game',  title:'Stardew Valley',     sub:'400h+ de farm',     emoji:'🎮'},
+          {kind:'music', title:'Strawberries & Cigarettes', sub:'Troye Sivan', emoji:'🎵'},
+          {kind:'anime', title:'Demon Slayer',       sub:'En cours',          emoji:'📺'},
+        ] },
+      { name:'Mo', tag:'mo.zzz', age:23, gender:'male', looking:'sleep', status:'dnd', nitro:false,
+        joinedOn:'21 août 2025',
+        activity:{type:'call', title:'Dans un appel', sub:'Voicechat — Tindord Chill'},
+        games:['Minecraft','Rocket League'], bio:'Insomniaque. Sleepcall ce soir ?',
+        common:{friends:0, servers:1}, c1:'#FFB66E', c2:'#FF4FA0', initial:'M',
+        orbs:[
+          {kind:'voice', title:'Note vocale',        sub:"« Bonne nuit »",    emoji:'🎤', voice:"Hey, si tu galères à dormir, je suis dispo en sleepcall."},
+          {kind:'music', title:'Drown',              sub:'Cuco',              emoji:'🎵'},
+          {kind:'game',  title:'Minecraft',          sub:'Realm chill',       emoji:'🎮'},
+          {kind:'anime', title:'Cowboy Bebop',       sub:'Anime culte',       emoji:'📺'},
+        ] },
+      { name:'Sam', tag:'sam.exe', age:20, gender:'other', looking:'now', status:'online', nitro:true,
+        joinedOn:'5 nov. 2025',
+        activity:{type:'game', title:'League of Legends', sub:'File d\'attente — Solo/Duo'},
+        games:['LoL','TFT'], bio:'Main support, je carry les mid 🙃',
+        common:{friends:5, servers:3}, c1:'#3BD17C', c2:'#5BE9FF', initial:'S',
+        orbs:[
+          {kind:'game',  title:'League of Legends', sub:'Soraka one-trick',   emoji:'🎮'},
+          {kind:'music', title:'Industry Baby',      sub:'Lil Nas X',         emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Duo maintenant ? »", emoji:'🎤', voice:"Yo, t'es chaud pour un duo ranked maintenant ?"},
+          {kind:'anime', title:'Jujutsu Kaisen',     sub:'Saison 2',          emoji:'📺'},
+        ] },
+      { name:'Nora', tag:'noraaa', age:22, gender:'female', looking:'chill', status:'online', nitro:false,
+        joinedOn:'12 juil. 2025',
+        activity:{type:'game', title:'Phasmophobia', sub:'En partie depuis 23 min'},
+        games:['Phasmo','Stardew'], bio:"Films d'horreur + popcorn, t'es chaud ?",
+        common:{friends:2, servers:2}, c1:'#A65BFF', c2:'#FF7EB6', initial:'N',
+        orbs:[
+          {kind:'anime', title:'Junji Ito',          sub:'Tomié, Uzumaki',    emoji:'📺'},
+          {kind:'music', title:'Bury a Friend',       sub:'Billie Eilish',     emoji:'🎵'},
+          {kind:'game',  title:'Phasmophobia',       sub:'Pro hunter',        emoji:'🎮'},
+          {kind:'voice', title:'Note vocale',        sub:"« Halloween toute l'année »", emoji:'🎤', voice:"Hello, on regarde Insidious ensemble ?"},
+        ] },
+      { name:'Theo', tag:'theo_apex', age:25, gender:'male', looking:'now', status:'online', nitro:true,
+        joinedOn:'29 juin 2025',
+        activity:{type:'game', title:'Apex Legends', sub:'En partie ranked'},
+        games:['Apex','Warzone'], bio:'Predator EU. Cherche duo sérieux maintenant.',
+        common:{friends:4, servers:1}, c1:'#FF4FA0', c2:'#9146FF', initial:'T',
+        orbs:[
+          {kind:'game',  title:'Apex Legends',       sub:'Predator EU',       emoji:'🎮'},
+          {kind:'music', title:'Sicko Mode',          sub:'Travis Scott',      emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Duo Apex now ? »", emoji:'🎤', voice:"Yo, je cherche un duo Apex là, t'es bon comment ?"},
+          {kind:'game',  title:'Warzone',            sub:'KD 2.4',            emoji:'🎮'},
+        ] },
+      { name:'Iris', tag:'iris_zzz', age:18, gender:'female', looking:'sleep', status:'idle', nitro:true,
+        joinedOn:'18 sept. 2025',
+        activity:{type:'call', title:'Dans un appel', sub:'2 personnes'},
+        games:['Minecraft'], bio:'Voix douce, sleepcall calme ☁️',
+        common:{friends:1, servers:5}, c1:'#5BE9FF', c2:'#FF7EB6', initial:'I',
+        orbs:[
+          {kind:'voice', title:'Note vocale',        sub:"« Bonsoir »",       emoji:'🎤', voice:"Bonsoir, je m'appelle Iris. Tu veux un sleepcall ?"},
+          {kind:'music', title:'Lover',               sub:'Taylor Swift',      emoji:'🎵'},
+          {kind:'anime', title:'Your Name',          sub:'Makoto Shinkai',    emoji:'📺'},
+          {kind:'game',  title:'Minecraft',          sub:'Survie tranquille', emoji:'🎮'},
+        ] },
+      { name:'Kai', tag:'kai.lofi', age:24, gender:'other', looking:'chill', status:'online', nitro:false,
+        joinedOn:'3 oct. 2025',
+        activity:{type:'music', title:'Spotify', sub:'lofi hip hop radio — beats'},
+        games:['Disco Elysium'], bio:'Lecture, lo-fi, débats jusqu\'à 4h du mat.',
+        common:{friends:0, servers:6}, c1:'#9146FF', c2:'#3BD17C', initial:'K',
+        orbs:[
+          {kind:'music', title:'lofi beats',          sub:'ChilledCow',        emoji:'🎵'},
+          {kind:'anime', title:'Mushishi',           sub:'Slow anime',        emoji:'📺'},
+          {kind:'game',  title:'Disco Elysium',      sub:'3x rejoué',         emoji:'🎮'},
+          {kind:'voice', title:'Note vocale',        sub:"« Hello »",         emoji:'🎤', voice:"Salut, je m'appelle Kai. On discute philo ce soir ?"},
+        ] },
+      { name:'Zoé', tag:'zoe.dia', age:21, gender:'female', looking:'now', status:'online', nitro:true,
+        joinedOn:'24 oct. 2025',
+        activity:{type:'game', title:'Valorant', sub:'Ranked — Diamond II'},
+        games:['Valorant','Overwatch'], bio:'Diamond mais je rage pas (trop)',
+        common:{friends:6, servers:2}, c1:'#FF7EB6', c2:'#FFB66E', initial:'Z',
+        orbs:[
+          {kind:'game',  title:'Valorant',           sub:'Diamond II',        emoji:'🎮'},
+          {kind:'music', title:'Bad Habits',          sub:'Ed Sheeran',        emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Duo Valo ? »",    emoji:'🎤', voice:"Hello, t'es chaud pour une ranked Valo là ?"},
+          {kind:'game',  title:'Overwatch 2',        sub:'Master support',    emoji:'🎮'},
+        ] },
+      { name:'Hugo', tag:'hugo.rev', age:26, gender:'male', looking:'chill', status:'dnd', nitro:false,
+        joinedOn:'11 avr. 2025',
+        activity:{type:'game', title:'Elden Ring', sub:'Boss : Malenia'},
+        games:['Resident Evil','Elden Ring'], bio:'Marathon Resi 4, stream le soir.',
+        common:{friends:2, servers:3}, c1:'#6B2BFF', c2:'#5BE9FF', initial:'H',
+        orbs:[
+          {kind:'game',  title:'Elden Ring',         sub:'NG+3',              emoji:'🎮'},
+          {kind:'anime', title:'Berserk',            sub:'Manga + anime',     emoji:'📺'},
+          {kind:'music', title:'Mind Mischief',       sub:'Tame Impala',       emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« On stream ? »",   emoji:'🎤', voice:"Yo, je stream Resi 4 ce soir, t'es chaud pour venir ?"},
+        ] },
     ];
     let deckIdx = 0;
     function ensureDeck(){
@@ -1754,6 +2024,7 @@
       wrap.innerHTML = '';
       if (deckIdx >= PROFILES.length) {
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        renderOrbs(null);
         return;
       }
       // Render up to 3 cards stacked, top card last in DOM = on top visually
@@ -1762,6 +2033,7 @@
         const card = buildCard(PROFILES[i], i === deckIdx);
         wrap.appendChild(card);
       }
+      renderOrbs(PROFILES[deckIdx]);
     }
     function activityIcon(type){
       if (type === 'call')  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5be9ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>`;
@@ -1769,6 +2041,7 @@
       return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 12h2M9 11v2M14 12h.01M16 13h.01"/></svg>`;
     }
     const STATUS_LABEL = { online:'En ligne', idle:'Inactif', dnd:'Ne pas déranger', offline:'Hors ligne' };
+    const LOOK_EMOJI   = { chill:'🛋️', game:'🎮', now:'⌨️', sleep:'💤' };
 
     function buildCard(p, isTop){
       const c = document.createElement('div');
@@ -1780,19 +2053,24 @@
         c.style.pointerEvents = 'none';
         c.style.opacity = '0.85';
       }
-      const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), sleep:tx('look_sleep') }[p.looking] || p.looking;
+      const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), now:tx('look_now'), sleep:tx('look_sleep') }[p.looking] || p.looking;
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         <div class="banner"></div>
-        <div class="avatar-wrap">
+        <div class="avatar-wrap${p.nitro ? ' nitro' : ''}">
           <div class="avi" style="background:linear-gradient(135deg, ${p.c1}, ${p.c2})">${p.initial}</div>
           <span class="status-dot ${p.status}"></span>
         </div>
+        ${p.nitro ? `<span class="nitro-badge">${tx('nitro')}</span>` : ''}
         <div class="body">
           <div>
             <div class="name-row"><span class="name">${p.name}</span><span class="age">${p.age}</span></div>
             <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
+            <div class="joined">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              ${tx('joined_on')} ${p.joinedOn}
+            </div>
           </div>
           <hr class="div"/>
           <div class="activity">
@@ -1800,7 +2078,6 @@
             <div class="lbl"><b>${p.activity.title}</b><span>${p.activity.sub}</span></div>
           </div>
           <div class="meta">
-            <span class="chip">${lookLabel}</span>
             ${p.games.map(g => `<span class="chip">🎮 ${g}</span>`).join('')}
           </div>
           <div class="bio">
@@ -1810,11 +2087,78 @@
             <span><b>${p.common.friends}</b> ami${p.common.friends > 1 ? 's' : ''} en commun</span>
             <span><b>${p.common.servers}</b> serveur${p.common.servers > 1 ? 's' : ''} en commun</span>
           </div>
-        </div>`;
+        </div>
+        <div class="lookfor" data-look="${p.looking}" title="${lookLabel}">${LOOK_EMOJI[p.looking] || '🎮'}</div>
+      `;
       if (isTop) attachDrag(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
       c.addEventListener('animationend', (ev) => { if (ev.animationName === 'cardIn') c.classList.remove('entering'); }, { once:true });
       return c;
+    }
+
+    /* Render the orb constellation around the top card */
+    function renderOrbs(p){
+      const orbit = document.getElementById('swipeOrbit');
+      orbit.innerHTML = '';
+      if (!p || !p.orbs) return;
+      p.orbs.slice(0, 6).forEach((o) => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'orb';
+        el.dataset.kind = o.kind;
+        el.innerHTML = `<span class="ico">${o.emoji || '🎵'}</span>`;
+        el.addEventListener('click', (ev) => { ev.stopPropagation(); playOrb(o, el); });
+        orbit.appendChild(el);
+      });
+    }
+
+    /* Toast + media playback for an orb */
+    let _voice = null;
+    function showToast(ico, title, sub){
+      const t = document.getElementById('swipeToast');
+      document.getElementById('toastIco').textContent = ico;
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastSub').textContent = sub;
+      t.setAttribute('data-show', 'true');
+      clearTimeout(showToast._h);
+      showToast._h = setTimeout(() => t.setAttribute('data-show', 'false'), 3200);
+    }
+    function playOrb(o, el){
+      const titleByKind = {
+        music: '🎵 ' + o.title,
+        voice: '🎤 ' + o.title,
+        anime: '📺 ' + o.title,
+        game:  '🎮 ' + o.title,
+      };
+      showToast(o.emoji || '🎵', titleByKind[o.kind] || o.title, o.sub || '');
+      if (o.kind === 'voice' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(o.voice || o.title);
+          u.lang = (document.documentElement.lang === 'en') ? 'en-US' : 'fr-FR';
+          u.rate = 1; u.pitch = 1;
+          el.classList.add('playing');
+          u.onend = () => el.classList.remove('playing');
+          u.onerror = () => el.classList.remove('playing');
+          window.speechSynthesis.speak(u);
+        } catch(_){}
+      } else if (o.kind === 'music') {
+        try {
+          const ctx = (playOrb._ac ||= new (window.AudioContext || window.webkitAudioContext)());
+          const now = ctx.currentTime;
+          const notes = [523.25, 659.25, 783.99, 659.25, 587.33]; // C5 E5 G5 E5 D5
+          notes.forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = 'sine'; osc.frequency.value = f;
+            g.gain.setValueAtTime(0, now + i * 0.2);
+            g.gain.linearRampToValueAtTime(0.12, now + i * 0.2 + 0.02);
+            g.gain.linearRampToValueAtTime(0, now + i * 0.2 + 0.18);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(now + i * 0.2); osc.stop(now + i * 0.2 + 0.2);
+          });
+        } catch(_){}
+      }
     }
     function attachDrag(card){
       let sx=0, sy=0, dx=0, dy=0, dragging=false;
@@ -1873,6 +2217,40 @@
     function topCard(){ return document.querySelector('#swipeWrap .swipe-card:last-child'); }
     document.getElementById('swipeYes').addEventListener('click', () => { const t = topCard(); if (t) commitSwipe('yes', t); });
     document.getElementById('swipeNo').addEventListener('click',  () => { const t = topCard(); if (t) commitSwipe('no',  t); });
+
+    // ---------- My-status floating control ----------
+    const LOOK_EMO = { chill:'🛋️', game:'🎮', now:'⌨️', sleep:'💤' };
+    function refreshMyStatusUI(){
+      const cur = (state.profile && state.profile.looking) || 'game';
+      document.getElementById('myStatusEmoji').textContent = LOOK_EMO[cur] || '🎮';
+      const lbl = document.getElementById('myStatusLabel');
+      lbl.setAttribute('data-i18n', 'look_' + cur);
+      lbl.textContent = tx('look_' + cur);
+      document.querySelectorAll('#myStatusPop button').forEach(b => b.classList.toggle('selected', b.dataset.val === cur));
+    }
+    const msBtn = document.getElementById('myStatusBtn');
+    const msPop = document.getElementById('myStatusPop');
+    msBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      msPop.setAttribute('data-open', msPop.getAttribute('data-open') === 'true' ? 'false' : 'true');
+    });
+    msPop.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-val]');
+      if (!b) return;
+      state.profile = state.profile || { gender:null, age:null, looking:null, bio:'' };
+      state.profile.looking = b.dataset.val;
+      save();
+      refreshMyStatusUI();
+      msPop.setAttribute('data-open', 'false');
+      showToast(LOOK_EMO[state.profile.looking] || '🎮', tx('saved'), tx('look_' + state.profile.looking));
+    });
+    document.addEventListener('click', (e) => {
+      if (msPop.getAttribute('data-open') === 'true' && !msPop.contains(e.target) && !msBtn.contains(e.target)) {
+        msPop.setAttribute('data-open', 'false');
+      }
+    });
+    // Make sure the status pill is correct as soon as we land on swipe
+    if (document.body.getAttribute('data-screen') === 'swipe') refreshMyStatusUI();
 
     // ---------- Account screen ----------
     function renderAccount(){
