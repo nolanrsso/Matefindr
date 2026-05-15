@@ -1553,7 +1553,7 @@
     const decoration_url = deco?.asset ? `https://cdn.discordapp.com/avatar-decoration-presets/${deco.asset}.png?passthrough=false` : null;
     return {
       displayName: m.global_name || m.full_name || m.name || m.user_name || 'Discord user',
-      discordTag:  m.user_name || m.preferred_username || m.name || null,
+      discordTag:  (m.user_name || m.preferred_username || m.name || '').replace(/#0$/, '') || null,
       discordId:   id,
       email:       u.email || m.email || null,
       avatarUrl:   avatar_url,
