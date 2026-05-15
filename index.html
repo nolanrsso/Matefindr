@@ -414,59 +414,120 @@
     position:relative;z-index:2;flex:1 1 auto;flex-direction:column;
     align-items:center;justify-content:center;padding:20px 24px 30px;gap:18px;
   }
-  .swipe-wrap{position:relative;width:min(92vw,360px);height:min(72vh,560px)}
+  .swipe-wrap{position:relative;width:min(92vw,380px);height:min(72vh,600px)}
+
+  /* Discord-style profile card */
   .swipe-card{
-    position:absolute;inset:0;border-radius:24px;overflow:hidden;
-    background:linear-gradient(160deg, #2a1850, #150b2c 60%);
-    border:1px solid var(--stroke-2);
-    box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04) inset;
-    color:#fff;cursor:grab;user-select:none;
+    position:absolute;inset:0;border-radius:20px;overflow:hidden;
+    background:#1c1d22;color:#fff;cursor:grab;user-select:none;
+    border:1px solid rgba(255,255,255,.06);
+    box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
     display:flex;flex-direction:column;
-    transition:transform .25s cubic-bezier(.2,.7,.3,1), opacity .25s ease;
+    transition:transform .35s cubic-bezier(.2,.7,.3,1), opacity .35s ease;
     will-change:transform;
   }
+  .swipe-card.entering{
+    animation:cardIn .55s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes cardIn{
+    from{transform:translateX(120%) rotate(14deg);opacity:0}
+    to  {transform:translateX(0) rotate(0);opacity:1}
+  }
   .swipe-card:active{cursor:grabbing}
-  .swipe-card .photo{
-    flex:1;display:grid;place-items:center;
-    font-family:"Clash Display",sans-serif;font-weight:800;font-size:110px;color:#fff;
-    position:relative;
+  .swipe-card .banner{
+    height:90px;background:linear-gradient(135deg, var(--c1,#5865F2), var(--c2,#9146FF));
+    position:relative;flex:0 0 auto;
   }
-  .swipe-card .photo .avi{
-    width:160px;height:160px;border-radius:50%;display:grid;place-items:center;
-    box-shadow:0 12px 50px rgba(0,0,0,.45), 0 0 0 4px rgba(255,255,255,.08);
+  .swipe-card .avatar-wrap{
+    position:absolute;left:18px;top:48px;width:96px;height:96px;border-radius:50%;
+    padding:6px;background:#1c1d22;display:grid;place-items:center;
   }
-  .swipe-card .badge-stamp{
-    position:absolute;top:24px;padding:8px 16px;border-radius:10px;
-    font-family:"Clash Display",sans-serif;font-weight:800;font-size:26px;letter-spacing:.08em;
-    border:3px solid;opacity:0;transform:rotate(-12deg);transition:opacity .12s ease;
-    pointer-events:none;
+  .swipe-card .avatar-wrap .avi{
+    width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:38px;color:#fff;
   }
-  .swipe-card .badge-stamp.like {right:24px;color:#3BD17C;border-color:#3BD17C;text-shadow:0 0 14px #3BD17C}
-  .swipe-card .badge-stamp.nope {left:24px;color:#FF4FA0;border-color:#FF4FA0;transform:rotate(12deg);text-shadow:0 0 14px #FF4FA0}
-  .swipe-card .info{
-    padding:18px 20px 22px;background:linear-gradient(180deg, transparent, rgba(0,0,0,.45));
-    backdrop-filter:blur(2px);
+  .swipe-card .status-dot{
+    position:absolute;right:4px;bottom:4px;width:24px;height:24px;border-radius:50%;
+    border:5px solid #1c1d22;box-sizing:content-box;
   }
-  .swipe-card .info .name-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  .swipe-card .info .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:24px;letter-spacing:-.01em}
-  .swipe-card .info .age{color:var(--ink-dim);font-weight:600;font-size:18px}
-  .swipe-card .info .meta{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-  .swipe-card .info .chip{
-    padding:5px 10px;border-radius:999px;font-size:12px;font-weight:600;
-    background:rgba(255,255,255,.08);border:1px solid var(--stroke-2);color:#fff;
-  }
-  .swipe-card .info .bio{margin-top:10px;font-size:13.5px;color:var(--ink-dim);line-height:1.45}
+  .swipe-card .status-dot.online{background:#3ba55d}
+  .swipe-card .status-dot.idle  {background:#faa61a;clip-path:circle(50%)}
+  .swipe-card .status-dot.dnd   {background:#ed4245}
+  .swipe-card .status-dot.offline{background:#747f8d}
 
-  .swipe-actions{display:flex;gap:18px;align-items:center;justify-content:center}
-  .swipe-btn{
-    width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;
-    display:grid;place-items:center;color:#fff;
-    transition:.16s ease;
-    box-shadow:0 12px 30px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06) inset;
+  .swipe-card .body{
+    flex:1 1 auto;padding:60px 18px 18px;display:flex;flex-direction:column;gap:14px;
+    overflow:hidden;
   }
-  .swipe-btn:hover{transform:translateY(-3px) scale(1.05)}
-  .swipe-btn--no  {background:linear-gradient(180deg,#FF4FA0,#C7186E)}
-  .swipe-btn--yes {background:linear-gradient(180deg,#3BD17C,#1f8f55)}
+  .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:24px;letter-spacing:-.01em}
+  .swipe-card .age{color:#b9bbbe;font-weight:600;font-size:18px}
+  .swipe-card .handle{color:#b9bbbe;font-size:13px;display:flex;align-items:center;gap:6px;margin-top:-6px}
+  .swipe-card .handle .sep{opacity:.6}
+  .swipe-card hr.div{border:none;border-top:1px solid rgba(255,255,255,.08);margin:2px 0}
+
+  .swipe-card .activity{
+    background:#2b2d31;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;
+  }
+  .swipe-card .activity .icon{
+    width:36px;height:36px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;
+    background:rgba(255,255,255,.06);
+  }
+  .swipe-card .activity .lbl{font-size:13px;line-height:1.3}
+  .swipe-card .activity .lbl b{display:block;font-weight:700;font-size:13.5px;color:#fff}
+  .swipe-card .activity .lbl span{color:#b9bbbe;font-size:12.5px}
+
+  .swipe-card .meta{display:flex;gap:6px;flex-wrap:wrap}
+  .swipe-card .chip{
+    padding:5px 10px;border-radius:999px;font-size:11.5px;font-weight:600;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#dcddde;
+  }
+  .swipe-card .bio{
+    font-size:13px;color:#b9bbbe;line-height:1.5;
+    background:#2b2d31;border-radius:10px;padding:10px 12px;
+  }
+  .swipe-card .bio b{color:#fff;display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+  .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
+  .swipe-card .common b{color:#fff;font-weight:700}
+
+  /* LIKE / NOPE stamps */
+  .swipe-card .badge-stamp{
+    position:absolute;top:24px;padding:6px 14px;border-radius:8px;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:22px;letter-spacing:.08em;
+    border:3px solid;opacity:0;transition:opacity .12s ease;
+    pointer-events:none;z-index:5;
+  }
+  .swipe-card .badge-stamp.like {right:18px;color:#03d100;border-color:#03d100;transform:rotate(-12deg);text-shadow:0 0 14px rgba(3,209,0,.6)}
+  .swipe-card .badge-stamp.nope {left:18px;color:#ff008c;border-color:#ff008c;transform:rotate(12deg);text-shadow:0 0 14px rgba(255,0,140,.6)}
+
+  /* Action buttons — blended with the "draggable gradient icon" aesthetic */
+  .swipe-actions{display:flex;gap:22px;align-items:center;justify-content:center}
+  .swipe-btn{
+    position:relative;width:68px;height:68px;border-radius:22px;border:none;cursor:pointer;
+    display:grid;place-items:center;color:#fff;padding:14px;
+    transition:transform .16s ease, box-shadow .2s ease, filter .2s ease;
+    box-shadow:0 14px 32px rgba(0,0,0,.45);
+    overflow:visible;
+  }
+  .swipe-btn::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;
+    filter:blur(14px);opacity:.55;transition:opacity .2s ease;
+  }
+  .swipe-btn:hover{transform:translateY(-3px) scale(1.06)}
+  .swipe-btn:hover::before{opacity:.9}
+  .swipe-btn:active{transform:translateY(-1px) scale(.98)}
+  /* Nope = pink → magenta (motion lib colors) */
+  .swipe-btn--no  {background:linear-gradient(180deg,#ff008c 0%, #d309e1 100%)}
+  .swipe-btn--no::before {background:linear-gradient(180deg,#ff008c 0%, #d309e1 100%)}
+  /* Yes = lime → green */
+  .swipe-btn--yes {background:linear-gradient(180deg,#e6ff00 0%, #03d100 100%);color:#0d3a00}
+  .swipe-btn--yes::before{background:linear-gradient(180deg,#e6ff00 0%, #03d100 100%)}
+  .swipe-btn svg path{stroke-linecap:round;stroke-linejoin:round}
+  /* Live reaction while dragging — class set by JS on .swipe-actions */
+  .swipe-actions.dir-right .swipe-btn--yes{transform:scale(1.22);box-shadow:0 18px 40px rgba(3,209,0,.55)}
+  .swipe-actions.dir-right .swipe-btn--yes::before{opacity:1}
+  .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
+  .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
   .swipe-empty{
     text-align:center;color:var(--ink-dim);font-size:15px;padding:40px 20px;
   }
@@ -841,10 +902,10 @@
     <div class="swipe-wrap" id="swipeWrap"></div>
     <div class="swipe-actions">
       <button class="swipe-btn swipe-btn--no" id="swipeNo" type="button" aria-label="Passer">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#fff" stroke-width="3.5"><path d="M17 17 L33 33 M33 17 L17 33"/></svg>
       </button>
       <button class="swipe-btn swipe-btn--yes" id="swipeYes" type="button" aria-label="Liker">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg>
+        <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#0d3a00" stroke-width="3.5"><path d="M14 26 L22 33 L35 16"/></svg>
       </button>
     </div>
   </section>
@@ -1676,16 +1737,16 @@
 
     // ---------- Swipe deck ----------
     const PROFILES = [
-      { name:'Alex', age:21, gender:'male',   looking:'game',  bio:'CS2 Faceit lvl 8, on tryhard ?',                  games:['CS2','Valorant','Apex'],    color:['#FF7EB6','#9146FF'], initial:'A' },
-      { name:'Léa',  age:19, gender:'female', looking:'chill', bio:'Stardew & Animal Crossing, binôme cosy 🌱',        games:['Stardew','Hades'],          color:['#5BE9FF','#9146FF'], initial:'L' },
-      { name:'Mo',   age:23, gender:'male',   looking:'sleep', bio:'Insomniaque. Qui dort en sleepcall ce soir ?',     games:['Minecraft','Rocket League'],color:['#FFB66E','#FF4FA0'], initial:'M' },
-      { name:'Sam',  age:20, gender:'other',  looking:'game',  bio:'LoL main support, je carry les mid 🙃',             games:['LoL','TFT'],                color:['#3BD17C','#5BE9FF'], initial:'S' },
-      { name:'Nora', age:22, gender:'female', looking:'chill', bio:"Films d'horreur + popcorn, t'es chaud ?",          games:['Phasmo','Stardew'],         color:['#A65BFF','#FF7EB6'], initial:'N' },
-      { name:'Theo', age:25, gender:'male',   looking:'game',  bio:'Apex predator EU. Cherche duo sérieux.',           games:['Apex','Warzone'],           color:['#FF4FA0','#9146FF'], initial:'T' },
-      { name:'Iris', age:18, gender:'female', looking:'sleep', bio:'Voix douce, sleepcall calme ☁️',                    games:['Minecraft'],                color:['#5BE9FF','#FF7EB6'], initial:'I' },
-      { name:'Kai',  age:24, gender:'other',  looking:'chill', bio:'Lecture, lo-fi, débats existentiels jusqu\'à 4h.', games:['Disco Elysium'],            color:['#9146FF','#3BD17C'], initial:'K' },
-      { name:'Zoé',  age:21, gender:'female', looking:'game',  bio:'Valo Diamond, mais je rage pas (trop)',            games:['Valorant','Overwatch'],     color:['#FF7EB6','#FFB66E'], initial:'Z' },
-      { name:'Hugo', age:26, gender:'male',   looking:'chill', bio:'Resi 4 marathon. Streaming le soir.',              games:['Resident Evil','Elden Ring'],color:['#6B2BFF','#5BE9FF'], initial:'H' },
+      { name:'Alex',  tag:'alex',     age:21, gender:'male',   looking:'game',  status:'online', activity:{type:'game',  title:'CS2',         sub:'En partie — Dust2 16-12'}, games:['CS2','Valorant','Apex'],     bio:'Faceit lvl 8, on tryhard ?',                  common:{friends:3, servers:2}, c1:'#FF7EB6', c2:'#9146FF', initial:'A' },
+      { name:'Léa',   tag:'leah_',    age:19, gender:'female', looking:'chill', status:'idle',   activity:{type:'music', title:'Spotify',     sub:'Sweater Weather · The Neighbourhood'}, games:['Stardew','Hades'], bio:'Stardew & AC, binôme cosy 🌱',                common:{friends:1, servers:4}, c1:'#5BE9FF', c2:'#9146FF', initial:'L' },
+      { name:'Mo',    tag:'mo.zzz',   age:23, gender:'male',   looking:'sleep', status:'dnd',    activity:{type:'call',  title:'Dans un appel', sub:'Voicechat — Tindord Chill'}, games:['Minecraft','Rocket League'], bio:'Insomniaque. Sleepcall ce soir ?',     common:{friends:0, servers:1}, c1:'#FFB66E', c2:'#FF4FA0', initial:'M' },
+      { name:'Sam',   tag:'sam.exe',  age:20, gender:'other',  looking:'game',  status:'online', activity:{type:'game',  title:'League of Legends', sub:'File d\'attente — Solo/Duo'}, games:['LoL','TFT'], bio:'Main support, je carry les mid 🙃',           common:{friends:5, servers:3}, c1:'#3BD17C', c2:'#5BE9FF', initial:'S' },
+      { name:'Nora',  tag:'noraaa',   age:22, gender:'female', looking:'chill', status:'online', activity:{type:'game',  title:'Phasmophobia', sub:'En partie depuis 23 min'}, games:['Phasmo','Stardew'], bio:"Films d'horreur + popcorn, t'es chaud ?",      common:{friends:2, servers:2}, c1:'#A65BFF', c2:'#FF7EB6', initial:'N' },
+      { name:'Theo',  tag:'theo_apex',age:25, gender:'male',   looking:'game',  status:'online', activity:{type:'game',  title:'Apex Legends', sub:'En partie ranked'}, games:['Apex','Warzone'], bio:'Predator EU. Cherche duo sérieux.',                common:{friends:4, servers:1}, c1:'#FF4FA0', c2:'#9146FF', initial:'T' },
+      { name:'Iris',  tag:'iris_zzz', age:18, gender:'female', looking:'sleep', status:'idle',   activity:{type:'call',  title:'Dans un appel', sub:'2 personnes'}, games:['Minecraft'], bio:'Voix douce, sleepcall calme ☁️',                common:{friends:1, servers:5}, c1:'#5BE9FF', c2:'#FF7EB6', initial:'I' },
+      { name:'Kai',   tag:'kai.lofi', age:24, gender:'other',  looking:'chill', status:'online', activity:{type:'music', title:'Spotify',     sub:'lofi hip hop radio — beats'}, games:['Disco Elysium'], bio:'Lecture, lo-fi, débats jusqu\'à 4h.',          common:{friends:0, servers:6}, c1:'#9146FF', c2:'#3BD17C', initial:'K' },
+      { name:'Zoé',   tag:'zoe.dia',  age:21, gender:'female', looking:'game',  status:'online', activity:{type:'game',  title:'Valorant',    sub:'Ranked — Diamond II'}, games:['Valorant','Overwatch'], bio:'Diamond mais je rage pas (trop)',           common:{friends:6, servers:2}, c1:'#FF7EB6', c2:'#FFB66E', initial:'Z' },
+      { name:'Hugo',  tag:'hugo.rev', age:26, gender:'male',   looking:'chill', status:'dnd',    activity:{type:'game',  title:'Elden Ring',  sub:'Boss : Malenia'}, games:['Resident Evil','Elden Ring'], bio:'Marathon Resi 4, stream le soir.',     common:{friends:2, servers:3}, c1:'#6B2BFF', c2:'#5BE9FF', initial:'H' },
     ];
     let deckIdx = 0;
     function ensureDeck(){
@@ -1702,9 +1763,18 @@
         wrap.appendChild(card);
       }
     }
+    function activityIcon(type){
+      if (type === 'call')  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5be9ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>`;
+      if (type === 'music') return `<svg width="18" height="18" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg>`;
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 12h2M9 11v2M14 12h.01M16 13h.01"/></svg>`;
+    }
+    const STATUS_LABEL = { online:'En ligne', idle:'Inactif', dnd:'Ne pas déranger', offline:'Hors ligne' };
+
     function buildCard(p, isTop){
       const c = document.createElement('div');
-      c.className = 'swipe-card';
+      c.className = 'swipe-card' + (isTop ? ' entering' : '');
+      c.style.setProperty('--c1', p.c1);
+      c.style.setProperty('--c2', p.c2);
       if (!isTop) {
         c.style.transform = 'scale(0.96) translateY(10px)';
         c.style.pointerEvents = 'none';
@@ -1714,15 +1784,36 @@
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
-        <div class="photo" style="background:linear-gradient(160deg, ${p.color[0]} 0%, ${p.color[1]} 100%)">
-          <div class="avi" style="background:linear-gradient(135deg, ${p.color[1]}, ${p.color[0]})">${p.initial}</div>
+        <div class="banner"></div>
+        <div class="avatar-wrap">
+          <div class="avi" style="background:linear-gradient(135deg, ${p.c1}, ${p.c2})">${p.initial}</div>
+          <span class="status-dot ${p.status}"></span>
         </div>
-        <div class="info">
-          <div class="name-row"><span class="name">${p.name}</span><span class="age">${p.age}</span></div>
-          <div class="meta"><span class="chip">${lookLabel}</span>${p.games.map(g => `<span class="chip">🎮 ${g}</span>`).join('')}</div>
-          <p class="bio">${p.bio}</p>
+        <div class="body">
+          <div>
+            <div class="name-row"><span class="name">${p.name}</span><span class="age">${p.age}</span></div>
+            <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
+          </div>
+          <hr class="div"/>
+          <div class="activity">
+            <div class="icon">${activityIcon(p.activity.type)}</div>
+            <div class="lbl"><b>${p.activity.title}</b><span>${p.activity.sub}</span></div>
+          </div>
+          <div class="meta">
+            <span class="chip">${lookLabel}</span>
+            ${p.games.map(g => `<span class="chip">🎮 ${g}</span>`).join('')}
+          </div>
+          <div class="bio">
+            <b>Bio</b>${p.bio}
+          </div>
+          <div class="common">
+            <span><b>${p.common.friends}</b> ami${p.common.friends > 1 ? 's' : ''} en commun</span>
+            <span><b>${p.common.servers}</b> serveur${p.common.servers > 1 ? 's' : ''} en commun</span>
+          </div>
         </div>`;
       if (isTop) attachDrag(c);
+      // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
+      c.addEventListener('animationend', (ev) => { if (ev.animationName === 'cardIn') c.classList.remove('entering'); }, { once:true });
       return c;
     }
     function attachDrag(card){
@@ -1739,6 +1830,12 @@
         document.addEventListener('touchmove', onMove, { passive:false });
         document.addEventListener('touchend', onUp);
       }
+      const wrap = document.getElementById('swipeWrap');
+      const actions = wrap.parentElement.querySelector('.swipe-actions');
+      function setDir(dir){
+        actions.classList.toggle('dir-right', dir === 'right');
+        actions.classList.toggle('dir-left',  dir === 'left');
+      }
       function onMove(e){
         if (!dragging) return;
         if (e.touches) e.preventDefault();
@@ -1747,6 +1844,9 @@
         card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
         like.style.opacity = Math.max(0, Math.min(1, dx / 120));
         nope.style.opacity = Math.max(0, Math.min(1, -dx / 120));
+        if (dx > 40) setDir('right');
+        else if (dx < -40) setDir('left');
+        else setDir(null);
       }
       function onUp(){
         dragging = false;
@@ -1756,7 +1856,7 @@
         document.removeEventListener('touchend', onUp);
         card.style.transition = '';
         if (Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
-        else { card.style.transform = ''; like.style.opacity = 0; nope.style.opacity = 0; }
+        else { card.style.transform = ''; like.style.opacity = 0; nope.style.opacity = 0; setDir(null); }
       }
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });
@@ -1766,6 +1866,8 @@
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
       cardEl.style.opacity = '0';
+      const actions = document.querySelector('#screen-swipe .swipe-actions');
+      if (actions) actions.classList.remove('dir-right', 'dir-left');
       setTimeout(() => { deckIdx++; ensureDeck(); }, 320);
     }
     function topCard(){ return document.querySelector('#swipeWrap .swipe-card:last-child'); }
