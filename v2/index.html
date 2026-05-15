@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tindord — Trouve ton duo, pas juste un pseudo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700,800&display=swap" />
+<style>
+  :root{
+    --bg:        #0D0B1E;
+    --violet:    #9146FF;
+    --violet-2:  #6B2BFF;
+    --pink:      #FF7EB6;
+    --pink-2:    #FF4FA0;
+    --cyan:      #5BE9FF;
+    --ink:       #FFFFFF;
+    --ink-dim:   #B9BBBE;
+    --ink-mute:  #7C7E8C;
+    --stroke:    rgba(255,255,255,0.10);
+    --stroke-2:  rgba(255,255,255,0.14);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-family:"Inter",system-ui,sans-serif}
+  html,body{height:100%;overflow:hidden}
+
+  /* ------------- Background mesh ------------- */
+  .scene{
+    position:fixed;inset:0;z-index:0;overflow:hidden;
+    background:
+      radial-gradient(1200px 800px at 50% -10%, #1c143a 0%, transparent 60%),
+      radial-gradient(900px 700px at 100% 100%, #1a0d2c 0%, transparent 55%),
+      var(--bg);
+  }
+  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.78;mix-blend-mode:screen;will-change:transform}
+  .blob.b1{width:780px;height:780px;left:-140px;top:-180px;background:radial-gradient(circle,#7a2bff 0%,#2a0f55 55%,transparent 70%);animation:drift1 22s ease-in-out infinite alternate}
+  .blob.b2{width:680px;height:680px;right:-120px;top:60px;background:radial-gradient(circle,#ff5fae 0%,#5b1245 55%,transparent 70%);animation:drift2 26s ease-in-out infinite alternate}
+  .blob.b3{width:520px;height:520px;left:18%;bottom:-180px;background:radial-gradient(circle,#5be9ff 0%,#0d3a55 50%,transparent 70%);opacity:.45;animation:drift3 30s ease-in-out infinite alternate}
+  .blob.b4{width:420px;height:420px;right:22%;bottom:-220px;background:radial-gradient(circle,#9146ff 0%,#1d0d3a 55%,transparent 70%);animation:drift4 24s ease-in-out infinite alternate}
+  @keyframes drift1{0%{transform:translate(0,0) scale(1)}100%{transform:translate(120px,80px) scale(1.08)}}
+  @keyframes drift2{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-140px,60px) scale(1.05)}}
+  @keyframes drift3{0%{transform:translate(0,0) scale(1)}100%{transform:translate(80px,-60px) scale(1.1)}}
+  @keyframes drift4{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-90px,-100px) scale(0.95)}}
+
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+
+  /* ------------- Layout ------------- */
+  main{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column}
+
+  /* Header */
+  header{
+    flex:0 0 auto;
+    margin:14px 22px 0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 14px;
+    background:linear-gradient(180deg, rgba(20,16,46,.55), rgba(20,16,46,.35));
+    backdrop-filter:blur(20px) saturate(140%);
+    -webkit-backdrop-filter:blur(20px) saturate(140%);
+    border:1px solid var(--stroke);
+    border-bottom:none;
+    border-radius:18px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-family:"Clash Display",sans-serif;font-weight:700;font-size:20px;letter-spacing:-.01em;text-decoration:none;color:inherit;cursor:pointer}
+  .brand .mark{width:36px;height:36px;display:grid;place-items:center;filter:drop-shadow(0 4px 20px rgba(145,70,255,.6))}
+  .brand .word{background:linear-gradient(180deg,#fff 0%,#d9c6ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .nav{display:flex;align-items:center;gap:6px}
+  .nav a{color:var(--ink-dim);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px;border-radius:10px;transition:.18s ease}
+  .nav a:hover{color:#fff;background:rgba(255,255,255,.04)}
+  /* Floating corner controls */
+  .corner-ctrl{
+    position:fixed;bottom:22px;z-index:15;
+    display:inline-flex;align-items:center;gap:8px;
+    padding:11px 14px;border-radius:13px;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;
+    letter-spacing:.01em;text-decoration:none;cursor:pointer;
+    transition:transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
+  }
+  .corner-ctrl:hover{
+    background:rgba(255,255,255,.10);
+    border-color:rgba(255,255,255,.22);
+    transform:translateY(-2px);
+  }
+  .corner-ctrl--discord{left:18px;bottom:18px;padding:11px;border-radius:14px}
+  .corner-ctrl--discord svg{opacity:.95;width:22px;height:auto}
+
+  /* Language switcher (fresh, isolated) */
+  #langSwitch{
+    position:fixed !important;
+    right:18px !important;
+    bottom:18px !important;
+    top:auto !important;
+    left:auto !important;
+    margin:0 !important;
+    z-index:30;
+  }
+  #langSwitch .ls-btn{
+    all:unset;
+    display:inline-flex;align-items:center;gap:8px;
+    padding:11px 14px;border-radius:13px;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;
+    letter-spacing:.01em;cursor:pointer;
+    box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
+    transition:.18s ease;
+    box-sizing:border-box;
+  }
+  #langSwitch .ls-btn:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);transform:translateY(-2px)}
+  #langSwitch .ls-btn .ls-globe{opacity:.75}
+  #langSwitch .ls-btn .ls-chev{opacity:.7;transition:transform .2s ease}
+  #langSwitch[data-open="true"] .ls-btn .ls-chev{transform:rotate(180deg)}
+  #langSwitch .ls-menu{
+    position:absolute;bottom:calc(100% + 8px);right:0;min-width:188px;
+    list-style:none;margin:0;padding:6px;
+    background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(20,16,46,.92));
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(22px) saturate(150%);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    border-radius:14px;
+    box-shadow:0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04) inset;
+    transform-origin:bottom right;
+    animation:lsIn .16s ease-out;
+  }
+  @keyframes lsIn{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+  #langSwitch .ls-menu li{
+    display:flex;align-items:center;gap:10px;
+    padding:9px 10px;border-radius:9px;cursor:pointer;
+    font-size:13.5px;color:var(--ink-dim);font-weight:500;
+    transition:.12s ease;
+  }
+  #langSwitch .ls-menu li:hover{background:rgba(255,255,255,.06);color:#fff}
+  #langSwitch .ls-menu li[aria-selected="true"]{color:#fff;background:rgba(145,70,255,.18)}
+  #langSwitch .ls-menu .ls-flag{font-size:16px;line-height:1}
+  #langSwitch .ls-menu .ls-check{margin-left:auto;color:var(--pink);font-weight:700}
+  #langSwitch .ls-menu li:not([aria-selected="true"]) .ls-check{display:none}
+
+  .login{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 14px;border-radius:11px;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--stroke-2);
+    color:#fff;font-weight:600;font-size:13.5px;text-decoration:none;
+    transition:.18s ease;
+  }
+  .login:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+  .login .dot{width:7px;height:7px;border-radius:50%;background:#3BD17C;box-shadow:0 0 10px #3BD17C}
+
+  /* Hero */
+  .hero{
+    flex:1 1 auto;
+    position:relative;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:20px 28px 40px;
+    text-align:center;
+  }
+  .badge{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:7px 12px 7px 8px;border-radius:999px;
+    background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(14px);
+    font-size:12.5px;color:var(--ink-dim);font-weight:500;
+    letter-spacing:.01em;
+  }
+  .badge .pulse{width:8px;height:8px;border-radius:50%;background:var(--pink);box-shadow:0 0 0 0 rgba(255,126,182,.7);animation:pulse 2s infinite}
+  .badge b{color:#fff;font-weight:600}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,126,182,.7)}70%{box-shadow:0 0 0 14px rgba(255,126,182,0)}100%{box-shadow:0 0 0 0 rgba(255,126,182,0)}}
+
+  h1{
+    font-family:"Clash Display",sans-serif;
+    font-weight:800;
+    font-size:clamp(96px, 18vw, 240px);
+    line-height:.9;letter-spacing:calc(-.045em + 3px);
+    margin:24px auto 14px;
+    background:linear-gradient(180deg,#fff 0%, #fff 35%, #FF7EB6 65%, #9146FF 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 80px rgba(145,70,255,.25);
+    position:relative;
+  }
+  .tagline{
+    font-family:"Clash Display",sans-serif;font-weight:600;
+    font-size:clamp(18px,2.1vw,28px);
+    letter-spacing:-.01em;color:#fff;margin:0 0 14px;
+  }
+  .tagline .accent{
+    background:linear-gradient(90deg,#FFB1D2 0%,#E0B8FF 55%,#B689FF 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 18px rgba(224,184,255,.35));
+  }
+  .sub{
+    color:var(--ink-dim);font-size:clamp(14px,1.25vw,16px);
+    max-width:48ch;margin:0 auto 30px;line-height:1.55;
+  }
+  .sub b{color:#fff;font-weight:600}
+
+  /* CTA */
+  .cta-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:4px;position:relative;z-index:5}
+  .btn{
+    position:relative;display:inline-flex;align-items:center;gap:12px;
+    padding:18px 26px;border-radius:16px;font-weight:600;font-size:16px;
+    text-decoration:none;color:#fff;cursor:pointer;border:none;
+    transition:transform .18s ease, box-shadow .25s ease;
+    font-family:inherit;
+  }
+  .btn-primary{
+    background:linear-gradient(180deg,#A65BFF 0%, #6B2BFF 100%);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.12) inset,
+      0 8px 24px rgba(107,43,255,.45),
+      0 0 60px rgba(145,70,255,.55),
+      0 0 120px rgba(145,70,255,.35);
+  }
+  .btn-primary::before{
+    content:"";position:absolute;inset:1px;border-radius:15px;
+    background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 45%);
+    pointer-events:none;
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:
+    0 0 0 1px rgba(255,255,255,.16) inset,
+    0 12px 32px rgba(107,43,255,.55),
+    0 0 80px rgba(145,70,255,.7),
+    0 0 160px rgba(255,126,182,.35);}
+  .btn-primary:active{transform:translateY(0)}
+  .btn-ghost{
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(10px);
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,.10);transform:translateY(-2px)}
+  .btn .arr{transition:transform .2s ease}
+  .btn:hover .arr{transform:translateX(3px)}
+
+  .cta-meta{
+    margin-top:22px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+    color:var(--ink-mute);font-size:13px;position:relative;z-index:5;
+  }
+  .cta-meta .stack{display:flex;margin-right:4px}
+  .cta-meta .stack span{
+    width:22px;height:22px;border-radius:50%;
+    border:2px solid var(--bg);
+    margin-left:-7px;
+    background-size:cover;background-position:center;
+  }
+  .cta-meta .stack span:first-child{margin-left:0}
+  .cta-meta b{color:#fff;font-weight:600}
+  .cta-meta .sep{color:#3a3650}
+
+  /* Bubble layer */
+  .bubbles{position:absolute;inset:0;z-index:3;overflow:visible;pointer-events:none}
+  .bubble{pointer-events:auto}
+  .bubble{
+    position:absolute;display:grid;place-items:center;
+    border-radius:50%;
+    background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03));
+    border:1px solid var(--stroke-2);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 12px 40px rgba(13,11,30,.5), 0 0 0 1px rgba(255,255,255,.04) inset;
+    cursor:pointer;will-change:transform;
+    transition:box-shadow .2s ease;
+    user-select:none;
+  }
+  .bubble:hover{box-shadow:0 12px 40px rgba(13,11,30,.5), 0 0 0 1px rgba(255,255,255,.18) inset, 0 0 24px rgba(255,126,182,.35)}
+  .bubble.dying{animation:die .4s cubic-bezier(.2,.7,.3,1) forwards;pointer-events:none}
+  @keyframes die{
+    0%{transform:scale(1) rotate(0);opacity:1;filter:brightness(1)}
+    30%{transform:scale(1.25) rotate(8deg);opacity:1;filter:brightness(2)}
+    100%{transform:scale(.2) rotate(-45deg);opacity:0;filter:brightness(3)}
+  }
+  .bubble svg{width:46%;height:46%;color:#fff;pointer-events:none}
+  .bubble .face{width:100%;height:100%;display:grid;place-items:center;border-radius:50%;font-family:"Clash Display",sans-serif;font-weight:700;font-size:22px;pointer-events:none}
+  .bubble .glow{position:absolute;inset:-2px;border-radius:50%;filter:blur(18px);opacity:.55;z-index:-1;pointer-events:none}
+
+  /* Particles */
+  .particle{
+    position:absolute;pointer-events:none;border-radius:50%;
+    will-change:transform,opacity;
+  }
+
+  /* Bottom corner decorations */
+  .badge.corner{
+    position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+    color:var(--ink-mute);font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;
+    background:none;border:none;backdrop-filter:none;padding:0;
+  }
+  .badge.corner b{color:#fff;font-weight:500;letter-spacing:.04em}
+
+  @media (max-width:780px){
+    header{margin:10px 14px 0}
+    h1{font-size:clamp(72px,22vw,140px)}
+  }
+
+  /* Bigger nav on large screens */
+  @media (min-width:1100px){
+    header{margin:20px 44px 0;padding:14px 22px;border-radius:22px}
+    .brand{font-size:24px;gap:14px}
+    .brand .mark{width:44px;height:44px}
+    .brand .mark svg{width:36px !important;height:40px !important}
+    .brand .word{font-size:26px !important;letter-spacing:-.3px !important;margin:-9px !important;width:auto !important}
+    .login{padding:12px 18px;font-size:15px;border-radius:13px;gap:10px}
+    .login .dot{width:8px;height:8px}
+  }
+
+  /* Auth modal */
+  .auth-backdrop{
+    position:fixed;inset:0;z-index:60;display:none;
+    background:rgba(8,5,22,.62);backdrop-filter:blur(8px) saturate(120%);
+    -webkit-backdrop-filter:blur(8px) saturate(120%);
+    align-items:center;justify-content:center;
+    animation:authIn .18s ease-out;
+  }
+  .auth-backdrop[data-open="true"]{display:flex}
+  @keyframes authIn{from{opacity:0}to{opacity:1}}
+  .auth-card{
+    position:relative;width:min(92vw,420px);
+    padding:30px 28px 26px;border-radius:22px;
+    background:linear-gradient(180deg, rgba(30,22,62,.92), rgba(18,12,42,.94));
+    border:1px solid var(--stroke-2);
+    box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04) inset, 0 0 80px rgba(145,70,255,.25);
+    color:#fff;text-align:center;
+    animation:authCardIn .25s cubic-bezier(.2,.7,.3,1);
+  }
+  @keyframes authCardIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+  .auth-card .auth-close{
+    position:absolute;top:12px;right:12px;width:32px;height:32px;
+    display:grid;place-items:center;border-radius:9px;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid var(--stroke);
+    color:var(--ink-dim);transition:.15s ease;
+  }
+  .auth-card .auth-close:hover{background:rgba(255,255,255,.10);color:#fff}
+  .auth-card h2{
+    font-family:"Clash Display",sans-serif;font-weight:700;
+    font-size:24px;margin:0 0 6px;letter-spacing:-.01em;
+    background:linear-gradient(180deg,#fff 0%,#d9c6ff 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .auth-card .auth-sub{color:var(--ink-dim);font-size:13.5px;margin:0 0 20px}
+  .auth-list{display:flex;flex-direction:column;gap:10px}
+  .auth-btn{
+    display:flex;align-items:center;gap:12px;
+    padding:13px 16px;border-radius:13px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--stroke-2);
+    color:#fff;font-family:inherit;font-size:14.5px;font-weight:600;
+    cursor:pointer;text-decoration:none;text-align:left;
+    transition:.18s ease;
+  }
+  .auth-btn:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+  .auth-btn svg{flex:0 0 auto}
+  .auth-btn .lbl{flex:1}
+  .auth-btn--discord{background:linear-gradient(180deg, rgba(145,70,255,.25), rgba(107,43,255,.18));border-color:rgba(145,70,255,.45)}
+  .auth-btn--discord:hover{background:linear-gradient(180deg, rgba(145,70,255,.4), rgba(107,43,255,.28));border-color:rgba(145,70,255,.65);box-shadow:0 0 30px rgba(145,70,255,.35)}
+</style>
+</head>
+<body>
+
+<div class="scene" aria-hidden="true">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="blob b4"></div>
+</div>
+<div class="grain" aria-hidden="true"></div>
+
+<main>
+  <header data-screen-label="Header">
+    <a href="/" class="brand" id="brandHome" aria-label="Recharger la page">
+      <div class="mark">
+        <!-- Tindord logo: chat-bubble (Discord) silhouette with a d-pad + button cluster inside.
+             No heart. Reads as 'chat × gaming'. -->
+        <svg viewBox="0 0 64 64" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Tindord" style="width: 29px; height: 32px">
+          <defs>
+            <linearGradient id="lg" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="#FF7EB6"/>
+              <stop offset="55%" stop-color="#B36BFF"/>
+              <stop offset="100%" stop-color="#6B2BFF"/>
+            </linearGradient>
+          </defs>
+          <!-- chat-bubble: rounded squircle with a tail bottom-left -->
+          <path d="M16 6 H48 C54.6 6 60 11.4 60 18 V40 C60 46.6 54.6 52 48 52 H28 L16 60 V52 C9.4 52 4 46.6 4 40 V18 C4 11.4 9.4 6 16 6 Z"
+                fill="url(#lg)" style="stroke-width: 0.5px"/>
+          <!-- D-pad cross (left) -->
+          <g fill="#0D0B1E">
+            <rect x="11" y="25" width="14" height="5" rx="1.6"/>
+            <rect x="15.5" y="20.5" width="5" height="14" rx="1.6"/>
+          </g>
+          <!-- 4 face buttons (right) -->
+          <g fill="#0D0B1E">
+            <circle cx="46" cy="22" r="2.4"/>
+            <circle cx="51" cy="27.5" r="2.4"/>
+            <circle cx="41" cy="27.5" r="2.4"/>
+            <circle cx="46" cy="33" r="2.4"/>
+          </g>
+        </svg>
+      </div>
+      <span class="word" style="width: 92px; font-size: 22px; letter-spacing: -0.2px; padding: 0px; margin: -9.23071px">Tindord</span>
+    </a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="#" class="login" id="loginBtn"><span class="dot"></span><span data-i18n="login">Se connecter</span></a>
+    </nav>
+  </header>
+
+  <!-- Auth modal -->
+  <div class="auth-backdrop" id="authModal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <button class="auth-close" id="authClose" type="button" aria-label="Fermer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <h2 id="authTitle" data-i18n="auth_title">Se connecter</h2>
+      <p class="auth-sub" data-i18n="auth_sub">Choisis ta méthode préférée</p>
+      <div class="auth-list">
+        <button class="auth-btn auth-btn--discord" id="authDiscord" type="button">
+          <svg width="22" height="17" viewBox="0 0 71 55" fill="currentColor" aria-hidden="true"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/></svg>
+          <span class="lbl" data-i18n="auth_discord">Continuer avec Discord</span>
+        </button>
+        <button class="auth-btn" id="authGoogle" type="button">
+          <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571.001-.001.002-.001.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+          <span class="lbl" data-i18n="auth_google">Continuer avec Google</span>
+        </button>
+        <button class="auth-btn" id="authEmail" type="button">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          <span class="lbl" data-i18n="auth_email">Continuer avec un email</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <a href="https://discord.gg/NkW4uMmQR" target="_blank" rel="noopener" class="corner-ctrl corner-ctrl--discord" id="joinCorner" aria-label="Rejoindre le Discord" title="Rejoindre le Discord">
+    <svg width="22" height="17" viewBox="0 0 71 55" fill="currentColor" aria-hidden="true" style="stroke-width: 3px; width: 22px; height: 15px"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/></svg>
+  </a>
+
+  <div id="langSwitch" data-open="false">
+    <button class="ls-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+      <span class="ls-current">FR</span>
+      <svg class="ls-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <ul class="ls-menu" role="listbox" hidden>
+      <li role="option" data-code="FR" aria-selected="true">FR<span class="ls-check">✓</span></li>
+      <li role="option" data-code="EN">EN<span class="ls-check">✓</span></li>
+    </ul>
+  </div>
+
+  <section class="hero" data-screen-label="Hero">
+    <div class="bubbles" id="bubbles" aria-hidden="true"></div>
+
+    <span class="badge" role="status">
+      <span class="pulse"></span> <span data-i18n="badge">Bêta ouverte · <b>+10 000 membres</b> sur Discord</span>
+    </span>
+
+    <h1 style="padding: 21.2306px; margin: 0px">Tindord</h1>
+
+    <p class="tagline" data-i18n="tagline">Trouve un <span class="accent">Mate</span> pas juste un random</p>
+
+    <p class="sub" data-i18n="sub"><b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer</p>
+
+    <div class="cta-row">
+      <!-- Discord OAuth2: replace YOUR_CLIENT_ID with the Client ID from your Discord application
+           (https://discord.com/developers/applications). The redirect_uri must be whitelisted there. -->
+      <a class="btn btn-primary" href="https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&response_type=code&scope=identify%20email&redirect_uri=https%3A%2F%2Fnolanrsso.github.io%2FTindord%2F" id="join">
+        <svg width="22" height="17" viewBox="0 0 71 55" fill="currentColor" aria-hidden="true"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/></svg>
+        <span data-i18n="cta">Rejoindre avec Discord</span>
+      </a>
+    </div>
+
+    <div class="cta-meta">
+      <div class="stack" aria-hidden="true">
+        <span style="background:linear-gradient(135deg,#FF7EB6,#9146FF)"></span>
+        <span style="background:linear-gradient(135deg,#5BE9FF,#9146FF)"></span>
+        <span style="background:linear-gradient(135deg,#FFB66E,#FF4FA0)"></span>
+        <span style="background:linear-gradient(135deg,#3BD17C,#5BE9FF)"></span>
+      </div>
+      <span style="color: rgb(185, 187, 190)" data-i18n="online">2 428 en ligne</span>
+      <span class="sep" style="color: rgb(185, 187, 190)">•</span>
+      <span style="color: rgb(185, 187, 190)" data-i18n="tags">Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres</span>
+    </div>
+
+    <div class="badge corner" style="font-size: 9px" data-i18n="footer">EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE</div>
+  </section>
+</main>
+
+<script>
+  /* ====== Animated bubble field with mouse repulsion + click explosion ====== */
+  const layer = document.getElementById('bubbles');
+
+  const ICONS = {
+    pad:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h4M8 10v4"/><circle cx="15.5" cy="12" r=".9" fill="currentColor"/><circle cx="17.5" cy="14" r=".9" fill="currentColor"/><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/></svg>',
+    mic:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>',
+    dice:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1" fill="currentColor" stroke="none"/></svg>',
+    chat:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c0 4.4-4 8-9 8-1.3 0-2.6-.3-3.7-.7L3 21l1.3-4.6C3.5 15.1 3 13.6 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z"/></svg>',
+    heart:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg>',
+    ghost:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V10a7 7 0 0 1 14 0v11l-2-2-2 2-2-2-2 2-2-2-2 2-2-2Z"/><circle cx="9.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="1" fill="currentColor" stroke="none"/></svg>',
+    bolt:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>',
+    sparkle:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6L12 2Z"/></svg>',
+    star:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.4 7 .7-5.3 4.7 1.6 6.8L12 17.7l-6.2 3.4 1.6-6.8L2.1 9.6l7-.7L12 2.5Z"/></svg>',
+    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>',
+  };
+
+  const AVATAR_PALETTES = [
+    ['#FF7EB6','#9146FF','#fff'],
+    ['#5BE9FF','#9146FF','#fff'],
+    ['#FFB66E','#FF4FA0','#0D0B1E'],
+    ['#3BD17C','#5BE9FF','#0D0B1E'],
+    ['#A65BFF','#FF7EB6','#fff'],
+  ];
+
+  const CONFIG = [
+    { kind:'icon', icon:'pad',    size:78, hue:'#9146FF' },
+    { kind:'avatar', letter:'L',  size:68, palette:0 },
+    { kind:'icon', icon:'mic',    size:62, hue:'#5BE9FF' },
+    { kind:'avatar', letter:'M',  size:84, palette:3 },
+    { kind:'icon', icon:'heart',  size:54, hue:'#FF7EB6' },
+    { kind:'avatar', letter:'S',  size:58, palette:2 },
+    { kind:'icon', icon:'chat',   size:50, hue:'#5BE9FF' },
+    { kind:'icon', icon:'bolt',   size:46, hue:'#FF7EB6' },
+    { kind:'avatar', letter:'A',  size:60, palette:1 },
+    { kind:'icon', icon:'star',   size:52, hue:'#9146FF' },
+    { kind:'icon', icon:'target', size:56, hue:'#FF7EB6' },
+    { kind:'icon', icon:'sparkle',size:44, hue:'#5BE9FF' },
+  ];
+
+  let W = layer.clientWidth, H = layer.clientHeight;
+  const bubbles = [];
+  const mouse = { x: -9999, y: -9999, has: false };
+  // exclusion zone (center text)
+  function centerRect(){
+    const r = layer.getBoundingClientRect();
+    return {
+      cx: r.width/2, cy: r.height/2,
+      w: Math.min(r.width*.7, 760), h: 360
+    };
+  }
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  function spawn(cfg, idx, initial){
+    const c = centerRect();
+    const el = document.createElement('div');
+    el.className = 'bubble';
+    el.style.width = cfg.size + 'px';
+    el.style.height = cfg.size + 'px';
+
+    if (cfg.kind === 'icon'){
+      el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div>${ICONS[cfg.icon]}`;
+    } else {
+      const p = AVATAR_PALETTES[cfg.palette];
+      el.innerHTML = `<div class="glow" style="background:${p[0]}"></div><div class="face" style="background:linear-gradient(135deg,${p[0]},${p[1]});color:${p[2]}">${cfg.letter}</div>`;
+    }
+
+    // pick a position outside the center text rect
+    let x, y, tries = 0;
+    do {
+      x = rand(20, W - cfg.size - 20);
+      y = rand(20, H - cfg.size - 20);
+      tries++;
+    } while (insideCenter(x + cfg.size/2, y + cfg.size/2, c) && tries < 40);
+
+    const b = {
+      el, cfg,
+      x, y,
+      vx: rand(-.25,.25),
+      vy: rand(-.25,.25),
+      r: cfg.size/2,
+      phase: Math.random()*Math.PI*2,
+      idx,
+      alive: true,
+    };
+    layer.appendChild(el);
+    el.addEventListener('click', (e) => { e.stopPropagation(); explode(b); });
+    el.addEventListener('mouseenter', () => {
+      // small impulse away from cursor on hover-in
+      const dx = mouse.x - (b.x + b.r);
+      const dy = mouse.y - (b.y + b.r);
+      const d = Math.hypot(dx,dy) || 1;
+      b.vx -= (dx/d) * 1.6;
+      b.vy -= (dy/d) * 1.6;
+    });
+    bubbles.push(b);
+    return b;
+  }
+
+  function insideCenter(px, py, c){
+    return Math.abs(px - c.cx) < c.w/2 && Math.abs(py - c.cy) < c.h/2;
+  }
+
+  function init(){
+    W = layer.clientWidth; H = layer.clientHeight;
+    layer.innerHTML = '';
+    bubbles.length = 0;
+    CONFIG.forEach((cfg, i) => spawn(cfg, i, true));
+  }
+
+  function resize(){
+    W = layer.clientWidth; H = layer.clientHeight;
+  }
+  window.addEventListener('resize', resize);
+
+  window.addEventListener('mousemove', (e) => {
+    const r = layer.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+    mouse.has = true;
+  });
+  window.addEventListener('mouseleave', () => { mouse.has = false; mouse.x = -9999; mouse.y = -9999; });
+
+  /* explosion */
+  function explode(b){
+    if (!b.alive) return;
+    b.alive = false;
+
+    // Center computed from the actual rendered bubble — bulletproof against any
+    // transform / layout edge case. (cx, cy) are coords inside the .bubbles layer.
+    const bubbleRect = b.el.getBoundingClientRect();
+    const layerRect  = layer.getBoundingClientRect();
+    const cx = bubbleRect.left - layerRect.left + bubbleRect.width  / 2;
+    const cy = bubbleRect.top  - layerRect.top  + bubbleRect.height / 2;
+
+    const palette = b.cfg.kind === 'avatar'
+      ? AVATAR_PALETTES[b.cfg.palette]
+      : [b.cfg.hue, '#FF7EB6', '#fff'];
+    const main = palette[0];
+    const accent = palette[1] || '#FF7EB6';
+
+    // 1) Core flash (white → main color) — short, bright
+    const flash = document.createElement('div');
+    flash.className = 'particle';
+    flash.style.cssText = `left:${cx}px;top:${cy}px;width:${b.r*2.2}px;height:${b.r*2.2}px;border-radius:50%;background:radial-gradient(circle, #fff 0%, ${main} 45%, transparent 72%);transform:translate(-50%,-50%) scale(.4);mix-blend-mode:screen;filter:blur(3px)`;
+    layer.appendChild(flash);
+    flash.animate(
+      [{transform:'translate(-50%,-50%) scale(.4)', opacity:1},
+       {transform:'translate(-50%,-50%) scale(1.5)', opacity:.85, offset:.35},
+       {transform:'translate(-50%,-50%) scale(2.4)', opacity:0}],
+      {duration:380, easing:'cubic-bezier(.1,.7,.3,1)', fill:'forwards'}
+    ).onfinish = () => flash.remove();
+
+    // 2) Single clean shockwave ring
+    const ring = document.createElement('div');
+    ring.className = 'particle';
+    ring.style.cssText = `left:${cx}px;top:${cy}px;width:${b.r*2}px;height:${b.r*2}px;border-radius:50%;border:2px solid ${main};transform:translate(-50%,-50%) scale(.7);box-shadow:0 0 24px ${main}, inset 0 0 12px ${main}80`;
+    layer.appendChild(ring);
+    ring.animate(
+      [{transform:'translate(-50%,-50%) scale(.7)', opacity:.9, borderWidth:'2px'},
+       {transform:'translate(-50%,-50%) scale(2.8)', opacity:0,  borderWidth:'.5px'}],
+      {duration:650, easing:'cubic-bezier(.2,.7,.25,1)', fill:'forwards'}
+    ).onfinish = () => ring.remove();
+
+    // 3) Confetti shards — colored chunks tumbling outward
+    const shardCount = 7;
+    for (let i=0; i<shardCount; i++){
+      const s = document.createElement('div');
+      const ssize = rand(b.r*.35, b.r*.7);
+      const c = palette[i % palette.length];
+      s.className = 'particle';
+      s.style.cssText = `left:${cx}px;top:${cy}px;width:${ssize}px;height:${ssize*rand(.5,1)}px;border-radius:${rand(20,50)}% ${rand(40,70)}% ${rand(30,60)}% ${rand(20,50)}%;background:linear-gradient(135deg, ${c}, ${c}66);border:1px solid rgba(255,255,255,.4);box-shadow:0 4px 14px ${c}88;transform:translate(-50%,-50%);`;
+      layer.appendChild(s);
+      const ang = (i/shardCount)*Math.PI*2 + rand(-.3,.3);
+      const dist = rand(110, 200);
+      const dx = Math.cos(ang)*dist;
+      const dy = Math.sin(ang)*dist;
+      const rot = rand(-480, 480);
+      const dur = rand(750, 1100);
+      s.animate(
+        [{transform:'translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1)', opacity:1},
+         {transform:`translate(-50%,-50%) translate(${dx*.55}px, ${dy*.55 - 16}px) rotate(${rot*.5}deg) scale(.95)`, opacity:.95, offset:.45},
+         {transform:`translate(-50%,-50%) translate(${dx}px, ${dy + dist*.85}px) rotate(${rot}deg) scale(.35)`, opacity:0}],
+        {duration:dur, easing:'cubic-bezier(.2,.6,.3,1)', fill:'forwards'}
+      ).onfinish = () => s.remove();
+    }
+
+    // 4) Sparks — small bright dots, radial burst with gravity
+    const sparkN = 24 + Math.floor(Math.random()*6);
+    for (let i=0; i<sparkN; i++){
+      const p = document.createElement('div');
+      const size = rand(3, 6);
+      const c = palette[i % palette.length];
+      p.className = 'particle';
+      p.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;border-radius:50%;background:${c};box-shadow:0 0 12px ${c}, 0 0 3px #fff;transform:translate(-50%,-50%)`;
+      layer.appendChild(p);
+      const ang = (i / sparkN) * Math.PI*2 + rand(-.25,.25);
+      const dist = rand(90, 240);
+      const dx = Math.cos(ang)*dist;
+      const dy = Math.sin(ang)*dist;
+      const grav = rand(70, 140);
+      const dur = rand(700, 1100);
+      p.animate(
+        [{transform:'translate(-50%,-50%) translate(0,0) scale(1.3)', opacity:1},
+         {transform:`translate(-50%,-50%) translate(${dx*.5}px,${dy*.5 - 4}px) scale(1)`, opacity:1, offset:.3},
+         {transform:`translate(-50%,-50%) translate(${dx}px,${dy + grav}px) scale(.15)`, opacity:0}],
+        {duration:dur, easing:'cubic-bezier(.2,.55,.3,1)', fill:'forwards'}
+      ).onfinish = () => p.remove();
+    }
+
+    // 5) Dying bubble — animate with translate preserved (no class‑based @keyframes
+    //    which would clobber the translate and visually “reset” the bubble to 0,0).
+    const startT = `translate(${b.x}px, ${b.y}px)`;
+    b.el.style.pointerEvents = 'none';
+    b.el.animate(
+      [{transform:`${startT} scale(1) rotate(0)`,    opacity:1, filter:'brightness(1)'},
+       {transform:`${startT} scale(1.25) rotate(6deg)`, opacity:1, filter:'brightness(2)', offset:.28},
+       {transform:`${startT} scale(.15) rotate(-32deg)`, opacity:0, filter:'brightness(3)'}],
+      {duration:380, easing:'cubic-bezier(.2,.7,.3,1)', fill:'forwards'}
+    ).onfinish = () => b.el.remove();
+
+    // 6) Shockwave — nudge nearby bubbles outward (also feeds collision system)
+    for (const other of bubbles){
+      if (other === b || !other.alive) continue;
+      const ox = other.x + other.r, oy = other.y + other.r;
+      const dx = ox - cx, dy = oy - cy;
+      const d = Math.hypot(dx, dy);
+      const range = 220;
+      if (d < range){
+        const force = (1 - d/range) * 14;
+        const nx = dx / (d || 1), ny = dy / (d || 1);
+        other.vx += nx * force;
+        other.vy += ny * force;
+      }
+    }
+
+    // respawn after 15 seconds
+    setTimeout(() => respawn(b.cfg, b.idx), 15000);
+    const idx = bubbles.indexOf(b);
+    if (idx >= 0) bubbles.splice(idx, 1);
+  }
+
+  function respawn(cfg, idx){
+    const c = centerRect();
+    // enter strictly from left or right wall, at a random Y
+    const fromRight = Math.random() < 0.5;
+    const x = fromRight ? W + cfg.size : -cfg.size;
+    const y = rand(20, H - cfg.size - 20);
+    const b = spawn(cfg, idx, false);
+    b.x = x; b.y = y;
+    // gentle pull to a random anchor outside center
+    let ax, ay, tries=0;
+    do {
+      ax = rand(40, W - cfg.size - 40);
+      ay = rand(40, H - cfg.size - 40);
+      tries++;
+    } while (insideCenter(ax + cfg.size/2, ay + cfg.size/2, c) && tries < 40);
+    b.vx = (ax - b.x) * 0.005;
+    b.vy = (ay - b.y) * 0.005;
+  }
+
+  /* simulation */
+  function step(){
+    const c = centerRect();
+    for (const b of bubbles){
+      if (!b.alive) continue;
+
+      // tiny idle float via noise
+      b.phase += 0.013;
+      const float = Math.sin(b.phase) * 0.04;
+
+      // mouse repulsion
+      if (mouse.has){
+        const dx = (b.x + b.r) - mouse.x;
+        const dy = (b.y + b.r) - mouse.y;
+        const d2 = dx*dx + dy*dy;
+        const range = 170;
+        if (d2 < range*range){
+          const d = Math.sqrt(d2) || 1;
+          const force = (1 - d/range);
+          b.vx += (dx/d) * force * 1.4;
+          b.vy += (dy/d) * force * 1.4;
+        }
+      }
+
+      // soft push away from center text rect
+      const px = b.x + b.r, py = b.y + b.r;
+      if (insideCenter(px, py, c)){
+        const dx = px - c.cx, dy = py - c.cy;
+        const d = Math.hypot(dx,dy) || 1;
+        b.vx += (dx/d) * 0.5;
+        b.vy += (dy/d) * 0.5;
+      }
+
+      // damping + drift
+      b.vx *= 0.94;
+      b.vy *= 0.94;
+      // ambient return toward a slow drift
+      b.vx += float * 0.1;
+      b.vy += Math.cos(b.phase*.8) * 0.04;
+
+      // clamp max speed
+      const sp = Math.hypot(b.vx, b.vy);
+      const max = 8;
+      if (sp > max){ b.vx = b.vx/sp*max; b.vy = b.vy/sp*max; }
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      // bounce off walls
+      if (b.x < 8){ b.x = 8; b.vx = Math.abs(b.vx)*.6; }
+      if (b.x + b.cfg.size > W - 8){ b.x = W - 8 - b.cfg.size; b.vx = -Math.abs(b.vx)*.6; }
+      if (b.y < 8){ b.y = 8; b.vy = Math.abs(b.vy)*.6; }
+      if (b.y + b.cfg.size > H - 8){ b.y = H - 8 - b.cfg.size; b.vy = -Math.abs(b.vy)*.6; }
+    }
+
+    // === bubble ↔ bubble collisions ===
+    for (let i=0; i<bubbles.length; i++){
+      const a = bubbles[i];
+      if (!a.alive) continue;
+      for (let j=i+1; j<bubbles.length; j++){
+        const b2 = bubbles[j];
+        if (!b2.alive) continue;
+        const ax = a.x + a.r, ay = a.y + a.r;
+        const bx = b2.x + b2.r, by = b2.y + b2.r;
+        const dx = bx - ax, dy = by - ay;
+        const minDist = a.r + b2.r;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < minDist*minDist && d2 > 0.0001){
+          const d = Math.sqrt(d2);
+          const nx = dx / d, ny = dy / d;
+          // positional correction (equal mass)
+          const overlap = (minDist - d) * 0.5;
+          a.x  -= nx * overlap;
+          a.y  -= ny * overlap;
+          b2.x += nx * overlap;
+          b2.y += ny * overlap;
+          // elastic exchange along normal (equal mass)
+          const va = a.vx*nx + a.vy*ny;
+          const vb = b2.vx*nx + b2.vy*ny;
+          if (va - vb > 0){
+            // already separating; skip impulse to avoid sticking jitter
+            continue;
+          }
+          const restitution = 0.85;
+          const impulse = (vb - va) * restitution;
+          a.vx  += nx * impulse;
+          a.vy  += ny * impulse;
+          b2.vx -= nx * impulse;
+          b2.vy -= ny * impulse;
+        }
+      }
+    }
+
+    // commit transforms
+    for (const b of bubbles){
+      if (!b.alive) continue;
+      b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+    }
+    requestAnimationFrame(step);
+  }
+
+  init();
+  requestAnimationFrame(step);
+
+  // background blob parallax
+  const blobsEls = document.querySelectorAll('.blob');
+  let rx=0, ry=0, tx=0, ty=0;
+  window.addEventListener('mousemove', (e) => {
+    tx = (e.clientX / window.innerWidth - .5) * 30;
+    ty = (e.clientY / window.innerHeight - .5) * 30;
+  }, { passive:true });
+  function blobTick(){
+    rx += (tx-rx)*.04; ry += (ty-ry)*.04;
+    blobsEls.forEach((b,i) => {
+      const f = (i+1)*0.6;
+      b.style.translate = `${rx*f}px ${ry*f}px`;
+    });
+    requestAnimationFrame(blobTick);
+  }
+  blobTick();
+
+  // online count drifter
+  const el = document.getElementById('onlineCount');
+  if (el) {
+  let n = 2100, target = 2348 + Math.floor(Math.random()*40);
+  const fmt = v => v.toLocaleString('fr-FR').replace(',', ' ');
+  const tickN = setInterval(() => {
+    n += Math.ceil((target - n) / 18);
+    el.textContent = fmt(n);
+    if (n >= target) { clearInterval(tickN); driftCount(); }
+  }, 30);
+  function driftCount(){
+    setInterval(() => {
+      target = 2300 + Math.floor(Math.random()*120);
+      const dir = target > n ? 1 : -1;
+      const step = setInterval(() => {
+        n += dir;
+        el.textContent = fmt(n);
+        if (n === target) clearInterval(step);
+      }, 200);
+    }, 6000);
+  }
+  }
+
+  // Language switcher
+  (() => {
+    const root = document.getElementById('langSwitch');
+    const btn  = root.querySelector('.ls-btn');
+    const menu = root.querySelector('.ls-menu');
+    const cur  = root.querySelector('.ls-current');
+    let open = false;
+
+    const I18N = {
+      FR: {
+        login:        'Se connecter',
+        badge:        'Bêta ouverte · <b>+10 000 membres</b> sur Discord',
+        tagline:      'Trouve un <span class="accent">Mate</span> pas juste un random',
+        sub:          '<b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer',
+        cta:          'Rejoindre avec Discord',
+        online:       '2 428 en ligne',
+        tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres',
+        footer:       'EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE',
+        auth_title:   'Se connecter',
+        auth_sub:     'Choisis ta méthode préférée',
+        auth_discord: 'Continuer avec Discord',
+        auth_google:  'Continuer avec Google',
+        auth_email:   'Continuer avec un email',
+      },
+      EN: {
+        login:        'Sign in',
+        badge:        'Open beta · <b>+10,000 members</b> on Discord',
+        tagline:      'Find a <span class="accent">Mate</span>, not just a random',
+        sub:          '<b>Swipe</b> Discord profiles, <b>Like</b> the gems you fancy<br><b>Match</b> and game on',
+        cta:          'Join with Discord',
+        online:       '2,428 online',
+        tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Dating',
+        footer:       'POP THE BUBBLES — WHO KNOWS WHAT THEY MIGHT BE HIDING',
+        auth_title:   'Sign in',
+        auth_sub:     'Pick your preferred method',
+        auth_discord: 'Continue with Discord',
+        auth_google:  'Continue with Google',
+        auth_email:   'Continue with email',
+      },
+    };
+
+    function applyLang(code){
+      const dict = I18N[code] || I18N.FR;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        if (dict[k] != null) el.innerHTML = dict[k];
+      });
+      document.documentElement.lang = code.toLowerCase();
+    }
+
+    function setOpen(v){
+      open = v;
+      root.setAttribute('data-open', String(v));
+      btn.setAttribute('aria-expanded', String(v));
+      menu.hidden = !v;
+    }
+    function select(code){
+      cur.textContent = code;
+      menu.querySelectorAll('li').forEach(li => {
+        li.setAttribute('aria-selected', li.dataset.code === code);
+      });
+      applyLang(code);
+      setOpen(false);
+    }
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!open); });
+    menu.addEventListener('click', (e) => {
+      const li = e.target.closest('li[data-code]');
+      if (li) select(li.dataset.code);
+    });
+    document.addEventListener('click', (e) => {
+      if (open && !root.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) setOpen(false); });
+  })();
+
+  // CTA click feedback
+  document.getElementById('join').addEventListener('click', (e) => {
+    const b = e.currentTarget;
+    b.animate(
+      [{ transform: 'translateY(-2px) scale(1)' }, { transform: 'translateY(-2px) scale(0.97)' }, { transform: 'translateY(-2px) scale(1)' }],
+      { duration: 220, easing: 'ease-out' }
+    );
+  });
+
+  // ===== Auth modal =====
+  (() => {
+    const modal = document.getElementById('authModal');
+    const trigger = document.getElementById('loginBtn');
+    const closeBtn = document.getElementById('authClose');
+
+    // OAuth URLs — replace YOUR_*_CLIENT_ID with real Client IDs.
+    const REDIRECT = location.origin + location.pathname;
+    const DISCORD_URL = 'https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&response_type=code&scope=identify%20email&redirect_uri=' + encodeURIComponent(REDIRECT);
+    const GOOGLE_URL  = 'https://accounts.google.com/o/oauth2/v2/auth?client_id=YOUR_GOOGLE_CLIENT_ID&response_type=code&scope=openid%20email%20profile&redirect_uri=' + encodeURIComponent(REDIRECT);
+
+    function open(){
+      modal.setAttribute('data-open', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+    function close(){
+      modal.setAttribute('data-open', 'false');
+      document.body.style.overflow = '';
+    }
+
+    trigger.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.getAttribute('data-open') === 'true') close();
+    });
+
+    document.getElementById('authDiscord').addEventListener('click', () => { window.location.href = DISCORD_URL; });
+    document.getElementById('authGoogle').addEventListener('click',  () => { window.location.href = GOOGLE_URL; });
+    document.getElementById('authEmail').addEventListener('click',   () => {
+      const email = prompt(document.documentElement.lang === 'en' ? 'Your email address:' : 'Ton adresse email :');
+      if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert(document.documentElement.lang === 'en'
+          ? 'Magic link sent to ' + email + ' (demo)'
+          : 'Lien magique envoyé à ' + email + ' (démo)');
+        close();
+      } else if (email !== null) {
+        alert(document.documentElement.lang === 'en' ? 'Invalid email.' : 'Email invalide.');
+      }
+    });
+  })();
+</script>
+</body>
+</html>
