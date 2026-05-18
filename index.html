@@ -656,7 +656,7 @@
   .swipe-card:active{cursor:grabbing}
   .swipe-card .banner{
     height:120px;max-height:120px;background:linear-gradient(135deg, var(--c1,#5865F2) 0%, var(--c2,#9146FF) 100%);
-    position:relative;flex:0 0 auto;overflow:hidden;margin-bottom:-44px;
+    position:relative;flex:0 0 auto;overflow:hidden;
   }
   .swipe-card .banner::after{
     content:"";position:absolute;inset:0;
@@ -664,7 +664,7 @@
     pointer-events:none;
   }
   .swipe-card .avatar-wrap{
-    position:absolute;left:20px;top:66px;width:108px;height:108px;border-radius:50%;
+    position:absolute;left:20px;top:34px;width:108px;height:108px;border-radius:50%;
     padding:7px;background:#1c1d22;display:grid;place-items:center;
   }
   .swipe-card .avatar-wrap .avi{
@@ -701,7 +701,7 @@
   .swipe-card .status-dot.offline{background:#747f8d}
 
   .swipe-card .body{
-    flex:1 1 auto;padding:60px 18px 60px;display:flex;flex-direction:column;gap:12px;
+    flex:1 1 auto;padding:42px 18px 60px;display:flex;flex-direction:column;gap:12px;
     overflow:hidden;position:relative;
   }
   .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
@@ -1104,9 +1104,9 @@
     background:#1c1d22;border:1px solid rgba(255,255,255,.06);
     box-shadow:0 18px 40px rgba(0,0,0,.5);position:relative;
   }
-  .preview-card .pb{height:80px;background:linear-gradient(135deg,#5865F2,#9146FF);position:relative;background-size:cover;background-position:center;border-radius:18px 18px 0 0;overflow:hidden;margin-bottom:-32px}
+  .preview-card .pb{height:62px;background:linear-gradient(135deg,#5865F2,#9146FF);position:relative;background-size:cover;background-position:center;border-radius:14px 14px 0 0;overflow:hidden}
   .preview-card .pa{
-    position:absolute;left:14px;top:48px;width:72px;height:72px;border-radius:50%;padding:4px;
+    position:absolute;left:14px;top:22px;width:58px;height:58px;border-radius:50%;padding:4px;
     background:#1c1d22;display:grid;place-items:center;z-index:2;
   }
   .preview-card .prev-deco{
@@ -1127,7 +1127,7 @@
     background:linear-gradient(135deg,#FF7EB6,#9146FF);
   }
   .preview-card .pa .av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
-  .preview-card .pbody{padding:54px 14px 14px;color:#fff}
+  .preview-card .pbody{padding:32px 12px 10px;color:#fff}
   .preview-card .pn{display:flex;align-items:baseline;gap:6px}
   .preview-card .pn b{font-family:"Clash Display",sans-serif;font-weight:700;font-size:18px}
   .preview-card .pn span{color:#b9bbbe;font-size:14px}
@@ -1151,8 +1151,8 @@
   }
   .acc-card{
     position:relative;
-    width:min(96vw,1180px);max-height:calc(100vh - 110px);
-    padding:18px 22px 80px;border-radius:24px;display:flex;flex-direction:column;min-height:0;
+    width:min(98vw,1280px);height:calc(100vh - 80px);max-height:calc(100vh - 80px);
+    padding:14px 18px 72px;border-radius:22px;display:flex;flex-direction:column;min-height:0;
     background:linear-gradient(180deg, rgba(28,22,58,.78), rgba(18,12,42,.78));
     border:1px solid var(--stroke-2);
     backdrop-filter:blur(22px) saturate(150%);
@@ -1160,6 +1160,30 @@
     box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04) inset;
     color:#fff;
   }
+  /* No-scroll: tabs fit on screen */
+  .acc-tab{overflow:hidden !important;padding-right:0 !important}
+  .acc-section{padding:8px 0 !important;margin-top:4px !important}
+  .acc-section h3{margin:0 0 8px !important;font-size:14.5px !important}
+  .acc-field{margin-top:8px !important}
+  .acc-field label{font-size:12px !important;margin-bottom:4px !important}
+  .acc-input, .acc-select, .acc-field textarea{padding:8px 10px !important;font-size:13px !important}
+  .acc-field textarea{min-height:42px !important;max-height:42px !important}
+  .acc-color-row{gap:6px !important;margin-top:4px !important}
+  .acc-color-swatch{width:28px !important;height:28px !important}
+  .acc-color-swatch[data-color="discord"]{height:28px !important;padding:4px 10px 4px 4px !important;font-size:11px !important}
+  .acc-color-swatch[data-color="discord"] span{width:18px !important;height:18px !important}
+  .acc-color-pick{width:28px !important;height:28px !important}
+  .acc-btn{padding:8px 12px !important;font-size:12.5px !important}
+  .acc-resync-btn{padding:7px 10px !important}
+  .acc-orb-grid{max-height:140px;overflow:auto}
+  .gif-stage{min-height:120px !important;height:120px !important}
+  /* Make 2-column inside profil tab when wide */
+  .acc-tab[data-tab="profil"]{display:grid !important;grid-template-columns:1fr 1fr;gap:14px;align-content:start;height:100%}
+  .acc-tab[data-tab="profil"] > .acc-section,
+  .acc-tab[data-tab="profil"] > .acc-field,
+  .acc-tab[data-tab="profil"] > hr{grid-column:span 1}
+  .acc-tab[data-tab="profil"] > .acc-section:first-child{grid-row:span 3}
+  @media (max-width:780px){ .acc-tab[data-tab="profil"]{grid-template-columns:1fr} }
   /* 2-column main area: identity left, tab content right */
   .acc-main{
     flex:1 1 auto;min-height:0;display:grid;
@@ -1926,9 +1950,9 @@
 
       <!-- Tabs bar -->
       <div class="acc-tabs" id="accTabs">
+        <button type="button" class="acc-tab-btn acc-tab-btn--boost" data-tab="boost"><span class="boost-star">✦</span> Boost</button>
         <button type="button" class="acc-tab-btn active" data-tab="profil">Profil</button>
         <button type="button" class="acc-tab-btn" data-tab="bulles">Bulles <span class="tab-count" id="tabBulleCount" data-show="false">0</span></button>
-        <button type="button" class="acc-tab-btn acc-tab-btn--boost" data-tab="boost"><span class="boost-star">✦</span> Boost</button>
         <button type="button" class="acc-tab-btn" data-tab="infos">Paramètres</button>
       </div>
 
