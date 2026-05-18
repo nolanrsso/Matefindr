@@ -1181,7 +1181,10 @@
   .gif-stage{min-height:90px !important;height:90px !important}
   .acc-actions{margin-top:8px !important}
   .acc-tabs{margin-bottom:8px !important}
-  .boost-banner{padding:8px 12px !important;margin-bottom:8px !important}
+  .boost-banner{padding:8px 12px !important;margin-bottom:0 !important}
+  /* Inline boost banner inside acc-actions row */
+  .acc-actions{display:flex;align-items:center;gap:12px}
+  .boost-banner--inline{flex:1 1 auto;margin-bottom:0 !important;min-width:0}
 
   /* 2-column Profil (left preview, right settings) */
   .acc-tab--2col:not([hidden]){display:grid !important;grid-template-columns:minmax(280px,360px) 1fr;gap:16px;align-content:start;height:100%;overflow:hidden}
@@ -1274,9 +1277,9 @@
   .acc-msg{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:13px;display:none;background:rgba(59,209,124,.12);border:1px solid rgba(59,209,124,.35);color:#9CF0BD}
   .acc-msg[data-show="true"]{display:block;animation:authViewIn .22s ease-out}
 
-  /* Floating save bar — appears at bottom of acc-card on changes */
+  /* Floating save bar — appears at bottom-right of acc-card on changes */
   .acc-save-bar{
-    position:absolute;left:50%;bottom:18px;transform:translateX(-50%) translateY(120%);
+    position:absolute;right:18px;bottom:18px;transform:translateY(120%);
     display:flex;align-items:center;gap:10px;
     padding:10px 14px;border-radius:14px;
     background:rgba(20,21,26,.96);
@@ -1287,7 +1290,7 @@
     opacity:0;pointer-events:none;z-index:20;
     max-width:calc(100% - 36px);
   }
-  .acc-save-bar[data-show="true"]{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+  .acc-save-bar[data-show="true"]{transform:translateY(0);opacity:1;pointer-events:auto}
   .acc-save-bar .acc-save-msg{
     font-size:13px;font-weight:600;color:#fff;margin-right:6px;white-space:nowrap;
   }
@@ -1946,17 +1949,6 @@
        ============================================================ -->
   <section id="screen-account" class="screen">
     <div class="acc-card">
-      <!-- ✨ Boost banner -->
-      <button type="button" class="boost-banner" id="boostBanner">
-        <div class="bb-glow"></div>
-        <span class="bb-emoji">✨</span>
-        <div class="bb-text">
-          <b id="boostBannerTitle">Passer en Tindord Boost</b>
-          <small id="boostBannerSub">18 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
-        </div>
-        <span class="bb-cta" id="boostBannerCta">Découvrir</span>
-      </button>
-
       <!-- Tabs bar -->
       <div class="acc-tabs" id="accTabs">
         <button type="button" class="acc-tab-btn acc-tab-btn--boost" data-tab="boost"><span class="boost-star">✦</span> Boost</button>
@@ -2171,6 +2163,16 @@
 
       <div class="acc-actions">
         <button type="button" class="acc-btn acc-btn--ghost"   id="accBackSwipe" data-i18n="back_to_swipe">← Retour</button>
+        <!-- Boost banner moved to bottom -->
+        <button type="button" class="boost-banner boost-banner--inline" id="boostBanner">
+          <div class="bb-glow"></div>
+          <span class="bb-emoji">✨</span>
+          <div class="bb-text">
+            <b id="boostBannerTitle">Passer en Tindord Boost</b>
+            <small id="boostBannerSub">18 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
+          </div>
+          <span class="bb-cta" id="boostBannerCta">Découvrir</span>
+        </button>
       </div>
       <div class="acc-msg" id="accMsg" data-show="false"></div>
     </div>
