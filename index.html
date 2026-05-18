@@ -1319,20 +1319,19 @@
   .acc-msg{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:13px;display:none;background:rgba(59,209,124,.12);border:1px solid rgba(59,209,124,.35);color:#9CF0BD}
   .acc-msg[data-show="true"]{display:block;animation:authViewIn .22s ease-out}
 
-  /* Floating save bar — appears at bottom-right of acc-card on changes */
+  /* Floating save button — appears inside the frame, bottom-right of tab area */
   .acc-save-bar{
-    position:absolute;right:18px;bottom:18px;transform:translateY(120%);
-    display:flex;align-items:center;gap:10px;
-    padding:10px 14px;border-radius:14px;
-    background:rgba(20,21,26,.96);
-    border:1px solid rgba(255,255,255,.08);
-    box-shadow:0 18px 50px rgba(0,0,0,.65);
-    backdrop-filter:blur(10px);
-    transition:transform .28s cubic-bezier(.2,.7,.3,1), opacity .2s ease;
-    opacity:0;pointer-events:none;z-index:20;
-    max-width:calc(100% - 36px);
+    position:absolute;right:22px;bottom:80px;transform:translateY(10px) scale(.96);
+    display:flex;align-items:center;gap:8px;
+    transition:transform .26s cubic-bezier(.2,.7,.3,1), opacity .2s ease;
+    opacity:0;pointer-events:none;z-index:18;
   }
-  .acc-save-bar[data-show="true"]{transform:translateY(0);opacity:1;pointer-events:auto}
+  .acc-save-bar[data-show="true"]{transform:translateY(0) scale(1);opacity:1;pointer-events:auto}
+  .acc-save-bar .acc-btn--primary{
+    padding:11px 16px !important;font-size:13.5px !important;
+    border-radius:14px !important;
+    box-shadow:0 14px 38px rgba(107,43,255,.55), 0 0 0 1px rgba(255,255,255,.08) inset;
+  }
   .acc-save-bar .acc-save-msg{
     font-size:13px;font-weight:600;color:#fff;margin-right:6px;white-space:nowrap;
   }
@@ -2227,13 +2226,14 @@
         </button>
       </div>
       <div class="acc-msg" id="accMsg" data-show="false"></div>
-    </div>
-
-    <!-- Floating save bar (appears when changes are detected) -->
-    <div class="acc-save-bar" id="accSaveBar" data-show="false">
-      <span class="acc-save-msg">Modifications non enregistrées</span>
-      <button type="button" class="acc-btn acc-btn--ghost" id="accSaveReset">Annuler</button>
-      <button type="button" class="acc-btn acc-btn--primary" id="accSave">Sauvegarder les changements</button>
+      <!-- Single floating save button inside the frame, bottom-right of tab body -->
+      <div class="acc-save-bar" id="accSaveBar" data-show="false">
+        <button type="button" class="acc-btn acc-btn--primary" id="accSave">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Sauvegarder les changements
+        </button>
+        <button type="button" id="accSaveReset" style="display:none"></button>
+      </div>
     </div>
 
     <!-- Floating Discord server button (bottom-right of page in account screen) -->
