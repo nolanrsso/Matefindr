@@ -2251,10 +2251,19 @@
     let displayName = m.global_name || m.full_name || m.name || m.user_name || 'Discord user';
     let discordTag  = (m.user_name || m.preferred_username || m.name || '').replace(/#0$/, '') || null;
 
-    // Enrich from Discord API if provider_token is available
-    const token = session.provider_token;
+    // Enrich from Discord API if provider_token is available.
+    // Try session first, fallback to localStorage (captured at OAuth callback).
+    let token = session.provider_token;
+    if (!token) {
+      const stored = localStorage.getItem('tindord_discord_token');
+      const ts = parseInt(localStorage.getItem('tindord_discord_token_ts') || '0', 10);
+      // Discord access tokens last ~7 days; we keep ours up to 24h to be safe.
+      if (stored && (Date.now() - ts) < 24 * 3600 * 1000) token = stored;
+    }
     if (token) {
+      console.log('[Tindord] Fetching real Discord profile…');
       const d = await fetchDiscordProfile(token);
+      console.log('[Tindord] Discord profile:', d);
       if (d) {
         id = d.id || id;
         if (d.avatar) avatar_url = discordAvatarUrl(d.id, d.avatar);
@@ -4744,15 +4753,39 @@
     // ---------- Supabase: hydrate from session (after OAuth redirect) ----------
     (async () => {
       if (!window.__supa) return;
+
+      // Capture provider_token from URL hash IMMEDIATELY (before Supabase eats it)
+      // because Supabase doesn't persist provider_token between page loads.
+      function capProviderToken(){
+        try {
+          const hash = window.location.hash || '';
+          if (!hash.includes('provider_token')) return;
+          const params = new URLSearchParams(hash.slice(1));
+          const pt = params.get('provider_token');
+          if (pt) {
+            localStorage.setItem('tindord_discord_token', pt);
+            localStorage.setItem('tindord_discord_token_ts', String(Date.now()));
+            console.log('[Tindord] Discord provider_token captured.');
+          }
+        } catch {}
+      }
+      capProviderToken();
+
       try {
         const { data: { session } } = await window.__supa.auth.getSession();
+        console.log('[Tindord] Supabase session:', !!session, 'provider_token:', !!session?.provider_token);
         if (session) {
           const u = await userFromSupabaseSession(session);
           if (u) window.__tindord.onLogin(u);
         }
-        // Keep state in sync if user signs in/out in another tab
-        window.__supa.auth.onAuthStateChange(async (_event, s) => {
+        window.__supa.auth.onAuthStateChange(async (event, s) => {
+          console.log('[Tindord] auth event:', event, 'provider_token:', !!s?.provider_token);
           if (s) {
+            // Save token from session if present (Supabase may include it in SIGNED_IN)
+            if (s.provider_token) {
+              localStorage.setItem('tindord_discord_token', s.provider_token);
+              localStorage.setItem('tindord_discord_token_ts', String(Date.now()));
+            }
             const u = await userFromSupabaseSession(s);
             if (u) window.__tindord.onLogin(u);
           }
