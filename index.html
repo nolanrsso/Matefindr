@@ -1002,6 +1002,38 @@
   .acc-langs button:hover{background:rgba(255,255,255,.08);color:#fff}
   .acc-langs button.active{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 0 0 3px rgba(255,255,255,.05)}
 
+  /* Profile color picker */
+  .acc-color-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .acc-color-swatch{
+    width:34px;height:34px;border-radius:50%;cursor:pointer;position:relative;
+    background:var(--c,#9146FF);border:2px solid rgba(255,255,255,.08);
+    transition:.16s ease;padding:0;font-family:inherit;
+  }
+  .acc-color-swatch:hover{transform:scale(1.1);border-color:rgba(255,255,255,.25)}
+  .acc-color-swatch.active{border-color:#fff;box-shadow:0 0 0 3px rgba(145,70,255,.4)}
+  .acc-color-swatch[data-color="discord"]{
+    width:auto;border-radius:18px;padding:6px 12px 6px 6px;height:34px;
+    display:inline-flex;align-items:center;gap:8px;color:#fff;font-size:12px;font-weight:700;
+    background:rgba(255,255,255,.04);
+  }
+  .acc-color-swatch[data-color="discord"] span{
+    width:22px;height:22px;border-radius:50%;display:block;
+  }
+  .acc-color-pick{
+    width:34px;height:34px;border-radius:50%;cursor:pointer;
+    background:repeating-conic-gradient(#FF7EB6 0% 12%, #FFB66E 12% 24%, #3BD17C 24% 38%, #5BE9FF 38% 52%, #9146FF 52% 68%, #FF4FA0 68% 84%, #FF7EB6 84% 100%);
+    border:2px solid rgba(255,255,255,.10);display:grid;place-items:center;
+    position:relative;overflow:hidden;
+  }
+  .acc-color-pick:hover{border-color:rgba(255,255,255,.30);transform:scale(1.06)}
+  .acc-color-pick input[type="color"]{
+    position:absolute;inset:0;width:100%;height:100%;border:none;opacity:0;cursor:pointer;
+  }
+  .acc-color-pick-ico{
+    color:#fff;font-size:18px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,.6);
+    pointer-events:none;line-height:1;
+  }
+
   /* Social connections */
   .acc-social{display:flex;flex-direction:column;gap:10px}
   .acc-social-row{
@@ -1870,6 +1902,23 @@
             <div class="pbio" id="prevBio">—</div>
             <div class="prev-socials" id="prevSocials"></div>
             <div class="pchips" id="prevChips"></div>
+          </div>
+        </div>
+        <div class="acc-field" style="margin-top:16px">
+          <label style="margin-top:10px;display:block">Couleur de profil <small style="color:#b9bbbe;font-weight:400">(fond de la bannière sur ta carte)</small></label>
+          <div class="acc-color-row">
+            <button type="button" class="acc-color-swatch" data-color="discord" title="Couleur Discord (par défaut)"><span style="background:linear-gradient(135deg,#5865F2,#9146FF)"></span>Discord</button>
+            <button type="button" class="acc-color-swatch" data-color="#9146FF" style="--c:#9146FF"></button>
+            <button type="button" class="acc-color-swatch" data-color="#FF7EB6" style="--c:#FF7EB6"></button>
+            <button type="button" class="acc-color-swatch" data-color="#5BE9FF" style="--c:#5BE9FF"></button>
+            <button type="button" class="acc-color-swatch" data-color="#3BD17C" style="--c:#3BD17C"></button>
+            <button type="button" class="acc-color-swatch" data-color="#FFB66E" style="--c:#FFB66E"></button>
+            <button type="button" class="acc-color-swatch" data-color="#ED4245" style="--c:#ED4245"></button>
+            <button type="button" class="acc-color-swatch" data-color="#1a1a1a" style="--c:#1a1a1a"></button>
+            <label class="acc-color-pick" title="Couleur personnalisée">
+              <span class="acc-color-pick-ico">+</span>
+              <input type="color" id="accProfileColor" value="#9146FF" />
+            </label>
           </div>
         </div>
         <div class="acc-field" style="margin-top:16px">
@@ -3214,6 +3263,8 @@
         avatarUrl: u.avatarUrl || null,
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
+        profileColor: u.profileColor || null,
+        accentColor: u.accentColor || null,
         orbs,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
@@ -3287,9 +3338,13 @@
         c.style.opacity = '0.85';
       }
       const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), now:tx('look_now'), sleep:tx('look_sleep') }[p.looking] || p.looking;
-      const bannerStyle = p.bannerUrl
-        ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
-        : '';
+      const customColor = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
+      const accentHex = (!customColor && p.accentColor) ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
+      const bannerStyle = customColor
+        ? `background:${customColor}`
+        : (p.bannerUrl
+          ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
+          : (accentHex ? `background:${accentHex}` : ''));
       const aviInner = p.avatarUrl
         ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="${p.name}">`
         : p.initial;
@@ -3306,12 +3361,12 @@
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
-        <div class="avatar-wrap${p.nitro ? ' nitro' : ''}">
+        <div class="avatar-wrap${(p.nitro && !p.decorationUrl) ? ' nitro' : ''}${p.decorationUrl ? ' has-deco' : ''}">
           <div class="avi" ${aviStyle}>${aviInner}</div>
           ${decoHtml}
           <span class="status-dot ${p.status}"></span>
         </div>
-        ${p.nitro ? `<span class="nitro-badge">${tx('nitro')}</span>` : ''}
+        ${(p.nitro && !p.decorationUrl) ? `<span class="nitro-badge">${tx('nitro')}</span>` : ''}
         <div class="body">
           <div>
             <div class="name-row">
@@ -4017,10 +4072,12 @@
       const pseudo = (document.getElementById('accPseudo').value || u.displayName || 'Tindord_user').trim();
       const bio    = (document.getElementById('accBio').value || '').trim() || '—';
       const look   = document.getElementById('accLookSel').value;
-      // Banner
+      // Banner — profileColor (user choice) overrides everything
       const banner = document.getElementById('prevBanner');
       if (banner) {
-        if (u.bannerUrl) { banner.style.backgroundImage = `url('${u.bannerUrl}')`; banner.style.backgroundSize = 'cover'; banner.style.backgroundPosition = 'center'; banner.style.background = ''; }
+        const cc = u.profileColor;
+        if (cc && cc !== 'discord') { banner.style.backgroundImage = ''; banner.style.background = cc; }
+        else if (u.bannerUrl) { banner.style.backgroundImage = `url('${u.bannerUrl}')`; banner.style.backgroundSize = 'cover'; banner.style.backgroundPosition = 'center'; banner.style.background = ''; }
         else if (u.accentColor) { banner.style.background = `#${u.accentColor.toString(16).padStart(6,'0')}`; banner.style.backgroundImage = ''; }
         else { banner.style.backgroundImage = ''; banner.style.background = 'linear-gradient(135deg,#5865F2,#9146FF)'; }
       }
@@ -4480,6 +4537,40 @@
         state.user.musicVolume = v;
         save();
       });
+    })();
+
+    // Profile color picker
+    (function bindProfileColor(){
+      const row = document.querySelector('.acc-color-row');
+      if (!row) return;
+      const swatches = row.querySelectorAll('.acc-color-swatch');
+      const picker = document.getElementById('accProfileColor');
+      function applyActive(val){
+        swatches.forEach(s => s.classList.toggle('active', s.dataset.color === val));
+      }
+      function setColor(val){
+        state.user = state.user || {};
+        state.user.profileColor = val;
+        save();
+        refreshAccountPreview();
+      }
+      swatches.forEach(s => {
+        s.addEventListener('click', () => {
+          const val = s.dataset.color;
+          applyActive(val);
+          setColor(val);
+        });
+      });
+      if (picker) {
+        picker.addEventListener('input', () => {
+          applyActive(null);
+          setColor(picker.value);
+        });
+      }
+      // restore on render
+      const stored = (state.user && state.user.profileColor) || 'discord';
+      applyActive(stored);
+      if (picker && stored && stored !== 'discord' && /^#[0-9a-f]{6}$/i.test(stored)) picker.value = stored;
     })();
 
     // Music start time slider
