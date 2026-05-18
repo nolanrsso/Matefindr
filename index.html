@@ -345,15 +345,19 @@
     display:grid;place-items:center;border:2px solid #0D0B1E;
   }
 
-  /* Messages panel — full page */
+  /* Messages panel — slide-out drawer */
   .msg-panel{
-    position:fixed;inset:0;width:100%;z-index:60;
+    position:fixed;left:0;bottom:0;
+    width:min(420px,96vw);height:min(640px,calc(100vh - 40px));
+    border-radius:18px;margin:0 0 12px 12px;z-index:60;
     background:rgba(15,15,20,.96);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 30px 80px rgba(0,0,0,.65);
     backdrop-filter:blur(28px) saturate(160%);
     -webkit-backdrop-filter:blur(28px) saturate(160%);
     opacity:0;transform:translateY(12px);pointer-events:none;
     transition:opacity .25s ease, transform .3s cubic-bezier(.2,.7,.3,1);
-    display:flex;flex-direction:column;color:#fff;
+    display:flex;flex-direction:column;color:#fff;overflow:hidden;
   }
   .msg-panel[data-open="true"]{opacity:1;transform:translateY(0);pointer-events:auto}
   .msg-head{
@@ -993,10 +997,10 @@
   .tab-count[data-show="true"]{display:inline-flex}
   .acc-tab-btn.active .tab-count{background:rgba(255,255,255,.30)}
 
-  /* Identity panel — only visible on Profil tab */
-  body[data-screen="account"] .acc-card[data-current-tab="profil"] .acc-identity{display:flex}
-  body[data-screen="account"] .acc-card:not([data-current-tab="profil"]) .acc-identity{display:none}
-  body[data-screen="account"] .acc-card:not([data-current-tab="profil"]) .acc-main{grid-template-columns:1fr}
+  /* Identity panel (now profile card preview) — visible on ALL tabs */
+  body[data-screen="account"] .acc-identity{display:flex !important;flex-direction:column;gap:8px}
+  .acc-identity > h3{font-size:14px !important}
+  .acc-identity .preview-card{margin:0 !important;max-width:none !important}
 
   /* Danger zone in Paramètres */
   .acc-danger-zone{display:flex;flex-direction:column;gap:8px;margin-top:8px}
@@ -1199,7 +1203,7 @@
   /* 2-column main area: identity left, tab content right */
   .acc-main{
     flex:1 1 auto;min-height:0;display:grid;
-    grid-template-columns:300px 1fr;gap:22px;
+    grid-template-columns:280px 1fr;gap:18px;
   }
   .acc-identity{
     display:flex;flex-direction:column;gap:14px;
@@ -1957,17 +1961,27 @@
         <button type="button" class="acc-tab-btn" data-tab="infos">Paramètres</button>
       </div>
 
-      <!-- 2-column main: identity (left) + tab content (right) -->
+      <!-- 2-column main: profile card preview (left, all tabs) + tab content (right) -->
       <div class="acc-main">
-        <!-- LEFT: identity (avatar, pseudo, bio) — permanent across tabs -->
+        <!-- LEFT: profile card preview — visible on all tabs -->
         <aside class="acc-identity">
-          <div class="acc-avatar-wrap">
-            <div class="acc-avatar" id="accAvatar" title="Cliquer pour changer">?</div>
-            <input type="file" id="accAvatarFile" accept="image/*" style="display:none" />
-            <h2 class="acc-name" id="accName">—</h2>
-            <p class="acc-handle" id="accHandle">@—</p>
+          <h3 style="margin:0 0 8px;text-align:left">Aperçu du profil</h3>
+          <div class="preview-card" id="accPreview">
+            <div class="pb" id="prevBanner"></div>
+            <div class="pa">
+              <div class="av" id="prevAv">?</div>
+              <img class="prev-deco" id="prevDeco" src="" alt="" style="display:none">
+            </div>
+            <div class="pbody">
+              <div class="prev-badge-row" id="prevBadgeRow" style="display:none"></div>
+              <div class="pn"><b id="prevName">—</b><span id="prevAge"></span></div>
+              <div class="ph" id="prevHandle">@—</div>
+              <div class="pbio" id="prevBio">—</div>
+              <div class="prev-socials" id="prevSocials"></div>
+              <div class="pchips" id="prevChips"></div>
+            </div>
           </div>
-          <div class="acc-field">
+          <div class="acc-field" style="margin-top:8px">
             <label>Pseudo</label>
             <input class="acc-input" id="accPseudo" type="text" maxlength="32" placeholder="Tindord_user" />
           </div>
@@ -1975,32 +1989,18 @@
             <label>Bio</label>
             <textarea id="accBio" maxlength="280" placeholder="Parle un peu de toi…"></textarea>
           </div>
+          <!-- Hidden originals (avoid duplicate IDs) -->
+          <div style="display:none">
+            <span id="accAvatar"></span><span id="accName"></span><span id="accHandle"></span>
+            <input type="file" id="accAvatarFile" accept="image/*" />
+          </div>
         </aside>
 
         <!-- RIGHT: tab content -->
         <div class="acc-tab-body">
 
       <!-- 🪪 Profil -->
-      <div class="acc-section acc-tab acc-tab--2col" data-tab="profil">
-        <div class="acc-col-left">
-        <h3>Apercu profil <span class="pill">LIVE</span></h3>
-        <div class="preview-card" id="accPreview">
-          <div class="pb" id="prevBanner"></div>
-          <div class="pa">
-            <div class="av" id="prevAv">?</div>
-            <img class="prev-deco" id="prevDeco" src="" alt="" style="display:none">
-          </div>
-          <div class="pbody">
-            <div class="prev-badge-row" id="prevBadgeRow"></div>
-            <div class="pn"><b id="prevName">—</b><span id="prevAge"></span></div>
-            <div class="ph" id="prevHandle">@—</div>
-            <div class="pbio" id="prevBio">—</div>
-            <div class="prev-socials" id="prevSocials"></div>
-            <div class="pchips" id="prevChips"></div>
-          </div>
-        </div>
-        </div>
-        <div class="acc-col-right">
+      <div class="acc-section acc-tab" data-tab="profil">
         <div class="acc-field">
           <label style="margin-top:10px;display:block">Couleur de profil <small style="color:#b9bbbe;font-weight:400">(fond de la bannière sur ta carte)</small></label>
           <div class="acc-color-row">
@@ -2026,15 +2026,12 @@
           </button>
           <small id="accResyncHint" style="color:#b9bbbe;font-weight:400;font-size:11.5px;display:block;margin-top:6px">Récupère ton avatar, bannière, décoration et badges depuis Discord</small>
         </div>
-        <div class="acc-field">
-          <label>Je cherche</label>
-          <select class="acc-select" id="accLookSel">
-            <option value="chill">🛋️ Chill</option>
-            <option value="game">🎮 Une game</option>
-            <option value="now">⌨️ Mate maintenant</option>
-            <option value="sleep">💤 Sleepcall</option>
-          </select>
-        </div>
+        <select class="acc-select" id="accLookSel" style="display:none">
+          <option value="chill">🛋️ Chill</option>
+          <option value="game">🎮 Une game</option>
+          <option value="now">⌨️ Mate maintenant</option>
+          <option value="sleep">💤 Sleepcall</option>
+        </select>
 
         <h3 style="margin-top:10px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
         <div class="acc-social">
@@ -2057,7 +2054,6 @@
             <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
           </div>
         </div>
-        </div><!-- /acc-col-right -->
       </div>
 
       <!-- 🫧 Mes Bulles -->
