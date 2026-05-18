@@ -962,9 +962,45 @@
     flex:1 1 auto;min-width:64px;padding:8px 10px;border-radius:10px;border:none;
     background:transparent;color:#b9bbbe;font-family:inherit;font-weight:700;font-size:12px;
     cursor:pointer;transition:.15s ease;white-space:nowrap;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;position:relative;
   }
   .acc-tab-btn:hover{color:#fff;background:rgba(255,255,255,.05)}
   .acc-tab-btn.active{background:linear-gradient(180deg,#A65BFF,#6B2BFF);color:#fff;box-shadow:0 4px 14px rgba(107,43,255,.35)}
+
+  /* Boost tab — premium yellow */
+  .acc-tab-btn--boost{
+    color:#FFD83D;background:rgba(255,216,61,.06);
+    box-shadow:inset 0 0 0 1px rgba(255,216,61,.30);
+  }
+  .acc-tab-btn--boost .boost-star{
+    display:inline-block;font-size:13px;line-height:1;color:#FFD83D;text-shadow:0 0 6px rgba(255,216,61,.6);
+  }
+  .acc-tab-btn--boost:hover{
+    color:#fff;background:rgba(255,216,61,.18);box-shadow:inset 0 0 0 1px rgba(255,216,61,.55);
+  }
+  .acc-tab-btn--boost.active{
+    background:linear-gradient(180deg,#FFE066,#E5A800);color:#1a1100;
+    box-shadow:0 6px 22px rgba(255,216,61,.55), inset 0 0 0 1px rgba(255,255,255,.4);
+  }
+  .acc-tab-btn--boost.active .boost-star{color:#1a1100;text-shadow:none}
+
+  /* Tab count chip */
+  .tab-count{
+    display:none;min-width:18px;height:18px;padding:0 5px;border-radius:999px;
+    background:rgba(255,255,255,.18);color:#fff;font-size:10.5px;font-weight:800;
+    align-items:center;justify-content:center;line-height:1;
+  }
+  .tab-count[data-show="true"]{display:inline-flex}
+  .acc-tab-btn.active .tab-count{background:rgba(255,255,255,.30)}
+
+  /* Identity panel — only visible on Profil tab */
+  body[data-screen="account"] .acc-card[data-current-tab="profil"] .acc-identity{display:flex}
+  body[data-screen="account"] .acc-card:not([data-current-tab="profil"]) .acc-identity{display:none}
+  body[data-screen="account"] .acc-card:not([data-current-tab="profil"]) .acc-main{grid-template-columns:1fr}
+
+  /* Danger zone in Paramètres */
+  .acc-danger-zone{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .acc-danger-zone .acc-btn--danger{margin-left:0 !important}
   .acc-tab-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
   .acc-tab{flex:1 1 auto;min-height:0;overflow:auto;padding-right:4px}
   .acc-tab[hidden]{display:none !important}
@@ -1891,9 +1927,9 @@
       <!-- Tabs bar -->
       <div class="acc-tabs" id="accTabs">
         <button type="button" class="acc-tab-btn active" data-tab="profil">Profil</button>
-        <button type="button" class="acc-tab-btn" data-tab="bulles">Bulles & Comptes</button>
-        <button type="button" class="acc-tab-btn" data-tab="boost">Boost</button>
-        <button type="button" class="acc-tab-btn" data-tab="infos">Infos</button>
+        <button type="button" class="acc-tab-btn" data-tab="bulles">Bulles <span class="tab-count" id="tabBulleCount" data-show="false">0</span></button>
+        <button type="button" class="acc-tab-btn acc-tab-btn--boost" data-tab="boost"><span class="boost-star">✦</span> Boost</button>
+        <button type="button" class="acc-tab-btn" data-tab="infos">Paramètres</button>
       </div>
 
       <!-- 2-column main: identity (left) + tab content (right) -->
@@ -1971,29 +2007,9 @@
             <option value="sleep">💤 Sleepcall</option>
           </select>
         </div>
-      </div>
-
-      <!-- 🫧 Mes Bulles -->
-      <div class="acc-section acc-tab" data-tab="bulles" hidden>
-        <h3>Mes Bulles <span class="pill" id="orbCounterPill">0/5</span></h3>
-        <div class="acc-orb-cats" id="accOrbCats">
-          <button type="button" class="acc-orb-cat active" data-kind="music">Musique</button>
-          <button type="button" class="acc-orb-cat" data-kind="game">Jeu</button>
-          <button type="button" class="acc-orb-cat" data-kind="anime">Anime</button>
-        </div>
-        <div class="acc-orb-form">
-          <div class="acc-orb-input-wrap">
-            <input class="acc-input" id="accOrbInput" type="text" placeholder="Recherche un son Spotify…" autocomplete="off" />
-            <div class="spotify-sugg" id="spotifySugg"></div>
-          </div>
-          <button type="button" class="acc-orb-add" id="accOrbAdd">+</button>
-        </div>
-        <div class="acc-orb-grid" id="accOrbGrid"></div>
-
-        <button type="button" class="acc-btn acc-btn--ghost" id="orbPreviewBtn" style="margin-top:12px;width:100%">Apercu du profil</button>
 
         <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:18px 0 12px" />
-        <h3 style="margin-bottom:8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:12px">(apparaissent sur ta carte)</small></h3>
+        <h3 style="margin-bottom:8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:12px">(cliquables sur ta carte de swipe)</small></h3>
         <div class="acc-social">
           <div class="acc-social-row" data-kind="instagram">
             <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
@@ -2014,6 +2030,26 @@
             <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
           </div>
         </div>
+      </div>
+
+      <!-- 🫧 Mes Bulles -->
+      <div class="acc-section acc-tab" data-tab="bulles" hidden>
+        <h3>Mes Bulles <span class="pill" id="orbCounterPill">0/5</span></h3>
+        <div class="acc-orb-cats" id="accOrbCats">
+          <button type="button" class="acc-orb-cat active" data-kind="music">Musique</button>
+          <button type="button" class="acc-orb-cat" data-kind="game">Jeu</button>
+          <button type="button" class="acc-orb-cat" data-kind="anime">Anime</button>
+        </div>
+        <div class="acc-orb-form">
+          <div class="acc-orb-input-wrap">
+            <input class="acc-input" id="accOrbInput" type="text" placeholder="Recherche un son Spotify…" autocomplete="off" />
+            <div class="spotify-sugg" id="spotifySugg"></div>
+          </div>
+          <button type="button" class="acc-orb-add" id="accOrbAdd">+</button>
+        </div>
+        <div class="acc-orb-grid" id="accOrbGrid"></div>
+
+        <button type="button" class="acc-btn acc-btn--ghost" id="orbPreviewBtn" style="margin-top:12px;width:100%">Apercu du profil</button>
       </div>
 
       <!-- ✨ Boost-only options -->
@@ -2063,12 +2099,15 @@
         </div>
       </div>
 
-      <!-- Infos + Langue (merged) -->
+      <!-- Paramètres -->
       <div class="acc-section acc-tab" data-tab="infos" hidden>
-        <h3 data-i18n="acc_lang">Langue & infos</h3>
-        <div class="acc-langs" id="accLangs">
-          <button type="button" data-val="FR">🇫🇷 Français</button>
-          <button type="button" data-val="EN">🇬🇧 English</button>
+        <h3>Paramètres</h3>
+        <div class="acc-field">
+          <label data-i18n="acc_lang">Langue</label>
+          <div class="acc-langs" id="accLangs">
+            <button type="button" data-val="FR">🇫🇷 Français</button>
+            <button type="button" data-val="EN">🇬🇧 English</button>
+          </div>
         </div>
         <div class="acc-grid2" style="margin-top:14px">
           <div class="acc-field"><label data-i18n="acc_gender">Genre</label><div class="val" id="accGender">—</div></div>
@@ -2082,6 +2121,13 @@
           <label>Debut de la musique <span id="musicStartVal" style="color:#b9bbbe;font-weight:400;margin-left:6px">0s</span></label>
           <input type="range" id="musicStartTime" min="0" max="28" value="0" style="width:100%;accent-color:#9146FF;margin-top:6px" />
         </div>
+
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:22px 0 14px" />
+        <h3 style="color:#FF7EB6">Zone dangereuse</h3>
+        <div class="acc-danger-zone">
+          <button type="button" class="acc-btn acc-btn--ghost" id="accLogout" data-i18n="logout" style="width:100%;margin-bottom:10px">Se déconnecter</button>
+          <button type="button" class="acc-btn acc-btn--danger" id="accDeleteAccount" style="width:100%;margin-left:0">Supprimer mon compte</button>
+        </div>
       </div>
 
         </div><!-- /acc-tab-body -->
@@ -2089,7 +2135,6 @@
 
       <div class="acc-actions">
         <button type="button" class="acc-btn acc-btn--ghost"   id="accBackSwipe" data-i18n="back_to_swipe">← Retour</button>
-        <button type="button" class="acc-btn acc-btn--danger"  id="accLogout" data-i18n="logout">Se déconnecter</button>
       </div>
       <div class="acc-msg" id="accMsg" data-show="false"></div>
     </div>
@@ -4033,11 +4078,18 @@
         grid.appendChild(item);
       });
       const pill = document.getElementById('orbCounterPill');
+      const used = orbsUsed();
+      const max = orbBudget();
       if (pill) {
-        const used = orbsUsed();
-        const max = orbBudget();
         const sc = socialsCount();
         pill.textContent = used + '/' + max + (sc ? ' (' + sc + ' social' + (sc>1?'s':'') + ')' : '');
+      }
+      // Sync the chip next to the Bulles tab
+      const tabCount = document.getElementById('tabBulleCount');
+      if (tabCount) {
+        const orbsOnly = ((state.profile && state.profile.userOrbs) || []).length;
+        tabCount.textContent = orbsOnly;
+        tabCount.setAttribute('data-show', orbsOnly > 0 ? 'true' : 'false');
       }
     }
 
@@ -4130,6 +4182,9 @@
 
     // ---------- Account screen ----------
     function renderAccount(){
+      // Ensure data-current-tab is set on first open (defaults to 'profil')
+      const card = document.querySelector('#screen-account .acc-card');
+      if (card && !card.hasAttribute('data-current-tab')) card.setAttribute('data-current-tab', 'profil');
       const u = state.user || {};
       const p = state.profile || {};
       document.getElementById('accName').textContent = u.displayName || u.email || 'Tindord user';
@@ -4270,6 +4325,9 @@
         document.querySelectorAll('#screen-account .acc-tab').forEach(p => {
           p.hidden = (p.dataset.tab !== t);
         });
+        // Track current tab on acc-card for identity panel visibility
+        const card = document.querySelector('#screen-account .acc-card');
+        if (card) card.setAttribute('data-current-tab', t);
       });
     });
 
@@ -4811,10 +4869,14 @@
        If any field differs from the snapshot, the floating save bar appears. */
     let _accSnapshot = null;
     function _accSnap(){
+      const fn = document.getElementById('boostFakeNitro');
+      const gf = document.getElementById('boostGenderFilter');
       return JSON.stringify({
         pseudo: document.getElementById('accPseudo').value,
         bio:    document.getElementById('accBio').value,
         look:   document.getElementById('accLookSel').value,
+        fakeNitro: fn ? !!fn.checked : false,
+        gender: gf ? gf.value : 'all',
       });
     }
     function refreshSaveBar(){
@@ -4830,7 +4892,7 @@
     (function hookAccountSnapshot(){
       const origSet = window.setScreen;
       // Use a MutationObserver-free approach: just listen to inputs and reset on save
-      ['accPseudo','accBio','accLookSel'].forEach(id => {
+      ['accPseudo','accBio','accLookSel','boostFakeNitro','boostGenderFilter'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', refreshSaveBar);
         if (el) el.addEventListener('change', refreshSaveBar);
@@ -4843,6 +4905,23 @@
       state.profile.looking = document.getElementById('accLookSel').value;
       const pseudo = document.getElementById('accPseudo').value.trim();
       if (pseudo) { state.user = state.user || {}; state.user.displayName = pseudo; }
+
+      // If the user edited Boost-only options without being premium, auto-impose Boost
+      const fakeNitro = !!document.getElementById('boostFakeNitro').checked;
+      const genderFilter = document.getElementById('boostGenderFilter').value || 'all';
+      const usingBoostFeatures = fakeNitro || (genderFilter && genderFilter !== 'all')
+        || !!(state.user && state.user.swipeMusic)
+        || !!(state.user && Array.isArray(state.user.gifs) && state.user.gifs.length);
+      if (usingBoostFeatures && !(state.user && state.user.boost)) {
+        state.user = state.user || {};
+        state.user.boost = true;
+        state.user.boostPlan = state.user.boostPlan || 'monthly';
+        state.user.fakeNitro = fakeNitro;
+        state.user.genderFilter = genderFilter;
+        if (typeof refreshBoostUI === 'function') refreshBoostUI();
+        showToast && showToast('✦', 'Tindord Boost activé', 'Tes options premium sont appliquées');
+      }
+
       save();
       updateChip();
       refreshMyStatusUI();
@@ -4854,6 +4933,15 @@
       setTimeout(() => msg.setAttribute('data-show', 'false'), 1800);
     }
     document.getElementById('accSave').addEventListener('click', doAccSave);
+    // Delete account
+    document.getElementById('accDeleteAccount').addEventListener('click', () => {
+      if (!confirm('Supprimer définitivement ton compte Tindord ? Toutes tes données locales seront effacées.')) return;
+      try { localStorage.clear(); } catch {}
+      try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch {}
+      state = { user:null, profile:null };
+      setAuth(false);
+      setScreen('landing');
+    });
     document.getElementById('accSaveReset').addEventListener('click', () => {
       // Revert fields to last snapshot
       const u = state.user || {}; const p = state.profile || {};
