@@ -758,11 +758,22 @@
     background:#2b2d31;border-radius:10px;padding:10px 12px;
   }
   .swipe-card .bio b{color:#fff;display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
-  /* Avatar decoration overlay */
+  /* Avatar decoration overlay (APNG from Discord auto-animates) */
   .swipe-card .avatar-wrap{position:relative}
   .swipe-card .avi-deco{
     position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);
     object-fit:contain;pointer-events:none;z-index:3;
+    animation: decoFloat 4s ease-in-out infinite, decoGlow 3.6s ease-in-out infinite;
+    filter:drop-shadow(0 0 6px rgba(145,70,255,.0));
+    transform-origin:center;
+  }
+  @keyframes decoFloat{
+    0%,100% { transform: translateY(0) scale(1) rotate(0deg); }
+    50%     { transform: translateY(-2px) scale(1.015) rotate(.6deg); }
+  }
+  @keyframes decoGlow{
+    0%,100% { filter: drop-shadow(0 0 6px rgba(145,70,255,.0)) drop-shadow(0 0 2px rgba(255,255,255,0)); }
+    50%     { filter: drop-shadow(0 0 14px rgba(145,70,255,.65)) drop-shadow(0 0 4px rgba(91,233,255,.35)); }
   }
 
   /* Discord badges row on card */
@@ -1010,13 +1021,20 @@
   }
   .acc-preview-wrap .swipe-card .badge-stamp,
   .acc-preview-wrap .swipe-card .badge-picker-btn{display:none !important}
-  /* Animated avatar decoration (Discord APNG) */
-  .swipe-card .avi-deco{animation:none}
-  /* Animated profile decoration ring — when no real Discord deco, gentle glow */
+  /* Animated profile decoration ring — extra glow around the avatar */
   .swipe-card .avatar-wrap.has-deco::before{
     content:'';position:absolute;inset:-3px;border-radius:50%;
     background:conic-gradient(from 0deg, rgba(255,255,255,0), rgba(145,70,255,.55), rgba(91,233,255,.55), rgba(255,126,182,.55), rgba(255,255,255,0));
     filter:blur(4px);opacity:.55;animation:nitroSpin 8s linear infinite;z-index:0;pointer-events:none;
+  }
+  /* Profile body color shimmer — when user has a profile color set */
+  .swipe-card[style*="background:"]{
+    background-size:200% 200% !important;
+    animation: profileShimmer 12s ease-in-out infinite;
+  }
+  @keyframes profileShimmer{
+    0%,100% { background-position: 0% 0%; }
+    50%     { background-position: 100% 100%; }
   }
 
   /* Danger zone in Paramètres */
