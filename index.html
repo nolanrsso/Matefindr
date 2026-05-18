@@ -668,8 +668,11 @@
     pointer-events:none;
   }
   .swipe-card .avatar-wrap{
-    position:absolute;left:20px;top:12px;width:108px;height:108px;border-radius:50%;
+    /* top:120px = exactly the banner bottom edge ; translateY(-50%) centers the avatar on that edge
+       → 50% of the avatar overlaps the banner, 50% sits on the body (Discord style) */
+    position:absolute;left:20px;top:120px;width:108px;height:108px;border-radius:50%;
     padding:7px;background:#1c1d22;display:grid;place-items:center;z-index:5;
+    transform:translateY(-50%);
   }
   .swipe-card .avatar-wrap .avi{
     width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
@@ -705,7 +708,7 @@
   .swipe-card .status-dot.offline{background:#747f8d}
 
   .swipe-card .body{
-    flex:1 1 auto;padding:30px 18px 60px;display:flex;flex-direction:column;gap:12px;
+    flex:1 1 auto;padding:62px 18px 60px;display:flex;flex-direction:column;gap:12px;
     overflow:hidden;position:relative;
   }
   .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
@@ -1194,7 +1197,7 @@
   }
   .acc-card{
     position:relative;
-    width:min(98vw,1280px);height:calc(100vh - 60px);max-height:calc(100vh - 60px);
+    width:min(98vw,1280px);max-height:calc(100vh - 140px);
     padding:12px 16px 14px;border-radius:22px;display:flex;flex-direction:column;min-height:0;
     background:linear-gradient(180deg, rgba(28,22,58,.78), rgba(18,12,42,.78));
     border:1px solid var(--stroke-2);
@@ -1212,7 +1215,7 @@
   .acc-field{margin-top:6px !important}
   .acc-field label{font-size:11.5px !important;margin-bottom:3px !important}
   .acc-input, .acc-select, .acc-field textarea{padding:7px 10px !important;font-size:12.5px !important}
-  .acc-field textarea{min-height:38px !important;max-height:38px !important}
+  .acc-field textarea{min-height:96px !important;max-height:160px !important;resize:vertical !important}
   .acc-color-row{gap:5px !important;margin-top:3px !important}
   .acc-color-swatch{width:26px !important;height:26px !important}
   .acc-color-swatch[data-color="discord"]{height:26px !important;padding:3px 8px 3px 3px !important;font-size:10.5px !important}
@@ -1319,18 +1322,23 @@
   .acc-msg{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:13px;display:none;background:rgba(59,209,124,.12);border:1px solid rgba(59,209,124,.35);color:#9CF0BD}
   .acc-msg[data-show="true"]{display:block;animation:authViewIn .22s ease-out}
 
-  /* Floating save button — appears inside the frame, bottom-right of tab area */
+  /* Save button — sits inline next to "← Retour" on the right side of the actions row */
   .acc-save-bar{
-    position:absolute;right:22px;bottom:80px;transform:translateY(10px) scale(.96);
-    display:flex;align-items:center;gap:8px;
-    transition:transform .26s cubic-bezier(.2,.7,.3,1), opacity .2s ease;
-    opacity:0;pointer-events:none;z-index:18;
+    margin-left:auto;display:flex;align-items:center;
+    transform:translateY(6px);opacity:0;pointer-events:none;
+    transition:transform .22s cubic-bezier(.2,.7,.3,1), opacity .18s ease;
   }
-  .acc-save-bar[data-show="true"]{transform:translateY(0) scale(1);opacity:1;pointer-events:auto}
+  .acc-save-bar[data-show="true"]{transform:translateY(0);opacity:1;pointer-events:auto}
   .acc-save-bar .acc-btn--primary{
-    padding:11px 16px !important;font-size:13.5px !important;
-    border-radius:14px !important;
-    box-shadow:0 14px 38px rgba(107,43,255,.55), 0 0 0 1px rgba(255,255,255,.08) inset;
+    padding:10px 16px !important;font-size:13px !important;
+    border-radius:12px !important;
+    box-shadow:0 10px 28px rgba(107,43,255,.5), 0 0 0 1px rgba(255,255,255,.08) inset;
+  }
+
+  /* Boost banner OUTSIDE the acc-card */
+  .boost-banner--outside{
+    width:min(98vw,1280px);margin:12px auto 0;display:flex !important;
+    box-shadow:0 12px 36px rgba(0,0,0,.55);
   }
   .acc-save-bar .acc-save-msg{
     font-size:13px;font-weight:600;color:#fff;margin-right:6px;white-space:nowrap;
@@ -2215,27 +2223,27 @@
 
       <div class="acc-actions">
         <button type="button" class="acc-btn acc-btn--ghost"   id="accBackSwipe" data-i18n="back_to_swipe">← Retour</button>
-        <!-- Boost banner moved to bottom -->
-        <button type="button" class="boost-banner boost-banner--inline" id="boostBanner">
-          <div class="bb-glow"></div>
-          <span class="bb-emoji">✨</span>
-          <div class="bb-text">
-            <b id="boostBannerTitle">Passer en Tindord Boost</b>
-            <small id="boostBannerSub">18 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
-          </div>
-          <span class="bb-cta" id="boostBannerCta">Découvrir</span>
-        </button>
+        <div class="acc-save-bar" id="accSaveBar" data-show="false">
+          <button type="button" class="acc-btn acc-btn--primary" id="accSave">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Sauvegarder les changements
+          </button>
+          <button type="button" id="accSaveReset" style="display:none"></button>
+        </div>
       </div>
       <div class="acc-msg" id="accMsg" data-show="false"></div>
-      <!-- Single floating save button inside the frame, bottom-right of tab body -->
-      <div class="acc-save-bar" id="accSaveBar" data-show="false">
-        <button type="button" class="acc-btn acc-btn--primary" id="accSave">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Sauvegarder les changements
-        </button>
-        <button type="button" id="accSaveReset" style="display:none"></button>
-      </div>
     </div>
+
+    <!-- Boost banner is OUTSIDE the acc-card frame (full width below) -->
+    <button type="button" class="boost-banner boost-banner--outside" id="boostBanner">
+      <div class="bb-glow"></div>
+      <span class="bb-emoji">✨</span>
+      <div class="bb-text">
+        <b id="boostBannerTitle">Passer en Tindord Boost</b>
+        <small id="boostBannerSub">18 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
+      </div>
+      <span class="bb-cta" id="boostBannerCta">Découvrir</span>
+    </button>
 
     <!-- Floating Discord server button (bottom-right of page in account screen) -->
     <a href="https://discord.gg/NkW4uMmQR" target="_blank" rel="noopener" class="acc-discord-fab" id="accDiscordFab" title="Rejoindre le serveur Discord">
