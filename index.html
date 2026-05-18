@@ -668,9 +668,9 @@
     pointer-events:none;
   }
   .swipe-card .avatar-wrap{
-    /* Banner = 120px. Avatar 108px. We position the avatar so it sits MOSTLY in the
-       banner: top:18px → avatar from 18px to 126px, only ~6px below the banner. */
-    position:absolute;left:20px;top:18px;width:108px;height:108px;border-radius:50%;
+    /* Discord style 50/50: avatar centered on the banner bottom edge.
+       Banner 120px, avatar 108px → top:66 puts center at y=120 = banner edge. */
+    position:absolute;left:20px;top:66px;width:108px;height:108px;border-radius:50%;
     padding:7px;background:#1c1d22;display:grid;place-items:center;z-index:5;
     transform:none;
   }
@@ -708,7 +708,7 @@
   .swipe-card .status-dot.offline{background:#747f8d}
 
   .swipe-card .body{
-    flex:1 1 auto;padding:22px 18px 60px;display:flex;flex-direction:column;gap:12px;
+    flex:1 1 auto;padding:64px 18px 60px;display:flex;flex-direction:column;gap:12px;
     overflow:hidden;position:relative;
   }
   .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
