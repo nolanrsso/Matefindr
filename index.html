@@ -764,7 +764,7 @@
   /* Avatar decoration overlay — Discord serves it as APNG which auto-animates.
      We avoid any CSS that could pause the animation (no will-change/transform/filter
      on the <img> itself). The glow is applied to the parent wrapper. */
-  .swipe-card .avatar-wrap{position:relative}
+  /* (avatar-wrap is already position:absolute above; .avi-deco uses inset relative to it) */
   .swipe-card .avi-deco{
     position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);
     object-fit:contain;pointer-events:none;z-index:3;
