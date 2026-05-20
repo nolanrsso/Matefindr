@@ -2140,6 +2140,7 @@
           <button type="button" class="acc-orb-cat active" data-kind="music">Musique</button>
           <button type="button" class="acc-orb-cat" data-kind="game">Jeu</button>
           <button type="button" class="acc-orb-cat" data-kind="anime">Anime</button>
+          <button type="button" class="acc-orb-cat" data-kind="film">Film·Série</button>
         </div>
         <div class="acc-orb-form">
           <div class="acc-orb-input-wrap">
@@ -4290,54 +4291,147 @@
     document.getElementById('accOrbAdd').addEventListener('click', () => addOrb());
     document.getElementById('accOrbInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addOrb(); } });
 
+    /* Curated suggestion lists by category — used as the primary set of
+       suggestions for game / anime / film bubbles. Covers are fetched on
+       demand via Wikipedia (game / film) or Jikan (anime). */
+    const ORB_SUGGESTIONS = {
+      game: ["Chess","Minecraft","Roblox","Fortnite","League of Legends","Counter-Strike 2","Dota 2","Valorant","Grand Theft Auto V","Red Dead Redemption 2","Elden Ring","The Witcher 3: Wild Hunt","The Elder Scrolls V: Skyrim","Cyberpunk 2077","Baldur's Gate 3","World of Warcraft","Final Fantasy XIV","Rocket League","Overwatch 2","Apex Legends","PUBG: Battlegrounds","Call of Duty: Warzone","Call of Duty: Modern Warfare","Call of Duty: Black Ops","Tom Clancy's Rainbow Six Siege","Destiny 2","Terraria","Stardew Valley","Hollow Knight","Hades","Celeste","Dead Cells","Slay the Spire","The Binding of Isaac","Factorio","RimWorld","Cities: Skylines","Kerbal Space Program","Microsoft Flight Simulator","Euro Truck Simulator 2","The Sims 4","Animal Crossing: New Horizons","Super Smash Bros. Ultimate","Mario Kart 8 Deluxe","The Legend of Zelda: Breath of the Wild","The Legend of Zelda: Tears of the Kingdom","Super Mario Odyssey","Dark Souls","Dark Souls II","Dark Souls III","Bloodborne","Sekiro: Shadows Die Twice","God of War","God of War Ragnarök","The Last of Us Part I","The Last of Us Part II","Uncharted 4: A Thief's End","Half-Life 2","Portal","Portal 2","BioShock","BioShock Infinite","Fallout 3","Fallout 4","Fallout: New Vegas","Mass Effect Legendary Edition","Dragon Age: Origins","Persona 5 Royal","Chrono Trigger","Undertale","Disco Elysium","Deus Ex","Vampire: The Masquerade – Bloodlines","Kenshi","Rust","DayZ","Garry's Mod","Team Fortress 2","Left 4 Dead 2","Payday 2","StarCraft","StarCraft II","Warcraft III","Age of Empires II","Civilization VI","Crusader Kings III","Hearts of Iron IV","Total War: Warhammer III","XCOM 2","Frostpunk","Into the Breach","Hearthstone","Magic: The Gathering Arena","Street Fighter 6","Tekken 8","Mortal Kombat 1","Dragon Ball FighterZ","Guilty Gear Strive","FIFA 23","EA Sports FC 24","NBA 2K24","NHL 24","Madden NFL 24","Gran Turismo 7","Forza Horizon 5","Need for Speed Unbound","Burnout Paradise","DOOM Eternal","Wolfenstein: The New Order","Titanfall 2","Borderlands 2","Far Cry 3","Assassin's Creed II","Assassin's Creed IV: Black Flag","Assassin's Creed Odyssey","Batman: Arkham Asylum","Batman: Arkham City","Batman: Arkham Knight","Marvel's Spider-Man","Horizon Zero Dawn","Heavy Rain","Beyond: Two Souls","Detroit: Become Human","Life is Strange","The Walking Dead","Among Us","Fall Guys"],
+      anime: ["One Piece","Naruto","Dragon Ball Z","Dragon Ball Super","Bleach","Hunter x Hunter","Fullmetal Alchemist: Brotherhood","Attack on Titan","Jujutsu Kaisen","Demon Slayer","Chainsaw Man","My Hero Academia","Black Clover","Soul Eater","Fairy Tail","JoJo's Bizarre Adventure","YuYu Hakusho","Seven Deadly Sins","Dr. Stone","Fire Force","Death Note","Monster","Vinland Saga","Berserk","Psycho-Pass","Parasyte: The Maxim","Tokyo Ghoul","Erased","Steins;Gate","Death Parade","Elfen Lied","Hellsing Ultimate","Code Geass","Future Diary","Another","The Promised Neverland","Hajime no Ippo","Slam Dunk","Haikyuu!!","Kuroko's Basketball","Blue Lock","Your Lie in April","Clannad","Toradora","Golden Time","Kaguya-sama: Love is War","Nichijou","Great Teacher Onizuka","Saiki K","Spy x Family","Bocchi the Rock!","March Comes in Like a Lion","Neon Genesis Evangelion","Cowboy Bebop","Akira","Ghost in the Shell","Trigun","Samurai Champloo","FLCL","Tengen Toppa Gurren Lagann","Mobile Suit Gundam","Macross","Serial Experiments Lain","Paprika","Perfect Blue","Made in Abyss","Re:Zero","Konosuba","Overlord","That Time I Got Reincarnated as a Slime","Mushoku Tensei","Ranking of Kings","Mob Psycho 100","Ping Pong the Animation","Kill la Kill","Devilman Crybaby","Dorohedoro","Golden Kamuy","Nana","Fruits Basket","Ouran High School Host Club","Azumanga Daioh","Lucky Star","K-On!","Cardcaptor Sakura","Sailor Moon","Pokemon","Digimon","Yu-Gi-Oh!","Inuyasha","Ranma 1/2","Maison Ikkoku","City Hunter","Space Dandy"],
+      film: ["Breaking Bad","Better Call Saul","The Wire","The Sopranos","Peaky Blinders","Dexter","True Detective","Fargo","Sons of Anarchy","Narcos","Ozark","Mindhunter","Prison Break","The Shield","Boardwalk Empire","The Night Of","Game of Thrones","House of the Dragon","Stranger Things","The X-Files","Black Mirror","The Twilight Zone","Doctor Who","Battlestar Galactica","The Expanse","Westworld","Dark","The Boys","The Umbrella Academy","Lost","Fringe","Foundation","Silo","The Office","Friends","Seinfeld","The Simpsons","South Park","Rick and Morty","It's Always Sunny in Philadelphia","Parks and Recreation","Brooklyn Nine-Nine","How I Met Your Mother","Arrested Development","Community","Curb Your Enthusiasm","Ted Lasso","The Good Place","Silicon Valley","The Godfather","Pulp Fiction","Fight Club","Inception","Interstellar","The Dark Knight","The Matrix","Star Wars: A New Hope","The Empire Strikes Back","Return of the Jedi","The Lord of the Rings: The Fellowship of the Ring","The Two Towers","The Return of the King","Jurassic Park","Terminator","Terminator 2: Judgment Day","Blade Runner","Alien","The Shawshank Redemption","Forrest Gump","Saving Private Ryan","Gladiator","Se7en","Shutter Island","Parasite","Spirited Away","The Silence of the Lambs","The Shining","Psycho","Casablanca","Citizen Kane","2001: A Space Odyssey","Apocalypse Now","Taxi Driver","Goodfellas","Reservoir Dogs","The Big Lebowski","No Country for Old Men","There Will Be Blood","Whiplash","Birdman","The Grand Budapest Hotel","The Truman Show","Eternal Sunshine of the Spotless Mind","Memento","Donnie Darko","A Clockwork Orange","Full Metal Jacket","Dr. Strangelove","Lord of War","American Psycho","Scarface","Heat","Casino","The Departed","Dunkirk","Oppenheimer","Tenet","The Prestige","Batman Begins","The Dark Knight Rises","Joker","Logan","Mad Max: Fury Road","Braveheart","Troy","Kingdom of Heaven","300","Sin City","Watchmen","V for Vendetta","Children of Men","District 9","Arrival","Gravity","The Martian","Ad Astra","Moon","Ex Machina","Her","Up","Wall-E","Ratatouille","Finding Nemo","The Incredibles","Toy Story","The Lion King","Aladdin","Beauty and the Beast","Princess Mononoke","Howl's Moving Castle","My Neighbor Totoro","Grave of the Fireflies","Your Name","Weathering With You","Suzume"],
+    };
+    /* Cache: kind+title -> coverUrl */
+    const _suggCoverCache = new Map();
+    async function fetchSuggCover(kind, title){
+      const k = kind + ':' + title;
+      if (_suggCoverCache.has(k)) return _suggCoverCache.get(k);
+      let cover = null;
+      try {
+        if (kind === 'anime') {
+          const r = await searchAnime(title);
+          cover = (r && r[0] && r[0].cover) || null;
+        } else if (kind === 'game' || kind === 'film') {
+          const r = await searchWiki(title, kind);
+          cover = (r && r[0] && r[0].cover) || null;
+        }
+      } catch {}
+      _suggCoverCache.set(k, cover);
+      return cover;
+    }
+    function curatedMatches(query, kind, limit){
+      const arr = ORB_SUGGESTIONS[kind] || [];
+      const q = (query || '').toLowerCase().trim();
+      if (!q) return arr.slice(0, limit);
+      const starts = [], contains = [];
+      for (const t of arr) {
+        const lt = t.toLowerCase();
+        if (lt.startsWith(q)) starts.push(t);
+        else if (lt.includes(q)) contains.push(t);
+        if (starts.length + contains.length >= limit + 4) break;
+      }
+      return starts.concat(contains).slice(0, limit);
+    }
+
     /* Live search dropdown — kind-aware (Spotify / Jikan / Wikipedia) */
+    /* Render the suggestions panel from a normalized results array */
+    function renderOrbSugg(results, kind){
+      const sugg = document.getElementById('spotifySugg');
+      const fallbackIcon = {music:'🎵', anime:'📺', game:'🎮', film:'🎬'}[kind] || '✨';
+      sugg.innerHTML = '';
+      results.forEach((r, idx) => {
+        const item = document.createElement('div');
+        item.className = 'sp-item';
+        item.dataset.suggIdx = String(idx);
+        item.innerHTML =
+          (r.cover ? `<img src="${r.cover}" alt="">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
+          `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
+          `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
+        item.addEventListener('mousedown', ev => {
+          ev.preventDefault();
+          document.getElementById('accOrbInput').value = r.orb.title;
+          addOrb(r.orb);
+        });
+        sugg.appendChild(item);
+      });
+      sugg.classList.add('open');
+    }
+
+    /* Lazy-fetch covers for curated suggestions (game/anime/film). */
+    async function hydrateCuratedCovers(results, kind, requestId){
+      const sugg = document.getElementById('spotifySugg');
+      for (let i = 0; i < results.length; i++) {
+        if (requestId !== _suggReqId) return; // newer query started
+        const r = results[i];
+        if (r.cover) continue;
+        const cover = await fetchSuggCover(kind, r.orb.title);
+        if (requestId !== _suggReqId) return;
+        if (cover) {
+          r.cover = cover; r.orb.cover = cover;
+          const item = sugg.querySelector(`.sp-item[data-sugg-idx="${i}"]`);
+          if (item) {
+            const ph = item.querySelector('.sp-no-cover');
+            if (ph) ph.outerHTML = `<img src="${cover}" alt="">`;
+          }
+        }
+      }
+    }
+
+    let _suggReqId = 0;
+    async function runOrbSearch(val){
+      const reqId = ++_suggReqId;
+      const sugg = document.getElementById('spotifySugg');
+      const kind = selectedOrbKind;
+
+      if (kind === 'music') {
+        if (val.length < 2) { closeSugg(); return; }
+        const tracks = await searchSpotifyTracks(val);
+        if (reqId !== _suggReqId) return;
+        const results = tracks
+          .filter(t => t.previewUrl)
+          .map(t => ({ name:t.name, sub:t.artist, cover:t.cover,
+            orb:{kind:'music', title:t.name+' · '+t.artist, previewUrl:t.previewUrl, cover:t.cover}}));
+        if (!results.length) { closeSugg(); return; }
+        renderOrbSugg(results, kind);
+        return;
+      }
+
+      // game / anime / film : show curated list first (instant), then enrich w/ covers
+      const titles = curatedMatches(val, kind, 10);
+      const results = titles.map(t => ({
+        name: t, sub: '', cover: null,
+        orb: { kind, title: t, cover: null },
+      }));
+      if (results.length) {
+        renderOrbSugg(results, kind);
+        hydrateCuratedCovers(results, kind, reqId);
+      } else if (val.length >= 2) {
+        // No curated match — fall back to API search
+        let api = [];
+        if (kind === 'anime') {
+          api = (await searchAnime(val)).map(a => ({ name:a.name, sub:a.sub, cover:a.cover,
+            orb:{kind:'anime', title:a.name, cover:a.cover}}));
+        } else {
+          api = (await searchWiki(val, kind)).map(p => ({ name:p.name, sub:p.sub, cover:p.cover,
+            orb:{kind, title:p.name, cover:p.cover}}));
+        }
+        if (reqId !== _suggReqId) return;
+        if (!api.length) { closeSugg(); return; }
+        renderOrbSugg(api, kind);
+      } else {
+        closeSugg();
+      }
+    }
+
     document.getElementById('accOrbInput').addEventListener('input', e => {
       _pendingSpotifyOrb = null;
       const val = e.target.value.trim();
-      const sugg = document.getElementById('spotifySugg');
-      if (val.length < 2){ closeSugg(); return; }
       clearTimeout(_suggDebounce);
-      _suggDebounce = setTimeout(async () => {
-        let results = [];
-        if (selectedOrbKind === 'music') {
-          const tracks = await searchSpotifyTracks(val);
-          results = tracks
-            .filter(t => t.previewUrl)
-            .map(t => ({
-              name:t.name, sub:t.artist, cover:t.cover,
-              orb:{kind:'music', title:t.name+' · '+t.artist, previewUrl:t.previewUrl, cover:t.cover},
-            }));
-        } else if (selectedOrbKind === 'anime') {
-          const animes = await searchAnime(val);
-          results = animes.map(a => ({
-            name:a.name, sub:a.sub, cover:a.cover,
-            orb:{kind:'anime', title:a.name, cover:a.cover},
-          }));
-        } else if (selectedOrbKind === 'game' || selectedOrbKind === 'film') {
-          const pages = await searchWiki(val, selectedOrbKind);
-          results = pages.map(p => ({
-            name:p.name, sub:p.sub, cover:p.cover,
-            orb:{kind:selectedOrbKind, title:p.name, cover:p.cover},
-          }));
-        }
-        if (!results.length){ closeSugg(); return; }
-        sugg.innerHTML = '';
-        results.forEach(r => {
-          const item = document.createElement('div');
-          item.className = 'sp-item';
-          item.innerHTML =
-            (r.cover ? `<img src="${r.cover}" alt="">` : '<div class="sp-no-cover">'+({music:'🎵',anime:'📺',game:'🎮',film:'🎬'}[selectedOrbKind]||'✨')+'</div>') +
-            `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
-            `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
-          item.addEventListener('mousedown', ev => {
-            ev.preventDefault();
-            document.getElementById('accOrbInput').value = r.orb.title;
-            addOrb(r.orb);
-          });
-          sugg.appendChild(item);
-        });
-        sugg.classList.add('open');
-      }, 320);
+      _suggDebounce = setTimeout(() => runOrbSearch(val), selectedOrbKind === 'music' ? 320 : 80);
+    });
+    /* Show curated suggestions immediately on focus (empty input → top of list) */
+    document.getElementById('accOrbInput').addEventListener('focus', () => {
+      if (selectedOrbKind === 'music') return;
+      const val = document.getElementById('accOrbInput').value.trim();
+      runOrbSearch(val);
     });
     document.getElementById('accOrbInput').addEventListener('blur', () => setTimeout(closeSugg, 200));
 
