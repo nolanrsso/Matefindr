@@ -3901,14 +3901,6 @@
       showToast._h = setTimeout(() => t.setAttribute('data-show', 'false'), 3200);
     }
     function playOrb(o, el){
-      const titleByKind = {
-        music: '🎵 ' + o.title,
-        voice: '🎤 ' + o.title,
-        anime: '📺 ' + o.title,
-        game:  '🎮 ' + o.title,
-        film:  '🎬 ' + o.title,
-      };
-      showToast(o.emoji || '🎵', titleByKind[o.kind] || o.title, o.sub || '');
       if (o.kind === 'voice' && 'speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
@@ -3926,7 +3918,6 @@
           fadeOutAndStop(_spotifyAudio);
           _spotifyAudio = null;
           el.classList.remove('playing');
-          showToast('⏸', o.title, 'Arrêté');
           return;
         }
         // Different orb: stop previous, start new
@@ -3942,12 +3933,10 @@
           fadeIn(a, 0.45, 700);
           a.addEventListener('ended', () => { el.classList.remove('playing'); if (_spotifyAudio === a) _spotifyAudio = null; });
           _spotifyAudio = a;
-          showToast('▶️', name, sub);
         };
         if (o.previewUrl) {
           playUrl(o.previewUrl, o.title, '30s preview');
         } else {
-          showToast('⏳', o.title, 'Chargement…');
           (async () => {
             try {
               const results = await searchSpotifyTracks(o.title, 1);
@@ -3955,9 +3944,8 @@
               if (r?.previewUrl) { playUrl(r.previewUrl, r.name, r.artist); return; }
               const itu = await itunesPreview(r?.artist || '', r?.name || o.title);
               if (itu) { playUrl(itu, r?.name || o.title, r?.artist || ''); return; }
-              showToast('🎵', o.title, o.sub || 'Pas de preview');
               el.classList.remove('playing');
-            } catch { showToast('🎵', o.title, o.sub || ''); el.classList.remove('playing'); }
+            } catch { el.classList.remove('playing'); }
           })();
         }
       }
