@@ -1615,7 +1615,12 @@
   .sp-item{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;transition:.12s}
   .sp-item:hover{background:rgba(255,255,255,.06)}
   .sp-item img,.sp-no-cover{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:0 0 auto}
-  .sp-no-cover{background:#1DB954;display:grid;place-items:center;font-size:18px}
+  .sp-no-cover{background:linear-gradient(135deg,#3a3050,#1a1426);display:grid;place-items:center;font-size:18px;animation:spLoadPulse 1.2s ease-in-out infinite}
+  @keyframes spLoadPulse{0%,100%{opacity:.55}50%{opacity:.9}}
+  .sp-item--loading .sp-info{opacity:.6}
+  .sp-item--unavailable{opacity:.35;cursor:not-allowed}
+  .sp-item--unavailable .sp-no-cover{animation:none;background:#3a2030}
+  .sp-item--unavailable .sp-no-cover::before{content:'×';color:#ff6688;font-weight:800}
   .sp-info{flex:1;min-width:0}
   .sp-title{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sp-artist{font-size:11px;color:#b9bbbe;margin-top:1px}
@@ -4284,12 +4289,25 @@
       _pendingSpotifyOrb = null;
       input.value = '';
       closeSugg();
+      save();
       renderUserOrbs();
       refreshAccountPreview();
+      showToast(({music:'🎵',anime:'📺',game:'🎮',film:'🎬'}[orb.kind]||'✨'), 'Bulle ajoutée', orb.title);
     }
 
-    document.getElementById('accOrbAdd').addEventListener('click', () => addOrb());
-    document.getElementById('accOrbInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addOrb(); } });
+    // Free-text adding is disabled — orbs can only be created by clicking a suggestion
+    document.getElementById('accOrbAdd').addEventListener('click', () => {
+      showToast('🔎', 'Choisis dans la liste', 'Clique sur une suggestion pour créer une bulle');
+      document.getElementById('accOrbInput').focus();
+    });
+    document.getElementById('accOrbInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const first = document.querySelector('#spotifySugg .sp-item');
+        if (first) first.dispatchEvent(new MouseEvent('mousedown'));
+        else showToast('🔎', 'Choisis dans la liste', 'Aucune suggestion à valider');
+      }
+    });
 
     /* Curated suggestion lists by category — used as the primary set of
        suggestions for game / anime / film bubbles. Covers are fetched on
@@ -4301,6 +4319,15 @@
     };
     /* Cache: kind+title -> coverUrl */
     const _suggCoverCache = new Map();
+    async function wikiPageSummary(title){
+      // REST summary API : direct lookup of the exact page title, returns a thumbnail
+      try {
+        const r = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/\s/g, '_')));
+        if (!r.ok) return null;
+        const d = await r.json();
+        return d.thumbnail?.source || d.originalimage?.source || null;
+      } catch { return null; }
+    }
     async function fetchSuggCover(kind, title){
       const k = kind + ':' + title;
       if (_suggCoverCache.has(k)) return _suggCoverCache.get(k);
@@ -4309,9 +4336,19 @@
         if (kind === 'anime') {
           const r = await searchAnime(title);
           cover = (r && r[0] && r[0].cover) || null;
-        } else if (kind === 'game' || kind === 'film') {
-          const r = await searchWiki(title, kind);
+          if (!cover) cover = await wikiPageSummary(title + ' (anime)');
+          if (!cover) cover = await wikiPageSummary(title);
+        } else if (kind === 'game') {
+          const r = await searchWiki(title, 'game');
           cover = (r && r[0] && r[0].cover) || null;
+          if (!cover) cover = await wikiPageSummary(title + ' (video game)');
+          if (!cover) cover = await wikiPageSummary(title);
+        } else if (kind === 'film') {
+          const r = await searchWiki(title, 'film');
+          cover = (r && r[0] && r[0].cover) || null;
+          if (!cover) cover = await wikiPageSummary(title + ' (film)');
+          if (!cover) cover = await wikiPageSummary(title + ' (TV series)');
+          if (!cover) cover = await wikiPageSummary(title);
         }
       } catch {}
       _suggCoverCache.set(k, cover);
@@ -4332,14 +4369,30 @@
     }
 
     /* Live search dropdown — kind-aware (Spotify / Jikan / Wikipedia) */
-    /* Render the suggestions panel from a normalized results array */
+    /* Render the suggestions panel from a normalized results array.
+       Items pending cover are dimmed and labelled "...". A click on an item
+       ensures a cover is fetched before adding — no cover = no bulle. */
+    async function ensureCoverThenAdd(r, kind){
+      let cover = r.cover;
+      if (!cover && (kind === 'game' || kind === 'film' || kind === 'anime')) {
+        cover = await fetchSuggCover(kind, r.orb.title);
+      }
+      if (!cover) {
+        showToast('⚠️', 'Pas d\'image trouvée', 'Choisis un autre titre');
+        return;
+      }
+      r.cover = cover; r.orb.cover = cover;
+      document.getElementById('accOrbInput').value = r.orb.title;
+      addOrb(r.orb);
+    }
+
     function renderOrbSugg(results, kind){
       const sugg = document.getElementById('spotifySugg');
       const fallbackIcon = {music:'🎵', anime:'📺', game:'🎮', film:'🎬'}[kind] || '✨';
       sugg.innerHTML = '';
       results.forEach((r, idx) => {
         const item = document.createElement('div');
-        item.className = 'sp-item';
+        item.className = 'sp-item' + (r.cover ? '' : ' sp-item--loading');
         item.dataset.suggIdx = String(idx);
         item.innerHTML =
           (r.cover ? `<img src="${r.cover}" alt="">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
@@ -4347,8 +4400,7 @@
           `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
         item.addEventListener('mousedown', ev => {
           ev.preventDefault();
-          document.getElementById('accOrbInput').value = r.orb.title;
-          addOrb(r.orb);
+          ensureCoverThenAdd(r, kind);
         });
         sugg.appendChild(item);
       });
@@ -4364,13 +4416,18 @@
         if (r.cover) continue;
         const cover = await fetchSuggCover(kind, r.orb.title);
         if (requestId !== _suggReqId) return;
+        const item = sugg.querySelector(`.sp-item[data-sugg-idx="${i}"]`);
         if (cover) {
           r.cover = cover; r.orb.cover = cover;
-          const item = sugg.querySelector(`.sp-item[data-sugg-idx="${i}"]`);
           if (item) {
             const ph = item.querySelector('.sp-no-cover');
             if (ph) ph.outerHTML = `<img src="${cover}" alt="">`;
+            item.classList.remove('sp-item--loading');
           }
+        } else if (item) {
+          // No cover available — visually mark and disable
+          item.classList.remove('sp-item--loading');
+          item.classList.add('sp-item--unavailable');
         }
       }
     }
@@ -4386,7 +4443,7 @@
         const tracks = await searchSpotifyTracks(val);
         if (reqId !== _suggReqId) return;
         const results = tracks
-          .filter(t => t.previewUrl)
+          .filter(t => t.previewUrl && t.cover)
           .map(t => ({ name:t.name, sub:t.artist, cover:t.cover,
             orb:{kind:'music', title:t.name+' · '+t.artist, previewUrl:t.previewUrl, cover:t.cover}}));
         if (!results.length) { closeSugg(); return; }
