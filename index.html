@@ -566,9 +566,9 @@
     pointer-events:auto;
     animation:orbFloat 6s ease-in-out infinite;
   }
-  /* Orb bubble — fully circular, vibrant. 124px (15% smaller than previous 146). */
+  /* Orb bubble — fully circular, vibrant. 136px (+10% over 124). */
   .swipe-stage .orbit .orb{
-    width:124px;height:124px;border-radius:50%;
+    width:136px;height:136px;border-radius:50%;
     display:grid;place-items:center;
     border:1.5px solid rgba(255,255,255,.28);
     cursor:pointer;pointer-events:auto;
@@ -585,40 +585,62 @@
   }
   .swipe-stage .orbit .orb:hover{transform:scale(1.12);border-color:rgba(255,255,255,.42)}
   .swipe-stage .orbit .orb:active{transform:scale(.93)}
-  .swipe-stage .orbit .orb svg{width:38px;height:38px;position:relative;z-index:2;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
+  .swipe-stage .orbit .orb svg{width:42px;height:42px;position:relative;z-index:2;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
   .swipe-stage .orbit .orb .orb-cover{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;z-index:2}
-  /* Music orbs: white aura. All other kinds (game/anime/film/voice): deep black + black aura. */
+  /* Kind-specific vibrant colors :
+     - music = green (Spotify-like)
+     - anime = deep purple
+     - film  = light blue
+     - game  = red */
   .swipe-stage .orbit .orb[data-kind="music"]{
-    background:radial-gradient(circle at 34% 28%, #ffffff 0%, #f3f3f3 35%, #d9d9d9 70%, #b6b6b6 100%);
-    border-color:rgba(255,255,255,.95);
+    background:radial-gradient(circle at 34% 28%, #2BFF8C 0%, #1ED760 35%, #0E7A38 100%);
+    border-color:rgba(80,255,150,.85);
     box-shadow:
-      inset 0 0 0 1px rgba(255,255,255,.55),
-      inset 0 -10px 22px rgba(0,0,0,.10),
-      0 0 0 3px rgba(255,255,255,.35),
-      0 0 24px 6px rgba(255,255,255,.65),
-      0 0 68px 16px rgba(255,255,255,.40),
+      inset 0 0 0 1px rgba(255,255,255,.22),
+      inset 0 -10px 22px rgba(0,0,0,.28),
+      0 0 0 2px rgba(29,185,84,.40),
+      0 0 22px 4px rgba(30,215,96,.80),
+      0 0 60px 14px rgba(29,185,84,.45),
       0 14px 30px rgba(0,0,0,.55);
   }
-  .swipe-stage .orbit .orb[data-kind="voice"],
-  .swipe-stage .orbit .orb[data-kind="anime"],
-  .swipe-stage .orbit .orb[data-kind="game"],
-  .swipe-stage .orbit .orb[data-kind="film"]{
-    background:radial-gradient(circle at 36% 32%, #2a2a2e 0%, #15151a 45%, #07070b 100%);
-    border-color:rgba(0,0,0,.85);
+  .swipe-stage .orbit .orb[data-kind="anime"]{
+    background:radial-gradient(circle at 34% 28%, #7A2BFF 0%, #4B16AD 50%, #260955 100%);
+    border-color:rgba(150,90,255,.85);
     box-shadow:
-      inset 0 0 0 1px rgba(255,255,255,.06),
-      inset 0 -12px 24px rgba(0,0,0,.7),
-      0 0 0 2px rgba(0,0,0,.50),
-      0 0 22px 4px rgba(0,0,0,.85),
-      0 0 60px 18px rgba(0,0,0,.65),
-      0 14px 30px rgba(0,0,0,.65);
+      inset 0 0 0 1px rgba(255,255,255,.18),
+      inset 0 -10px 22px rgba(0,0,0,.4),
+      0 0 0 2px rgba(75,22,173,.50),
+      0 0 22px 4px rgba(122,43,255,.80),
+      0 0 60px 14px rgba(75,22,173,.55),
+      0 14px 30px rgba(0,0,0,.6);
   }
-  /* Orb covers (game/anime/film/voice) — sit on top of the black background */
-  .swipe-stage .orbit .orb[data-kind="voice"] .orb-cover,
-  .swipe-stage .orbit .orb[data-kind="anime"] .orb-cover,
-  .swipe-stage .orbit .orb[data-kind="game"] .orb-cover,
-  .swipe-stage .orbit .orb[data-kind="film"] .orb-cover{
-    box-shadow:0 0 0 3px rgba(0,0,0,.85);
+  .swipe-stage .orbit .orb[data-kind="film"]{
+    background:radial-gradient(circle at 34% 28%, #B2E9FF 0%, #5EC8FF 50%, #1F8ED1 100%);
+    border-color:rgba(190,235,255,.9);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.30),
+      inset 0 -10px 22px rgba(0,0,0,.18),
+      0 0 0 2px rgba(94,200,255,.45),
+      0 0 22px 4px rgba(178,233,255,.85),
+      0 0 60px 14px rgba(94,200,255,.55),
+      0 14px 30px rgba(0,0,0,.45);
+  }
+  .swipe-stage .orbit .orb[data-kind="game"]{
+    background:radial-gradient(circle at 34% 28%, #FF6B6B 0%, #E53935 50%, #8B0E0E 100%);
+    border-color:rgba(255,150,150,.85);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.22),
+      inset 0 -10px 22px rgba(0,0,0,.32),
+      0 0 0 2px rgba(229,57,53,.50),
+      0 0 22px 4px rgba(255,107,107,.85),
+      0 0 60px 14px rgba(229,57,53,.55),
+      0 14px 30px rgba(0,0,0,.55);
+  }
+  /* voice kept neutral dark in case it's used */
+  .swipe-stage .orbit .orb[data-kind="voice"]{
+    background:linear-gradient(145deg,#7289DA,#5865F2,#9146FF);
+    border-color:rgba(173,140,255,.85);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 -10px 22px rgba(0,0,0,.28), 0 0 0 2px rgba(88,101,242,.30), 0 0 18px 2px rgba(88,101,242,.75), 0 0 48px 10px rgba(88,101,242,.32), 0 14px 30px rgba(0,0,0,.45);
   }
   .swipe-stage .orbit .orb[data-kind="voice"].playing{animation:voicePulse 1s ease-in-out infinite}
   @keyframes voicePulse{
@@ -631,19 +653,19 @@
     50%    { filter:drop-shadow(0 8px 18px rgba(255,255,255,.08)) }
   }
   /* When >6 orbs : shrink so they all fit on screen */
-  .orbit.orbit--dynamic .orb{width:95px;height:95px}
-  .orbit.orbit--dynamic .orb svg{width:32px;height:32px}
-  .orbit.orbit--dynamic .orb-label{max-width:90px;font-size:10px}
+  .orbit.orbit--dynamic .orb{width:105px;height:105px}
+  .orbit.orbit--dynamic .orb svg{width:35px;height:35px}
+  .orbit.orbit--dynamic .orb-label{max-width:100px;font-size:10px}
   /* When dynamic, position is set inline → kill the CSS nth-child defaults */
   .orbit.orbit--dynamic .orb-wrap:nth-child(n){top:auto;left:auto;right:auto;bottom:auto;animation:none}
   .orbit .orb-wrap{user-select:none;-webkit-user-select:none}
   .orbit .orb-wrap .orb{cursor:pointer}
 
-  /* Music orbs are bigger to be easier to catch (also -15%) */
-  .orbit .orb-wrap--music .orb{width:144px;height:144px}
-  .orbit .orb-wrap--music .orb svg{width:54px;height:54px}
-  .orbit.orbit--dynamic .orb-wrap--music .orb{width:119px;height:119px}
-  .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:46px;height:46px}
+  /* Music orbs are bigger to be easier to catch (+10%) */
+  .orbit .orb-wrap--music .orb{width:158px;height:158px}
+  .orbit .orb-wrap--music .orb svg{width:60px;height:60px}
+  .orbit.orbit--dynamic .orb-wrap--music .orb{width:131px;height:131px}
+  .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:50px;height:50px}
 
   /* Sound-wave ripple when clicking a music orb */
   .orb-sound-ripple{
@@ -4091,7 +4113,7 @@
         wrap.appendChild(label);
 
         const isMusic = o.kind === 'music';
-        const orbR = isMusic ? 76 : (n > 6 ? 48 : 62);
+        const orbR = isMusic ? 84 : (n > 6 ? 53 : 68);
         const pos = pickPos(orbR);
 
         if (isMusic) wrap.classList.add('orb-wrap--music');
