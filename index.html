@@ -4355,7 +4355,7 @@
       _spotifyTokenExp = Date.now() + (d.expires_in - 60) * 1000;
       return _spotifyToken;
     }
-    /* iTunes Search API — fallback pour les previews 30s (Spotify CC renvoie souvent null) */
+    /* iTunes Search API — fallback #2 pour les previews 30s */
     const _itunesCache = new Map();
     async function itunesPreview(artist, name){
       const key = ((artist||'') + '|' + (name||'')).toLowerCase().trim();
@@ -4369,6 +4369,36 @@
         return url;
       } catch { _itunesCache.set(key, null); return null; }
     }
+
+    /* Deezer API — fallback #1 pour les previews 30s. CORS bloque /search direct
+       → on utilise leur endpoint JSONP qui marche depuis le navigateur. */
+    const _deezerCache = new Map();
+    function jsonpFetch(url, timeoutMs = 5000){
+      return new Promise((resolve, reject) => {
+        const cbName = 'dz_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        const sep = url.includes('?') ? '&' : '?';
+        const fullUrl = url + sep + 'output=jsonp&callback=' + cbName;
+        const script = document.createElement('script');
+        const cleanup = () => { delete window[cbName]; script.remove(); };
+        const timeout = setTimeout(() => { cleanup(); reject(new Error('jsonp timeout')); }, timeoutMs);
+        window[cbName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+        script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('jsonp error')); };
+        script.src = fullUrl;
+        document.head.appendChild(script);
+      });
+    }
+    async function deezerPreview(artist, name){
+      const key = ((artist||'') + '|' + (name||'')).toLowerCase().trim();
+      if (_deezerCache.has(key)) return _deezerCache.get(key);
+      try {
+        const q = encodeURIComponent(((artist||'') + ' ' + (name||'')).trim());
+        const data = await jsonpFetch('https://api.deezer.com/search?q=' + q + '&limit=1');
+        const url = data?.data?.[0]?.preview || null;
+        _deezerCache.set(key, url);
+        return url;
+      } catch { _deezerCache.set(key, null); return null; }
+    }
+
     async function searchSpotifyTracks(query, limit=6){
       const token = await getSpotifyToken();
       const resp = await fetch(
@@ -4383,7 +4413,9 @@
         previewUrl: t.preview_url,
         durationMs: t.duration_ms,
       }));
+      // Cascade : Spotify → Deezer → iTunes pour le preview URL
       await Promise.all(items.map(async t => {
+        if (!t.previewUrl) t.previewUrl = await deezerPreview(t.artist, t.name);
         if (!t.previewUrl) t.previewUrl = await itunesPreview(t.artist, t.name);
       }));
       return items;
