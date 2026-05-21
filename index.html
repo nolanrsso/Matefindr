@@ -607,6 +607,10 @@
   .orbit.orbit--dynamic .orb-label{max-width:78px;font-size:9.5px}
   /* When dynamic, position is set inline → kill the CSS nth-child defaults */
   .orbit.orbit--dynamic .orb-wrap:nth-child(n){top:auto;left:auto;right:auto;bottom:auto;animation:none}
+  /* Drag interactions */
+  .orbit .orb-wrap{cursor:grab;user-select:none;-webkit-user-select:none}
+  .orbit .orb-wrap.orb-dragging{cursor:grabbing;z-index:99}
+  .orbit .orb-wrap.orb-dragging .orb{transform:scale(1.18);box-shadow:0 18px 40px rgba(0,0,0,.6)}
   /* Orb label — floats below each bubble */
   .orb-label{
     font-size:10.5px;font-weight:700;color:#fff;
@@ -3837,7 +3841,11 @@
         btn.dataset.kind = o.kind;
         btn.title = `${o.title} · ${o.sub || ''}`;
         btn.innerHTML = orbInner(o);
-        btn.addEventListener('click', (ev) => { ev.stopPropagation(); playOrb(o, btn); });
+        btn.addEventListener('click', (ev) => {
+          // Suppress click if we just finished dragging (so drop doesn't play music)
+          if (wrap._wasDragged) { wrap._wasDragged = false; ev.preventDefault(); ev.stopPropagation(); return; }
+          ev.stopPropagation(); playOrb(o, btn);
+        });
         const label = document.createElement('span');
         label.className = 'orb-label';
         label.textContent = (o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || '');
@@ -3860,14 +3868,52 @@
 
         orbit.appendChild(wrap);
 
-        _orbSim.items.push({
+        const item = {
           el: wrap,
           ax, ay,             // anchor (target position)
           x: ax, y: ay,       // current
           vx: 0, vy: 0,       // velocity
           phase: Math.random() * Math.PI * 2,
           r: wrap.offsetWidth / 2 || 38,
-        });
+          dragging: false,
+        };
+        _orbSim.items.push(item);
+
+        /* Drag handler — click & drag the bulle wherever you want.
+           Anchor follows on drop so it stays there (until reload). */
+        const stage = orbit.parentElement;
+        function onDown(e){
+          e.preventDefault();
+          item.dragging = true;
+          wrap.classList.add('orb-dragging');
+          const move = (ev) => {
+            const p = ev.touches ? ev.touches[0] : ev;
+            const r = stage.getBoundingClientRect();
+            item.x = p.clientX - r.left;
+            item.y = p.clientY - r.top;
+            item.vx = 0; item.vy = 0;
+            wrap._wasDragged = true;
+          };
+          const up = () => {
+            item.dragging = false;
+            wrap.classList.remove('orb-dragging');
+            // New anchor = current position (orb stays here)
+            item.ax = item.x;
+            item.ay = item.y;
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            document.removeEventListener('touchmove', move);
+            document.removeEventListener('touchend', up);
+            // Allow click again after a tick
+            setTimeout(() => { wrap._wasDragged = false; }, 150);
+          };
+          document.addEventListener('mousemove', move);
+          document.addEventListener('mouseup', up);
+          document.addEventListener('touchmove', move, { passive:false });
+          document.addEventListener('touchend', up);
+        }
+        wrap.addEventListener('mousedown', onDown);
+        wrap.addEventListener('touchstart', onDown, { passive:false });
       });
 
       // Initial paint
@@ -3893,11 +3939,14 @@
       const step = () => {
         const m = _orbSim.mouse;
         for (const it of _orbSim.items){
+          if (it.dragging) {
+            // While dragging, the move handler sets x/y directly — just paint.
+            it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`;
+            continue;
+          }
           it.phase += 0.012;
-          // Idle bob
           const bobX = Math.sin(it.phase) * 0.18;
           const bobY = Math.cos(it.phase * 0.83) * 0.22;
-          // Mouse repulsion
           if (m.has){
             const dx = it.x - m.x;
             const dy = it.y - m.y;
@@ -3910,15 +3959,13 @@
               it.vy += (dy/d) * force * 1.8;
             }
           }
-          // Elastic pull toward anchor
-          it.vx += (it.ax - it.x) * 0.018;
-          it.vy += (it.ay - it.y) * 0.018;
-          // Damping
-          it.vx *= 0.86;
-          it.vy *= 0.86;
+          // Soft elastic pull toward anchor (anchor may have been moved by drag)
+          it.vx += (it.ax - it.x) * 0.012;
+          it.vy += (it.ay - it.y) * 0.012;
+          it.vx *= 0.88;
+          it.vy *= 0.88;
           it.x += it.vx + bobX;
           it.y += it.vy + bobY;
-          // Apply transform
           it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`;
         }
         _orbSim.raf = requestAnimationFrame(step);
