@@ -4040,15 +4040,19 @@
       const cardH = Math.min(sh * 0.85, 640);
       const cardCx = sw / 2, cardCy = sh / 2;
 
+      const headerH = document.querySelector('header')?.getBoundingClientRect().height || 0;
+      const yMin = headerH + 18 + orbR_default();
+      function orbR_default(){ return 90; }
       function pickPos(orbR){
+        const top = headerH + 18 + orbR;
         for (let tries = 0; tries < 40; tries++){
           const x = orbR + 12 + Math.random() * (sw - 2 * orbR - 24);
-          const y = orbR + 12 + Math.random() * (sh - 2 * orbR - 24);
+          const y = top + Math.random() * (sh - top - orbR - 24);
           const dx = x - cardCx, dy = y - cardCy;
           if (Math.abs(dx) < cardW * 0.5 && Math.abs(dy) < cardH * 0.5) continue;
           return { x, y };
         }
-        return { x: Math.random() < 0.5 ? orbR + 24 : sw - orbR - 24, y: orbR + 24 + Math.random() * (sh - 2 * orbR - 48) };
+        return { x: Math.random() < 0.5 ? orbR + 24 : sw - orbR - 24, y: top + Math.random() * (sh - top - orbR - 48) };
       }
 
       list.forEach((o, i) => {
@@ -4125,15 +4129,86 @@
       window.addEventListener('mouseleave', () => { _orbSim.mouse.has = false; });
     })();
 
+    /* Returns a list of rects representing UI zones bubbles must avoid.
+       Each rect: { x, y, w, h, hard:bool }. hard=true => no entry allowed. */
+    function forbiddenRects(){
+      const rects = [];
+      const add = (sel, hard, padding = 12) => {
+        document.querySelectorAll(sel).forEach(el => {
+          if (!el || el.hidden) return;
+          const r = el.getBoundingClientRect();
+          if (!r.width || !r.height) return;
+          rects.push({
+            x: r.left - padding,
+            y: r.top - padding,
+            w: r.width + padding * 2,
+            h: r.height + padding * 2,
+            hard,
+          });
+        });
+      };
+      // Hard block — top navigation bar
+      add('header', true, 6);
+      // Soft avoid — interactive UI
+      add('.msg-fab', false, 20);
+      add('.swipe-actions', false, 16);
+      add('.swipe-tools', false, 14);
+      add('.my-status', false, 16);
+      add('.acc-discord-fab', false, 16);
+      return rects;
+    }
+
     function orbSimStart(){
       if (_orbSim.raf) return;
+      let _zoneCache = null, _zoneCacheT = 0;
       const step = () => {
         const m = _orbSim.mouse;
-        // Orbit is position:fixed -> bounce off viewport edges (full page)
         const sw = window.innerWidth;
         const sh = window.innerHeight;
+        // Refresh forbidden zones every ~400ms (cheaper than every frame)
+        const now = performance.now();
+        if (!_zoneCache || now - _zoneCacheT > 400){
+          _zoneCache = forbiddenRects();
+          _zoneCacheT = now;
+        }
+        const zones = _zoneCache;
         for (const it of _orbSim.items){
           it.phase += 0.014;
+
+          // Forbidden-zone repulsion — push the orb out of nav/FAB/etc.
+          for (const z of zones){
+            // Closest point on rect to orb center
+            const cx = Math.max(z.x, Math.min(it.x, z.x + z.w));
+            const cy = Math.max(z.y, Math.min(it.y, z.y + z.h));
+            const dx = it.x - cx;
+            const dy = it.y - cy;
+            const inside = dx === 0 && dy === 0;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            const reach = it.r + (z.hard ? 6 : 18);
+            if (inside || d < reach){
+              // Compute push direction (use rect center if inside)
+              let nx, ny;
+              if (inside){
+                const rcx = z.x + z.w / 2, rcy = z.y + z.h / 2;
+                nx = (it.x - rcx) || 1;
+                ny = (it.y - rcy) || 1;
+                const nl = Math.hypot(nx, ny) || 1;
+                nx /= nl; ny /= nl;
+              } else {
+                nx = dx / (d || 1);
+                ny = dy / (d || 1);
+              }
+              const fScale = z.hard ? 8 : 3.5;
+              const overlap = Math.max(0, reach - d);
+              it.vx += nx * (0.6 + overlap * 0.05) * fScale * 0.3;
+              it.vy += ny * (0.6 + overlap * 0.05) * fScale * 0.3;
+              // Hard zones : also clamp position so orbs really can't enter
+              if (z.hard && inside){
+                it.x = z.x + z.w / 2 + nx * (z.w / 2 + it.r + 4);
+                it.y = z.y + z.h / 2 + ny * (z.h / 2 + it.r + 4);
+              }
+            }
+          }
 
           // Mouse repulsion (music = soft, others = strong)
           if (m.has){
@@ -4153,8 +4228,9 @@
           // Wobble — random impulses every frame for organic, non-rectilinear motion.
           // Non-music orbs get a strong, biased wobble + a slow curl so trajectories curve.
           if (it.isMusic) {
-            it.vx += (Math.random() - 0.5) * 0.025;
-            it.vy += (Math.random() - 0.5) * 0.025;
+            // Slightly more lively than before but still catchable
+            it.vx += (Math.random() - 0.5) * 0.07;
+            it.vy += (Math.random() - 0.5) * 0.07;
           } else {
             // Curl: rotate velocity slightly each frame
             const curl = Math.sin(it.phase * 0.7) * 0.03;
@@ -4168,13 +4244,13 @@
           }
 
           // Damping — very light for free-floaters (keeps them moving fast)
-          const damp = it.isMusic ? 0.95 : 0.993;
+          const damp = it.isMusic ? 0.97 : 0.993;
           it.vx *= damp;
           it.vy *= damp;
 
           // Clamp max speed
           const sp = Math.hypot(it.vx, it.vy);
-          const maxSp = it.isMusic ? 0.9 : 5.5;
+          const maxSp = it.isMusic ? 1.4 : 5.5;
           if (sp > maxSp) { it.vx = it.vx / sp * maxSp; it.vy = it.vy / sp * maxSp; }
 
           // Maintain a minimum drift for non-music orbs
