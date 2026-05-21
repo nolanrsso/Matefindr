@@ -241,6 +241,17 @@
   .btn .arr{transition:transform .2s ease}
   .btn:hover .arr{transform:translateX(3px)}
 
+  .landing-discord-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:999px;
+    background:rgba(88,101,242,.18);color:#fff;
+    border:1px solid rgba(88,101,242,.45);
+    font-size:12px;font-weight:700;text-decoration:none;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+    margin-left:6px;
+  }
+  .landing-discord-btn:hover{background:rgba(88,101,242,.32);border-color:rgba(88,101,242,.75);transform:translateY(-1px)}
+
   .cta-meta{
     margin-top:22px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
     color:var(--ink-mute);font-size:13px;position:relative;z-index:5;
@@ -1725,8 +1736,18 @@
   .liked-item .li-info{flex:1;min-width:0}
   .liked-item .li-info b{display:block;font-size:14px;color:#fff}
   .liked-item .li-info small{font-size:11.5px;color:#b9bbbe}
-  .liked-item .li-blur{filter:blur(6px);transition:.2s}
-  .liked-item:hover .li-blur{filter:none}
+  .liked-item .li-blur{filter:blur(6px);transition:.2s;user-select:none}
+  /* Locked (non-boost) : reveal slightly on hover for visual feedback only */
+  .liked-item--locked:hover .li-blur{filter:blur(3px)}
+  .liked-item--clickable{cursor:pointer}
+  .liked-item--clickable:hover{background:rgba(255,79,160,.10)}
+  .liked-item .li-action{
+    margin-left:auto;width:32px;height:32px;border-radius:50%;
+    display:grid;place-items:center;color:#FF7EB6;flex:0 0 auto;
+    background:rgba(255,79,160,.12);border:1px solid rgba(255,79,160,.35);
+    transition:.15s ease;
+  }
+  .liked-item--clickable:hover .li-action{background:rgba(255,79,160,.28);transform:scale(1.08)}
 
   /* ===== Boost banner (account) ===== */
   .boost-banner{
@@ -2150,6 +2171,10 @@
       <span style="color: rgb(185, 187, 190)" data-i18n="online">2 428 en ligne</span>
       <span class="sep" style="color: rgb(185, 187, 190)">•</span>
       <span style="color: rgb(185, 187, 190)" data-i18n="tags">Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres</span>
+      <a href="https://discord.gg/NkW4uMmQR" target="_blank" rel="noopener" class="landing-discord-btn" title="Rejoindre le serveur Discord">
+        <svg width="18" height="14" viewBox="0 0 71 55" fill="currentColor"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978Z"/></svg>
+        <span>Discord</span>
+      </a>
     </div>
 
     <div class="badge corner" style="font-size: 9px" data-i18n="footer">EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE</div>
@@ -2225,7 +2250,7 @@
 
     <!-- Toolbar : raccourcis pendant le swipe -->
     <div class="swipe-tools" id="swipeTools">
-      <button class="stool-btn" id="stoolLikes" type="button" aria-label="Likes secrets">
+      <button class="stool-btn" id="stoolLikes" type="button" aria-label="Profils qui t'ont liké">
         <span class="stool-ico">👀</span>
         <span class="stool-lbl"><b id="stoolLikesCount">0</b><small>likes</small></span>
       </button>
@@ -2558,9 +2583,9 @@
   </div>
 
   <!-- ✨ Liked-me panel -->
-  <aside class="liked-panel" id="likedPanel" data-open="false" aria-label="Likes secrets">
+  <aside class="liked-panel" id="likedPanel" data-open="false" aria-label="Profils qui t'ont liké">
     <div class="msg-head">
-      <h3>👀 Likes secrets</h3>
+      <h3>❤️ Profils qui t'ont liké</h3>
       <button class="msg-close" id="likedClose" type="button" aria-label="Fermer">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
@@ -4871,6 +4896,30 @@
     });
     renderMsgList();
 
+    // Create a match from a liker (Boost flow) → adds a convo + opens chat
+    window.createMatchFromLiker = function(p){
+      const id = 'm_' + Date.now();
+      // Remove the liker from the secret-likes list (already liked back)
+      const idx = LIKED_ME.findIndex(x => x.tag === p.tag);
+      if (idx >= 0) LIKED_ME.splice(idx, 1);
+      // Inject at the top of CONVOS with a "C'est un match !" first message
+      CONVOS.unshift({
+        id, name: p.name, tag: p.tag, c1: p.c1, c2: p.c2, initial: p.initial,
+        t: "à l'instant", unread: false,
+        last: 'Vous venez de matcher 🎉',
+        msgs: [
+          { who: 'system', text: `🎉 C'est un match avec ${p.name} ! Lancez la conversation.` },
+        ],
+      });
+      // Refresh secret-likes panel + open messages panel + open the convo
+      if (typeof renderLikedMe === 'function') renderLikedMe();
+      document.getElementById('likedPanel').setAttribute('data-open', 'false');
+      panel.setAttribute('data-open', 'true');
+      panel.setAttribute('data-view', 'list');
+      renderMsgList();
+      setTimeout(() => openConvo(id), 60);
+    };
+
     // ---------- Orb manager ----------
     let selectedOrbKind = 'music';
     const orbPlaceholders = {
@@ -5448,15 +5497,21 @@
       }
 
       // List of likers — photo always visible on the LEFT, info blurred for non-boost
-      likers.forEach(p => {
+      // (revealed on hover). Boost users : click → like back → match + open chat.
+      likers.forEach((p, idx) => {
         const it = document.createElement('div');
-        it.className = 'liked-item';
+        it.className = 'liked-item' + (unlocked ? ' liked-item--clickable' : ' liked-item--locked');
+        it.dataset.idx = String(idx);
         it.innerHTML =
           `<div class="lavi" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.initial}</div>` +
           `<div class="li-info">
              <b class="${unlocked ? '' : 'li-blur'}">${escapeHtmlMini(p.name)} · ${p.age}</b>
              <small class="${unlocked ? '' : 'li-blur'}">@${escapeHtmlMini(p.tag)}</small>
-           </div>`;
+           </div>` +
+          (unlocked ? `<span class="li-action" title="Like en retour"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg></span>` : '');
+        if (unlocked) {
+          it.addEventListener('click', () => createMatchFromLiker(p));
+        }
         list.appendChild(it);
       });
 
