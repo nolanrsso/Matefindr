@@ -4530,9 +4530,12 @@
 
     // ---------- Account screen ----------
     function renderAccount(){
-      // Ensure data-current-tab is set on first open (defaults to 'profil')
+      // Always reset to Profil tab on (re)entry — previously left tab state would
+      // bleed across screen transitions and look like a render bug.
       const card = document.querySelector('#screen-account .acc-card');
-      if (card && !card.hasAttribute('data-current-tab')) card.setAttribute('data-current-tab', 'profil');
+      if (card) card.setAttribute('data-current-tab', 'profil');
+      document.querySelectorAll('#accTabs .acc-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'profil'));
+      document.querySelectorAll('#screen-account .acc-tab').forEach(p => { p.hidden = (p.dataset.tab !== 'profil'); });
       const u = state.user || {};
       const p = state.profile || {};
       document.getElementById('accName').textContent = u.displayName || u.email || 'Tindord user';
