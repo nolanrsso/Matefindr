@@ -345,6 +345,58 @@
     display:grid;place-items:center;border:2px solid #0D0B1E;
   }
 
+  /* Bottom-right FAB stack — Heart (top) + Badge (bottom), visible auth=in */
+  .bf-fab{
+    position:fixed;right:18px;z-index:24;
+    width:60px;height:60px;border-radius:20px;border:none;cursor:pointer;
+    display:none;align-items:center;justify-content:center;color:#fff;
+    transition:transform .2s ease, box-shadow .25s ease;
+  }
+  body[data-auth="in"] .bf-fab{display:flex}
+  .bf-fab:hover{transform:translateY(-3px) scale(1.04)}
+  .bf-fab--heart{
+    bottom:90px;
+    background:linear-gradient(140deg,#FF4FA0 0%,#C92866 100%);
+    box-shadow:0 14px 36px rgba(255,79,160,.45), 0 0 0 1px rgba(255,255,255,.10) inset;
+  }
+  .bf-fab--heart:hover{box-shadow:0 18px 44px rgba(255,79,160,.65), 0 0 0 1px rgba(255,255,255,.15) inset}
+  .bf-fab--badge{
+    bottom:18px;
+    background:linear-gradient(140deg,#9146FF 0%,#6B2BFF 100%);
+    box-shadow:0 14px 36px rgba(107,43,255,.45), 0 0 0 1px rgba(255,255,255,.10) inset;
+  }
+  .bf-fab--badge:hover{box-shadow:0 18px 44px rgba(107,43,255,.65), 0 0 0 1px rgba(255,255,255,.15) inset}
+  .bf-fab .fab-badge{
+    position:absolute;top:-4px;right:-4px;
+    min-width:22px;height:22px;padding:0 6px;border-radius:11px;
+    background:#FFFFFF;color:#FF4FA0;font-size:12px;font-weight:800;
+    display:grid;place-items:center;border:2px solid #0D0B1E;
+  }
+
+  /* Badge-picker compact horizontal popup — opens to the LEFT of the badge FAB */
+  .badge-fab-pop{
+    position:fixed;right:86px;bottom:18px;z-index:25;
+    height:48px;max-width:60vw;
+    padding:6px 10px;border-radius:14px;
+    background:rgba(20,21,26,.96);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:0 14px 36px rgba(0,0,0,.6);
+    backdrop-filter:blur(10px);
+    display:none;align-items:center;gap:8px;
+    opacity:0;transform:translateX(8px);
+    transition:opacity .18s ease, transform .22s cubic-bezier(.2,.7,.3,1);
+    overflow:hidden;
+  }
+  .badge-fab-pop[data-open="true"]{display:flex;opacity:1;transform:translateX(0)}
+  .badge-fab-pop .bfp-item{
+    width:32px;height:32px;border-radius:8px;border:none;cursor:pointer;
+    background:#111;display:grid;place-items:center;flex:0 0 auto;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .badge-fab-pop .bfp-item:hover{transform:scale(1.1);background:#1c1c22}
+  .badge-fab-pop .bfp-item img{width:22px;height:22px;object-fit:contain}
+  .badge-fab-pop .bfp-empty{color:#b9bbbe;font-size:11.5px;padding:0 6px;white-space:nowrap}
+
   /* Messages panel — slide-out drawer */
   .msg-panel{
     position:fixed;left:0;bottom:0;
@@ -1031,7 +1083,7 @@
   .my-status[data-look="game"]  .ms-emoji{box-shadow:0 0 0 1.5px rgba(91,233,255,.7)}
   .my-status[data-look="now"]   .ms-emoji{box-shadow:0 0 0 1.5px rgba(3,209,0,.8)}
   .my-status[data-look="sleep"] .ms-emoji{box-shadow:0 0 0 1.5px rgba(145,70,255,.6)}
-  body[data-screen="swipe"] .my-status{display:inline-flex}
+  body[data-screen="swipe"] .my-status{display:none !important}
 
   /* Popover — clean dark, no violet */
   .ms-pop{
@@ -2394,7 +2446,7 @@
               <option value="il">🙋‍♂️ Hommes (Il)</option>
               <option value="elle">🙋‍♀️ Femmes (Elle)</option>
             </select>
-            <button type="button" class="acc-btn acc-btn--ghost" id="openLikedMe" style="margin:0">Voir qui m'a liké</button>
+            <button type="button" class="acc-btn acc-btn--ghost" id="openLikedMe" style="margin:0;display:none" hidden>Voir qui m'a liké</button>
           </div>
         </div>
 
@@ -2524,6 +2576,20 @@
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
     <span class="fab-badge" id="msgFabBadge">2</span>
   </button>
+
+  <!-- Bottom-right FAB stack : heart (likes received) + badge picker -->
+  <button class="bf-fab bf-fab--heart" id="heartFab" type="button" aria-label="Likes reçus">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg>
+    <span class="fab-badge" id="heartFabBadge">0</span>
+  </button>
+  <button class="bf-fab bf-fab--badge" id="badgeFab" type="button" aria-label="Mes badges Discord">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2.5l2.4 2.1 3.1-.6.6 3.1 2.1 2.4-2.1 2.4-.6 3.1-3.1-.6L12 16.5l-2.4-2.1-3.1.6-.6-3.1L3.8 9.5 5.9 7.1l.6-3.1 3.1.6L12 2.5z"/>
+      <path d="M9 11l2 2 4-4"/>
+    </svg>
+  </button>
+  <!-- Compact horizontal dropdown next to the badge FAB -->
+  <div class="badge-fab-pop" id="badgeFabPop" data-open="false" role="menu" aria-label="Mes badges"></div>
 
   <aside class="msg-panel" id="msgPanel" data-open="false" data-view="list" aria-label="Messages">
     <div class="msg-head">
@@ -4170,6 +4236,7 @@
       add('.swipe-tools', false, 14);
       add('.my-status', false, 16);
       add('.acc-discord-fab', false, 16);
+      add('.bf-fab', false, 18);
       return rects;
     }
 
@@ -5924,7 +5991,65 @@
       });
     })();
 
-    /* ===== Badge picker ===== */
+    /* ===== Badge FAB — compact horizontal popup ===== */
+    (function bindBadgeFab(){
+      const fab = document.getElementById('badgeFab');
+      const pop = document.getElementById('badgeFabPop');
+      if (!fab || !pop) return;
+      function renderPopup(){
+        const u = state.user || {};
+        const badges = getDiscordBadges(u.publicFlags || 0, u.premiumType || 0);
+        pop.innerHTML = '';
+        if (!badges.length) {
+          const empty = document.createElement('span');
+          empty.className = 'bfp-empty';
+          empty.textContent = 'Connecte Discord pour voir tes badges';
+          pop.appendChild(empty);
+          return;
+        }
+        badges.forEach(b => {
+          const it = document.createElement('button');
+          it.type = 'button';
+          it.className = 'bfp-item';
+          it.title = b.title;
+          it.innerHTML = `<img src="https://cdn.discordapp.com/badge-icons/${b.img}.png" alt="${b.title}">`;
+          pop.appendChild(it);
+        });
+      }
+      fab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = pop.getAttribute('data-open') === 'true';
+        if (!open) renderPopup();
+        pop.setAttribute('data-open', open ? 'false' : 'true');
+      });
+      // Click outside → close
+      document.addEventListener('click', (e) => {
+        if (pop.getAttribute('data-open') !== 'true') return;
+        if (e.target.closest('#badgeFabPop') || e.target.closest('#badgeFab')) return;
+        pop.setAttribute('data-open', 'false');
+      });
+    })();
+
+    /* Heart FAB — shows count of likes received */
+    (function bindHeartFab(){
+      const fab = document.getElementById('heartFab');
+      const badge = document.getElementById('heartFabBadge');
+      if (!fab) return;
+      function refresh(){
+        const n = (state.user && state.user.likesReceived) || 0;
+        badge.textContent = String(n);
+        badge.style.display = n > 0 ? 'grid' : 'none';
+      }
+      refresh();
+      window.__heartFabRefresh = refresh;
+      fab.addEventListener('click', () => {
+        // Open the existing Liked-me panel
+        const panel = document.getElementById('likedPanel');
+        if (panel) panel.setAttribute('data-open', 'true');
+      });
+    })();
+
+    /* ===== Badge picker (legacy panel — still used elsewhere if needed) ===== */
     function openBadgePicker(){
       const u = state.user || {};
       const badges = getDiscordBadges(u.publicFlags || 0, u.premiumType || 0);
