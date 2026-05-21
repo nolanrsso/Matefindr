@@ -2455,7 +2455,7 @@
           <div class="bm-col-head">
             <span class="bm-col-name">Tindord</span>
             <span class="bm-col-sub">Boost</span>
-            <div class="bm-col-price"><b>4,39€</b><small>/mois</small> · <b>15€</b><small>à vie</small></div>
+            <div class="bm-col-price"><b>3,59€</b><small>/mois</small> · <b>14,99€</b><small>à vie</small></div>
           </div>
           <ul class="bm-col-feats">
             <li class="on"><span>👑</span>Fake Nitro</li>
@@ -2470,12 +2470,12 @@
       <div class="bm-plans">
         <button type="button" class="bm-plan" data-plan="monthly">
           <span class="bm-plan-tag">Sans engagement</span>
-          <div class="bm-plan-price"><b>4,39€</b><small>/mois</small></div>
+          <div class="bm-plan-price"><b>3,59€</b><small>/mois</small></div>
           <span class="bm-plan-cta">Choisir</span>
         </button>
         <button type="button" class="bm-plan bm-plan--best" data-plan="lifetime">
           <span class="bm-plan-tag">Meilleur deal</span>
-          <div class="bm-plan-price"><b>15€</b><small>à vie</small></div>
+          <div class="bm-plan-price"><b>14,99€</b><small>à vie</small></div>
           <span class="bm-plan-cta">Choisir</span>
         </button>
       </div>
@@ -5199,7 +5199,7 @@
       document.querySelectorAll('.bm-plan').forEach(b => b.style.opacity = active ? '.45' : '1');
       bmActive.hidden = !active;
       if (active) document.getElementById('bmActivePlan').textContent =
-        '· ' + (state.user.boostPlan === 'lifetime' ? '15€ à vie' : '4,39€/mois');
+        '· ' + (state.user.boostPlan === 'lifetime' ? '14,99€ à vie' : '3,59€/mois');
       // Note: do NOT touch boostSection.hidden here — that's controlled by the tab switcher.
       // We only sync the form fields with the boost state.
       document.getElementById('boostFakeNitro').checked = !!(state.user && state.user.fakeNitro);
@@ -5221,7 +5221,7 @@
         state.user.boostPlan = btn.dataset.plan;
         save();
         refreshBoostUI();
-        showToast('✨', 'Bienvenue dans Boost !', btn.dataset.plan === 'lifetime' ? '15€ à vie' : '4,39€/mois');
+        showToast('✨', 'Bienvenue dans Boost !', btn.dataset.plan === 'lifetime' ? '14,99€ à vie' : '3,59€/mois');
       });
     });
     document.getElementById('bmCancel').addEventListener('click', () => {
