@@ -2185,7 +2185,7 @@
         </div>
 
         <div class="acc-field" style="margin-top:14px">
-          <label>Musique d'ambiance pendant le swipe</label>
+          <label>Musique d'entrée de profil <small style="color:#b9bbbe;font-weight:400">(joue automatiquement quand quelqu'un arrive sur ton profil)</small></label>
           <div id="swipeMusicCurrent" class="swipe-music-current" hidden></div>
           <div class="acc-orb-form" id="swipeMusicForm">
             <div class="acc-orb-input-wrap">
@@ -2237,7 +2237,7 @@
           <div class="acc-field"><label data-i18n="acc_age">Âge</label><div class="val" id="accAge">—</div></div>
         </div>
         <div class="acc-field" style="margin-top:14px">
-          <label>Volume bulles musique <span id="musicVolVal" style="color:#b9bbbe;font-weight:400;margin-left:6px">21%</span></label>
+          <label>Volume musique d'entrée <span id="musicVolVal" style="color:#b9bbbe;font-weight:400;margin-left:6px">21%</span></label>
           <input type="range" id="musicVolume" min="0" max="100" value="21" style="width:100%;accent-color:#9146FF;margin-top:6px" />
         </div>
         <div class="acc-field" style="margin-top:14px">
@@ -3618,6 +3618,33 @@
       wrap.appendChild(buildCard(p, true));
       renderOrbs(p);
       renderSwipeGifs(p);
+      // Auto-play the profile's entry music
+      playProfileEntryMusic(p);
+    }
+
+    /* Plays the profile owner's entry music when the card is displayed. */
+    async function playProfileEntryMusic(p){
+      if (_swipeMusicAudio) { _swipeMusicAudio.pause(); _swipeMusicAudio = null; }
+      const box = document.getElementById('swipeMusic');
+      if (box) box.setAttribute('data-show', 'false');
+      // For ME: use state.user.swipeMusic. For others: use their entryMusic field (mock data).
+      let track = null;
+      if (p && p.isMe) track = state.user && state.user.swipeMusic;
+      else track = p && (p.entryMusic || p.swipeMusic);
+      if (!track || !track.previewUrl) return;
+      try {
+        _swipeMusicAudio = new Audio(track.previewUrl);
+        _swipeMusicAudio.loop = true;
+        _swipeMusicAudio.volume = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : 0.35;
+        _swipeMusicAudio.play().catch(() => {});
+        document.getElementById('smTitle').textContent = track.title;
+        document.getElementById('smArtist').textContent = track.artist || '';
+        document.getElementById('smCover').style.backgroundImage = track.cover ? `url('${track.cover}')` : '';
+        document.getElementById('smCover').classList.remove('is-paused');
+        document.getElementById('smIcoPlay').style.display = 'none';
+        document.getElementById('smIcoPause').style.display = '';
+        if (box) box.setAttribute('data-show', 'true');
+      } catch {}
     }
 
     function renderSwipeGifs(p){
@@ -4961,7 +4988,8 @@
       bmActive.hidden = !active;
       if (active) document.getElementById('bmActivePlan').textContent =
         '· ' + (state.user.boostPlan === 'lifetime' ? '15€ à vie' : '4,39€/mois');
-      document.getElementById('boostSection').hidden = !active;
+      // Note: do NOT touch boostSection.hidden here — that's controlled by the tab switcher.
+      // We only sync the form fields with the boost state.
       document.getElementById('boostFakeNitro').checked = !!(state.user && state.user.fakeNitro);
       document.getElementById('boostGenderFilter').value = (state.user && state.user.genderFilter) || 'all';
       renderSwipeMusicCurrent();
