@@ -872,7 +872,31 @@
   .swipe-card .lookfor[data-look="sleep"]{background:linear-gradient(135deg,#9146FF,#6B2BFF)}
   .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:24px;letter-spacing:-.01em}
-  .swipe-card .age{color:#fff;font-weight:700;font-size:20px;opacity:.85}
+  /* age inline next to the name (legacy / fallback) — hidden in favor of the corner badge */
+  .swipe-card .age{display:none}
+
+  /* Age + gender badge — top-right of the banner */
+  .card-age-badge{
+    position:absolute;top:12px;right:14px;z-index:6;
+    display:flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:999px;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 4px 14px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12) inset;
+    color:#fff;font-family:"Clash Display",sans-serif;font-weight:800;
+  }
+  .card-age-badge .cab-age{font-size:18px;line-height:1;letter-spacing:.02em}
+  .card-age-badge .cab-gender{
+    font-size:16px;line-height:1;width:22px;height:22px;border-radius:50%;
+    display:grid;place-items:center;
+  }
+  .card-age-badge .cab-gender[data-g="male"],
+  .card-age-badge .cab-gender[data-g="il"]{background:#2287F7;color:#fff}
+  .card-age-badge .cab-gender[data-g="female"],
+  .card-age-badge .cab-gender[data-g="elle"]{background:#FF4FA0;color:#fff}
+  .card-age-badge .cab-gender[data-g="nonbinary"],
+  .card-age-badge .cab-gender[data-g="other"],
+  .card-age-badge .cab-gender[data-g="autre"]{background:linear-gradient(135deg,#9146FF,#FF7EB6);color:#fff}
   .swipe-card .handle{color:#b9bbbe;font-size:13px;display:flex;align-items:center;gap:6px;margin-top:-6px}
   .swipe-card .handle .sep{opacity:.6}
   .swipe-card hr.div{border:none;border-top:1px solid rgba(255,255,255,.08);margin:2px 0}
@@ -3885,6 +3909,7 @@
         name: u.displayName || u.email?.split('@')[0] || 'Moi',
         tag: u.discordTag || 'moi',
         age: p.age || '',
+        gender: p.gender || '',
         looking: p.looking || 'game',
         status: 'online',
         nitro: !!u.decorationUrl || !!(u.boost && u.fakeNitro),
@@ -4064,10 +4089,18 @@
         ${ttUrl ? `<a href="${ttUrl}" target="_blank" rel="noopener" class="card-social" data-kind="tiktok" title="Voir le profil TikTok"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg><span>@${escapeHtmlMini(ttH)}</span></a>` : ''}
         ${spUrl ? `<a href="${spUrl}" target="_blank" rel="noopener" class="card-social" data-kind="spotify" title="Voir le profil Spotify"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Z"/></svg><span>${escapeHtmlMini(spH)}</span></a>` : ''}
       </div>` : '';
+      // Age + gender badge in the top-right corner of the banner
+      const GENDER_SYM = { male:'♂', il:'♂', female:'♀', elle:'♀', nonbinary:'⚧', other:'⚧', autre:'⚧' };
+      const gSym = GENDER_SYM[p.gender] || '';
+      const ageBadgeHtml = (p.age || gSym) ? `
+        <div class="card-age-badge">
+          ${p.age ? `<span class="cab-age">${p.age}</span>` : ''}
+          ${gSym ? `<span class="cab-gender" data-g="${p.gender || ''}">${gSym}</span>` : ''}
+        </div>` : '';
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
-        <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
+        <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}>${ageBadgeHtml}</div>
         <div class="avatar-wrap${(p.nitro && !p.decorationUrl) ? ' nitro' : ''}${p.decorationUrl ? ' has-deco' : ''}">
           <div class="avi" ${aviStyle}>${aviInner}</div>
           ${decoHtml}
@@ -4078,7 +4111,6 @@
           <div>
             <div class="name-row">
               <span class="name">${p.name}</span>
-              ${p.age ? `<span class="age">${p.age}</span>` : ''}
               ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
             </div>
             <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
