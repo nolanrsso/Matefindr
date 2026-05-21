@@ -1393,40 +1393,61 @@
   body[data-screen="account"] .acc-discord-fab{display:flex}
   .acc-discord-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 16px 38px rgba(88,101,242,.6)}
 
-  /* Voice recorder FAB — bottom-right of the acc-card (above the actions row) */
-  .acc-voice-fab{
-    position:absolute;right:24px;bottom:78px;
-    width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;
-    background:linear-gradient(180deg,#9146FF,#6B2BFF);color:#fff;
-    box-shadow:0 14px 36px rgba(107,43,255,.55), 0 0 0 1px rgba(255,255,255,.10) inset;
-    transition:transform .18s ease, box-shadow .18s ease, background .2s ease;
-    z-index:18;
+  /* Voice memo — compact dark block in the Profil right column */
+  .acc-voice{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .acc-voice-lbl{font-size:11.5px;font-weight:700;color:#dcddde}
+  /* Record button */
+  .acc-voice-record{
+    display:flex;align-items:center;justify-content:flex-start;gap:10px;
+    padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);cursor:pointer;color:#fff;
+    font-family:inherit;font-weight:600;font-size:13px;
+    transition:.15s ease;
   }
-  .acc-voice-fab:hover{transform:scale(1.07) translateY(-2px);box-shadow:0 18px 42px rgba(145,70,255,.65)}
-  .acc-voice-fab .acc-voice-ico{display:grid;place-items:center}
-  .acc-voice-fab .ico-stop{display:none}
-  .acc-voice-fab[data-state="recording"]{background:linear-gradient(180deg,#FF4FA0,#C92866);animation:voiceRecPulse 1.2s ease-in-out infinite}
-  .acc-voice-fab[data-state="recording"] .ico-mic{display:none}
-  .acc-voice-fab[data-state="recording"] .ico-stop{display:block}
-  .acc-voice-fab .acc-voice-timer{font-size:10px;font-weight:800;letter-spacing:.04em}
+  .acc-voice-record:hover{background:rgba(145,70,255,.12);border-color:rgba(145,70,255,.40)}
+  .acc-voice-record .acc-voice-ico{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(180deg,#9146FF,#6B2BFF);color:#fff;flex:0 0 auto}
+  .acc-voice-record .ico-stop{display:none}
+  .acc-voice-record[data-state="recording"]{border-color:rgba(255,79,160,.55);background:rgba(255,79,160,.10)}
+  .acc-voice-record[data-state="recording"] .acc-voice-ico{background:linear-gradient(180deg,#FF4FA0,#C92866);animation:voiceRecPulse 1.2s ease-in-out infinite}
+  .acc-voice-record[data-state="recording"] .ico-mic{display:none}
+  .acc-voice-record[data-state="recording"] .ico-stop{display:block}
+  .acc-voice-record .acc-voice-timer{margin-left:auto;font-size:11px;font-weight:800;color:#FF7EB6;letter-spacing:.04em}
   @keyframes voiceRecPulse{
-    0%,100%{box-shadow:0 0 0 0 rgba(255,79,160,.7), 0 14px 36px rgba(255,79,160,.6)}
-    50%    {box-shadow:0 0 0 14px rgba(255,79,160,0), 0 14px 36px rgba(255,79,160,.6)}
+    0%,100%{box-shadow:0 0 0 0 rgba(255,79,160,.5)}
+    50%    {box-shadow:0 0 0 8px rgba(255,79,160,0)}
   }
-  /* Don't show the voice FAB on other tabs */
-  body[data-screen="account"] .acc-card:not([data-current-tab="profil"]) .acc-voice-fab,
-  body[data-screen="account"] .acc-card:not([data-current-tab="profil"]) .acc-voice-preview{display:none}
-
-  .acc-voice-preview{
-    position:absolute;right:100px;bottom:88px;z-index:18;
-    display:flex;align-items:center;gap:8px;
-    padding:6px 8px 6px 10px;border-radius:14px;
-    background:rgba(20,21,26,.96);border:1px solid rgba(255,255,255,.08);
-    box-shadow:0 14px 32px rgba(0,0,0,.55);
+  /* Player (listen + delete) */
+  .acc-voice-player{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px 8px 8px;border-radius:12px;
+    background:rgba(20,21,26,.85);border:1px solid rgba(255,255,255,.06);
   }
-  .acc-voice-preview audio{height:28px}
-  .acc-voice-preview .acc-btn{padding:5px 9px !important;font-size:11px !important;background:rgba(255,79,160,.18)!important;color:#FF7EB6!important;border:1px solid rgba(255,79,160,.35)!important}
+  .acc-voice-play{
+    width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
+    display:grid;place-items:center;color:#fff;flex:0 0 auto;
+    background:linear-gradient(180deg,#9146FF,#6B2BFF);
+    box-shadow:0 4px 12px rgba(107,43,255,.4);
+  }
+  .acc-voice-play:hover{transform:scale(1.05)}
+  .acc-voice-play .ico-pause{display:none}
+  .acc-voice-play[data-playing="true"] .ico-play{display:none}
+  .acc-voice-play[data-playing="true"] .ico-pause{display:block}
+  .acc-voice-track{
+    flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;
+  }
+  .acc-voice-track-bar{
+    display:block;height:100%;width:0%;
+    background:linear-gradient(90deg,#9146FF,#FF7EB6);
+    transition:width .1s linear;
+  }
+  .acc-voice-time{font-size:11px;font-weight:700;color:#b9bbbe;min-width:30px;text-align:right}
+  .acc-voice-del{
+    width:28px;height:28px;border-radius:8px;border:none;cursor:pointer;
+    display:grid;place-items:center;flex:0 0 auto;
+    background:rgba(255,79,160,.12);color:#FF7EB6;border:1px solid rgba(255,79,160,.30);
+    transition:.15s ease;
+  }
+  .acc-voice-del:hover{background:rgba(255,79,160,.22)}
 
   /* ===== GIF placement stage (account) ===== */
   .gif-stage{
@@ -2148,6 +2169,35 @@
                 <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
               </div>
             </div>
+
+            <!-- Voice memo — under Comptes liés -->
+            <div class="acc-voice" id="accVoiceBlock">
+              <span class="acc-voice-lbl">Vocal du profil <small style="color:#72767d;font-weight:400;font-size:11px">(5s max — joue à l'arrivée sur ton profil)</small></span>
+              <!-- Record state -->
+              <button type="button" class="acc-voice-record" id="accVoiceFab" title="Enregistrer un vocal" data-state="idle">
+                <span class="acc-voice-ico">
+                  <svg class="ico-mic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M9 21h6"/></svg>
+                  <svg class="ico-stop" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                </span>
+                <span class="acc-voice-label" id="accVoiceLabel">Enregistrer un vocal</span>
+                <span class="acc-voice-timer" id="accVoiceTimer"></span>
+              </button>
+              <!-- Playback state -->
+              <div class="acc-voice-player" id="accVoicePreview" hidden>
+                <button type="button" class="acc-voice-play" id="accVoicePlay" title="Lecture">
+                  <svg class="ico-play"  width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+                  <svg class="ico-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <div class="acc-voice-track">
+                  <span class="acc-voice-track-bar" id="accVoiceBar"></span>
+                </div>
+                <span class="acc-voice-time" id="accVoiceTime">0:00</span>
+                <button type="button" class="acc-voice-del" id="accVoiceDel" title="Supprimer le vocal">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+                </button>
+                <audio id="accVoiceAudio" preload="metadata" style="display:none"></audio>
+              </div>
+            </div>
           </div>
         </div>
         <div class="acc-field">
@@ -2318,19 +2368,6 @@
         </div>
       </div>
       <div class="acc-msg" id="accMsg" data-show="false"></div>
-
-      <!-- Voice recorder FAB (bottom-right of acc-card, visible only on Profil tab) -->
-      <div class="acc-voice-preview" id="accVoicePreview" hidden>
-        <audio id="accVoiceAudio" controls></audio>
-        <button type="button" class="acc-btn acc-btn--ghost" id="accVoiceDel" title="Supprimer le vocal">✕</button>
-      </div>
-      <button type="button" class="acc-voice-fab" id="accVoiceFab" title="Enregistrer un vocal pour ton profil" data-state="idle">
-        <span class="acc-voice-ico">
-          <svg class="ico-mic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M9 21h6"/></svg>
-          <svg class="ico-stop" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-        </span>
-        <span class="acc-voice-timer" id="accVoiceTimer">15s</span>
-      </button>
     </div>
 
     <!-- Boost banner is OUTSIDE the acc-card frame (full width below) -->
@@ -5282,27 +5319,40 @@
     })();
 
     // Discord resync button — fetches latest Discord profile and merges into state.user
-    /* ===== Voice recorder (profile audio) ===== */
+    /* ===== Voice memo (profile audio, max 5s, listen + delete only) ===== */
     (function bindVoiceRecorder(){
       const fab = document.getElementById('accVoiceFab');
       const timer = document.getElementById('accVoiceTimer');
+      const lbl = document.getElementById('accVoiceLabel');
       const preview = document.getElementById('accVoicePreview');
       const audioEl = document.getElementById('accVoiceAudio');
+      const playBtn = document.getElementById('accVoicePlay');
       const delBtn = document.getElementById('accVoiceDel');
+      const bar = document.getElementById('accVoiceBar');
+      const timeLbl = document.getElementById('accVoiceTime');
       if (!fab) return;
-      let mediaRec = null, chunks = [], tickIv = null, secs = 0, MAX = 15;
+      let mediaRec = null, chunks = [], tickIv = null, secs = 0;
+      const MAX = 5;
 
+      function fmtTime(t){
+        const s = Math.floor(t); return '0:' + (s < 10 ? '0' + s : s);
+      }
       function renderExisting(){
         const u = state.user || {};
-        if (u.profileVoice) {
+        const has = !!u.profileVoice;
+        if (has) {
           audioEl.src = u.profileVoice;
           preview.hidden = false;
+          fab.hidden = true;
         } else {
           audioEl.src = '';
           preview.hidden = true;
+          fab.hidden = false;
+          fab.setAttribute('data-state', 'idle');
+          lbl.textContent = 'Enregistrer un vocal';
+          timer.textContent = '';
         }
       }
-      // Initial render + re-render on account screen entry
       renderExisting();
       window.__voiceRefresh = renderExisting;
 
@@ -5324,12 +5374,11 @@
               renderExisting();
             };
             reader.readAsDataURL(blob);
-            fab.setAttribute('data-state', 'idle');
-            timer.textContent = MAX + 's';
             clearInterval(tickIv); tickIv = null; secs = 0;
           };
           mediaRec.start();
           fab.setAttribute('data-state', 'recording');
+          lbl.textContent = 'Enregistrement…';
           secs = 0;
           timer.textContent = (MAX - secs) + 's';
           tickIv = setInterval(() => {
@@ -5342,17 +5391,34 @@
           alert('Accès au micro refusé.');
         }
       }
-      function stop(){
-        try { mediaRec?.stop(); } catch {}
-      }
+      function stop(){ try { mediaRec?.stop(); } catch {} }
       fab.addEventListener('click', () => {
         if (fab.dataset.state === 'recording') stop(); else start();
       });
       delBtn.addEventListener('click', () => {
+        try { audioEl.pause(); } catch {}
         state.user = state.user || {};
         delete state.user.profileVoice;
         save();
         renderExisting();
+      });
+      // Custom player controls
+      playBtn.addEventListener('click', () => {
+        if (audioEl.paused) audioEl.play().catch(()=>{});
+        else audioEl.pause();
+      });
+      audioEl.addEventListener('play',  () => playBtn.setAttribute('data-playing','true'));
+      audioEl.addEventListener('pause', () => playBtn.setAttribute('data-playing','false'));
+      audioEl.addEventListener('ended', () => { playBtn.setAttribute('data-playing','false'); bar.style.width = '0%'; });
+      audioEl.addEventListener('timeupdate', () => {
+        if (!audioEl.duration || !isFinite(audioEl.duration)) return;
+        const p = (audioEl.currentTime / audioEl.duration) * 100;
+        bar.style.width = p + '%';
+        timeLbl.textContent = fmtTime(audioEl.currentTime);
+      });
+      audioEl.addEventListener('loadedmetadata', () => {
+        const dur = isFinite(audioEl.duration) ? audioEl.duration : 5;
+        timeLbl.textContent = fmtTime(dur);
       });
     })();
 
