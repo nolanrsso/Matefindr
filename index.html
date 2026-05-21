@@ -4965,20 +4965,39 @@
         img.src = url;
       });
     }
+    /* Manual overrides for specific games — used when Wikidata only has a
+       transparent logo or a bad asset. Either a forced URL, or "logo:true" to
+       accept a transparent logo for that game (e.g. Dead by Daylight). */
+    const GAME_COVER_OVERRIDES = {
+      'Minecraft': 'https://upload.wikimedia.org/wikipedia/en/5/51/Minecraft_cover.png',
+      'Dead by Daylight': { logo: true }, // allow transparent logo
+    };
+
     /* Try Wikidata cover variants for games and pick the first one without a
-       transparent background. Returns null if everything is transparent. */
+       transparent background. Falls back to manual overrides. */
     async function gameCoverOpaque(title){
-      // Pull the QID once, then test each candidate property until we find an opaque image.
+      // Manual override (forced URL)
+      const ovr = GAME_COVER_OVERRIDES[title];
+      if (ovr && typeof ovr === 'string') return ovr;
+      const allowLogo = !!(ovr && ovr.logo);
+
       const qid = await wikiWikibaseId(title);
       if (!qid) return null;
       const props = ['P18', 'P154', 'P2716'];
+      // First pass : look for an opaque image
       for (const p of props){
         const url = await wikidataImage(qid, [p]);
         if (!url) continue;
-        // .svg : almost always transparent → skip outright
-        if (/\.svg(\?|$)/i.test(url)) continue;
+        if (/\.svg(\?|$)/i.test(url) && !allowLogo) continue;
         const transparent = await imageHasTransparency(url);
         if (!transparent) return url;
+      }
+      // If a logo is allowed for this game (e.g. Dead by Daylight), accept the first one
+      if (allowLogo){
+        for (const p of ['P154', 'P18']){
+          const url = await wikidataImage(qid, [p]);
+          if (url) return url;
+        }
       }
       return null;
     }
