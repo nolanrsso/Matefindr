@@ -597,6 +597,16 @@
     50%    {box-shadow:0 0 0 10px rgba(145,70,255,.2), 0 0 70px rgba(145,70,255,1)}
   }
   @keyframes orbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  @keyframes orbDrift{
+    0%,100%{ filter:drop-shadow(0 0 0 transparent) }
+    50%    { filter:drop-shadow(0 8px 18px rgba(255,255,255,.08)) }
+  }
+  /* When >6 orbs : shrink slightly so they fit nicely on the side bands */
+  .orbit.orbit--dynamic .orb{width:70px;height:70px}
+  .orbit.orbit--dynamic .orb svg{width:30px;height:30px}
+  .orbit.orbit--dynamic .orb-label{max-width:78px;font-size:9.5px}
+  /* When dynamic, position is set inline → kill the CSS nth-child defaults */
+  .orbit.orbit--dynamic .orb-wrap:nth-child(n){top:auto;left:auto;right:auto;bottom:auto;animation:none}
   /* Orb label — floats below each bubble */
   .orb-label{
     font-size:10.5px;font-weight:700;color:#fff;
@@ -1643,11 +1653,13 @@
   .acc-orb-grid.acc-orb-grid--many{gap:10px 14px}
   .acc-orb-item{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;min-width:0}
   .acc-orb-circle{
-    width:100%;aspect-ratio:1;max-width:120px;border-radius:50%;display:grid;place-items:center;
+    width:100%;aspect-ratio:1;max-width:200px;border-radius:50%;display:grid;place-items:center;
     position:relative;overflow:visible;
     transition:width .2s ease;
   }
-  .acc-orb-grid--many .acc-orb-circle{max-width:80px}
+  .acc-orb-grid--many .acc-orb-circle{max-width:140px}
+  .acc-orb-circle svg{width:48px !important;height:48px !important}
+  .acc-orb-grid--many .acc-orb-circle svg{width:36px !important;height:36px !important}
   .acc-orb-circle::before{
     content:"";position:absolute;inset:0;border-radius:50%;
     background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.30) 0%,transparent 56%);
@@ -3798,9 +3810,38 @@
       orbit.innerHTML = '';
       if (!p || !p.orbs) return;
       const maxOrbs = orbBudget();
-      p.orbs.slice(0, maxOrbs).forEach((o) => {
+      const list = p.orbs.slice(0, maxOrbs);
+      const n = list.length;
+      // For ≤6 orbs we keep the static :nth-child positions defined in CSS.
+      // For >6 orbs we compute positions on an ellipse around the card so they
+      // never stack and we add a continuous gentle drift animation.
+      const dynamic = n > 6;
+      orbit.classList.toggle('orbit--dynamic', dynamic);
+
+      list.forEach((o, i) => {
         const wrap = document.createElement('div');
         wrap.className = 'orb-wrap';
+        if (dynamic) {
+          // Distribute around the card on left + right side. Cards have center
+          // content, so we cluster orbs on the side bands ±45° around top/bottom.
+          // Angle goes around the ellipse, skipping the central area.
+          const half = Math.ceil(n / 2);
+          const side = i < half ? -1 : 1; // -1 = left, 1 = right
+          const idxInSide = side === -1 ? i : (i - half);
+          const totInSide = side === -1 ? half : (n - half);
+          // Spread orbs vertically along the side, 6% .. 92% Y
+          const t = totInSide <= 1 ? 0.5 : idxInSide / (totInSide - 1);
+          const y = 6 + t * 86;                                   // %
+          const xJitter = (Math.sin(i * 12.9898) * 43758.5453) % 1; // hash → 0..1
+          const xOff = Math.abs(xJitter) * 6;                     // 0..6% inset
+          const dur  = 5 + ((i * 1.7) % 3.5);                     // 5–8.5s
+          const delay = -((i * 0.83) % 4);                        // staggered
+          wrap.style.position = 'absolute';
+          wrap.style.top = y + '%';
+          if (side === -1) wrap.style.left = (-1 + xOff) + '%';
+          else             wrap.style.right = (-1 + xOff) + '%';
+          wrap.style.animation = `orbFloat ${dur.toFixed(2)}s ease-in-out ${delay.toFixed(2)}s infinite, orbDrift ${(dur*1.4).toFixed(2)}s ease-in-out ${(delay*0.7).toFixed(2)}s infinite`;
+        }
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'orb';
@@ -4524,8 +4565,9 @@
         return;
       }
 
-      // game / anime / film : show curated list first (instant), then enrich w/ covers
-      const titles = curatedMatches(val, kind, 10);
+      // game / anime / film : ONLY curated list (no Wikipedia/API fallback to avoid
+      // geographic places etc. polluting the suggestions).
+      const titles = curatedMatches(val, kind, 30);
       const results = titles.map(t => ({
         name: t, sub: '', cover: null,
         orb: { kind, title: t, cover: null },
@@ -4533,19 +4575,6 @@
       if (results.length) {
         renderOrbSugg(results, kind);
         hydrateCuratedCovers(results, kind, reqId);
-      } else if (val.length >= 2) {
-        // No curated match — fall back to API search
-        let api = [];
-        if (kind === 'anime') {
-          api = (await searchAnime(val)).map(a => ({ name:a.name, sub:a.sub, cover:a.cover,
-            orb:{kind:'anime', title:a.name, cover:a.cover}}));
-        } else {
-          api = (await searchWiki(val, kind)).map(p => ({ name:p.name, sub:p.sub, cover:p.cover,
-            orb:{kind, title:p.name, cover:p.cover}}));
-        }
-        if (reqId !== _suggReqId) return;
-        if (!api.length) { closeSugg(); return; }
-        renderOrbSugg(api, kind);
       } else {
         closeSugg();
       }
