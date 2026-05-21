@@ -4921,30 +4921,47 @@
       }
       return null;
     }
-    /* Detect images with a transparent background by sampling the corner pixels
-       on a canvas. Returns true if any sampled pixel has alpha < 240. */
+    /* Detect images with a transparent background.
+       Strict mode : ANY pixel along the outer ring with alpha < 252 = transparent.
+       Tainted canvas (CORS denied) → treat as transparent (safer for the "no transparency" rule). */
     async function imageHasTransparency(url){
       return new Promise(resolve => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        const TIMEOUT = setTimeout(() => resolve(false), 4000);
+        const TIMEOUT = setTimeout(() => resolve(true), 5000); // timeout → safer to skip
         img.onload = () => {
           clearTimeout(TIMEOUT);
           try {
             const canvas = document.createElement('canvas');
-            const w = canvas.width = 32, h = canvas.height = 32;
+            const w = canvas.width = 64, h = canvas.height = 64;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, w, h);
             const data = ctx.getImageData(0, 0, w, h).data;
-            const checks = [[0,0],[w-1,0],[0,h-1],[w-1,h-1],[(w/2)|0,0],[(w/2)|0,h-1],[0,(h/2)|0],[w-1,(h/2)|0]];
-            for (const [x,y] of checks){
-              const i = (y * w + x) * 4;
-              if (data[i+3] < 240) { resolve(true); return; }
+            // Sample the full outer ring (top row, bottom row, left col, right col)
+            // Plus 1px inset to catch images with a tiny border.
+            let transparentCount = 0;
+            const sampleAlpha = (x, y) => data[(y * w + x) * 4 + 3];
+            for (let i = 0; i < w; i++) {
+              if (sampleAlpha(i, 0)   < 252) transparentCount++;
+              if (sampleAlpha(i, h-1) < 252) transparentCount++;
+              if (sampleAlpha(i, 1)   < 252) transparentCount++;
+              if (sampleAlpha(i, h-2) < 252) transparentCount++;
             }
-            resolve(false);
-          } catch { resolve(false); /* tainted canvas */ }
+            for (let j = 1; j < h-1; j++) {
+              if (sampleAlpha(0, j)   < 252) transparentCount++;
+              if (sampleAlpha(w-1, j) < 252) transparentCount++;
+              if (sampleAlpha(1, j)   < 252) transparentCount++;
+              if (sampleAlpha(w-2, j) < 252) transparentCount++;
+            }
+            // Total samples ≈ 4*w + 4*(h-2) = 4*64 + 4*62 = 504
+            // If >5% have transparency, it's a transparent-bg image
+            resolve(transparentCount > 25);
+          } catch {
+            // CORS-tainted canvas → can't read pixels → safer to skip this image
+            resolve(true);
+          }
         };
-        img.onerror = () => { clearTimeout(TIMEOUT); resolve(false); };
+        img.onerror = () => { clearTimeout(TIMEOUT); resolve(true); };
         img.src = url;
       });
     }
