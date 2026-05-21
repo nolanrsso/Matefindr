@@ -654,8 +654,9 @@
     -webkit-background-clip:text;background-clip:text;color:transparent;
     text-align:center;
   }
-  .onb-step .sub{color:#b9bbbe;font-size:15px;margin:0 0 28px;text-align:center}
-  .onb-options{display:grid;gap:12px;margin-bottom:26px}
+  .onb-step .sub{color:#b9bbbe;font-size:15px;margin:0 auto 28px;text-align:center !important;width:100%;display:block}
+  .onb-options{display:grid;gap:14px;margin-bottom:26px}
+  .onb-options:has(+ .onb-skip){margin-bottom:14px}
   .onb-options.three{grid-template-columns:repeat(3,1fr)}
   .onb-options.four{grid-template-columns:repeat(2,1fr)}
   .onb-options.genders{grid-template-columns:repeat(4,1fr)}
@@ -665,10 +666,10 @@
     .onb-options.genders{grid-template-columns:repeat(2,1fr)}
   }
   .onb-opt{
-    padding:20px 12px;border-radius:16px;cursor:pointer;
+    padding:30px 14px;border-radius:18px;cursor:pointer;
     background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.08);
-    color:#fff;font-family:inherit;font-weight:600;font-size:14px;
-    display:flex;flex-direction:column;align-items:center;gap:8px;
+    color:#fff;font-family:inherit;font-weight:600;font-size:15px;
+    display:flex;flex-direction:column;align-items:center;gap:12px;
     transition:transform .16s ease, background .18s ease, border-color .18s ease, box-shadow .25s ease;
     position:relative;overflow:hidden;
   }
@@ -693,7 +694,7 @@
 
   /* Smaller text-link to skip the gender question */
   .onb-skip{
-    display:block;margin:8px auto 24px;padding:6px 12px;
+    display:block;margin:-8px auto 8px;padding:4px 10px;
     background:transparent;border:none;cursor:pointer;
     color:#e7e8ea;font-family:inherit;font-size:13.5px;font-weight:600;
     text-decoration:underline;text-decoration-color:rgba(255,255,255,.40);
