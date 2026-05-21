@@ -1222,7 +1222,7 @@
   .acc-color-pick{width:26px !important;height:26px !important}
   .acc-btn{padding:7px 12px !important;font-size:12px !important}
   .acc-resync-btn{padding:6px 10px !important}
-  .acc-orb-grid{max-height:110px;overflow:auto}
+  .acc-orb-grid{overflow:visible}
   .gif-stage{min-height:90px !important;height:90px !important}
   .acc-actions{margin-top:8px !important}
   .acc-tabs{margin-bottom:8px !important}
@@ -1635,12 +1635,19 @@
     box-shadow:0 4px 14px rgba(107,43,255,.4);transition:.15s ease;
   }
   .acc-orb-add:hover{transform:scale(1.07)}
-  .acc-orb-grid{display:flex;flex-wrap:wrap;gap:14px;min-height:20px}
-  .acc-orb-item{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
-  .acc-orb-circle{
-    width:68px;height:68px;border-radius:50%;display:grid;place-items:center;
-    position:relative;overflow:visible;
+  .acc-orb-grid{
+    display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));
+    gap:14px 18px;min-height:20px;width:100%;
   }
+  /* When > 6 orbs : keep 6 cols and just shrink so 2 rows fit nicely */
+  .acc-orb-grid.acc-orb-grid--many{gap:10px 14px}
+  .acc-orb-item{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;min-width:0}
+  .acc-orb-circle{
+    width:100%;aspect-ratio:1;max-width:120px;border-radius:50%;display:grid;place-items:center;
+    position:relative;overflow:visible;
+    transition:width .2s ease;
+  }
+  .acc-orb-grid--many .acc-orb-circle{max-width:80px}
   .acc-orb-circle::before{
     content:"";position:absolute;inset:0;border-radius:50%;
     background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.30) 0%,transparent 56%);
@@ -1652,7 +1659,8 @@
   .acc-orb-circle[data-kind="game"] {background:linear-gradient(145deg,#FFD080,#FFB66E,#FF4FA0);box-shadow:0 8px 24px rgba(255,79,160,.5)}
   .acc-orb-circle[data-kind="anime"]{background:linear-gradient(145deg,#FF9CC0,#FF7EB6,#b020b8);box-shadow:0 8px 24px rgba(192,38,211,.5)}
   .acc-orb-circle[data-kind="film"] {background:linear-gradient(145deg,#a78bfa,#7c3aed,#4c1d95);box-shadow:0 8px 24px rgba(124,58,237,.5)}
-  .acc-orb-lbl{font-size:10px;font-weight:700;color:#fff;max-width:72px;text-align:center;line-height:1.25;word-break:break-word}
+  .acc-orb-lbl{font-size:11px;font-weight:700;color:#fff;width:100%;max-width:100%;text-align:center;line-height:1.25;word-break:break-word}
+  .acc-orb-grid--many .acc-orb-lbl{font-size:10px}
   .acc-orb-del{
     position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:50%;
     background:#2f3136;border:1.5px solid rgba(255,255,255,.2);color:#dcddde;
@@ -4218,6 +4226,8 @@
       const grid = document.getElementById('accOrbGrid');
       if (!grid) return;
       grid.innerHTML = '';
+      // Set a count class so CSS can shrink bubbles when >6
+      grid.classList.toggle('acc-orb-grid--many', orbs.length > 6);
       orbs.forEach((o, i) => {
         const item = document.createElement('div');
         item.className = 'acc-orb-item';
