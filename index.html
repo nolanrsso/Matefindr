@@ -3350,7 +3350,7 @@
       document.body.setAttribute('data-screen', name);
       if (name === 'account') renderAccount();
       if (name === 'swipe')   { ensureDeck(); refreshMyStatusUI(); refreshSwipeTools(); }
-      if (name !== 'swipe')   stopSwipeMusic();
+      if (name !== 'swipe')   { stopSwipeMusic(); if (typeof orbSimStop === 'function') orbSimStop(); }
     }
     function setAuth(on){
       document.body.setAttribute('data-auth', on ? 'in' : 'out');
@@ -3805,43 +3805,32 @@
     }
 
     /* Render the orb constellation around the top card */
+    /* Live physics state for the profile orbs (mouse repulsion + drift) */
+    let _orbSim = { items: [], mouse: { x: -9999, y: -9999, has: false }, raf: null };
+
     function renderOrbs(p){
       const orbit = document.getElementById('swipeOrbit');
       orbit.innerHTML = '';
+      _orbSim.items = [];
+      if (_orbSim.raf) { cancelAnimationFrame(_orbSim.raf); _orbSim.raf = null; }
       if (!p || !p.orbs) return;
       const maxOrbs = orbBudget();
       const list = p.orbs.slice(0, maxOrbs);
       const n = list.length;
-      // For ≤6 orbs we keep the static :nth-child positions defined in CSS.
-      // For >6 orbs we compute positions on an ellipse around the card so they
-      // never stack and we add a continuous gentle drift animation.
-      const dynamic = n > 6;
-      orbit.classList.toggle('orbit--dynamic', dynamic);
+      orbit.classList.toggle('orbit--dynamic', n > 0);
+
+      const stage = orbit.parentElement; // .swipe-stage
+      const sw = stage.clientWidth;
+      const sh = stage.clientHeight;
+      // Card occupies the center band ~ 64% wide / 92% tall. We place orbs on
+      // an ellipse around the card to spread them evenly.
+      const cx = sw / 2, cy = sh / 2;
+      const rx = sw * 0.46; // horizontal radius
+      const ry = sh * 0.44; // vertical radius
 
       list.forEach((o, i) => {
         const wrap = document.createElement('div');
         wrap.className = 'orb-wrap';
-        if (dynamic) {
-          // Distribute around the card on left + right side. Cards have center
-          // content, so we cluster orbs on the side bands ±45° around top/bottom.
-          // Angle goes around the ellipse, skipping the central area.
-          const half = Math.ceil(n / 2);
-          const side = i < half ? -1 : 1; // -1 = left, 1 = right
-          const idxInSide = side === -1 ? i : (i - half);
-          const totInSide = side === -1 ? half : (n - half);
-          // Spread orbs vertically along the side, 6% .. 92% Y
-          const t = totInSide <= 1 ? 0.5 : idxInSide / (totInSide - 1);
-          const y = 6 + t * 86;                                   // %
-          const xJitter = (Math.sin(i * 12.9898) * 43758.5453) % 1; // hash → 0..1
-          const xOff = Math.abs(xJitter) * 6;                     // 0..6% inset
-          const dur  = 5 + ((i * 1.7) % 3.5);                     // 5–8.5s
-          const delay = -((i * 0.83) % 4);                        // staggered
-          wrap.style.position = 'absolute';
-          wrap.style.top = y + '%';
-          if (side === -1) wrap.style.left = (-1 + xOff) + '%';
-          else             wrap.style.right = (-1 + xOff) + '%';
-          wrap.style.animation = `orbFloat ${dur.toFixed(2)}s ease-in-out ${delay.toFixed(2)}s infinite, orbDrift ${(dur*1.4).toFixed(2)}s ease-in-out ${(delay*0.7).toFixed(2)}s infinite`;
-        }
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'orb';
@@ -3854,9 +3843,90 @@
         label.textContent = (o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || '');
         wrap.appendChild(btn);
         wrap.appendChild(label);
+
+        // Even angular distribution around the ellipse. Start at -90° (top)
+        // and skip the top-center sector so orbs don't hide the avatar.
+        // We use the full circle but shift orbs slightly outward on the sides.
+        const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+        // Avoid the very top (avatar) by offsetting if angle ~ -90°
+        const ax = cx + Math.cos(angle) * rx;
+        const ay = cy + Math.sin(angle) * ry;
+
+        wrap.style.position = 'absolute';
+        wrap.style.left = '0';
+        wrap.style.top  = '0';
+        wrap.style.willChange = 'transform';
+        wrap.style.animation = 'none';
+
         orbit.appendChild(wrap);
+
+        _orbSim.items.push({
+          el: wrap,
+          ax, ay,             // anchor (target position)
+          x: ax, y: ay,       // current
+          vx: 0, vy: 0,       // velocity
+          phase: Math.random() * Math.PI * 2,
+          r: wrap.offsetWidth / 2 || 38,
+        });
       });
+
+      // Initial paint
+      _orbSim.items.forEach(it => { it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`; });
+      orbSimStart();
     }
+
+    /* Mouse tracking on the swipe stage */
+    (function bindOrbMouse(){
+      const stage = document.querySelector('.swipe-stage');
+      if (!stage) return;
+      stage.addEventListener('mousemove', (e) => {
+        const r = stage.getBoundingClientRect();
+        _orbSim.mouse.x = e.clientX - r.left;
+        _orbSim.mouse.y = e.clientY - r.top;
+        _orbSim.mouse.has = true;
+      });
+      stage.addEventListener('mouseleave', () => { _orbSim.mouse.has = false; });
+    })();
+
+    function orbSimStart(){
+      if (_orbSim.raf) return;
+      const step = () => {
+        const m = _orbSim.mouse;
+        for (const it of _orbSim.items){
+          it.phase += 0.012;
+          // Idle bob
+          const bobX = Math.sin(it.phase) * 0.18;
+          const bobY = Math.cos(it.phase * 0.83) * 0.22;
+          // Mouse repulsion
+          if (m.has){
+            const dx = it.x - m.x;
+            const dy = it.y - m.y;
+            const d2 = dx*dx + dy*dy;
+            const range = 160;
+            if (d2 < range*range){
+              const d = Math.sqrt(d2) || 1;
+              const force = (1 - d/range);
+              it.vx += (dx/d) * force * 1.8;
+              it.vy += (dy/d) * force * 1.8;
+            }
+          }
+          // Elastic pull toward anchor
+          it.vx += (it.ax - it.x) * 0.018;
+          it.vy += (it.ay - it.y) * 0.018;
+          // Damping
+          it.vx *= 0.86;
+          it.vy *= 0.86;
+          it.x += it.vx + bobX;
+          it.y += it.vy + bobY;
+          // Apply transform
+          it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`;
+        }
+        _orbSim.raf = requestAnimationFrame(step);
+      };
+      _orbSim.raf = requestAnimationFrame(step);
+    }
+    /* Pause simulation when not on swipe screen (saves CPU) */
+    function orbSimStop(){ if (_orbSim.raf) { cancelAnimationFrame(_orbSim.raf); _orbSim.raf = null; } }
     function escapeHtmlMini(s){ return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
     /* Spotify Client Credentials */
