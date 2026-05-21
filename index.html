@@ -603,44 +603,31 @@
       0 0 60px 14px rgba(29,185,84,.45),
       0 14px 30px rgba(0,0,0,.55);
   }
-  .swipe-stage .orbit .orb[data-kind="anime"]{
-    background:radial-gradient(circle at 34% 28%, #7A2BFF 0%, #4B16AD 50%, #260955 100%);
-    border-color:rgba(150,90,255,.85);
-    box-shadow:
-      inset 0 0 0 1px rgba(255,255,255,.18),
-      inset 0 -10px 22px rgba(0,0,0,.4),
-      0 0 0 2px rgba(75,22,173,.50),
-      0 0 22px 4px rgba(122,43,255,.80),
-      0 0 60px 14px rgba(75,22,173,.55),
-      0 14px 30px rgba(0,0,0,.6);
-  }
-  .swipe-stage .orbit .orb[data-kind="film"]{
-    background:radial-gradient(circle at 34% 28%, #B2E9FF 0%, #5EC8FF 50%, #1F8ED1 100%);
-    border-color:rgba(190,235,255,.9);
-    box-shadow:
-      inset 0 0 0 1px rgba(255,255,255,.30),
-      inset 0 -10px 22px rgba(0,0,0,.18),
-      0 0 0 2px rgba(94,200,255,.45),
-      0 0 22px 4px rgba(178,233,255,.85),
-      0 0 60px 14px rgba(94,200,255,.55),
-      0 14px 30px rgba(0,0,0,.45);
-  }
-  .swipe-stage .orbit .orb[data-kind="game"]{
-    background:radial-gradient(circle at 34% 28%, #FF6B6B 0%, #E53935 50%, #8B0E0E 100%);
-    border-color:rgba(255,150,150,.85);
-    box-shadow:
-      inset 0 0 0 1px rgba(255,255,255,.22),
-      inset 0 -10px 22px rgba(0,0,0,.32),
-      0 0 0 2px rgba(229,57,53,.50),
-      0 0 22px 4px rgba(255,107,107,.85),
-      0 0 60px 14px rgba(229,57,53,.55),
-      0 14px 30px rgba(0,0,0,.55);
-  }
-  /* voice kept neutral dark in case it's used */
+  /* Anime, film & voice : violet/purple (Discord-like) */
+  .swipe-stage .orbit .orb[data-kind="anime"],
+  .swipe-stage .orbit .orb[data-kind="film"],
   .swipe-stage .orbit .orb[data-kind="voice"]{
-    background:linear-gradient(145deg,#7289DA,#5865F2,#9146FF);
-    border-color:rgba(173,140,255,.85);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 -10px 22px rgba(0,0,0,.28), 0 0 0 2px rgba(88,101,242,.30), 0 0 18px 2px rgba(88,101,242,.75), 0 0 48px 10px rgba(88,101,242,.32), 0 14px 30px rgba(0,0,0,.45);
+    background:radial-gradient(circle at 34% 28%, #C7A5FF 0%, #8B5CF6 45%, #4A1BC1 100%);
+    border-color:rgba(199,165,255,.85);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.25),
+      inset 0 -10px 22px rgba(0,0,0,.28),
+      0 0 0 2px rgba(139,92,246,.50),
+      0 0 24px 5px rgba(199,165,255,.85),
+      0 0 62px 16px rgba(139,92,246,.55),
+      0 14px 30px rgba(0,0,0,.5);
+  }
+  /* Game : Discord cool blue (deep navy core + bright cyan rim) */
+  .swipe-stage .orbit .orb[data-kind="game"]{
+    background:radial-gradient(circle at 34% 28%, #8DCBFF 0%, #2F7BD8 45%, #102E5A 100%);
+    border-color:rgba(141,203,255,.9);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.25),
+      inset 0 -10px 22px rgba(0,0,0,.32),
+      0 0 0 2px rgba(47,123,216,.55),
+      0 0 24px 5px rgba(141,203,255,.85),
+      0 0 62px 16px rgba(47,123,216,.55),
+      0 14px 30px rgba(0,0,0,.55);
   }
   .swipe-stage .orbit .orb[data-kind="voice"].playing{animation:voicePulse 1s ease-in-out infinite}
   @keyframes voicePulse{
