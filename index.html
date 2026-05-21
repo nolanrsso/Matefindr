@@ -1713,17 +1713,12 @@
   }
   .liked-panel[data-open="true"]{transform:none}
   .liked-list{flex:1;overflow:auto;padding:6px}
-  .liked-paywall{display:flex;flex-direction:column;align-items:center;gap:18px;padding:32px 22px;text-align:center}
-  .liked-paywall .lp-avatars{display:flex;gap:-12px;justify-content:center;align-items:center}
-  .liked-paywall .lp-avi{
-    width:54px;height:54px;border-radius:50%;display:grid;place-items:center;
-    color:#fff;font-family:"Clash Display",sans-serif;font-weight:800;font-size:20px;
-    border:3px solid #1c1d22;margin-left:-12px;
-  }
-  .liked-paywall .lp-avi:first-child{margin-left:0}
-  .liked-paywall .lp-text{font-size:15px;color:#dcddde;line-height:1.4;margin:0}
+  .liked-paywall{display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 22px 22px;text-align:center;border-top:1px solid rgba(255,255,255,.06);margin-top:14px}
+  .liked-paywall .lp-text{font-size:14px;color:#dcddde;line-height:1.4;margin:0}
   .liked-paywall .lp-text b{color:#FFD83D;font-weight:800}
   .liked-paywall .lp-cta{width:100%;max-width:240px}
+  .liked-empty{padding:32px 22px;text-align:center;color:#dcddde}
+  .liked-empty p{margin:6px 0;font-size:14px;line-height:1.4}
   .liked-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer;transition:.12s}
   .liked-item:hover{background:rgba(255,255,255,.05)}
   .liked-item .lavi{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:"Clash Display",sans-serif;font-weight:800;font-size:18px;color:#fff;flex:0 0 auto}
@@ -5438,15 +5433,39 @@
       const list = document.getElementById('likedList');
       list.innerHTML = '';
       const unlocked = !!(state.user && state.user.boost);
+      const likers = LIKED_ME || [];
+
+      if (likers.length === 0) {
+        // No likes yet : simple message
+        const empty = document.createElement('div');
+        empty.className = 'liked-empty';
+        empty.innerHTML = `
+          <p>Personne ne t'a encore liké en secret.</p>
+          <p style="color:#72767d;font-size:12.5px">Continue à swiper pour augmenter tes chances ✨</p>
+        `;
+        list.appendChild(empty);
+        return;
+      }
+
+      // List of likers — photo always visible on the LEFT, info blurred for non-boost
+      likers.forEach(p => {
+        const it = document.createElement('div');
+        it.className = 'liked-item';
+        it.innerHTML =
+          `<div class="lavi" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.initial}</div>` +
+          `<div class="li-info">
+             <b class="${unlocked ? '' : 'li-blur'}">${escapeHtmlMini(p.name)} · ${p.age}</b>
+             <small class="${unlocked ? '' : 'li-blur'}">@${escapeHtmlMini(p.tag)}</small>
+           </div>`;
+        list.appendChild(it);
+      });
+
       if (!unlocked) {
-        // CTA paywall : show ONLY a row of blurred avatars + the upsell text
+        // Paywall CTA at the bottom : text + boost button (no avatars row)
         const cta = document.createElement('div');
         cta.className = 'liked-paywall';
         cta.innerHTML = `
-          <div class="lp-avatars">
-            ${LIKED_ME.slice(0, 6).map(p => `<div class="lp-avi li-blur" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.initial}</div>`).join('')}
-          </div>
-          <p class="lp-text">Passe à <b>Tindord Boost</b> pour voir ces likes ✨</p>
+          <p class="lp-text">Pour voir qui t'as liké, passe à <b>Tindord Boost</b> ✨</p>
           <button type="button" class="acc-btn acc-btn--primary lp-cta" id="likedPaywallCta">Découvrir Boost</button>
         `;
         list.appendChild(cta);
@@ -5455,16 +5474,7 @@
           document.getElementById('likedPanel').setAttribute('data-open','false');
           if (typeof openBoostModal === 'function') openBoostModal();
         });
-        return;
       }
-      LIKED_ME.forEach(p => {
-        const it = document.createElement('div');
-        it.className = 'liked-item';
-        it.innerHTML =
-          `<div class="lavi" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.initial}</div>` +
-          `<div class="li-info"><b>${escapeHtmlMini(p.name)} · ${p.age}</b><small>@${escapeHtmlMini(p.tag)}</small></div>`;
-        list.appendChild(it);
-      });
     }
     document.getElementById('likedClose').addEventListener('click', () => {
       document.getElementById('likedPanel').setAttribute('data-open','false');
