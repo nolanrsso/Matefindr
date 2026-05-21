@@ -477,7 +477,7 @@
   .bf-fab--badge:hover{box-shadow:0 18px 44px rgba(107,43,255,.65), 0 0 0 1px rgba(255,255,255,.15) inset}
   .bf-fab--badge[data-look="chill"]{background:linear-gradient(140deg,#FFB66E 0%,#FF7EB6 100%);box-shadow:0 14px 36px rgba(255,126,182,.45), 0 0 0 1px rgba(255,255,255,.10) inset}
   .bf-fab--badge[data-look="game"] {background:linear-gradient(140deg,#5BE9FF 0%,#9146FF 100%);box-shadow:0 14px 36px rgba(91,233,255,.45), 0 0 0 1px rgba(255,255,255,.10) inset}
-  .bf-fab--badge[data-look="now"]  {background:linear-gradient(140deg,#e6ff00 0%,#03d100 100%);box-shadow:0 14px 36px rgba(3,209,0,.45), 0 0 0 1px rgba(255,255,255,.10) inset}
+  .bf-fab--badge[data-look="talk"] {background:linear-gradient(140deg,#3BD17C 0%,#1EA362 100%);box-shadow:0 14px 36px rgba(30,163,98,.45), 0 0 0 1px rgba(255,255,255,.10) inset}
   .bf-fab--badge[data-look="sleep"]{background:linear-gradient(140deg,#9146FF 0%,#3D0E9F 100%);box-shadow:0 14px 36px rgba(61,14,159,.55), 0 0 0 1px rgba(255,255,255,.10) inset}
   .bf-fab .bf-emoji{font-size:30px;line-height:1;display:block}
   .bf-fab .fab-badge{
@@ -988,7 +988,7 @@
   }
   .swipe-card .lookfor[data-look="chill"]{background:linear-gradient(135deg,#FFB66E,#FF7EB6)}
   .swipe-card .lookfor[data-look="game"] {background:linear-gradient(135deg,#5BE9FF,#9146FF)}
-  .swipe-card .lookfor[data-look="now"]  {background:linear-gradient(135deg,#e6ff00,#03d100)}
+  .swipe-card .lookfor[data-look="talk"] {background:linear-gradient(135deg,#3BD17C,#1EA362)}
   .swipe-card .lookfor[data-look="sleep"]{background:linear-gradient(135deg,#9146FF,#6B2BFF)}
   .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:24px;letter-spacing:-.01em}
@@ -1255,7 +1255,7 @@
   /* Subtle per-mode accent line (no full violet background) */
   .my-status[data-look="chill"] .ms-emoji{box-shadow:0 0 0 1.5px rgba(255,182,110,.7)}
   .my-status[data-look="game"]  .ms-emoji{box-shadow:0 0 0 1.5px rgba(91,233,255,.7)}
-  .my-status[data-look="now"]   .ms-emoji{box-shadow:0 0 0 1.5px rgba(3,209,0,.8)}
+  .my-status[data-look="talk"]  .ms-emoji{box-shadow:0 0 0 1.5px rgba(59,209,124,.8)}
   .my-status[data-look="sleep"] .ms-emoji{box-shadow:0 0 0 1.5px rgba(145,70,255,.6)}
   body[data-screen="swipe"] .my-status{display:none !important}
 
@@ -1286,7 +1286,7 @@
   }
   .ms-pop button[data-val="chill"] .emo{box-shadow:0 0 0 1.5px rgba(255,182,110,.65)}
   .ms-pop button[data-val="game"]  .emo{box-shadow:0 0 0 1.5px rgba(91,233,255,.65)}
-  .ms-pop button[data-val="now"]   .emo{box-shadow:0 0 0 1.5px rgba(3,209,0,.75)}
+  .ms-pop button[data-val="talk"]  .emo{box-shadow:0 0 0 1.5px rgba(59,209,124,.75)}
   .ms-pop button[data-val="sleep"] .emo{box-shadow:0 0 0 1.5px rgba(145,70,255,.55)}
   .ms-pop button .lbl{display:flex;flex-direction:column}
   .ms-pop button .lbl small{font-weight:500;color:#8b8c92;font-size:11.5px}
@@ -2394,8 +2394,8 @@
         <p class="sub" data-i18n="onb_q3_sub">Tu pourras changer plus tard dans ton profil</p>
         <div class="onb-options four" id="onbLooking">
           <button type="button" class="onb-opt" data-val="chill"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg></span><span class="label" data-i18n="look_chill">Chill</span></button>
-          <button type="button" class="onb-opt" data-val="game"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="15.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="17.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span><span class="label" data-i18n="look_game">Une game</span></button>
-          <button type="button" class="onb-opt" data-val="now"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></span><span class="label" data-i18n="look_now">Mate maintenant</span></button>
+          <button type="button" class="onb-opt" data-val="game"><span class="emoji"><svg width="32" height="32" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span><span class="label" data-i18n="look_game">Jouer</span></button>
+          <button type="button" class="onb-opt" data-val="talk"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg></span><span class="label" data-i18n="look_talk">Discuter</span></button>
           <button type="button" class="onb-opt" data-val="sleep"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg></span><span class="label" data-i18n="look_sleep">Sleepcall</span></button>
         </div>
         <div class="onb-actions">
@@ -2417,8 +2417,8 @@
     </button>
     <div class="ms-pop" id="myStatusPop" data-open="false" role="menu">
       <button type="button" data-val="chill"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg></span><span class="lbl"><b data-i18n="look_chill">Chill</b><small data-i18n="look_chill_sub">Détente, discussions</small></span></button>
-      <button type="button" data-val="game"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="15.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="17.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span><span class="lbl"><b data-i18n="look_game">Une game</b><small data-i18n="look_game_sub">Tryhard ou casual</small></span></button>
-      <button type="button" data-val="now"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></span><span class="lbl"><b data-i18n="look_now">Mate maintenant</b><small data-i18n="look_now_sub">Dispo immédiatement</small></span></button>
+      <button type="button" data-val="game"><span class="emo"><svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span><span class="lbl"><b data-i18n="look_game">Jouer</b><small data-i18n="look_game_sub">Tryhard ou casual</small></span></button>
+      <button type="button" data-val="talk"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg></span><span class="lbl"><b data-i18n="look_talk">Discuter</b><small data-i18n="look_talk_sub">Conversation tranquille</small></span></button>
       <button type="button" data-val="sleep"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg></span><span class="lbl"><b data-i18n="look_sleep">Sleepcall</b><small data-i18n="look_sleep_sub">Voix douce pour s'endormir</small></span></button>
     </div>
 
@@ -2602,8 +2602,8 @@
         </div>
         <select class="acc-select" id="accLookSel" style="display:none">
           <option value="chill">🛋️ Chill</option>
-          <option value="game">🎮 Une game</option>
-          <option value="now">⌨️ Mate maintenant</option>
+          <option value="game">🎮 Jouer</option>
+          <option value="talk">💬 Discuter</option>
           <option value="sleep">💤 Sleepcall</option>
         </select>
       </div>
@@ -2829,8 +2829,8 @@
   <!-- Compact horizontal dropdown next to the badge FAB -->
   <div class="badge-fab-pop" id="badgeFabPop" data-open="false" role="menu" aria-label="Ce que tu cherches">
     <button type="button" class="bfp-item" data-val="chill" title="Chill"><span class="bfp-emoji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg></span></button>
-    <button type="button" class="bfp-item" data-val="game"  title="Une game"><span class="bfp-emoji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="15.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="17.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span></button>
-    <button type="button" class="bfp-item" data-val="now"   title="Mate maintenant"><span class="bfp-emoji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></span></button>
+    <button type="button" class="bfp-item" data-val="game"  title="Jouer"><span class="bfp-emoji"><svg width="20" height="20" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span></button>
+    <button type="button" class="bfp-item" data-val="talk"  title="Discuter"><span class="bfp-emoji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg></span></button>
     <button type="button" class="bfp-item" data-val="sleep" title="Sleepcall"><span class="bfp-emoji"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg></span></button>
   </div>
 
@@ -3973,7 +3973,7 @@
           {kind:'game',  title:'Minecraft',          sub:'Realm chill',       emoji:'🎮'},
           {kind:'anime', title:'Cowboy Bebop',       sub:'Anime culte',       emoji:'📺'},
         ] },
-      { name:'Sam', tag:'sam.exe', age:20, gender:'other', looking:'now', status:'online', nitro:true,
+      { name:'Sam', tag:'sam.exe', age:20, gender:'other', looking:'talk', status:'online', nitro:true,
         joinedOn:'5 nov. 2025',
         activity:{type:'game', title:'League of Legends', sub:'File d\'attente — Solo/Duo'},
         games:['LoL','TFT'], bio:'Main support, je carry les mid 🙃',
@@ -3995,7 +3995,7 @@
           {kind:'game',  title:'Phasmophobia',       sub:'Pro hunter',        emoji:'🎮'},
           {kind:'voice', title:'Note vocale',        sub:"« Halloween toute l'année »", emoji:'🎤', voice:"Hello, on regarde Insidious ensemble ?"},
         ] },
-      { name:'Theo', tag:'theo_apex', age:25, gender:'male', looking:'now', status:'online', nitro:true,
+      { name:'Theo', tag:'theo_apex', age:25, gender:'male', looking:'talk', status:'online', nitro:true,
         joinedOn:'29 juin 2025',
         activity:{type:'game', title:'Apex Legends', sub:'En partie ranked'},
         games:['Apex','Warzone'], bio:'Predator EU. Cherche duo sérieux maintenant.',
@@ -4028,7 +4028,7 @@
           {kind:'game',  title:'Disco Elysium',      sub:'3x rejoué',         emoji:'🎮'},
           {kind:'voice', title:'Note vocale',        sub:"« Hello »",         emoji:'🎤', voice:"Salut, je m'appelle Kai. On discute philo ce soir ?"},
         ] },
-      { name:'Zoé', tag:'zoe.dia', age:21, gender:'female', looking:'now', status:'online', nitro:true,
+      { name:'Zoé', tag:'zoe.dia', age:21, gender:'female', looking:'talk', status:'online', nitro:true,
         joinedOn:'24 oct. 2025',
         activity:{type:'game', title:'Valorant', sub:'Ranked — Diamond II'},
         games:['Valorant','Overwatch'], bio:'Diamond mais je rage pas (trop)',
@@ -4236,8 +4236,8 @@
     // Outline-style SVG icons (white) for looking_for badges — same DA as ♂ ♀ ⭐
     const LOOK_SVG = {
       chill: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg>',
-      game:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="15.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="17.5" cy="14" r="1" fill="#fff" stroke="none"/></svg>',
-      now:   '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>',
+      game:  '<svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg>',
+      talk:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg>',
       sleep: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>',
     };
     // Backwards-compat alias (some legacy code uses LOOK_EMOJI string)
@@ -4253,7 +4253,7 @@
         c.style.pointerEvents = 'none';
         c.style.opacity = '0.85';
       }
-      const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), now:tx('look_now'), sleep:tx('look_sleep') }[p.looking] || p.looking;
+      const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), talk:tx('look_talk'), sleep:tx('look_sleep') }[p.looking] || p.looking;
       // BANNER : only the top strip — uses Discord banner image, accent color, or default gradient.
       const accentHex = p.accentColor ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
       const bannerStyle = p.bannerUrl
@@ -6483,8 +6483,8 @@
       if (!fab || !pop) return;
       const FAB_SVG = {
         chill: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg>',
-        game:  '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="15.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="17.5" cy="14" r="1" fill="#fff" stroke="none"/></svg>',
-        now:   '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>',
+        game:  '<svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg>',
+        talk:  '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg>',
         sleep: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>',
       };
       function refreshFabState(){
@@ -6737,6 +6737,12 @@
         if (document.body.getAttribute('data-screen') === 'swipe')   ensureDeck();
       }
       return dirty;
+    }
+
+    // Migration : ancien statut 'now' -> nouveau 'talk' (Discuter)
+    if (state.profile && state.profile.looking === 'now') {
+      state.profile.looking = 'talk';
+      save();
     }
 
     // ---------- Init from persisted state ----------
