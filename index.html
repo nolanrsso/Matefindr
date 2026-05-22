@@ -1087,6 +1087,29 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
+  /* Auto-contrast — when profile color is too light, switch text to dark */
+  .swipe-card.light-bg .name,
+  .swipe-card.light-bg .handle,
+  .swipe-card.light-bg .handle .sep,
+  .swipe-card.light-bg .joined,
+  .swipe-card.light-bg .bio,
+  .swipe-card.light-bg .bio b,
+  .swipe-card.light-bg .common,
+  .swipe-card.light-bg .common b,
+  .swipe-card.light-bg .activity .lbl b,
+  .swipe-card.light-bg .activity .lbl span,
+  .swipe-card.light-bg .card-social,
+  .swipe-card.light-bg .card-voice-info b,
+  .swipe-card.light-bg .card-voice-time{color:#101014 !important}
+  .swipe-card.light-bg .handle .sep{opacity:.5}
+  .swipe-card.light-bg .joined svg,
+  .swipe-card.light-bg .card-social svg{color:#101014;opacity:.85}
+  .swipe-card.light-bg .bio{background:rgba(0,0,0,.08)}
+  .swipe-card.light-bg .activity{background:rgba(0,0,0,.06)}
+  .swipe-card.light-bg .card-voice{background:rgba(0,0,0,.10)}
+  .swipe-card.light-bg hr.div{border-color:rgba(0,0,0,.12)}
+  .swipe-card.light-bg .card-social[data-kind="tiktok"] svg{color:#101014}
+
   /* LIKE / NOPE stamps */
   .swipe-card .badge-stamp{
     position:absolute;top:24px;padding:6px 14px;border-radius:8px;
@@ -1348,7 +1371,10 @@
   .acc-langs button.active{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 0 0 3px rgba(255,255,255,.05)}
 
   /* Profile color picker */
-  .acc-color-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .acc-color-pair{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+  .acc-color-pair:first-of-type{margin-top:4px}
+  .acc-color-lbl{font-size:11px;font-weight:700;color:#b9bbbe;letter-spacing:.04em;text-transform:uppercase}
+  .acc-color-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px}
   .acc-color-swatch{
     width:34px;height:34px;border-radius:50%;cursor:pointer;position:relative;
     background:var(--c,#9146FF);border:2px solid rgba(255,255,255,.08);
@@ -2416,26 +2442,53 @@
             </div>
             <div class="acc-field" id="accColorBlock">
               <label style="display:block">Couleur de profil <small style="color:#b9bbbe;font-weight:400">(corps de la carte, sous la bannière)</small></label>
-              <div class="acc-color-row" data-target="profileColor">
-                <button type="button" class="acc-color-swatch" data-color="discord" title="Discord"><span style="background:#1c1d22"></span></button>
-                <button type="button" class="acc-color-swatch" data-color="#9146FF" style="--c:#9146FF"></button>
-                <button type="button" class="acc-color-swatch" data-color="#6B2BFF" style="--c:#6B2BFF"></button>
-                <button type="button" class="acc-color-swatch" data-color="#FF7EB6" style="--c:#FF7EB6"></button>
-                <button type="button" class="acc-color-swatch" data-color="#FF4FA0" style="--c:#FF4FA0"></button>
-                <button type="button" class="acc-color-swatch" data-color="#5BE9FF" style="--c:#5BE9FF"></button>
-                <button type="button" class="acc-color-swatch" data-color="#2BC4FF" style="--c:#2BC4FF"></button>
-                <button type="button" class="acc-color-swatch" data-color="#3BD17C" style="--c:#3BD17C"></button>
-                <button type="button" class="acc-color-swatch" data-color="#1E6F3A" style="--c:#1E6F3A"></button>
-                <button type="button" class="acc-color-swatch" data-color="#FFB66E" style="--c:#FFB66E"></button>
-                <button type="button" class="acc-color-swatch" data-color="#C56A1C" style="--c:#C56A1C"></button>
-                <button type="button" class="acc-color-swatch" data-color="#ED4245" style="--c:#ED4245"></button>
-                <button type="button" class="acc-color-swatch" data-color="#7A1F22" style="--c:#7A1F22"></button>
-                <button type="button" class="acc-color-swatch" data-color="#1a1a1a" style="--c:#1a1a1a"></button>
-                <button type="button" class="acc-color-swatch" data-color="#000000" style="--c:#000000"></button>
-                <label class="acc-color-pick" title="Couleur personnalisée">
-                  <span class="acc-color-pick-ico">+</span>
-                  <input type="color" id="accProfileColor" value="#9146FF" />
-                </label>
+              <div class="acc-color-pair">
+                <span class="acc-color-lbl">Primaire</span>
+                <div class="acc-color-row" data-target="profileColor">
+                  <button type="button" class="acc-color-swatch" data-color="discord" title="Discord"><span style="background:#1c1d22"></span></button>
+                  <button type="button" class="acc-color-swatch" data-color="#9146FF" style="--c:#9146FF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#6B2BFF" style="--c:#6B2BFF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#FF7EB6" style="--c:#FF7EB6"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#FF4FA0" style="--c:#FF4FA0"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#5BE9FF" style="--c:#5BE9FF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#2BC4FF" style="--c:#2BC4FF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#3BD17C" style="--c:#3BD17C"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#1E6F3A" style="--c:#1E6F3A"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#FFB66E" style="--c:#FFB66E"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#C56A1C" style="--c:#C56A1C"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#ED4245" style="--c:#ED4245"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#7A1F22" style="--c:#7A1F22"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#1a1a1a" style="--c:#1a1a1a"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#000000" style="--c:#000000"></button>
+                  <label class="acc-color-pick" title="Couleur personnalisée">
+                    <span class="acc-color-pick-ico">+</span>
+                    <input type="color" id="accProfileColor" value="#9146FF" />
+                  </label>
+                </div>
+              </div>
+              <div class="acc-color-pair">
+                <span class="acc-color-lbl">Secondaire <small style="color:#72767d;font-weight:400">(dégradé, optionnel)</small></span>
+                <div class="acc-color-row" data-target="profileColor2">
+                  <button type="button" class="acc-color-swatch" data-color="discord" title="Aucune"><span style="background:#1c1d22"></span></button>
+                  <button type="button" class="acc-color-swatch" data-color="#9146FF" style="--c:#9146FF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#6B2BFF" style="--c:#6B2BFF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#FF7EB6" style="--c:#FF7EB6"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#FF4FA0" style="--c:#FF4FA0"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#5BE9FF" style="--c:#5BE9FF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#2BC4FF" style="--c:#2BC4FF"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#3BD17C" style="--c:#3BD17C"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#1E6F3A" style="--c:#1E6F3A"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#FFB66E" style="--c:#FFB66E"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#C56A1C" style="--c:#C56A1C"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#ED4245" style="--c:#ED4245"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#7A1F22" style="--c:#7A1F22"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#1a1a1a" style="--c:#1a1a1a"></button>
+                  <button type="button" class="acc-color-swatch" data-color="#000000" style="--c:#000000"></button>
+                  <label class="acc-color-pick" title="Couleur personnalisée">
+                    <span class="acc-color-pick-ico">+</span>
+                    <input type="color" id="accProfileColor2" value="#6B2BFF" />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -3957,6 +4010,7 @@
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
         profileColor: u.profileColor || null,
+        profileColor2: u.profileColor2 || null,
         accentColor: u.accentColor || null,
         profileVoice: u.profileVoice || null,
         orbs,
@@ -4106,9 +4160,21 @@
       const bannerStyle = p.bannerUrl
         ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
         : (accentHex ? `background:${accentHex}` : '');
-      // PROFILE BODY COLOR : single color on the card itself (below banner).
+      // PROFILE BODY COLOR : primary + optional secondary as a gradient on the card body (below banner).
       const pc1 = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
-      if (pc1) c.style.background = pc1;
+      const pc2 = (p.profileColor2 && p.profileColor2 !== 'discord') ? p.profileColor2 : null;
+      if (pc1 && pc2) c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
+      else if (pc1)   c.style.background = pc1;
+      // Auto-contrast : if the card body is too light, switch text to dark.
+      const lum = (hex) => {
+        const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
+        const r = parseInt(m[1].slice(0,2),16)/255, g = parseInt(m[1].slice(2,4),16)/255, b = parseInt(m[1].slice(4,6),16)/255;
+        const lin = (v) => (v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4));
+        return .2126*lin(r) + .7152*lin(g) + .0722*lin(b);
+      };
+      const L1 = lum(pc1), L2 = lum(pc2);
+      const avg = (L1!=null && L2!=null) ? (L1+L2)/2 : (L1!=null ? L1 : (L2!=null ? L2 : null));
+      if (avg != null && avg > 0.55) c.classList.add('light-bg');
       // (default stays #1c1d22 from the .swipe-card class)
       // Avatar wrap background follows the card body so the circle blends in
       const aviBg = pc1 || '#1c1d22';
@@ -6264,9 +6330,9 @@
       const rows = document.querySelectorAll('.acc-color-row[data-target]');
       if (!rows.length) return;
       rows.forEach(row => {
-        const key = row.dataset.target; // 'profileColor'
+        const key = row.dataset.target; // 'profileColor' or 'profileColor2'
         const swatches = row.querySelectorAll('.acc-color-swatch');
-        const pickerId = 'accProfileColor';
+        const pickerId = key === 'profileColor' ? 'accProfileColor' : 'accProfileColor2';
         const picker = document.getElementById(pickerId);
         function applyActive(val){
           swatches.forEach(s => s.classList.toggle('active', s.dataset.color === val));
@@ -6438,6 +6504,7 @@
             userExtras: {
               profileVoice: u.profileVoice || null,
               profileColor: u.profileColor || null,
+              profileColor2: u.profileColor2 || null,
               musicVolume: u.musicVolume || null,
               musicStartTime: u.musicStartTime || null,
               socials: u.socials || null,
