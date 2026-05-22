@@ -1630,15 +1630,24 @@
   /* Floating Discord FAB — bottom-right of viewport, account screen only */
   .acc-discord-fab{
     position:fixed;right:22px;bottom:22px;
-    width:54px;height:54px;border-radius:50%;
+    width:52px;height:52px;border-radius:14px;
     display:none;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#5865F2,#4752C4);color:#fff;
-    box-shadow:0 12px 32px rgba(88,101,242,.45), 0 0 0 1px rgba(255,255,255,.08) inset;
-    text-decoration:none;transition:transform .18s ease, box-shadow .18s ease;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    color:#fff;text-decoration:none;
+    box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
+    transition:transform .18s ease, background .18s ease, border-color .18s ease;
     z-index:90;
   }
   body[data-screen="account"] .acc-discord-fab{display:flex}
-  .acc-discord-fab:hover{transform:scale(1.08) translateY(-2px);box-shadow:0 16px 38px rgba(88,101,242,.6)}
+  .acc-discord-fab svg{width:24px;height:auto;opacity:.95}
+  .acc-discord-fab:hover{
+    background:rgba(255,255,255,.10);
+    border-color:rgba(255,255,255,.22);
+    transform:translateY(-2px);
+  }
 
   /* Voice memo — compact dark block in the Profil right column */
   .acc-voice{display:flex;flex-direction:column;gap:6px;margin-top:10px}
