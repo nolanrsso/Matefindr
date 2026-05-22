@@ -989,7 +989,7 @@
   .swipe-card .lookfor[data-look="talk"] {background:linear-gradient(135deg,#3BD17C,#1EA362)}
   .swipe-card .lookfor[data-look="sleep"]{background:linear-gradient(135deg,#9146FF,#6B2BFF)}
   .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-  .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:24px;letter-spacing:-.01em}
+  .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:36px;letter-spacing:-.01em;line-height:1.05}
   /* age inline next to the name (legacy / fallback) — hidden in favor of the corner badge */
   .swipe-card .age{display:none}
 
@@ -1080,7 +1080,12 @@
   }
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
-    background:#2b2d31;border-radius:10px;padding:10px 12px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.06);
+    backdrop-filter:brightness(1.15);
+    -webkit-backdrop-filter:brightness(1.15);
+    border-radius:10px;padding:10px 12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.18) inset;
   }
   .swipe-card .bio b{color:#fff;display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
   /* Avatar decoration overlay — Discord serves it as APNG which auto-animates.
@@ -1158,7 +1163,7 @@
   .swipe-card.light-bg .handle .sep{opacity:.5}
   .swipe-card.light-bg .joined svg,
   .swipe-card.light-bg .card-social svg{color:#101014;opacity:.85}
-  .swipe-card.light-bg .bio{background:rgba(0,0,0,.08)}
+  .swipe-card.light-bg .bio{background:rgba(0,0,0,.12);border-color:rgba(0,0,0,.10)}
   .swipe-card.light-bg .activity{background:rgba(0,0,0,.06)}
   .swipe-card.light-bg .card-voice{background:rgba(0,0,0,.10)}
   .swipe-card.light-bg hr.div{border-color:rgba(0,0,0,.12)}
