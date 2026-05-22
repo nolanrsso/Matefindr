@@ -6323,7 +6323,11 @@
       const profilBtn = document.querySelector('#accTabs .acc-tab-btn[data-tab="profil"]');
       if (profilBtn) profilBtn.click();
     });
-    document.getElementById('accountChip').addEventListener('click', (e) => { e.preventDefault(); setScreen('account'); });
+    document.getElementById('accountChip').addEventListener('click', (e) => {
+      e.preventDefault();
+      const cur = document.body.getAttribute('data-screen');
+      setScreen(cur === 'account' ? 'swipe' : 'account');
+    });
     /* Dirty-state tracking: snapshot of editable fields at render time.
        If any field differs from the snapshot, the floating save bar appears. */
     let _accSnapshot = null;
