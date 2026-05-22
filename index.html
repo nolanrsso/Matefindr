@@ -5238,15 +5238,6 @@
           renderMsgList();
         }, 1100);
       }, 1900);
-
-      // Click outside the content closes the overlay early (skip animation)
-      const closeOnClick = (ev) => {
-        if (ev.target.closest('.match-content')) return;
-        overlay.setAttribute('data-show', 'false');
-        overlay.removeEventListener('click', closeOnClick);
-        renderMsgList();
-      };
-      overlay.addEventListener('click', closeOnClick);
     }
 
     // ---------- Orb manager ----------
