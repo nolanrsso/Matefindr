@@ -1087,6 +1087,30 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
+  /* Discord servers in common — icons row + count label */
+  .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
+  .swipe-card .cg-icons{display:flex;align-items:center}
+  .swipe-card .cg-icon{
+    width:26px;height:26px;border-radius:50%;
+    background:#1c1d22;border:2px solid #0d0b1e;object-fit:cover;
+    display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800;
+    margin-left:-8px;flex:0 0 auto;
+  }
+  .swipe-card .cg-icon:first-child{margin-left:0}
+  .swipe-card .cg-icon--ph{background:linear-gradient(135deg,#5865F2,#404EED)}
+  .swipe-card .cg-more{
+    margin-left:-8px;
+    min-width:26px;height:26px;padding:0 6px;border-radius:13px;
+    background:#2b2d31;color:#fff;font-size:11px;font-weight:800;
+    border:2px solid #0d0b1e;display:grid;place-items:center;
+  }
+  .swipe-card .cg-label{font-size:12px;color:#b9bbbe;line-height:1}
+  .swipe-card .cg-label b{color:#fff;font-weight:700}
+  .swipe-card.light-bg .cg-icon{border-color:rgba(255,255,255,.65)}
+  .swipe-card.light-bg .cg-more{background:rgba(0,0,0,.10);color:#101014;border-color:rgba(255,255,255,.65)}
+  .swipe-card.light-bg .cg-label,
+  .swipe-card.light-bg .cg-label b{color:#101014 !important}
+
   /* Auto-contrast — when profile color is too light, switch text to dark */
   .swipe-card.light-bg .name,
   .swipe-card.light-bg .handle,
@@ -2872,6 +2896,22 @@
       return await r.json();
     } catch { return null; }
   }
+  async function fetchDiscordGuilds(accessToken){
+    if (!accessToken) return [];
+    try {
+      const r = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+      if (!r.ok) return [];
+      const list = await r.json();
+      // Keep what we need: id, name, icon hash → URL
+      return (list || []).map(g => ({
+        id: g.id,
+        name: g.name,
+        iconUrl: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${g.icon.startsWith('a_') ? 'gif' : 'png'}?size=64` : null,
+      }));
+    } catch { return []; }
+  }
   function discordBannerUrl(id, hash){
     if (!id || !hash) return null;
     const ext = hash.startsWith('a_') ? 'gif' : 'png';
@@ -2918,6 +2958,7 @@
       // Discord access tokens last ~7 days; we keep ours up to 24h to be safe.
       if (stored && (Date.now() - ts) < 24 * 3600 * 1000) token = stored;
     }
+    let guilds = [];
     if (token) {
       console.log('[Tindord] Fetching real Discord profile…');
       const d = await fetchDiscordProfile(token);
@@ -2933,6 +2974,8 @@
         displayName  = d.global_name || d.username || displayName;
         discordTag   = (d.username || '').replace(/#0$/, '') || discordTag;
       }
+      guilds = await fetchDiscordGuilds(token);
+      console.log('[Tindord] Discord guilds:', guilds.length);
     }
 
     return {
@@ -2946,6 +2989,7 @@
       publicFlags: public_flags,
       premiumType: premium_type,
       accentColor: accent_color,
+      guilds,
       mode:        'discord',
     };
   }
@@ -4183,6 +4227,33 @@
         : p.initial;
       const aviStyle = p.avatarUrl ? '' : `style="background:linear-gradient(135deg,${p.c1},${p.c2})"`;
       const decoHtml = p.decorationUrl ? `<img class="avi-deco" src="${p.decorationUrl}" alt="">` : '';
+      // Discord common guilds (icons + count). For mock profiles, pick a random subset
+      // of the user's real guilds the first time we build the card, then cache it on
+      // the profile so re-renders stay stable for that session.
+      const myGuilds = (state.user && Array.isArray(state.user.guilds)) ? state.user.guilds : [];
+      let commonGuilds = [];
+      if (p.isMe) {
+        commonGuilds = myGuilds;
+      } else if (Array.isArray(p.commonGuilds)) {
+        commonGuilds = p.commonGuilds;
+      } else if (myGuilds.length > 0) {
+        const max = Math.min(myGuilds.length, 5);
+        const n = Math.floor(Math.random() * (max + 1));
+        p.commonGuilds = [...myGuilds].sort(() => Math.random() - 0.5).slice(0, n);
+        commonGuilds = p.commonGuilds;
+      }
+      const guildIconHtml = (g) => g.iconUrl
+        ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
+        : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
+      const guildsHtml = commonGuilds.length > 0 ? `
+        <div class="card-guilds">
+          <div class="cg-icons">
+            ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
+            ${commonGuilds.length > 5 ? `<span class="cg-more">+${commonGuilds.length - 5}</span>` : ''}
+          </div>
+          <span class="cg-label"><b>${commonGuilds.length}</b> serveur${commonGuilds.length > 1 ? 's' : ''} en commun</span>
+        </div>
+      ` : '';
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
       const igH = cleanHandle(s.instagram), ttH = cleanHandle(s.tiktok), spH = cleanHandle(s.spotify);
@@ -4254,10 +4325,7 @@
           `}
           <div class="bio"><b>Bio</b>${p.bio}</div>
           ${socialHtml}
-          <div class="common">
-            <span><b>${p.common.friends}</b> ami${p.common.friends > 1 ? 's' : ''} en commun</span>
-            <span><b>${p.common.servers}</b> serveur${p.common.servers > 1 ? 's' : ''} en commun</span>
-          </div>
+          ${guildsHtml}
         </div>
         <div class="lookfor" data-look="${p.looking}" title="${lookLabel}">${LOOK_EMOJI[p.looking] || ''}</div>
       `;
