@@ -5960,16 +5960,32 @@
       const fly      = document.getElementById('matchFly');
       const flyInit  = document.getElementById('matchFlyInit');
 
+      // CLEANUP : reset all leftover state from a previous match animation so
+      // we never see ghost avatars / opacities / classes overlapping.
+      fly.classList.remove('is-flying');
+      fly.hidden = true;
+      fly.style.cssText = '';
+      flyInit.innerHTML = '';
+      aviThem.style.background = '';
+      aviMe.style.background = '';
+      initMe.innerHTML = '';
+      initThem.innerHTML = '';
+      overlay.querySelector('.match-content').style.opacity = '';
+      overlay.querySelector('.match-content').style.transition = '';
+
       const u = state.user || {};
       const myName = u.displayName || 'Moi';
       const myInit = (myName || 'M').charAt(0).toUpperCase();
       const myAvatar = u.avatarUrl;
+      const themInit = (p.initial || (p.name || '?').charAt(0)).toUpperCase();
+      const themAvatar = p.avatarUrl;
 
       nameMe.textContent = myName;
       nameThem.textContent = p.name;
-      initMe.innerHTML = myAvatar ? `<img src="${myAvatar}" alt="">` : myInit;
-      initThem.textContent = p.initial;
-      aviThem.style.background = `linear-gradient(135deg,${p.c1},${p.c2})`;
+      initMe.innerHTML = myAvatar ? `<img src="${myAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : escapeHtmlMini(myInit);
+      initThem.innerHTML = themAvatar ? `<img src="${themAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : escapeHtmlMini(themInit);
+      // Only show the gradient fallback when the other person has no real avatar
+      if (!themAvatar) aviThem.style.background = `linear-gradient(135deg,${p.c1 || '#FF7EB6'},${p.c2 || '#9146FF'})`;
 
       overlay.setAttribute('data-show', 'true');
 
@@ -5985,8 +6001,13 @@
         fly.style.top  = aviRect.top  + 'px';
         fly.style.width  = aviRect.width  + 'px';
         fly.style.height = aviRect.height + 'px';
-        fly.style.background = `linear-gradient(135deg,${p.c1},${p.c2})`;
-        flyInit.textContent = p.initial;
+        if (themAvatar) {
+          flyInit.innerHTML = `<img src="${themAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          fly.style.background = '';
+        } else {
+          flyInit.textContent = themInit;
+          fly.style.background = `linear-gradient(135deg,${p.c1 || '#FF7EB6'},${p.c2 || '#9146FF'})`;
+        }
         fly.style.setProperty('--fx', fx + 'px');
         fly.style.setProperty('--fy', fy + 'px');
         fly.hidden = false;
