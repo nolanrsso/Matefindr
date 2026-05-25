@@ -7616,12 +7616,28 @@
       // Clear previously injected orbs (keep the card)
       stage.querySelectorAll('.oeo-orb, .oeo-add-fab').forEach(el => el.remove());
       const orbs = (state.profile && state.profile.userOrbs) || [];
-      // Split: index pair → gauche, impair → droite
+      const canAddMore = orbs.length < (typeof orbBudget === 'function' ? orbBudget() : 6);
+      const MAX_PER_COL = 4;
+      // Alternance gauche/droite : pair → gauche, impair → droite
       const left  = orbs.filter((_, i) => i % 2 === 0);
       const right = orbs.filter((_, i) => i % 2 === 1);
+      // Split chaque côté en colonnes de MAX_PER_COL (chunk 0 = près de la carte)
+      const chunkize = (arr) => {
+        const out = [];
+        for (let i = 0; i < arr.length; i += MAX_PER_COL) out.push(arr.slice(i, i + MAX_PER_COL));
+        return out;
+      };
+      const leftChunks  = chunkize(left);
+      const rightChunks = chunkize(right);
+      // Décider quel côté reçoit le "+" (celui avec le moins, gauche prioritaire)
       const plusOnLeft = left.length <= right.length;
-      // Show the "+" only if we can still add more bubbles
-      const canAddMore = orbs.length < (typeof orbBudget === 'function' ? orbBudget() : 6);
+      // Si la dernière colonne du côté du "+" est pleine, on crée une nouvelle colonne vide
+      if (canAddMore){
+        const sideChunks = plusOnLeft ? leftChunks : rightChunks;
+        if (sideChunks.length === 0 || sideChunks[sideChunks.length - 1].length >= MAX_PER_COL){
+          sideChunks.push([]);
+        }
+      }
 
       const sRect = stage.getBoundingClientRect();
       const cRect = wrap.getBoundingClientRect();
@@ -7634,27 +7650,33 @@
       const gap     = 14;
       const step    = orbSize + gap;
       const colMargin = 62;
+      const colGap    = 18;
 
-      const leftX  = cx - cardHalfW - colMargin - orbR;
-      const rightX = cx + cardHalfW + colMargin + orbR;
-
-      function renderColumn(items, xPos, isLeft){
-        const showPlus = canAddMore && (plusOnLeft === isLeft);
-        const total = items.length + (showPlus ? 1 : 0);
+      function placeChunk(chunk, xPos, isLeftSide, isLastChunk){
+        const showPlus = canAddMore && isLastChunk && ((isLeftSide && plusOnLeft) || (!isLeftSide && !plusOnLeft));
+        const total = chunk.length + (showPlus ? 1 : 0);
         if (!total) return;
         const colH = total * step - gap;
         const startY = cy - colH / 2 + orbR;
-        items.forEach((o, i) => {
+        chunk.forEach((o, i) => {
           const y = startY + i * step;
           stage.appendChild(makeMiniOrb(o, xPos - orbR, y - orbR, orbs.indexOf(o)));
         });
         if (showPlus){
-          const y = startY + items.length * step;
+          const y = startY + chunk.length * step;
           stage.appendChild(makeAddFab(xPos - orbR, y - orbR));
         }
       }
-      renderColumn(left,  leftX,  true);
-      renderColumn(right, rightX, false);
+      // Render left chunks (chunk 0 = près de la carte, chunk 1 = plus loin à gauche, etc.)
+      leftChunks.forEach((chunk, c) => {
+        const xPos = (cx - cardHalfW - colMargin - orbR) - c * (orbSize + colGap);
+        placeChunk(chunk, xPos, true, c === leftChunks.length - 1);
+      });
+      // Render right chunks (chunk 0 = près de la carte, chunk 1 = plus loin à droite, etc.)
+      rightChunks.forEach((chunk, c) => {
+        const xPos = (cx + cardHalfW + colMargin + orbR) + c * (orbSize + colGap);
+        placeChunk(chunk, xPos, false, c === rightChunks.length - 1);
+      });
     }
     function makeMiniOrb(o, leftPx, topPx, indexInUserOrbs){
       const el = document.createElement('div');
