@@ -7699,6 +7699,14 @@
     function closeOrbEditOverlay(){
       document.getElementById('orbEditOverlay').setAttribute('data-show', 'false');
       document.getElementById('oeoAddPanel').setAttribute('data-open', 'false');
+      // Defensive : force a save + refresh of the account preview/counter
+      // so any in-memory orb that wasn't yet persisted gets locked in.
+      try { save(); } catch(_){}
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+      if (typeof renderUserOrbs === 'function') renderUserOrbs();
+      if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
+      const n = ((state.profile && state.profile.userOrbs) || []).length;
+      console.log('[Tindord] orbs after close:', n, state.profile && state.profile.userOrbs);
     }
     window.openOrbEditOverlay = openOrbEditOverlay;
 
