@@ -2219,13 +2219,14 @@
   .oeo-orb-rank-orbit .oeo-orb-rank-ball{
     position:absolute;top:-10px;left:50%;transform:translateX(-50%);
     width:32px;height:32px;border-radius:50%;
-    background:radial-gradient(circle at 34% 30%, var(--rc1) 0%, var(--rc2) 100%);
-    border:2px solid #0d0b1e;
+    background:transparent;
+    border:2px solid var(--rc1);
     display:grid;place-items:center;
-    box-shadow:0 5px 12px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15) inset;
+    box-shadow:0 0 12px var(--rc1), 0 5px 12px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.18) inset;
     animation:oeoRankCounter 9s linear infinite;
+    backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
   }
-  .oeo-orb-rank-orbit .oeo-orb-rank-ico{font-size:16px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+  .oeo-orb-rank-orbit .oeo-orb-rank-ico{font-size:16px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85)) drop-shadow(0 0 5px var(--rc1, #fff))}
   @keyframes oeoRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
   @keyframes oeoRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
 
@@ -2299,13 +2300,14 @@
   .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-ball{
     position:absolute;top:-12px;left:50%;transform:translateX(-50%);
     width:38px;height:38px;border-radius:50%;
-    background:radial-gradient(circle at 34% 30%, var(--rc1) 0%, var(--rc2) 100%);
-    border:2.5px solid #0d0b1e;
+    background:transparent;
+    border:2.5px solid var(--rc1);
     display:grid;place-items:center;
-    box-shadow:0 6px 16px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15) inset;
+    box-shadow:0 0 14px var(--rc1), 0 6px 16px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.18) inset;
     animation:orbRankCounter 10s linear infinite;
+    backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
   }
-  .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-ico{font-size:18px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+  .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-ico{font-size:18px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85)) drop-shadow(0 0 6px var(--rc1, #fff))}
   @keyframes orbRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
   @keyframes orbRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
   /* Mini "+" button next to a game orb (only on MY card) — opens rank/clip modal */
@@ -7618,6 +7620,8 @@
       const left  = orbs.filter((_, i) => i % 2 === 0);
       const right = orbs.filter((_, i) => i % 2 === 1);
       const plusOnLeft = left.length <= right.length;
+      // Show the "+" only if we can still add more bubbles
+      const canAddMore = orbs.length < (typeof orbBudget === 'function' ? orbBudget() : 6);
 
       const sRect = stage.getBoundingClientRect();
       const cRect = wrap.getBoundingClientRect();
@@ -7635,7 +7639,8 @@
       const rightX = cx + cardHalfW + colMargin + orbR;
 
       function renderColumn(items, xPos, isLeft){
-        const total = items.length + ((plusOnLeft === isLeft) ? 1 : 0);
+        const showPlus = canAddMore && (plusOnLeft === isLeft);
+        const total = items.length + (showPlus ? 1 : 0);
         if (!total) return;
         const colH = total * step - gap;
         const startY = cy - colH / 2 + orbR;
@@ -7643,7 +7648,7 @@
           const y = startY + i * step;
           stage.appendChild(makeMiniOrb(o, xPos - orbR, y - orbR, orbs.indexOf(o)));
         });
-        if (plusOnLeft === isLeft){
+        if (showPlus){
           const y = startY + items.length * step;
           stage.appendChild(makeAddFab(xPos - orbR, y - orbR));
         }
