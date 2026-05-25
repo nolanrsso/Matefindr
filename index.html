@@ -1556,7 +1556,51 @@
     animation:nitroSpin 4s steps(8) infinite;
   }
 
-  /* Profile color picker */
+  /* Profile color picker — wheel version (one circular swatch per slot) */
+  .acc-color-wheel-row{display:flex;align-items:center;gap:14px;margin-top:8px;flex-wrap:wrap}
+  .acc-color-wheel{
+    position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;
+  }
+  .acc-color-wheel input[type="color"]{
+    appearance:none;-webkit-appearance:none;
+    width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,255,255,.18);
+    cursor:pointer;padding:0;background:#9146FF;
+    box-shadow:0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08) inset;
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .acc-color-wheel input[type="color"]:hover{transform:scale(1.06);border-color:rgba(255,255,255,.42)}
+  .acc-color-wheel input[type="color"]::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}
+  .acc-color-wheel input[type="color"]::-webkit-color-swatch{border:none;border-radius:50%}
+  .acc-color-wheel input[type="color"]::-moz-color-swatch{border:none;border-radius:50%}
+  .acc-color-wheel-lbl{font-size:10.5px;font-weight:700;color:#b9bbbe;letter-spacing:.05em;text-transform:uppercase}
+  .acc-color-reset{
+    width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.04);color:#b9bbbe;cursor:pointer;font-size:18px;line-height:1;
+    transition:.15s;align-self:flex-end;margin-bottom:8px;
+  }
+  .acc-color-reset:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.20)}
+
+  /* "Mes bulles" CTA — gros bouton qui ouvre l'overlay edit */
+  .acc-bulles-cta{
+    display:flex;align-items:center;gap:14px;width:100%;
+    padding:14px 16px;border-radius:14px;cursor:pointer;
+    background:linear-gradient(135deg, rgba(145,70,255,.18), rgba(255,126,182,.14));
+    border:1.5px solid rgba(145,70,255,.40);
+    color:#fff;font-family:inherit;text-align:left;
+    transition:.18s ease;
+  }
+  .acc-bulles-cta:hover{
+    background:linear-gradient(135deg, rgba(145,70,255,.30), rgba(255,126,182,.22));
+    border-color:rgba(145,70,255,.65);
+    transform:translateY(-1px);
+    box-shadow:0 10px 28px rgba(145,70,255,.30);
+  }
+  .acc-bulles-cta-ico{font-size:28px;line-height:1;flex:0 0 auto}
+  .acc-bulles-cta-text{display:flex;flex-direction:column;flex:1;min-width:0;gap:2px}
+  .acc-bulles-cta-text b{font-family:"Clash Display",sans-serif;font-weight:700;font-size:16px;color:#fff;letter-spacing:-.01em}
+  .acc-bulles-cta-text small{font-size:12px;color:#dcddde;font-weight:500}
+  .acc-bulles-cta-arrow{font-size:24px;color:rgba(255,255,255,.5);flex:0 0 auto;font-weight:300}
+
   .acc-color-pair{display:flex;flex-direction:column;gap:4px;margin-top:8px}
   .acc-color-pair:first-of-type{margin-top:4px}
   .acc-color-lbl{font-size:11px;font-weight:700;color:#b9bbbe;letter-spacing:.04em;text-transform:uppercase}
@@ -2701,7 +2745,6 @@
           <img src="assets/logo-gold.png" alt="Boost" style="width:22px;height:auto;display:block;filter:drop-shadow(0 0 4px rgba(255,216,61,.55))" />
         </span> Boost</button>
         <button type="button" class="acc-tab-btn active" data-tab="profil">Profil</button>
-        <button type="button" class="acc-tab-btn" data-tab="bulles">Bulles <span class="tab-count" id="tabBulleCount" data-show="false">0</span></button>
         <button type="button" class="acc-tab-btn" data-tab="infos">Paramètres</button>
       </div>
 
@@ -2739,55 +2782,33 @@
               <textarea id="accBio" maxlength="280" placeholder="Parle un peu de toi…"></textarea>
             </div>
             <div class="acc-field" id="accColorBlock">
-              <label style="display:block">Couleur de profil <small style="color:#b9bbbe;font-weight:400">(corps de la carte, sous la bannière)</small></label>
-              <div class="acc-color-pair">
-                <span class="acc-color-lbl">Primaire</span>
-                <div class="acc-color-row" data-target="profileColor">
-                  <button type="button" class="acc-color-swatch" data-color="discord" title="Discord"><span style="background:#1c1d22"></span></button>
-                  <button type="button" class="acc-color-swatch" data-color="#9146FF" style="--c:#9146FF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#6B2BFF" style="--c:#6B2BFF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#FF7EB6" style="--c:#FF7EB6"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#FF4FA0" style="--c:#FF4FA0"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#5BE9FF" style="--c:#5BE9FF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#2BC4FF" style="--c:#2BC4FF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#3BD17C" style="--c:#3BD17C"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#1E6F3A" style="--c:#1E6F3A"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#FFB66E" style="--c:#FFB66E"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#C56A1C" style="--c:#C56A1C"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#ED4245" style="--c:#ED4245"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#7A1F22" style="--c:#7A1F22"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#1a1a1a" style="--c:#1a1a1a"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#000000" style="--c:#000000"></button>
-                  <label class="acc-color-pick" title="Couleur personnalisée">
-                    <span class="acc-color-pick-ico">+</span>
-                    <input type="color" id="accProfileColor" value="#9146FF" />
-                  </label>
-                </div>
+              <label style="display:block">Couleur de profil</label>
+              <div class="acc-color-wheel-row">
+                <label class="acc-color-wheel" title="Couleur principale">
+                  <span class="acc-color-wheel-lbl">Primaire</span>
+                  <input type="color" id="accProfileColor" value="#9146FF" />
+                </label>
+                <label class="acc-color-wheel" title="Couleur secondaire (pour le dégradé)">
+                  <span class="acc-color-wheel-lbl">Secondaire</span>
+                  <input type="color" id="accProfileColor2" value="#6B2BFF" />
+                </label>
+                <button type="button" class="acc-color-reset" id="accColorReset" title="Réinitialiser">↺</button>
               </div>
-              <div class="acc-color-pair">
-                <span class="acc-color-lbl">Secondaire <small style="color:#72767d;font-weight:400">(dégradé, optionnel)</small></span>
-                <div class="acc-color-row" data-target="profileColor2">
-                  <button type="button" class="acc-color-swatch" data-color="discord" title="Aucune"><span style="background:#1c1d22"></span></button>
-                  <button type="button" class="acc-color-swatch" data-color="#9146FF" style="--c:#9146FF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#6B2BFF" style="--c:#6B2BFF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#FF7EB6" style="--c:#FF7EB6"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#FF4FA0" style="--c:#FF4FA0"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#5BE9FF" style="--c:#5BE9FF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#2BC4FF" style="--c:#2BC4FF"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#3BD17C" style="--c:#3BD17C"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#1E6F3A" style="--c:#1E6F3A"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#FFB66E" style="--c:#FFB66E"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#C56A1C" style="--c:#C56A1C"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#ED4245" style="--c:#ED4245"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#7A1F22" style="--c:#7A1F22"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#1a1a1a" style="--c:#1a1a1a"></button>
-                  <button type="button" class="acc-color-swatch" data-color="#000000" style="--c:#000000"></button>
-                  <label class="acc-color-pick" title="Couleur personnalisée">
-                    <span class="acc-color-pick-ico">+</span>
-                    <input type="color" id="accProfileColor2" value="#6B2BFF" />
-                  </label>
-                </div>
+              <!-- Hidden palette rows kept for the existing bindProfileColor() handler -->
+              <div style="display:none">
+                <div class="acc-color-row" data-target="profileColor"></div>
+                <div class="acc-color-row" data-target="profileColor2"></div>
               </div>
+            </div>
+            <div class="acc-field">
+              <button type="button" class="acc-bulles-cta" id="accBullesCta">
+                <span class="acc-bulles-cta-ico">🫧</span>
+                <span class="acc-bulles-cta-text">
+                  <b>Mes bulles</b>
+                  <small id="accBullesCtaCount">0 / 5</small>
+                </span>
+                <span class="acc-bulles-cta-arrow">›</span>
+              </button>
             </div>
           </div>
           <div class="acc-profil-col">
@@ -2858,9 +2879,9 @@
         </select>
       </div>
 
-      <!-- 🫧 Mes Bulles -->
-      <div class="acc-section acc-tab" data-tab="bulles" hidden>
-        <h3>Mes Bulles <span class="pill" id="orbCounterPill">0/5</span></h3>
+      <!-- 🫧 Bulles : section cachée — DOM gardé pour le JS, l'édition se fait dans l'overlay -->
+      <div class="acc-section acc-tab" data-tab="bulles" hidden style="display:none !important">
+        <span class="pill" id="orbCounterPill">0/5</span>
         <div class="acc-orb-cats" id="accOrbCats">
           <button type="button" class="acc-orb-cat active" data-kind="music">Musique</button>
           <button type="button" class="acc-orb-cat" data-kind="game">Jeu</button>
@@ -2874,8 +2895,7 @@
           <button type="button" class="acc-orb-add" id="accOrbAdd">+</button>
         </div>
         <div class="acc-orb-grid" id="accOrbGrid"></div>
-
-        <button type="button" class="acc-btn acc-btn--ghost" id="orbPreviewBtn" style="margin-top:12px;width:100%">Apercu du profil</button>
+        <button type="button" id="orbPreviewBtn">Apercu</button>
       </div>
 
       <!-- ✨ Boost-only options -->
@@ -5802,13 +5822,15 @@
         const sc = socialsCount();
         pill.textContent = used + '/' + max + (sc ? ' (' + sc + ' social' + (sc>1?'s':'') + ')' : '');
       }
-      // Sync the chip next to the Bulles tab
+      // Sync the chip next to the Bulles tab (legacy — tab is now hidden)
       const tabCount = document.getElementById('tabBulleCount');
       if (tabCount) {
         const orbsOnly = ((state.profile && state.profile.userOrbs) || []).length;
         tabCount.textContent = orbsOnly;
         tabCount.setAttribute('data-show', orbsOnly > 0 ? 'true' : 'false');
       }
+      // Update the "Mes bulles" CTA counter on the Profil tab
+      if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
     }
 
     document.querySelectorAll('.acc-orb-cat').forEach(btn => {
@@ -6235,6 +6257,13 @@
       if (typeof window.__refreshBannerPrev === 'function') window.__refreshBannerPrev();
       if (typeof window.__refreshDecoPicker === 'function') window.__refreshDecoPicker();
       if (typeof window.__hydrateDiscordNotifs === 'function') window.__hydrateDiscordNotifs();
+      // Hydrate color wheels from state
+      const cw1 = document.getElementById('accProfileColor');
+      const cw2 = document.getElementById('accProfileColor2');
+      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#9146FF';
+      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#6B2BFF';
+      // Update "Mes bulles" CTA counter
+      if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
       const s = u.socials || {};
       document.getElementById('socIg').value = s.instagram || '';
       document.getElementById('socTt').value = s.tiktok    || '';
@@ -7013,6 +7042,37 @@
       });
     })();
 
+    /* "Reset Discord" button on the color wheels */
+    (function bindColorReset(){
+      const btn = document.getElementById('accColorReset');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        state.user = state.user || {};
+        state.user.profileColor = null;
+        state.user.profileColor2 = null;
+        save();
+        if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        showToast('↺', 'Couleurs réinitialisées', 'On utilise la couleur Discord');
+      });
+    })();
+
+    /* "Mes bulles" CTA → ouvre l'overlay d'édition des bulles */
+    (function bindBullesCta(){
+      const btn = document.getElementById('accBullesCta');
+      if (!btn) return;
+      function refresh(){
+        const used = (typeof orbsUsed === 'function') ? orbsUsed() : ((state.profile && state.profile.userOrbs) || []).length;
+        const max  = (typeof orbBudget === 'function') ? orbBudget() : 6;
+        const lbl  = document.getElementById('accBullesCtaCount');
+        if (lbl) lbl.textContent = `${used} / ${max}`;
+      }
+      window.__refreshBullesCta = refresh;
+      refresh();
+      btn.addEventListener('click', () => {
+        if (typeof openOrbEditOverlay === 'function') openOrbEditOverlay();
+      });
+    })();
+
     // Custom banner import — file → data URL → state.user.bannerUrl
     (function bindBannerImport(){
       const importBtn = document.getElementById('accBannerImport');
@@ -7318,7 +7378,7 @@
       const orbR    = orbSize / 2;
       const gap     = 14;
       const step    = orbSize + gap;
-      const colMargin = 22;
+      const colMargin = 62;
 
       const leftX  = cx - cardHalfW - colMargin - orbR;
       const rightX = cx + cardHalfW + colMargin + orbR;
