@@ -990,6 +990,36 @@
   .swipe-card .lookfor[data-look="sleep"]{background:linear-gradient(135deg,#9146FF,#6B2BFF)}
   .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:36px;letter-spacing:-.01em;line-height:1.05}
+  /* Boost subscribers — golden shimmering name */
+  .swipe-card .name.name--boost{
+    background:linear-gradient(110deg,
+      #FFE17A 0%,
+      #F5C040 20%,
+      #FFFAE6 35%,
+      #F5C040 50%,
+      #B27B14 65%,
+      #F5C040 80%,
+      #FFE17A 100%);
+    background-size:220% 100%;
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;-webkit-text-fill-color:transparent;
+    text-shadow:none;
+    filter:drop-shadow(0 0 8px rgba(255,216,61,.35));
+    animation:nameBoostShimmer 4.5s ease-in-out infinite;
+  }
+  @keyframes nameBoostShimmer{
+    0%,100%{background-position:0% 50%}
+    50%    {background-position:100% 50%}
+  }
+  /* Tiny gold star next to a boost name */
+  .swipe-card .name-boost-star{
+    display:inline-block;margin-left:4px;vertical-align:0;
+    width:18px;height:18px;line-height:1;
+    background:linear-gradient(135deg,#FFE17A,#F5C040,#B27B14);
+    -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2 14.7 9.2 22 9.7l-5.8 4.6 1.9 7.2L12 17.6 5.9 21.5l1.9-7.2L2 9.7l7.3-.5L12 2Z'/></svg>") center/contain no-repeat;
+            mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2 14.7 9.2 22 9.7l-5.8 4.6 1.9 7.2L12 17.6 5.9 21.5l1.9-7.2L2 9.7l7.3-.5L12 2Z'/></svg>") center/contain no-repeat;
+    filter:drop-shadow(0 0 6px rgba(255,216,61,.6));
+  }
   /* age inline next to the name (legacy / fallback) — hidden in favor of the corner badge */
   .swipe-card .age{display:none}
 
@@ -4417,7 +4447,7 @@
     // Mock profiles. Each has nitro flag, joinedOn date, and an `orbs` array
     // — bubbles that orbit the card. Click an orb to hear/see its content.
     const PROFILES = [
-      { name:'Alex', tag:'alex', age:21, gender:'male', looking:'game', status:'online', nitro:true,
+      { name:'Alex', tag:'alex', age:21, gender:'male', looking:'game', status:'online', nitro:true, boost:true,
         joinedOn:'14 oct. 2025',
         activity:{type:'game', title:'CS2', sub:'En partie — Dust2 16-12'},
         games:['CS2','Valorant','Apex'], bio:'Faceit lvl 8, on tryhard ?',
@@ -4454,7 +4484,7 @@
           {kind:'game',  title:'Minecraft',          sub:'Realm chill',       emoji:'🎮'},
           {kind:'film', title:'Cowboy Bebop',       sub:'Anime culte',       emoji:'📺'},
         ] },
-      { name:'Sam', tag:'sam.exe', age:20, gender:'other', looking:'talk', status:'online', nitro:true,
+      { name:'Sam', tag:'sam.exe', age:20, gender:'other', looking:'talk', status:'online', nitro:true, boost:true,
         joinedOn:'5 nov. 2025',
         activity:{type:'game', title:'League of Legends', sub:'File d\'attente — Solo/Duo'},
         games:['LoL','TFT'], bio:'Main support, je carry les mid 🙃',
@@ -4487,7 +4517,7 @@
           {kind:'voice', title:'Note vocale',        sub:"« Duo Apex now ? »", emoji:'🎤', voice:"Yo, je cherche un duo Apex là, t'es bon comment ?"},
           {kind:'game',  title:'Warzone',            sub:'KD 2.4',            emoji:'🎮'},
         ] },
-      { name:'Iris', tag:'iris_zzz', age:18, gender:'female', looking:'sleep', status:'idle', nitro:true,
+      { name:'Iris', tag:'iris_zzz', age:18, gender:'female', looking:'sleep', status:'idle', nitro:true, boost:true,
         joinedOn:'18 sept. 2025',
         activity:{type:'call', title:'Dans un appel', sub:'2 personnes'},
         games:['Minecraft'], bio:'Voix douce, sleepcall calme ☁️',
@@ -4556,6 +4586,7 @@
         status: 'online',
         nitro: !!u.decorationUrl || !!(u.boost && u.fakeNitro),
         fakeDeco: (u.boost && u.fakeNitro) ? (u.fakeDeco || null) : null,
+        boost: !!u.boost,
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
         activity: {type:'game', title:'Tindord', sub:'Swipe en cours…'},
         games: [p.game].filter(Boolean),
@@ -4813,7 +4844,7 @@
         <div class="body">
           <div>
             <div class="name-row">
-              <span class="name">${p.name}</span>
+              <span class="name${p.boost ? ' name--boost' : ''}">${p.name}${p.boost ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
               ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
             </div>
             <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
@@ -6659,6 +6690,7 @@
         looking: p.looking || 'game',
         status: p.status || 'online',
         nitro: !!p.nitro,
+        boost: !!p.boost,
         joinedOn: p.joinedOn || 'récemment',
         activity: p.activity || { type:'game', title:'Tindord', sub:'Vient de te liker' },
         games: p.games || [],
