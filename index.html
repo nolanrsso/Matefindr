@@ -717,9 +717,9 @@
     pointer-events:auto;
     animation:orbFloat 6s ease-in-out infinite;
   }
-  /* Orb bubble — fully circular, vibrant. 136px (+10% over 124). */
+  /* Orb bubble — fully circular, vibrant. Smaller so several bubbles fit nicely. */
   .swipe-stage .orbit .orb{
-    width:136px;height:136px;border-radius:50%;
+    width:108px;height:108px;border-radius:50%;
     display:grid;place-items:center;
     border:1.5px solid rgba(255,255,255,.28);
     cursor:pointer;pointer-events:auto;
@@ -821,19 +821,19 @@
   .orb-wrap--common .orb-label{color:#FFD83D !important;font-weight:800;text-shadow:0 0 8px rgba(255,216,61,.55)}
 
   /* When >6 orbs : shrink so they all fit on screen */
-  .orbit.orbit--dynamic .orb{width:105px;height:105px}
-  .orbit.orbit--dynamic .orb svg{width:35px;height:35px}
+  .orbit.orbit--dynamic .orb{width:84px;height:84px}
+  .orbit.orbit--dynamic .orb svg{width:30px;height:30px}
   .orbit.orbit--dynamic .orb-label{max-width:100px;font-size:10px}
   /* When dynamic, position is set inline → kill the CSS nth-child defaults */
   .orbit.orbit--dynamic .orb-wrap:nth-child(n){top:auto;left:auto;right:auto;bottom:auto;animation:none}
   .orbit .orb-wrap{user-select:none;-webkit-user-select:none}
   .orbit .orb-wrap .orb{cursor:pointer}
 
-  /* Music orbs are bigger to be easier to catch (+10%) */
-  .orbit .orb-wrap--music .orb{width:158px;height:158px}
-  .orbit .orb-wrap--music .orb svg{width:60px;height:60px}
-  .orbit.orbit--dynamic .orb-wrap--music .orb{width:131px;height:131px}
-  .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:50px;height:50px}
+  /* Music orbs : slightly bigger than the others, but still compact */
+  .orbit .orb-wrap--music .orb{width:124px;height:124px}
+  .orbit .orb-wrap--music .orb svg{width:48px;height:48px}
+  .orbit.orbit--dynamic .orb-wrap--music .orb{width:100px;height:100px}
+  .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:38px;height:38px}
 
   /* Sound-wave ripple when clicking a music orb */
   .orb-sound-ripple{
@@ -4922,11 +4922,11 @@
       const cardHalfW = cardRect.width / 2;
       const colMargin = 30;
 
+      function orbRadius(o){ return o.kind === 'music' ? (n > 6 ? 50 : 62) : (n > 6 ? 42 : 54); }
       function colPositions(items, xPos) {
-        // Use the largest item's diameter to size the step so music orbs don't overlap
         if (!items.length) return [];
-        const stepLocal = Math.max(...items.map(o => (o.kind === 'music' ? 84 : (n > 6 ? 53 : 68)))) * 2 + 22;
-        const colH = items.length * stepLocal - 22;
+        const stepLocal = Math.max(...items.map(orbRadius)) * 2 + 18;
+        const colH = items.length * stepLocal - 18;
         const startY = cardCy - colH / 2 + stepLocal / 2;
         return items.map((_, i) => ({ x: xPos, y: startY + i * stepLocal }));
       }
@@ -4938,8 +4938,8 @@
       const leftItems  = leftIdx.map(i => list[i]);
       const rightItems = rightIdx.map(i => list[i]);
       // Pick X for the columns based on the max orb radius in each side
-      const leftMaxR  = leftItems.length  ? Math.max(...leftItems.map(o => (o.kind === 'music' ? 84 : (n > 6 ? 53 : 68))))  : 68;
-      const rightMaxR = rightItems.length ? Math.max(...rightItems.map(o => (o.kind === 'music' ? 84 : (n > 6 ? 53 : 68)))) : 68;
+      const leftMaxR  = leftItems.length  ? Math.max(...leftItems.map(orbRadius))  : 54;
+      const rightMaxR = rightItems.length ? Math.max(...rightItems.map(orbRadius)) : 54;
       const leftXPos  = Math.max(leftMaxR + 12, cardCx - cardHalfW - colMargin - leftMaxR);
       const rightXPos = Math.min(sw - rightMaxR - 12, cardCx + cardHalfW + colMargin + rightMaxR);
       colPositions(leftItems,  leftXPos).forEach((p, k) => anchors[leftIdx[k]]  = p);
@@ -5004,7 +5004,7 @@
         wrap.appendChild(label);
 
         const isMusic = o.kind === 'music';
-        const orbR = isMusic ? 84 : (n > 6 ? 53 : 68);
+        const orbR = orbRadius(o);
         const pos = pickPos(orbR, i);
 
         if (isMusic) wrap.classList.add('orb-wrap--music');
@@ -5172,20 +5172,24 @@
             }
           }
 
-          // Orbs are practically fixed — no random jitter at all. Mouse repulsion +
-          // collisions stay active so they react when you interact, but they snap
-          // back to their anchor position when left alone.
-          // Spring toward anchor position (ax, ay)
-          const sk = 0.018;
-          it.vx += (it.ax - it.x) * sk;
-          it.vy += (it.ay - it.y) * sk;
-          // Strong damping
-          const damp = 0.82;
+          // Orbs are anchored to a fixed slot but get a very slight breathing motion
+          // (sinusoidal phase-based offset around the anchor + a tiny random jitter)
+          // so they don't look frozen. The spring still pulls them back to (ax, ay).
+          const breathX = Math.cos(it.phase * 0.6) * 0.8;
+          const breathY = Math.sin(it.phase * 0.5) * 0.8;
+          const sk = 0.035;
+          it.vx += ((it.ax + breathX) - it.x) * sk;
+          it.vy += ((it.ay + breathY) - it.y) * sk;
+          // Tiny random jitter for organic feel
+          it.vx += (Math.random() - 0.5) * 0.06;
+          it.vy += (Math.random() - 0.5) * 0.06;
+          // Damping
+          const damp = 0.78;
           it.vx *= damp;
           it.vy *= damp;
           // Hard cap max speed
           const sp = Math.hypot(it.vx, it.vy);
-          const maxSp = 2.2;
+          const maxSp = 1.6;
           if (sp > maxSp) { it.vx = it.vx / sp * maxSp; it.vy = it.vy / sp * maxSp; }
 
           it.x += it.vx;
@@ -7653,6 +7657,7 @@
         save();
         renderUserOrbs();
         if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
         renderOrbEditLayout();
       });
       el.appendChild(del);
@@ -7777,6 +7782,7 @@
               save();
               renderUserOrbs();
               if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+              if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
               showToast(fallbackIcon, 'Bulle ajoutée', r.orb.title);
               // Re-render just the bubbles layout (keep card in place, close panel)
               renderOrbEditLayout();
