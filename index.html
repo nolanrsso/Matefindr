@@ -2189,6 +2189,40 @@
     font-size:9.5px;font-weight:800;line-height:20px;text-align:center;
     border:2px solid #0d0b1e;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;
   }
+  /* Mini "+" button next to a game orb — opens the rank/clip modal */
+  .oeo-orb .oeo-orb-meta{
+    position:absolute;bottom:-4px;left:-6px;
+    width:26px;height:26px;border-radius:50%;
+    border:2px solid #0d0b1e;
+    background:linear-gradient(135deg,#9146FF,#6B2BFF);
+    color:#fff;font-size:18px;font-weight:300;line-height:1;
+    cursor:pointer;padding:0;
+    display:grid;place-items:center;z-index:5;
+    box-shadow:0 6px 14px rgba(145,70,255,.55), 0 0 0 1px rgba(255,255,255,.15) inset;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .oeo-orb .oeo-orb-meta:hover{
+    transform:scale(1.18);
+    box-shadow:0 10px 22px rgba(145,70,255,.85), 0 0 0 1px rgba(255,255,255,.30) inset;
+  }
+  /* Rank orbiting around the game orb — small chip that rotates in orbit */
+  .oeo-orb-rank-orbit{
+    position:absolute;inset:-14px;border-radius:50%;
+    pointer-events:none;z-index:5;
+    animation:oeoRankOrbit 9s linear infinite;
+  }
+  .oeo-orb-rank-orbit .oeo-orb-rank-chip{
+    position:absolute;top:-2px;left:50%;transform:translateX(-50%);
+    padding:2px 8px;border-radius:11px;
+    background:linear-gradient(135deg,#FFD83D,#FF9A3D);color:#1c1d22;
+    font-size:9.5px;font-weight:800;line-height:1.3;
+    border:2px solid #0d0b1e;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
+    box-shadow:0 4px 10px rgba(255,170,40,.55);
+    /* counter-rotate so the text stays upright while the orbit spins */
+    animation:oeoRankCounter 9s linear infinite;
+  }
+  @keyframes oeoRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes oeoRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
 
   .oeo-add-panel{
     position:fixed;top:0;right:0;height:100vh;width:min(380px,92vw);z-index:4;
@@ -2242,7 +2276,7 @@
   .clip-content video{width:100%;aspect-ratio:16/9;height:auto;display:block;border:none}
   .clip-empty{padding:60px 30px;text-align:center;color:#b9bbbe;font-size:14px}
 
-  /* Rank badge on a game orb */
+  /* Rank badge on a game orb (legacy static badge — kept for fallback) */
   .orb-rank{
     position:absolute;bottom:-4px;right:-4px;z-index:4;
     min-width:24px;height:24px;padding:0 8px;border-radius:13px;
@@ -2250,6 +2284,39 @@
     font-size:10.5px;font-weight:800;line-height:24px;text-align:center;
     border:2px solid #0d0b1e;box-shadow:0 4px 12px rgba(0,0,0,.5);
     text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;
+  }
+  /* Rank orbiting around the game orb (animated, on swipe card) */
+  .swipe-stage .orbit .orb .orb-rank-orbit{
+    position:absolute;inset:-18px;border-radius:50%;
+    pointer-events:none;z-index:4;
+    animation:orbRankOrbit 10s linear infinite;
+  }
+  .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-chip{
+    position:absolute;top:-4px;left:50%;transform:translateX(-50%);
+    padding:3px 10px;border-radius:13px;
+    background:linear-gradient(135deg,#FFD83D,#FF9A3D);color:#1c1d22;
+    font-size:11px;font-weight:800;line-height:1.3;
+    border:2px solid #0d0b1e;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
+    box-shadow:0 6px 14px rgba(255,170,40,.55);
+    animation:orbRankCounter 10s linear infinite;
+  }
+  @keyframes orbRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes orbRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
+  /* Mini "+" button next to a game orb (only on MY card) — opens rank/clip modal */
+  .swipe-stage .orbit .orb .orb-meta{
+    position:absolute;bottom:-6px;left:-8px;z-index:5;
+    width:30px;height:30px;border-radius:50%;
+    border:2.5px solid #0d0b1e;
+    background:linear-gradient(135deg,#9146FF,#6B2BFF);
+    color:#fff;font-size:22px;font-weight:300;line-height:1;
+    cursor:pointer;padding:0;
+    display:grid;place-items:center;
+    box-shadow:0 6px 18px rgba(145,70,255,.55), 0 0 0 1px rgba(255,255,255,.15) inset;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .swipe-stage .orbit .orb .orb-meta:hover{
+    transform:scale(1.18);
+    box-shadow:0 10px 26px rgba(145,70,255,.85), 0 0 0 1px rgba(255,255,255,.30) inset;
   }
   .boost-modal[data-open="true"]{display:flex}
   .bm-backdrop{position:absolute;inset:0;background:rgba(8,9,14,.78);backdrop-filter:blur(8px)}
@@ -4885,12 +4952,26 @@
         btn.dataset.kind = o.kind;
         btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}`;
         btn.innerHTML = orbInner(o);
-        // Rank badge for ranked games
+        // Rank as an orbiting mini-bubble for game orbs (counter-rotated so it reads upright)
         if (o.kind === 'game' && o.rank) {
-          const rb = document.createElement('span');
-          rb.className = 'orb-rank';
-          rb.textContent = o.rank;
-          btn.appendChild(rb);
+          const rk = document.createElement('span');
+          rk.className = 'orb-rank-orbit';
+          rk.innerHTML = `<span class="orb-rank-chip">${escapeHtmlMini(o.rank)}</span>`;
+          btn.appendChild(rk);
+        }
+        // Mini "+" for game orbs on MY OWN card → opens the rank/clip modal
+        if (o.kind === 'game' && p.isMe) {
+          const meta = document.createElement('button');
+          meta.type = 'button';
+          meta.className = 'orb-meta';
+          meta.setAttribute('aria-label', o.rank || o.clipUrl ? 'Modifier rank/clip' : 'Ajouter rank/clip');
+          meta.title = o.rank || o.clipUrl ? 'Modifier rank/clip' : 'Ajouter rank/clip';
+          meta.innerHTML = '+';
+          meta.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            if (typeof openGameMetaModal === 'function') openGameMetaModal(o);
+          });
+          btn.appendChild(meta);
         }
         btn.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -5923,10 +6004,6 @@
       renderUserOrbs();
       refreshAccountPreview();
       showToast(({music:'🎵',anime:'📺',game:'🎮',film:'🎬'}[orb.kind]||'✨'), 'Bulle ajoutée', orb.title);
-      // For game bubbles, open the rank+clip modal right after adding
-      if (orb.kind === 'game' && typeof openGameMetaModal === 'function') {
-        openGameMetaModal(orb);
-      }
     }
 
     // Free-text adding is disabled — orbs can only be created by clicking a suggestion
@@ -7470,12 +7547,14 @@
       } else {
         el.innerHTML = `<span class="oeo-orb-ico">${fallback}</span>`;
       }
+      // Rank as a tiny orbiting bubble for game orbs
       if (o.kind === 'game' && o.rank){
-        const rb = document.createElement('span');
-        rb.className = 'oeo-orb-rank';
-        rb.textContent = o.rank;
-        el.appendChild(rb);
+        const rk = document.createElement('span');
+        rk.className = 'oeo-orb-rank-orbit';
+        rk.innerHTML = `<span class="oeo-orb-rank-chip">${escapeHtmlMini(o.rank)}</span>`;
+        el.appendChild(rk);
       }
+      // Delete (×) chip
       const del = document.createElement('button');
       del.className = 'oeo-orb-del';
       del.type = 'button';
@@ -7490,9 +7569,23 @@
         renderOrbEditLayout();
       });
       el.appendChild(del);
-      // Click on an existing game orb → re-open rank/clip modal
+      // Mini "+" button (smaller than the orb) for game orbs → add/edit rank & clip
+      if (o.kind === 'game') {
+        const meta = document.createElement('button');
+        meta.className = 'oeo-orb-meta';
+        meta.type = 'button';
+        meta.setAttribute('aria-label', 'Ajouter rank / clip');
+        meta.innerHTML = '+';
+        meta.title = o.rank || o.clipUrl ? 'Modifier rank / clip' : 'Ajouter rank / clip';
+        meta.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (typeof openGameMetaModal === 'function') openGameMetaModal(o);
+        });
+        el.appendChild(meta);
+      }
+      // Click on the orb itself → play the content (clip for game, audio for music)
       el.addEventListener('click', () => {
-        if (o.kind === 'game' && typeof openGameMetaModal === 'function') openGameMetaModal(o);
+        if (typeof playOrb === 'function') playOrb(o, el);
       });
       return el;
     }
@@ -7603,7 +7696,6 @@
               document.getElementById('oeoAddPanel').setAttribute('data-open', 'false');
               document.getElementById('oeoSearch').value = '';
               document.getElementById('oeoSugg').innerHTML = '';
-              if (r.orb.kind === 'game') openGameMetaModal(r.orb);
             });
             sugg.appendChild(item);
           });
