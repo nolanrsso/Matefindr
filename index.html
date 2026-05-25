@@ -5259,24 +5259,22 @@
             }
           }
 
-          // Lively motion — user requested "speed 80". Wider breathing arc,
-          // stronger spring, less damping, higher max speed → orbs move
-          // visibly around their anchor.
-          const breathX = Math.cos(it.phase * 0.6) * 4;
-          const breathY = Math.sin(it.phase * 0.5) * 4;
-          const sk = 0.06;
+          // Subtle motion — orbs barely drift around their anchor (calm enough to read labels)
+          const breathX = Math.cos(it.phase * 0.6) * 1;
+          const breathY = Math.sin(it.phase * 0.5) * 1;
+          const sk = 0.04;
           it.vx += ((it.ax + breathX) - it.x) * sk;
           it.vy += ((it.ay + breathY) - it.y) * sk;
-          // Random jitter for organic feel
-          it.vx += (Math.random() - 0.5) * 0.3;
-          it.vy += (Math.random() - 0.5) * 0.3;
-          // Damping
-          const damp = 0.92;
+          // Tiny random jitter for organic feel
+          it.vx += (Math.random() - 0.5) * 0.05;
+          it.vy += (Math.random() - 0.5) * 0.05;
+          // Strong damping
+          const damp = 0.80;
           it.vx *= damp;
           it.vy *= damp;
           // Hard cap max speed
           const sp = Math.hypot(it.vx, it.vy);
-          const maxSp = 8;
+          const maxSp = 1.4;
           if (sp > maxSp) { it.vx = it.vx / sp * maxSp; it.vy = it.vy / sp * maxSp; }
 
           it.x += it.vx;
