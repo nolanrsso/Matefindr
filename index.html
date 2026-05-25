@@ -4271,7 +4271,7 @@
       const u = state.user || {};
       const p = state.profile || {};
       if (!u.displayName && !u.email && !u.discordTag) return null;
-      const subByKind  = {music:'Ta musique', game:'Ton jeu', anime:'Ton anime', film:'Ton film'};
+      const subByKind  = {music:'musique', game:'jeu', anime:'série', film:'film'};
       const emoByKind  = {music:'🎵', game:'🎮', anime:'📺', film:'🎬'};
       const orbs = (p.userOrbs || []).map(o => ({
         kind: o.kind, title: o.title,
