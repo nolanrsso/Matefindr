@@ -3147,7 +3147,7 @@
       <span class="bb-emoji">✨</span>
       <div class="bb-text">
         <b id="boostBannerTitle">Passer en Tindord Boost</b>
-        <small id="boostBannerSub">10 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
+        <small id="boostBannerSub">16 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
       </div>
       <span class="bb-cta" id="boostBannerCta">Découvrir</span>
     </button>
@@ -3333,7 +3333,7 @@
           </div>
           <ul class="bm-col-feats">
             <li class="off"><span>✕</span>Fake Nitro</li>
-            <li class="on"><span>✓</span>4 bulles max</li>
+            <li class="on"><span>✓</span>6 bulles max</li>
             <li class="off"><span>✕</span>Musique d'ambiance</li>
             <li class="off"><span>✕</span>Filtre H/F</li>
             <li class="off"><span>✕</span>Likes secrets</li>
@@ -3349,7 +3349,7 @@
           </div>
           <ul class="bm-col-feats">
             <li class="on"><span>👑</span>Fake Nitro</li>
-            <li class="on"><span>🫧</span>10 bulles</li>
+            <li class="on"><span>🫧</span>16 bulles</li>
             <li class="on"><span>🎵</span>Musique d'ambiance</li>
             <li class="on"><span>🔍</span>Filtre H/F</li>
             <li class="on"><span>👀</span>Likes secrets</li>
@@ -4854,8 +4854,8 @@
     }
 
     /* Bubble budget — socials no longer count against the bubble limit.
-       Free: 4 bubbles. Boost: 10 bubbles. */
-    function orbBudget(){ return (state.user && state.user.boost) ? 10 : 4; }
+       Free: 6 bubbles. Boost: 16 bubbles. */
+    function orbBudget(){ return (state.user && state.user.boost) ? 16 : 6; }
     function socialsCount(){
       const s = (state.user && state.user.socials) || {};
       return ['instagram','tiktok','spotify'].filter(k => s[k]).length;
@@ -6008,7 +6008,7 @@
       if (!val) return;
       state.profile = state.profile || {};
       state.profile.userOrbs = state.profile.userOrbs || [];
-      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +6'); return; }
+      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +10'); return; }
       const orb = orbOverride || _pendingSpotifyOrb || {kind: selectedOrbKind, title: val};
       state.profile.userOrbs.push(orb);
       _pendingSpotifyOrb = null;
@@ -6548,7 +6548,7 @@
           btn.textContent = tx('connect');
           btn.classList.remove('connected');
         } else if (v) {
-          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +6'); return; }
+          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +10'); return; }
           state.user.socials[key] = v;
           btn.textContent = tx('connected');
           btn.classList.add('connected');
@@ -6964,11 +6964,11 @@
       if (active) {
         const plan = state.user.boostPlan === 'lifetime' ? 'À vie' : 'Mensuel';
         title.textContent = 'Tindord Boost actif';
-        sub.textContent   = plan + ' · 10 bulles, Fake Nitro, filtre H/F…';
+        sub.textContent   = plan + ' · 16 bulles, Fake Nitro, filtre H/F…';
         cta.textContent   = 'Gérer';
       } else {
         title.textContent = 'Passer en Tindord Boost';
-        sub.textContent   = '10 bulles, Fake Nitro, filtre H/F, likes secrets…';
+        sub.textContent   = '16 bulles, Fake Nitro, filtre H/F, likes secrets…';
         cta.textContent   = 'Découvrir';
       }
       const bmActive = document.getElementById('bmActive');
