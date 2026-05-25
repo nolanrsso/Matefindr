@@ -2205,22 +2205,22 @@
     transform:scale(1.18);
     box-shadow:0 10px 22px rgba(145,70,255,.85), 0 0 0 1px rgba(255,255,255,.30) inset;
   }
-  /* Rank orbiting around the game orb — small chip that rotates in orbit */
+  /* Round rank mini-bubble orbiting around a game orb in the edit overlay */
   .oeo-orb-rank-orbit{
-    position:absolute;inset:-14px;border-radius:50%;
+    position:absolute;inset:-18px;border-radius:50%;
     pointer-events:none;z-index:5;
     animation:oeoRankOrbit 9s linear infinite;
   }
-  .oeo-orb-rank-orbit .oeo-orb-rank-chip{
-    position:absolute;top:-2px;left:50%;transform:translateX(-50%);
-    padding:2px 8px;border-radius:11px;
-    background:linear-gradient(135deg,#FFD83D,#FF9A3D);color:#1c1d22;
-    font-size:9.5px;font-weight:800;line-height:1.3;
-    border:2px solid #0d0b1e;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
-    box-shadow:0 4px 10px rgba(255,170,40,.55);
-    /* counter-rotate so the text stays upright while the orbit spins */
+  .oeo-orb-rank-orbit .oeo-orb-rank-ball{
+    position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+    width:32px;height:32px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%, var(--rc1) 0%, var(--rc2) 100%);
+    border:2px solid #0d0b1e;
+    display:grid;place-items:center;
+    box-shadow:0 5px 12px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15) inset;
     animation:oeoRankCounter 9s linear infinite;
   }
+  .oeo-orb-rank-orbit .oeo-orb-rank-ico{font-size:16px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
   @keyframes oeoRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
   @keyframes oeoRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
 
@@ -2285,21 +2285,22 @@
     border:2px solid #0d0b1e;box-shadow:0 4px 12px rgba(0,0,0,.5);
     text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;
   }
-  /* Rank orbiting around the game orb (animated, on swipe card) */
+  /* Rank as a round mini-bubble orbiting around the game orb (swipe card) */
   .swipe-stage .orbit .orb .orb-rank-orbit{
-    position:absolute;inset:-18px;border-radius:50%;
+    position:absolute;inset:-22px;border-radius:50%;
     pointer-events:none;z-index:4;
     animation:orbRankOrbit 10s linear infinite;
   }
-  .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-chip{
-    position:absolute;top:-4px;left:50%;transform:translateX(-50%);
-    padding:3px 10px;border-radius:13px;
-    background:linear-gradient(135deg,#FFD83D,#FF9A3D);color:#1c1d22;
-    font-size:11px;font-weight:800;line-height:1.3;
-    border:2px solid #0d0b1e;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;
-    box-shadow:0 6px 14px rgba(255,170,40,.55);
+  .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-ball{
+    position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+    width:38px;height:38px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%, var(--rc1) 0%, var(--rc2) 100%);
+    border:2.5px solid #0d0b1e;
+    display:grid;place-items:center;
+    box-shadow:0 6px 16px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.15) inset;
     animation:orbRankCounter 10s linear infinite;
   }
+  .swipe-stage .orbit .orb .orb-rank-orbit .orb-rank-ico{font-size:18px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
   @keyframes orbRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
   @keyframes orbRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
   /* Mini "+" button next to a game orb (only on MY card) — opens rank/clip modal */
@@ -4904,9 +4905,12 @@
 
       // Position the orbs in two symmetric columns around the visible profile card
       // (same layout as the edit overlay). Even-index → left column, odd-index → right.
-      const cardEl = document.querySelector('.swipe-card');
-      const cardRect = cardEl
-        ? cardEl.getBoundingClientRect()
+      // Use the swipeWrap rect (stable, no transform) — the card itself may be in the
+      // middle of its `.entering` slide-in animation when this runs, so its rect is
+      // unreliable for the first frame.
+      const wrapEl = document.getElementById('swipeWrap');
+      const cardRect = wrapEl
+        ? wrapEl.getBoundingClientRect()
         : { left: sw/2 - 210, top: sh/2 - 320, width: 420, height: 640 };
       const cardCx = cardRect.left + cardRect.width / 2;
       const cardCy = cardRect.top + cardRect.height / 2;
@@ -4952,11 +4956,12 @@
         btn.dataset.kind = o.kind;
         btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}`;
         btn.innerHTML = orbInner(o);
-        // Rank as an orbiting mini-bubble for game orbs (counter-rotated so it reads upright)
+        // Rank as a round mini-bubble (with the tier icon) orbiting around the game orb
         if (o.kind === 'game' && o.rank) {
+          const v = rankVisual(o.rank);
           const rk = document.createElement('span');
           rk.className = 'orb-rank-orbit';
-          rk.innerHTML = `<span class="orb-rank-chip">${escapeHtmlMini(o.rank)}</span>`;
+          rk.innerHTML = `<span class="orb-rank-ball" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}"><span class="orb-rank-ico">${v.ico}</span></span>`;
           btn.appendChild(rk);
         }
         // Mini "+" for game orbs on MY OWN card → opens the rank/clip modal
@@ -5026,9 +5031,9 @@
     // Recompute anchors on viewport resize (keep bubbles aligned to the card)
     window.addEventListener('resize', () => {
       if (!_orbSim.items.length) return;
-      const cardEl = document.querySelector('.swipe-card');
-      if (!cardEl) return;
-      const cardRect = cardEl.getBoundingClientRect();
+      const wrapEl = document.getElementById('swipeWrap');
+      if (!wrapEl) return;
+      const cardRect = wrapEl.getBoundingClientRect();
       const cardCx = cardRect.left + cardRect.width / 2;
       const cardCy = cardRect.top  + cardRect.height / 2;
       const cardHalfW = cardRect.width / 2;
@@ -6041,6 +6046,82 @@
       'Street Fighter 6':               ['Rookie','Iron','Bronze','Silver','Gold','Platinum','Diamond','Master'],
     };
     function isRankedGame(title){ return !!RANKED_GAMES[title]; }
+
+    /* Visuals for each rank tier : emoji-style icon + brand color.
+       Used to render the rank as a small round bubble (not a text chip). */
+    const RANK_VISUAL = {
+      // Universal tiers
+      'Iron':              { ico:'⚙', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Copper':            { ico:'🟤', c1:'#cd7f32', c2:'#7a4818' },
+      'Bronze':            { ico:'🥉', c1:'#cd7f32', c2:'#5c3a14' },
+      'Silver':            { ico:'🥈', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Gold':              { ico:'🥇', c1:'#ffd700', c2:'#8c6e0a' },
+      'Gold Nova':         { ico:'🥇', c1:'#ffd700', c2:'#8c6e0a' },
+      'Master Guardian':   { ico:'🛡', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'DMG':               { ico:'🛡', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'LE':                { ico:'🦅', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'LEM':               { ico:'🦅', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Platinum':          { ico:'💠', c1:'#5ce0ff', c2:'#14495c' },
+      'Emerald':           { ico:'🟢', c1:'#3bff8c', c2:'#0e3a1f' },
+      'Diamond':           { ico:'💎', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'Ascendant':         { ico:'🔱', c1:'#3bd17c', c2:'#0e3a1f' },
+      'Master':            { ico:'👑', c1:'#C7A5FF', c2:'#4a1bc1' },
+      'Immortal':          { ico:'⚔', c1:'#9c27b0', c2:'#3a0e5c' },
+      'Radiant':           { ico:'✨', c1:'#fffacd', c2:'#8c7014' },
+      'Grandmaster':       { ico:'👑', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Challenger':        { ico:'🏆', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Global Elite':      { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Supreme':           { ico:'⚔', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Premier':           { ico:'🎯', c1:'#9146FF', c2:'#2a0e5c' },
+      // Apex / Overwatch / etc.
+      'Apex Predator':     { ico:'🦅', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Top 500':           { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Top 250':           { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Rookie':            { ico:'🔰', c1:'#7a7a7a', c2:'#3a3a3a' },
+      // Rocket League
+      'Champion':          { ico:'🏆', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Grand Champion':    { ico:'👑', c1:'#C7A5FF', c2:'#4a1bc1' },
+      'Supersonic Legend': { ico:'🚀', c1:'#FF4FA0', c2:'#5c0e2a' },
+      // Fortnite / COD / R6
+      'Elite':             { ico:'⭐', c1:'#3bff8c', c2:'#0e3a1f' },
+      'Crimson':           { ico:'🔥', c1:'#ED4245', c2:'#5c1414' },
+      'Iridescent':        { ico:'🌈', c1:'#FF7EB6', c2:'#5c0e3a' },
+      'Unreal':            { ico:'⚡', c1:'#9146FF', c2:'#2a0e5c' },
+      // Dota
+      'Herald':            { ico:'🛡', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Guardian':          { ico:'🛡', c1:'#cd7f32', c2:'#5c3a14' },
+      'Crusader':          { ico:'⚔', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Archon':            { ico:'🛡', c1:'#ffd700', c2:'#8c6e0a' },
+      'Legend':            { ico:'⚔', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'Ancient':           { ico:'💎', c1:'#3bd17c', c2:'#0e3a1f' },
+      'Divine':            { ico:'👑', c1:'#C7A5FF', c2:'#4a1bc1' },
+      // PUBG
+      'Crown':             { ico:'👑', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Ace':               { ico:'🎯', c1:'#9146FF', c2:'#2a0e5c' },
+      // Marvel Rivals
+      'Celestial':         { ico:'🌟', c1:'#FF7EB6', c2:'#5c0e3a' },
+      'Eternity':          { ico:'♾', c1:'#9c27b0', c2:'#3a0e5c' },
+      'One Above All':     { ico:'☀', c1:'#fffacd', c2:'#8c7014' },
+      // MK / Tekken / SF
+      'Apprentice':        { ico:'🌱', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Novice':            { ico:'⚪', c1:'#cd7f32', c2:'#5c3a14' },
+      'Warrior':           { ico:'⚔', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Kombatant':         { ico:'🥊', c1:'#ffd700', c2:'#8c6e0a' },
+      'Demigod':           { ico:'⚡', c1:'#9c27b0', c2:'#3a0e5c' },
+      'Elder God':         { ico:'☠', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Beginner':          { ico:'🔰', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Vanquisher':        { ico:'⚔', c1:'#cd7f32', c2:'#5c3a14' },
+      'Cavalry':           { ico:'🐎', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Fighter':           { ico:'🥊', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'Eliminator':        { ico:'🎯', c1:'#3bff8c', c2:'#0e3a1f' },
+      'Vindicator':        { ico:'⚔', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Tekken King':       { ico:'👑', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Tekken God':        { ico:'⚡', c1:'#fffacd', c2:'#8c7014' },
+    };
+    function rankVisual(rank){
+      if (!rank) return null;
+      return RANK_VISUAL[rank] || { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' };
+    }
 
     /* Curated suggestion lists by category — used as the primary set of
        suggestions for game / anime / film bubbles. Covers are fetched on
@@ -7547,11 +7628,12 @@
       } else {
         el.innerHTML = `<span class="oeo-orb-ico">${fallback}</span>`;
       }
-      // Rank as a tiny orbiting bubble for game orbs
+      // Rank as a round mini-bubble (with the tier icon) orbiting the game orb
       if (o.kind === 'game' && o.rank){
+        const v = rankVisual(o.rank);
         const rk = document.createElement('span');
         rk.className = 'oeo-orb-rank-orbit';
-        rk.innerHTML = `<span class="oeo-orb-rank-chip">${escapeHtmlMini(o.rank)}</span>`;
+        rk.innerHTML = `<span class="oeo-orb-rank-ball" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}"><span class="oeo-orb-rank-ico">${v.ico}</span></span>`;
         el.appendChild(rk);
       }
       // Delete (×) chip
