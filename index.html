@@ -4,11 +4,37 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Tindord — Trouve ton duo, pas juste un pseudo</title>
+<meta name="description" content="Tindord — l'app de matchmaking gaming-friendly. Swipe des profils Discord, partage tes bulles musique/jeu/série, et trouve ton duo." />
+<meta name="theme-color" content="#0D0B1E" />
+<meta name="referrer" content="no-referrer-when-downgrade" />
+<!-- Security : restrict resource origins. Discord webhooks + Supabase + media CDNs are allowed.
+     Inline styles/scripts allowed because this is a single-file SPA. -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com;
+  font-src 'self' https://fonts.gstatic.com https://api.fontshare.com data:;
+  img-src 'self' data: blob: https:;
+  media-src 'self' data: blob: https:;
+  connect-src 'self' https://*.supabase.co https://discord.com https://discordapp.com https://cdn.discordapp.com https://api.spotify.com https://accounts.spotify.com https://api.deezer.com https://itunes.apple.com https://api.jikan.moe https://en.wikipedia.org https://www.wikidata.org https://commons.wikimedia.org https://upload.wikimedia.org https://ui-avatars.com;
+  frame-src https://www.youtube-nocookie.com https://clips.twitch.tv https://streamable.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+" />
+<!-- Preconnect aux CDN externes les plus utilisés (perf) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://cdn.discordapp.com" crossorigin />
+<link rel="preconnect" href="https://i.scdn.co" crossorigin />
+<link rel="preconnect" href="https://api.spotify.com" crossorigin />
+<link rel="dns-prefetch" href="https://api.jikan.moe" />
+<link rel="dns-prefetch" href="https://en.wikipedia.org" />
+<link rel="dns-prefetch" href="https://www.wikidata.org" />
+<link rel="dns-prefetch" href="https://upload.wikimedia.org" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700,800&display=swap" />
-<!-- Supabase JS SDK (UMD) -->
+<!-- Supabase JS SDK (UMD) — chargé synchronously car utilisé par le script inline -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -4328,6 +4354,13 @@
      APP STATE MACHINE — landing → onboarding → swipe → account
      ============================================================ */
   (() => {
+    // ⚠️ SÉCURITÉ : ce secret Spotify est EXPOSÉ dans le frontend public.
+    // N'importe qui peut le récupérer dans le code source et l'utiliser pour
+    // consommer le quota de notre app. À DÉPLACER ABSOLUMENT côté backend
+    // (Supabase Edge Function "spotify-token" qui proxie la génération de token)
+    // avant la mise en production réelle. En attendant, surveille la console
+    // Spotify Developer (https://developer.spotify.com/dashboard) pour repérer
+    // tout abus, et révoque/recrée le secret en cas de compromission.
     const SPOTIFY_CLIENT_ID     = '97ee507ff2694d9c916f2cd930afcb4c';
     const SPOTIFY_CLIENT_SECRET = '1775eb6d41204c489c9e0ed9cf72f2bb';
 
@@ -4355,7 +4388,7 @@
       const u = state.user || {};
       const avi = document.getElementById('accountChipAvatar');
       if (u.avatarUrl) {
-        avi.innerHTML = `<img src="${u.avatarUrl}" alt="${u.displayName || ''}">`;
+        avi.innerHTML = `<img src="${u.avatarUrl}" alt="${escapeHtmlMini(u.displayName || '')}">`;
         avi.style.background = 'none';
       } else {
         avi.textContent = (u.displayName || u.email || 'U').charAt(0).toUpperCase();
@@ -5497,22 +5530,24 @@
     })();
 
     /* ===== Clip overlay (plays when a game orb is clicked) ===== */
+    /* Whitelist d'embeds — bloque les URL malicieuses (javascript:, data:, etc.)
+       Seuls les hosts trusted YouTube/Twitch/Streamable + fichiers vidéo directs (https only) sont acceptés. */
     function clipUrlToEmbed(url){
       if (!url) return null;
-      const u = url.trim();
-      // YouTube watch / short / shorts
+      const u = String(url).trim();
+      // YouTube watch / short / shorts — extract video ID
       let m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/i);
-      if (m) return { type:'iframe', src:`https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0` };
-      // Twitch clip (https://clips.twitch.tv/<slug> or https://www.twitch.tv/<chan>/clip/<slug>)
+      if (m) return { type:'iframe', src:`https://www.youtube-nocookie.com/embed/${encodeURIComponent(m[1])}?autoplay=1&rel=0` };
+      // Twitch clip
       m = u.match(/clips\.twitch\.tv\/([\w-]+)/i) || u.match(/twitch\.tv\/\w+\/clip\/([\w-]+)/i);
-      if (m) return { type:'iframe', src:`https://clips.twitch.tv/embed?clip=${m[1]}&parent=${location.hostname}&autoplay=true` };
+      if (m) return { type:'iframe', src:`https://clips.twitch.tv/embed?clip=${encodeURIComponent(m[1])}&parent=${encodeURIComponent(location.hostname)}&autoplay=true` };
       // Streamable
       m = u.match(/streamable\.com\/([\w-]+)/i);
-      if (m) return { type:'iframe', src:`https://streamable.com/e/${m[1]}?autoplay=1` };
-      // Direct video file
-      if (/\.(mp4|webm|mov)(\?.*)?$/i.test(u)) return { type:'video', src:u };
-      // Fallback: assume it's an embeddable URL
-      return { type:'iframe', src:u };
+      if (m) return { type:'iframe', src:`https://streamable.com/e/${encodeURIComponent(m[1])}?autoplay=1` };
+      // Direct video file — HTTPS only, no javascript: or data: URLs
+      if (/^https:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(u)) return { type:'video', src:u };
+      // Unknown source → reject (was previously a fallback that allowed any URL)
+      return null;
     }
     function openClipOverlay(orb){
       const overlay = document.getElementById('clipOverlay');
@@ -5520,12 +5555,27 @@
       if (!overlay || !content) return;
       const url = orb && orb.clipUrl;
       const embed = clipUrlToEmbed(url);
+      const safeTitle = escapeHtmlMini((orb && orb.title) || 'cette bulle');
+      // Always use DOM manipulation (createElement + setAttribute) for embed src
+      // so we never inject untrusted strings into innerHTML.
+      content.innerHTML = '';
       if (!embed) {
-        content.innerHTML = `<div class="clip-empty">Pas de clip associé à ${orb?.title || 'cette bulle'}.<br><small>Le propriétaire du profil n'a rien partagé pour le moment.</small></div>`;
+        const div = document.createElement('div');
+        div.className = 'clip-empty';
+        div.innerHTML = `Pas de clip associé à ${safeTitle}.<br><small>Le propriétaire du profil n'a rien partagé pour le moment.</small>`;
+        content.appendChild(div);
       } else if (embed.type === 'video') {
-        content.innerHTML = `<video src="${embed.src}" autoplay controls playsinline></video>`;
+        const v = document.createElement('video');
+        v.src = embed.src;
+        v.autoplay = true; v.controls = true; v.playsInline = true;
+        content.appendChild(v);
       } else {
-        content.innerHTML = `<iframe src="${embed.src}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`;
+        const f = document.createElement('iframe');
+        f.src = embed.src;
+        f.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
+        f.setAttribute('allowfullscreen', '');
+        f.setAttribute('referrerpolicy', 'no-referrer');
+        content.appendChild(f);
       }
       overlay.setAttribute('data-show', 'true');
     }
@@ -6432,7 +6482,7 @@
         item.className = 'sp-item' + (r.cover ? '' : ' sp-item--loading');
         item.dataset.suggIdx = String(idx);
         item.innerHTML =
-          (r.cover ? `<img src="${r.cover}" alt="">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
+          (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
           `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
           `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
         item.addEventListener('mousedown', ev => {
@@ -6812,7 +6862,7 @@
       if (!sm) { box.hidden = true; box.innerHTML = ''; return; }
       box.hidden = false;
       box.innerHTML =
-        (sm.cover ? `<img src="${sm.cover}" alt="">` : '') +
+        (sm.cover ? `<img src="${sm.cover}" alt="" loading="lazy" decoding="async">` : '') +
         `<div class="smc-info"><b>${escapeHtmlMini(sm.title)}</b><small>${escapeHtmlMini(sm.artist || '')}</small></div>` +
         `<button type="button" id="smcRemove">Retirer</button>`;
       document.getElementById('smcRemove').addEventListener('click', () => {
@@ -6837,7 +6887,7 @@
             const it = document.createElement('div');
             it.className = 'sp-item';
             it.innerHTML =
-              (r.cover ? `<img src="${r.cover}" alt="">` : '<div class="sp-no-cover"></div>') +
+              (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : '<div class="sp-no-cover"></div>') +
               `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
               `<div class="sp-artist">${escapeHtmlMini(r.artist)}</div></div>`;
             it.addEventListener('mousedown', ev => {
@@ -7878,7 +7928,7 @@
             const item = document.createElement('div');
             item.className = 'sp-item';
             item.innerHTML =
-              (r.cover ? `<img src="${r.cover}" alt="">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
+              (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
               `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
               `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
             item.addEventListener('click', async () => {
