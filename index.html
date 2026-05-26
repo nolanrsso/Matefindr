@@ -8153,12 +8153,47 @@
     // Hook into setScreen: snapshot when entering account
     (function hookAccountSnapshot(){
       const origSet = window.setScreen;
-      // Use a MutationObserver-free approach: just listen to inputs and reset on save
+      // Auto-save profile fields after a short debounce — no need to click "Sauvegarder"
+      let _autoSaveTimer = null;
+      function scheduleAutoSave(){
+        clearTimeout(_autoSaveTimer);
+        _autoSaveTimer = setTimeout(() => {
+          // Inline silent save (no toast / message)
+          state.profile = state.profile || { gender:null, age:null, looking:null };
+          const bioEl = document.getElementById('accBio');
+          const lookEl = document.getElementById('accLookSel');
+          const pseudoEl = document.getElementById('accPseudo');
+          if (bioEl)    state.profile.bio     = bioEl.value.trim();
+          if (lookEl)   state.profile.looking = lookEl.value;
+          if (pseudoEl && pseudoEl.value.trim()) {
+            state.user = state.user || {};
+            state.user.displayName = pseudoEl.value.trim();
+          }
+          const fn = document.getElementById('boostFakeNitro');
+          const gf = document.getElementById('boostGenderFilter');
+          if (fn) {
+            state.user = state.user || {};
+            // Only persist fakeNitro if user has Boost (otherwise toggle was cancelled)
+            if (state.user.boost) state.user.fakeNitro = !!fn.checked;
+          }
+          if (gf && state.user && state.user.boost) state.user.genderFilter = gf.value;
+          save();
+          updateChip();
+          if (typeof refreshMyStatusUI === 'function') refreshMyStatusUI();
+          if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+          // Mark as clean so the save bar disappears
+          _accSnapshot = _accSnap();
+          refreshSaveBar();
+        }, 400);
+      }
       ['accPseudo','accBio','accLookSel','boostFakeNitro','boostGenderFilter'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('input', refreshSaveBar);
-        if (el) el.addEventListener('change', refreshSaveBar);
+        if (!el) return;
+        el.addEventListener('input',  () => { refreshSaveBar(); scheduleAutoSave(); });
+        el.addEventListener('change', () => { refreshSaveBar(); scheduleAutoSave(); });
       });
+      // Also auto-save when the user leaves the page
+      window.addEventListener('beforeunload', () => { try { save(); } catch(_){} });
     })();
 
     function doAccSave(){
