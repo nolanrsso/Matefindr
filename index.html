@@ -402,6 +402,11 @@
     pointer-events:none;
   }
   .match-overlay[data-show="true"]{display:flex}
+  /* Pendant le match, on cache la scène swipe derrière (carte + bulles) pour
+     qu'aucun élément (badge lookfor, orbe, etc.) ne transparaisse à travers le backdrop. */
+  body.match-active .swipe-stage .orbit,
+  body.match-active #swipeWrap,
+  body.match-active .swipe-actions{visibility:hidden !important}
   .match-backdrop{
     position:absolute;inset:0;background:rgba(8,9,14,.82);
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -6022,6 +6027,7 @@
       if (!themAvatar) aviThem.style.background = `linear-gradient(135deg,${p.c1 || '#FF7EB6'},${p.c2 || '#9146FF'})`;
 
       overlay.setAttribute('data-show', 'true');
+      document.body.classList.add('match-active');
 
       // After 1.9s : start the fly-to-fab animation
       setTimeout(() => {
@@ -6058,6 +6064,7 @@
           fly.classList.remove('is-flying');
           fly.hidden = true;
           overlay.setAttribute('data-show', 'false');
+          document.body.classList.remove('match-active');
           overlay.querySelector('.match-content').style.opacity = '';
           // Bump the FAB unread badge + pulse
           if (fab) {
