@@ -1676,24 +1676,47 @@
 
   /* "Mes bulles" CTA — gros bouton qui ouvre l'overlay edit */
   .acc-bulles-cta{
+    position:relative;overflow:hidden;
     display:flex;align-items:center;gap:14px;width:100%;
-    padding:14px 16px;border-radius:14px;cursor:pointer;
-    background:linear-gradient(135deg, rgba(145,70,255,.18), rgba(255,126,182,.14));
-    border:1.5px solid rgba(145,70,255,.40);
+    padding:18px 18px;border-radius:16px;cursor:pointer;
+    background:linear-gradient(135deg, #9146FF 0%, #B14BFF 46%, #FF7EB6 100%);
+    border:1.5px solid rgba(255,255,255,.22);
     color:#fff;font-family:inherit;text-align:left;
-    transition:.18s ease;
+    box-shadow:0 8px 26px rgba(145,70,255,.45), inset 0 1px 0 rgba(255,255,255,.28);
+    transition:transform .18s ease, box-shadow .18s ease;
+    animation:bullesCtaPulse 2.8s ease-in-out infinite;
+  }
+  /* reflet qui balaye le bouton */
+  .acc-bulles-cta::before{
+    content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);
+    transform:skewX(-18deg);pointer-events:none;
+    animation:bullesCtaShine 3.6s ease-in-out infinite;
+  }
+  @keyframes bullesCtaShine{0%{left:-60%}55%,100%{left:135%}}
+  @keyframes bullesCtaPulse{
+    0%,100%{box-shadow:0 8px 26px rgba(145,70,255,.45), inset 0 1px 0 rgba(255,255,255,.28)}
+    50%{box-shadow:0 12px 36px rgba(255,126,182,.55), inset 0 1px 0 rgba(255,255,255,.28)}
   }
   .acc-bulles-cta:hover{
-    background:linear-gradient(135deg, rgba(145,70,255,.30), rgba(255,126,182,.22));
-    border-color:rgba(145,70,255,.65);
-    transform:translateY(-1px);
-    box-shadow:0 10px 28px rgba(145,70,255,.30);
+    transform:translateY(-2px) scale(1.015);
+    box-shadow:0 16px 42px rgba(145,70,255,.6);
   }
-  .acc-bulles-cta-ico{font-size:28px;line-height:1;flex:0 0 auto}
-  .acc-bulles-cta-text{display:flex;flex-direction:column;flex:1;min-width:0;gap:2px}
-  .acc-bulles-cta-text b{font-family:"Clash Display",sans-serif;font-weight:700;font-size:16px;color:#fff;letter-spacing:-.01em}
-  .acc-bulles-cta-text small{font-size:12px;color:#dcddde;font-weight:500}
-  .acc-bulles-cta-arrow{font-size:24px;color:rgba(255,255,255,.5);flex:0 0 auto;font-weight:300}
+  .acc-bulles-cta:active{transform:translateY(0) scale(.99)}
+  .acc-bulles-cta-ico{
+    font-size:30px;line-height:1;flex:0 0 auto;position:relative;z-index:1;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.35));
+    animation:bullesCtaFloat 3s ease-in-out infinite;
+  }
+  @keyframes bullesCtaFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .acc-bulles-cta-text{display:flex;flex-direction:column;flex:1;min-width:0;gap:2px;position:relative;z-index:1}
+  .acc-bulles-cta-text b{font-family:"Clash Display",sans-serif;font-weight:700;font-size:17px;color:#fff;letter-spacing:-.01em;text-shadow:0 1px 6px rgba(0,0,0,.25)}
+  .acc-bulles-cta-text small{font-size:12px;color:rgba(255,255,255,.92);font-weight:600}
+  .acc-bulles-cta-arrow{font-size:26px;color:rgba(255,255,255,.85);flex:0 0 auto;font-weight:300;position:relative;z-index:1;transition:transform .18s ease}
+  .acc-bulles-cta:hover .acc-bulles-cta-arrow{transform:translateX(3px)}
+  @media (prefers-reduced-motion:reduce){
+    .acc-bulles-cta,.acc-bulles-cta::before,.acc-bulles-cta-ico{animation:none}
+  }
 
   .acc-color-pair{display:flex;flex-direction:column;gap:4px;margin-top:8px}
   .acc-color-pair:first-of-type{margin-top:4px}
