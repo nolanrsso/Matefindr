@@ -1686,14 +1686,6 @@
     transition:transform .18s ease, box-shadow .18s ease;
     animation:bullesCtaPulse 2.8s ease-in-out infinite;
   }
-  /* reflet qui balaye le bouton */
-  .acc-bulles-cta::before{
-    content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;
-    background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);
-    transform:skewX(-18deg);pointer-events:none;
-    animation:bullesCtaShine 3.6s ease-in-out infinite;
-  }
-  @keyframes bullesCtaShine{0%{left:-60%}55%,100%{left:135%}}
   @keyframes bullesCtaPulse{
     0%,100%{box-shadow:0 8px 26px rgba(145,70,255,.45), inset 0 1px 0 rgba(255,255,255,.28)}
     50%{box-shadow:0 12px 36px rgba(255,126,182,.55), inset 0 1px 0 rgba(255,255,255,.28)}
@@ -1715,7 +1707,7 @@
   .acc-bulles-cta-arrow{font-size:26px;color:rgba(255,255,255,.85);flex:0 0 auto;font-weight:300;position:relative;z-index:1;transition:transform .18s ease}
   .acc-bulles-cta:hover .acc-bulles-cta-arrow{transform:translateX(3px)}
   @media (prefers-reduced-motion:reduce){
-    .acc-bulles-cta,.acc-bulles-cta::before,.acc-bulles-cta-ico{animation:none}
+    .acc-bulles-cta,.acc-bulles-cta-ico{animation:none}
   }
 
   .acc-color-pair{display:flex;flex-direction:column;gap:4px;margin-top:8px}
