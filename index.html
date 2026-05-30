@@ -62,7 +62,7 @@
       radial-gradient(900px 700px at 100% 100%, #1a0d2c 0%, transparent 55%),
       var(--bg);
   }
-  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.78;mix-blend-mode:screen;will-change:transform}
+  .blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.78;mix-blend-mode:screen;will-change:transform}
   .blob.b1{width:780px;height:780px;left:-140px;top:-180px;background:radial-gradient(circle,#7a2bff 0%,#2a0f55 55%,transparent 70%);animation:drift1 22s ease-in-out infinite alternate}
   .blob.b2{width:680px;height:680px;right:-120px;top:60px;background:radial-gradient(circle,#ff5fae 0%,#5b1245 55%,transparent 70%);animation:drift2 26s ease-in-out infinite alternate}
   .blob.b3{width:520px;height:520px;left:18%;bottom:-180px;background:radial-gradient(circle,#5be9ff 0%,#0d3a55 50%,transparent 70%);opacity:.45;animation:drift3 30s ease-in-out infinite alternate}
@@ -3638,13 +3638,13 @@
   let W = layer.clientWidth, H = layer.clientHeight;
   const bubbles = [];
   const mouse = { x: -9999, y: -9999, has: false };
-  // exclusion zone (center text)
+  // exclusion zone (center text) — cached, updated only on resize
+  let _cachedCenter = null;
   function centerRect(){
-    const r = layer.getBoundingClientRect();
-    return {
-      cx: r.width/2, cy: r.height/2,
-      w: Math.min(r.width*.7, 760), h: 360
-    };
+    if (!_cachedCenter) {
+      _cachedCenter = { cx: W/2, cy: H/2, w: Math.min(W*.7, 760), h: 360 };
+    }
+    return _cachedCenter;
   }
 
   function rand(a,b){ return a + Math.random()*(b-a); }
@@ -3706,17 +3706,21 @@
     CONFIG.forEach((cfg, i) => spawn(cfg, i, true));
   }
 
+  let _layerLeft = 0, _layerTop = 0;
   function resize(){
     W = layer.clientWidth; H = layer.clientHeight;
+    _cachedCenter = null;
+    const r = layer.getBoundingClientRect();
+    _layerLeft = r.left; _layerTop = r.top;
   }
+  resize();
   window.addEventListener('resize', resize);
 
   window.addEventListener('mousemove', (e) => {
-    const r = layer.getBoundingClientRect();
-    mouse.x = e.clientX - r.left;
-    mouse.y = e.clientY - r.top;
+    mouse.x = e.clientX - _layerLeft;
+    mouse.y = e.clientY - _layerTop;
     mouse.has = true;
-  });
+  }, { passive: true });
   window.addEventListener('mouseleave', () => { mouse.has = false; mouse.x = -9999; mouse.y = -9999; });
 
   /* explosion */
@@ -3955,28 +3959,30 @@
       if (!b.alive) continue;
       b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
     }
+
+    // blob parallax — throttled to every 3 frames (~20fps) to save GPU
+    _blobFrame = (_blobFrame + 1) % 3;
+    if (_blobFrame === 0){
+      rx += (tx-rx)*.08; ry += (ty-ry)*.08;
+      blobsEls.forEach((b,i) => {
+        const f = (i+1)*0.6;
+        b.style.translate = `${rx*f}px ${ry*f}px`;
+      });
+    }
+
     requestAnimationFrame(step);
   }
 
-  init();
-  requestAnimationFrame(step);
-
-  // background blob parallax
+  // background blob parallax — merged into main loop
   const blobsEls = document.querySelectorAll('.blob');
-  let rx=0, ry=0, tx=0, ty=0;
+  let rx=0, ry=0, tx=0, ty=0, _blobFrame=0;
   window.addEventListener('mousemove', (e) => {
     tx = (e.clientX / window.innerWidth - .5) * 30;
     ty = (e.clientY / window.innerHeight - .5) * 30;
   }, { passive:true });
-  function blobTick(){
-    rx += (tx-rx)*.04; ry += (ty-ry)*.04;
-    blobsEls.forEach((b,i) => {
-      const f = (i+1)*0.6;
-      b.style.translate = `${rx*f}px ${ry*f}px`;
-    });
-    requestAnimationFrame(blobTick);
-  }
-  blobTick();
+
+  init();
+  requestAnimationFrame(step);
 
   // online count drifter
   const el = document.getElementById('onlineCount');
