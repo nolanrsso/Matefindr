@@ -1655,17 +1655,32 @@
   .acc-color-wheel{
     position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;
   }
+  .acc-color-wheel-swatch{
+    position:relative;width:48px;height:48px;border-radius:50%;display:block;
+  }
   .acc-color-wheel input[type="color"]{
     appearance:none;-webkit-appearance:none;
     width:48px;height:48px;border-radius:50%;border:3px solid rgba(255,255,255,.18);
-    cursor:pointer;padding:0;background:#9146FF;
+    cursor:pointer;padding:0;background:#1c1d22;
     box-shadow:0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08) inset;
     transition:transform .15s ease, border-color .15s ease;
+    display:block;
   }
   .acc-color-wheel input[type="color"]:hover{transform:scale(1.06);border-color:rgba(255,255,255,.42)}
   .acc-color-wheel input[type="color"]::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}
   .acc-color-wheel input[type="color"]::-webkit-color-swatch{border:none;border-radius:50%}
   .acc-color-wheel input[type="color"]::-moz-color-swatch{border:none;border-radius:50%}
+  /* Cross overlay : shown only when the user hasn't picked a custom color (Discord default) */
+  .acc-color-wheel-cross{
+    position:absolute;inset:0;display:none;
+    align-items:center;justify-content:center;
+    color:#b9bbbe;pointer-events:none;
+    border-radius:50%;
+  }
+  .acc-color-wheel[data-default="true"] .acc-color-wheel-cross{display:flex}
+  .acc-color-wheel[data-default="true"] input[type="color"]{
+    background:repeating-linear-gradient(45deg, #1c1d22 0 6px, #2a2b30 6px 12px) !important;
+  }
   .acc-color-wheel-lbl{font-size:10.5px;font-weight:700;color:#b9bbbe;letter-spacing:.05em;text-transform:uppercase}
   .acc-color-reset{
     width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,.10);
@@ -3007,25 +3022,6 @@
               <label>Bio</label>
               <textarea id="accBio" maxlength="280" placeholder="Parle un peu de toi…"></textarea>
             </div>
-            <div class="acc-field" id="accColorBlock">
-              <label style="display:block">Couleur de profil</label>
-              <div class="acc-color-wheel-row">
-                <label class="acc-color-wheel" title="Couleur principale">
-                  <span class="acc-color-wheel-lbl">Primaire</span>
-                  <input type="color" id="accProfileColor" value="#9146FF" />
-                </label>
-                <label class="acc-color-wheel" title="Couleur secondaire (pour le dégradé)">
-                  <span class="acc-color-wheel-lbl">Secondaire</span>
-                  <input type="color" id="accProfileColor2" value="#6B2BFF" />
-                </label>
-                <button type="button" class="acc-color-reset" id="accColorReset" title="Réinitialiser">↺</button>
-              </div>
-              <!-- Hidden palette rows kept for the existing bindProfileColor() handler -->
-              <div style="display:none">
-                <div class="acc-color-row" data-target="profileColor"></div>
-                <div class="acc-color-row" data-target="profileColor2"></div>
-              </div>
-            </div>
             <div class="acc-field">
               <button type="button" class="acc-bulles-cta" id="accBullesCta">
                 <span class="acc-bulles-cta-ico">🫧</span>
@@ -3037,8 +3033,62 @@
               </button>
             </div>
 
-            <!-- Voice memo — déplacé sous Mes bulles -->
-            <div class="acc-voice" id="accVoiceBlock">
+            <!-- Couleur de profil — placée sous Mes bulles -->
+            <div class="acc-field" id="accColorBlock">
+              <label style="display:block">Couleur de profil</label>
+              <div class="acc-color-wheel-row">
+                <label class="acc-color-wheel" id="accColorWheel1" title="Couleur principale" data-default="true">
+                  <span class="acc-color-wheel-lbl">Primaire</span>
+                  <span class="acc-color-wheel-swatch">
+                    <input type="color" id="accProfileColor" value="#1c1d22" />
+                    <span class="acc-color-wheel-cross" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </span>
+                  </span>
+                </label>
+                <label class="acc-color-wheel" id="accColorWheel2" title="Couleur secondaire (pour le dégradé)" data-default="true">
+                  <span class="acc-color-wheel-lbl">Secondaire</span>
+                  <span class="acc-color-wheel-swatch">
+                    <input type="color" id="accProfileColor2" value="#1c1d22" />
+                    <span class="acc-color-wheel-cross" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </span>
+                  </span>
+                </label>
+                <button type="button" class="acc-color-reset" id="accColorReset" title="Revenir à la couleur Discord par défaut">↺</button>
+              </div>
+              <!-- Hidden palette rows kept for the existing bindProfileColor() handler -->
+              <div style="display:none">
+                <div class="acc-color-row" data-target="profileColor"></div>
+                <div class="acc-color-row" data-target="profileColor2"></div>
+              </div>
+            </div>
+          </div>
+          <div class="acc-profil-col">
+            <h3 style="margin:0 0 8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
+            <div class="acc-social">
+              <div class="acc-social-row" data-kind="instagram">
+                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
+                <span class="so-name">Instagram</span>
+                <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
+                <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
+              </div>
+              <div class="acc-social-row" data-kind="tiktok">
+                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
+                <span class="so-name">TikTok</span>
+                <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
+                <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
+              </div>
+              <div class="acc-social-row" data-kind="spotify">
+                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
+                <span class="so-name">Spotify</span>
+                <input type="text" id="socSp" placeholder="username" autocomplete="off" />
+                <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
+              </div>
+            </div>
+
+            <!-- Vocal du profil — déplacé sous Comptes liés -->
+            <div class="acc-voice" id="accVoiceBlock" style="margin-top:14px">
               <span class="acc-voice-lbl">Vocal du profil <small style="color:#72767d;font-weight:400;font-size:11px">(5s max — joue à l'arrivée sur ton profil)</small></span>
               <!-- Record state -->
               <button type="button" class="acc-voice-record" id="accVoiceFab" title="Enregistrer un vocal" data-state="idle">
@@ -3063,29 +3113,6 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></svg>
                 </button>
                 <audio id="accVoiceAudio" preload="metadata" style="display:none"></audio>
-              </div>
-            </div>
-          </div>
-          <div class="acc-profil-col">
-            <h3 style="margin:0 0 8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
-            <div class="acc-social">
-              <div class="acc-social-row" data-kind="instagram">
-                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
-                <span class="so-name">Instagram</span>
-                <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
-                <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
-              </div>
-              <div class="acc-social-row" data-kind="tiktok">
-                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
-                <span class="so-name">TikTok</span>
-                <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
-                <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
-              </div>
-              <div class="acc-social-row" data-kind="spotify">
-                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
-                <span class="so-name">Spotify</span>
-                <input type="text" id="socSp" placeholder="username" autocomplete="off" />
-                <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
               </div>
             </div>
           </div>
@@ -6845,11 +6872,18 @@
       if (typeof window.__refreshBannerPrev === 'function') window.__refreshBannerPrev();
       if (typeof window.__refreshDecoPicker === 'function') window.__refreshDecoPicker();
       if (typeof window.__hydrateDiscordNotifs === 'function') window.__hydrateDiscordNotifs();
-      // Hydrate color wheels from state
+      // Hydrate color wheels from state — when no custom color, show a cross
+      // (Discord default) instead of a misleading violet. Keep picker value at
+      // the real card background color so it visually matches the profile.
       const cw1 = document.getElementById('accProfileColor');
       const cw2 = document.getElementById('accProfileColor2');
-      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#9146FF';
-      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#6B2BFF';
+      const wh1 = document.getElementById('accColorWheel1');
+      const wh2 = document.getElementById('accColorWheel2');
+      const isHex = v => v && /^#[0-9a-f]{6}$/i.test(v);
+      if (cw1) cw1.value = isHex(u.profileColor)  ? u.profileColor  : '#1c1d22';
+      if (cw2) cw2.value = isHex(u.profileColor2) ? u.profileColor2 : '#1c1d22';
+      if (wh1) wh1.setAttribute('data-default', isHex(u.profileColor)  ? 'false' : 'true');
+      if (wh2) wh2.setAttribute('data-default', isHex(u.profileColor2) ? 'false' : 'true');
       // Update "Mes bulles" CTA counter
       if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
       const s = u.socials || {};
@@ -7619,13 +7653,18 @@
         const key = row.dataset.target; // 'profileColor' or 'profileColor2'
         const swatches = row.querySelectorAll('.acc-color-swatch');
         const pickerId = key === 'profileColor' ? 'accProfileColor' : 'accProfileColor2';
+        const wheelId  = key === 'profileColor' ? 'accColorWheel1' : 'accColorWheel2';
         const picker = document.getElementById(pickerId);
+        const wheel  = document.getElementById(wheelId);
         function applyActive(val){
           swatches.forEach(s => s.classList.toggle('active', s.dataset.color === val));
         }
         function setColor(val){
           state.user = state.user || {};
-          state.user[key] = (val === 'discord') ? null : val;
+          const isCustom = val && val !== 'discord' && /^#[0-9a-f]{6}$/i.test(val);
+          state.user[key] = isCustom ? val : null;
+          if (wheel) wheel.setAttribute('data-default', isCustom ? 'false' : 'true');
+          if (picker) picker.value = isCustom ? val : '#1c1d22';
           save();
           refreshAccountPreview();
         }
@@ -7644,7 +7683,9 @@
         }
         const stored = (state.user && state.user[key]) || 'discord';
         applyActive(stored);
-        if (picker && stored && stored !== 'discord' && /^#[0-9a-f]{6}$/i.test(stored)) picker.value = stored;
+        const isStoredCustom = stored && stored !== 'discord' && /^#[0-9a-f]{6}$/i.test(stored);
+        if (picker) picker.value = isStoredCustom ? stored : '#1c1d22';
+        if (wheel)  wheel.setAttribute('data-default', isStoredCustom ? 'false' : 'true');
       });
     })();
 
@@ -7656,6 +7697,15 @@
         state.user = state.user || {};
         state.user.profileColor = null;
         state.user.profileColor2 = null;
+        // Sync UI : both wheels back to "default" (cross over a neutral swatch)
+        ['accColorWheel1','accColorWheel2'].forEach(id => {
+          const w = document.getElementById(id);
+          if (w) w.setAttribute('data-default', 'true');
+        });
+        ['accProfileColor','accProfileColor2'].forEach(id => {
+          const p = document.getElementById(id);
+          if (p) p.value = '#1c1d22';
+        });
         save();
         if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
         showToast('↺', 'Couleurs réinitialisées', 'On utilise la couleur Discord');
