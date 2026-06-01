@@ -89,8 +89,14 @@
     border:1px solid var(--stroke);
     border-bottom:none;
     border-radius:18px;
+    position:relative;overflow:visible;
   }
-  .brand{display:flex;align-items:center;gap:0;text-decoration:none;color:inherit;cursor:pointer;margin-left:18px}
+  /* Le logo est sorti du flux pour ne pas dicter la hauteur du header. */
+  .brand{
+    position:absolute;left:18px;top:50%;transform:translateY(-50%);
+    display:flex;align-items:center;gap:0;text-decoration:none;color:inherit;cursor:pointer;
+    z-index:2;
+  }
   .brand .mark{width:96px;height:96px;display:grid;place-items:center;filter:drop-shadow(0 4px 20px rgba(145,70,255,.6))}
   .nav{display:flex;align-items:center;gap:6px}
   .nav a{color:var(--ink-dim);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px;border-radius:10px;transition:.18s ease}
@@ -339,7 +345,7 @@
   /* Bigger nav on large screens */
   @media (min-width:1100px){
     header{margin:20px 44px 0;padding:14px 22px;border-radius:22px}
-    .brand{margin-left:28px}
+    .brand{left:28px}
     .brand .mark{width:120px;height:120px}
     .login{padding:12px 18px;font-size:15px;border-radius:13px;gap:10px}
     .login .dot{width:8px;height:8px}
