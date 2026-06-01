@@ -53,6 +53,10 @@
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-family:"Inter",system-ui,sans-serif}
   html,body{height:100%;overflow:hidden}
+  /* Dézoom global de l'UI (comme un zoom navigateur < 100%). Ajuster --ui-zoom.
+     Les conteneurs plein écran (height:100vh) sont compensés en /var(--ui-zoom). */
+  :root{ --ui-zoom:0.8; }
+  body{ zoom:var(--ui-zoom); }
 
   /* ------------- Background mesh ------------- */
   .scene{
@@ -75,7 +79,7 @@
   .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 
   /* ------------- Layout ------------- */
-  main{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column}
+  main{position:relative;z-index:2;height:calc(100vh / var(--ui-zoom));display:flex;flex-direction:column}
 
   /* Header */
   header{
@@ -2177,7 +2181,7 @@
 
   /* ===== Liked-me panel ===== */
   .liked-panel{
-    position:fixed;top:0;right:0;height:100vh;width:min(92vw,360px);z-index:200;
+    position:fixed;top:0;right:0;height:calc(100vh / var(--ui-zoom));width:min(92vw,360px);z-index:200;
     background:#1c1d22;border-left:1px solid rgba(255,255,255,.08);
     transform:translateX(100%);transition:.25s ease;display:flex;flex-direction:column;
   }
@@ -2252,7 +2256,7 @@
   }
   .oeo-close:hover{transform:scale(1.06);background:rgba(255,79,160,.18);border-color:rgba(255,79,160,.45)}
   .oeo-stage{
-    position:relative;z-index:1;width:100vw;height:100vh;
+    position:relative;z-index:1;width:calc(100vw / var(--ui-zoom));height:calc(100vh / var(--ui-zoom));
     display:grid;place-items:center;
   }
   .oeo-card-wrap{
@@ -2380,7 +2384,7 @@
   @keyframes oeoRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
 
   .oeo-add-panel{
-    position:fixed;top:0;right:0;height:100vh;width:min(380px,92vw);z-index:4;
+    position:fixed;top:0;right:0;height:calc(100vh / var(--ui-zoom));width:min(380px,92vw);z-index:4;
     background:#1c1d22;border-left:1px solid rgba(255,255,255,.08);
     transform:translateX(105%);transition:.28s cubic-bezier(.2,.7,.3,1);
     display:flex;flex-direction:column;padding:18px 18px 22px;
