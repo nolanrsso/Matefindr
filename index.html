@@ -1815,9 +1815,12 @@
   .preview-card .pchips span{font-size:10.5px;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#dcddde}
 
   /* ===== Account screen ===== */
+  /* Scroll vertical si le contenu déborde (à TOUTE taille) → toutes les options
+     restent 100% accessibles. Centré quand ça rentre (via .acc-card margin:auto). */
   #screen-account{
     position:relative;z-index:2;flex:1 1 auto;flex-direction:column;
-    align-items:center;justify-content:center;padding:14px 24px;overflow:hidden;min-height:0;
+    align-items:center;justify-content:flex-start;padding:14px 24px;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;min-height:0;
   }
   /* Desktop : no scroll anywhere. Mobile : allow internal scroll. */
   @media (min-width:761px){
@@ -1829,8 +1832,8 @@
   }
   .acc-card{
     position:relative;
-    width:min(98vw,1280px);max-height:calc(100vh - 140px);
-    padding:12px 16px 14px;border-radius:22px;display:flex;flex-direction:column;min-height:0;
+    width:min(98vw,1280px);margin:auto;
+    padding:12px 16px 14px;border-radius:22px;display:flex;flex-direction:column;min-height:auto;flex:0 0 auto;
     background:linear-gradient(180deg, rgba(28,22,58,.78), rgba(18,12,42,.78));
     border:1px solid var(--stroke-2);
     backdrop-filter:blur(22px) saturate(150%);
@@ -1897,7 +1900,7 @@
   @media (max-width:780px){ .acc-tab[data-tab="boost"]:not([hidden]){grid-template-columns:1fr} }
   /* 2-column main area: identity left, tab content right */
   .acc-main{
-    flex:1 1 auto;min-height:0;display:grid;
+    flex:0 0 auto;min-height:auto;display:grid;
     grid-template-columns:280px 1fr;gap:18px;
   }
   .acc-identity{
@@ -1905,7 +1908,7 @@
     padding:18px;border-radius:18px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(255,255,255,.06);
-    overflow:auto;min-height:0;
+    overflow:visible;min-height:auto;
   }
   .acc-identity .acc-avatar-wrap{
     display:flex;flex-direction:column;align-items:center;gap:10px;
@@ -1929,28 +1932,12 @@
     font-family:"Clash Display",sans-serif;font-weight:700;font-size:20px;text-align:center;margin:0;
   }
   .acc-identity .acc-handle{color:var(--ink-dim);font-size:13px;text-align:center;margin:0}
-  .acc-tab-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  .acc-tab{overflow:auto;padding-right:8px}
+  .acc-tab-body{flex:0 0 auto;min-height:auto;display:flex;flex-direction:column;overflow:visible}
+  .acc-tab{overflow:visible;padding-right:0}
   @media (max-width:900px){
     .acc-main{grid-template-columns:1fr;gap:14px}
     .acc-identity{order:0}
     .acc-identity .acc-avatar{width:96px;height:96px;font-size:38px}
-  }
-  /* Fenêtre étroite (≈ < moitié d'un écran standard) : tout l'onglet compte
-     scrolle d'un seul bloc au lieu d'être coupé/écrasé. On neutralise les
-     overflow internes pour éviter un double scroll. */
-  @media (max-width:960px){
-    #screen-account{
-      overflow-y:auto;overflow-x:hidden;
-      justify-content:flex-start;
-      -webkit-overflow-scrolling:touch;
-    }
-    /* Empêche la compression flex (min-height:0 partout) pour que le contenu
-       déborde réellement et déclenche le scroll du conteneur. */
-    #screen-account .acc-card{max-height:none;flex:0 0 auto;min-height:auto}
-    #screen-account .acc-main{min-height:auto}
-    #screen-account .acc-tab-body{overflow:visible;min-height:auto}
-    #screen-account .acc-tab{overflow:visible;padding-right:0}
   }
   /* Legacy avatar override - used in some non-account contexts */
   .acc-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
@@ -2010,6 +1997,8 @@
     width:min(98vw,1280px);margin:12px auto 0;display:flex !important;
     box-shadow:0 12px 36px rgba(0,0,0,.55);
   }
+  /* Bannière de pub Boost retirée à la demande */
+  #boostBanner{display:none !important}
   .acc-save-bar .acc-save-msg{
     font-size:13px;font-weight:600;color:#fff;margin-right:6px;white-space:nowrap;
   }
@@ -2018,23 +2007,21 @@
   /* Floating Discord FAB — bottom-right of viewport, account screen only */
   .acc-discord-fab{
     position:fixed;right:22px;bottom:22px;
-    width:52px;height:52px;border-radius:14px;
+    width:52px;height:52px;border-radius:50%;
     display:none;align-items:center;justify-content:center;
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.10);
-    backdrop-filter:blur(18px) saturate(140%);
-    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    background:#5865F2;
+    border:1px solid rgba(255,255,255,.18);
     color:#fff;text-decoration:none;
-    box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
-    transition:transform .18s ease, background .18s ease, border-color .18s ease;
+    box-shadow:0 8px 22px rgba(88,101,242,.5), 0 0 0 1px rgba(255,255,255,.06) inset;
+    transition:transform .18s ease, background .18s ease, box-shadow .18s ease;
     z-index:90;
   }
   body[data-screen="account"] .acc-discord-fab{display:flex}
-  .acc-discord-fab svg{width:24px;height:auto;opacity:.95}
+  .acc-discord-fab svg{width:28px;height:auto;display:block}
   .acc-discord-fab:hover{
-    background:rgba(255,255,255,.10);
-    border-color:rgba(255,255,255,.22);
-    transform:translateY(-2px);
+    background:#6b75f5;
+    transform:translateY(-2px) scale(1.05);
+    box-shadow:0 12px 30px rgba(88,101,242,.65), 0 0 0 1px rgba(255,255,255,.12) inset;
   }
 
   /* Voice memo — compact dark block in the Profil right column */
@@ -3057,8 +3044,31 @@
                 <span class="acc-bulles-cta-arrow">›</span>
               </button>
             </div>
+          </div>
+          <div class="acc-profil-col">
+            <h3 style="margin:0 0 8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
+            <div class="acc-social">
+              <div class="acc-social-row" data-kind="instagram">
+                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
+                <span class="so-name">Instagram</span>
+                <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
+                <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
+              </div>
+              <div class="acc-social-row" data-kind="tiktok">
+                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
+                <span class="so-name">TikTok</span>
+                <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
+                <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
+              </div>
+              <div class="acc-social-row" data-kind="spotify">
+                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
+                <span class="so-name">Spotify</span>
+                <input type="text" id="socSp" placeholder="username" autocomplete="off" />
+                <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
+              </div>
+            </div>
 
-            <!-- Voice memo — déplacé sous Mes bulles -->
+            <!-- Voice memo — sous les comptes connectés -->
             <div class="acc-voice" id="accVoiceBlock">
               <span class="acc-voice-lbl">Vocal du profil <small style="color:#72767d;font-weight:400;font-size:11px">(5s max — joue à l'arrivée sur ton profil)</small></span>
               <!-- Record state -->
@@ -3084,29 +3094,6 @@
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></svg>
                 </button>
                 <audio id="accVoiceAudio" preload="metadata" style="display:none"></audio>
-              </div>
-            </div>
-          </div>
-          <div class="acc-profil-col">
-            <h3 style="margin:0 0 8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
-            <div class="acc-social">
-              <div class="acc-social-row" data-kind="instagram">
-                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
-                <span class="so-name">Instagram</span>
-                <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
-                <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
-              </div>
-              <div class="acc-social-row" data-kind="tiktok">
-                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
-                <span class="so-name">TikTok</span>
-                <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
-                <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
-              </div>
-              <div class="acc-social-row" data-kind="spotify">
-                <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
-                <span class="so-name">Spotify</span>
-                <input type="text" id="socSp" placeholder="username" autocomplete="off" />
-                <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
               </div>
             </div>
           </div>
@@ -3260,8 +3247,8 @@
     </button>
 
     <!-- Floating Discord server button (bottom-right of page in account screen) -->
-    <a href="https://discord.gg/NkW4uMmQR" target="_blank" rel="noopener" class="acc-discord-fab" id="accDiscordFab" title="Rejoindre le serveur Discord">
-      <svg width="22" height="17" viewBox="0 0 71 55" fill="currentColor"><path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978Z"/></svg>
+    <a href="https://discord.gg/NkW4uMmQR" target="_blank" rel="noopener" class="acc-discord-fab" id="accDiscordFab" title="Rejoindre le serveur Discord" aria-label="Discord">
+      <svg viewBox="0 0 127.14 96.36" fill="currentColor" aria-hidden="true"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69Z"/></svg>
     </a>
   </section>
 
