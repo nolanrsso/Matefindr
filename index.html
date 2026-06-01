@@ -8041,21 +8041,61 @@
       const cx = (cRect.left + cRect.width / 2) - sRect.left;
       const cy = (cRect.top  + cRect.height / 2) - sRect.top;
       const orbR = 39; // mini orb = 78px
-      // Clamp inside the stage so default columns never fall off a narrow viewport
-      const clampX = (x) => Math.max(orbR + 6, Math.min(sRect.width  - orbR - 6, x));
-      const clampY = (y) => Math.max(orbR + 6, Math.min(sRect.height - orbR - 6, y));
+      const pad = 6;
+      // Si le panel "+" est ouvert (à droite), on réduit la zone utile pour ne pas
+      // poser de bulles sous le panel.
+      const panel = document.getElementById('oeoAddPanel');
+      const panelOpen = panel && panel.getAttribute('data-open') === 'true';
+      const panelLeft = panelOpen ? (panel.getBoundingClientRect().left - sRect.left) : sRect.width;
+      const availLeft  = pad + orbR;
+      const availRight = Math.min(sRect.width, panelLeft) - pad - orbR;
+      const availTop   = pad + orbR;
+      const availBot   = sRect.height - pad - orbR;
+      const clampX = (x) => Math.max(availLeft, Math.min(availRight, x));
+      const clampY = (y) => Math.max(availTop,  Math.min(availBot,  y));
 
       // SAME normalized layout as the swipe card (orbRelLayout) → identical placement.
       const { rel, plus } = orbRelLayout(orbs, canAddMore);
-      const toPx = (r) => ({ x: clampX(cx + r.rx * cRect.width), y: clampY(cy + r.ry * cRect.height) });
+
+      // PROPORTIONNEL : si la position par défaut (auto) sort de la zone, on
+      // resserre uniformément TOUTES les bulles auto (échelle X et Y) pour qu'elles
+      // rentrent — pas d'empilement au bord. Les bulles custom (drag) gardent
+      // leur position absolue : elles sont juste clampées si elles débordent.
+      const isCustom = (o) => o && typeof o.customX === 'number' && typeof o.customY === 'number';
+      let maxAutoRx = 0, maxAutoRy = 0;
+      rel.forEach((r, o) => {
+        if (!isCustom(o)) {
+          maxAutoRx = Math.max(maxAutoRx, Math.abs(r.rx));
+          maxAutoRy = Math.max(maxAutoRy, Math.abs(r.ry));
+        }
+      });
+      if (plus) {
+        maxAutoRx = Math.max(maxAutoRx, Math.abs(plus.rx));
+        maxAutoRy = Math.max(maxAutoRy, Math.abs(plus.ry));
+      }
+      // Espace disponible de chaque côté du centre carte (en px), puis fraction max
+      // que peut atteindre |rx| sans déborder
+      const sideXmax = Math.min(cx - availLeft, availRight - cx);
+      const sideYmax = Math.min(cy - availTop,  availBot  - cy);
+      const maxAllowedRx = sideXmax / cRect.width;
+      const maxAllowedRy = sideYmax / cRect.height;
+      const scaleX = (maxAutoRx > maxAllowedRx) ? (maxAllowedRx / maxAutoRx) : 1;
+      const scaleY = (maxAutoRy > maxAllowedRy) ? (maxAllowedRy / maxAutoRy) : 1;
+      const scale  = Math.min(scaleX, scaleY); // échelle uniforme → garde les proportions
+
+      const toPx = (r, custom) => {
+        const sx = custom ? 1 : scale;
+        const sy = custom ? 1 : scale;
+        return { x: clampX(cx + r.rx * sx * cRect.width), y: clampY(cy + r.ry * sy * cRect.height) };
+      };
 
       orbs.forEach(o => {
         const r = rel.get(o); if (!r) return;
-        const p = toPx(r);
+        const p = toPx(r, isCustom(o));
         stage.appendChild(makeMiniOrb(o, p.x - orbR, p.y - orbR, orbs.indexOf(o)));
       });
       if (plus){
-        const p = toPx(plus);
+        const p = toPx(plus, false);
         stage.appendChild(makeAddFab(p.x - orbR, p.y - orbR));
       }
     }
@@ -8150,8 +8190,22 @@
           el.style.cursor = 'grabbing';
         }
         if (dragMoved) {
-          el.style.left = (dragData.startLeft + dx) + 'px';
-          el.style.top  = (dragData.startTop  + dy) + 'px';
+          // Clamp dans la zone visible du stage (= écran entier) pour qu'une bulle
+          // ne puisse jamais sortir, même si le pointer va hors écran. Tient compte
+          // de la taille réelle de la bulle.
+          const sRect = dragData.stage.getBoundingClientRect();
+          const w = el.offsetWidth, h = el.offsetHeight;
+          const pad = 4;
+          // Si le panel "+" est ouvert à droite, on réduit la zone utile à gauche du panel
+          const panel = document.getElementById('oeoAddPanel');
+          const panelOpen = panel && panel.getAttribute('data-open') === 'true';
+          const panelLeft = panelOpen ? (panel.getBoundingClientRect().left - sRect.left) : sRect.width;
+          const maxLeft = Math.max(pad, Math.min(sRect.width - w - pad, panelLeft - w - pad));
+          const maxTop  = sRect.height - h - pad;
+          const left = Math.max(pad, Math.min(maxLeft, dragData.startLeft + dx));
+          const top  = Math.max(pad, Math.min(maxTop,  dragData.startTop  + dy));
+          el.style.left = left + 'px';
+          el.style.top  = top  + 'px';
         }
       });
       function endDrag(e){
