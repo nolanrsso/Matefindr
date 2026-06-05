@@ -367,6 +367,8 @@
   /* Hide bubble-only landing extras on non-landing screens (decluttering) */
   body:not([data-screen="landing"]) .corner-ctrl--discord{display:none}
   body[data-auth="in"] #langSwitch{display:none}
+  /* Bouton Messages retiré partout (demande utilisateur) */
+  #msgFab, .msg-fab{display:none !important}
   body[data-auth="out"] #msgFab,
   body[data-screen="account"] #msgFab,
   body[data-screen="account"] .bf-fab{display:none !important}
@@ -3684,8 +3686,8 @@
 
 <script>
   /* ====== Supabase client (real Discord OAuth) ====== */
-  const SUPABASE_URL = 'https://kspyqwqudnvjvfdsybam.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzcHlxd3F1ZG52anZmZHN5YmFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MjkwMTQsImV4cCI6MjA5NDQwNTAxNH0.D1jTiRBpn9Z59XRgLlvPiP9N6ataIYGQJH1ECihbuHk';
+  const SUPABASE_URL = 'https://pdhffpxssagclexttfox.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaGZmcHhzc2FnY2xleHR0Zm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzA4NjgsImV4cCI6MjA5NjI0Njg2OH0.wqnVvxAcjMGfl6QgeUfgEs4EEJAQDjVLMOwy676sccg';
   const supa = (window.supabase && window.supabase.createClient)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
