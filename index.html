@@ -2732,9 +2732,61 @@
     display:none;
   }
   .auth-msg[data-show="true"]{display:block;animation:authViewIn .22s ease-out}
+  /* ===== Password gate (accès privé) ===== */
+  #gate{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    background:radial-gradient(1200px 800px at 50% -10%, #1c143a 0%, transparent 60%), radial-gradient(900px 700px at 100% 100%, #1a0d2c 0%, transparent 55%), #0D0B1E;
+    padding:24px;text-align:center}
+  #gate[hidden]{display:none}
+  #gate .gate-logo{width:96px;height:auto;margin-bottom:4px;filter:drop-shadow(0 4px 22px rgba(255,31,158,.5))}
+  #gate h1{font-family:"Clash Display",sans-serif;font-weight:800;font-size:clamp(28px,5vw,44px);margin:0;
+    background:linear-gradient(180deg,#fff 0%,#d9c6ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #gate p{color:#b9bbbe;font-size:14.5px;margin:0 0 8px}
+  #gate .gate-form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  #gate input{padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);
+    color:#fff;font-family:inherit;font-size:18px;outline:none;text-align:center;letter-spacing:.3em;width:200px;transition:.18s ease}
+  #gate input:focus{border-color:rgba(145,70,255,.6);background:rgba(255,255,255,.08);box-shadow:0 0 0 4px rgba(145,70,255,.18)}
+  #gate button{padding:14px 24px;border-radius:13px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:15px;color:#fff;
+    background:linear-gradient(180deg,#A65BFF 0%,#6B2BFF 100%);box-shadow:0 8px 24px rgba(107,43,255,.45);transition:transform .16s ease}
+  #gate button:hover{transform:translateY(-1px)}
+  #gate .gate-err{color:#FF7EB6;font-size:13px;min-height:16px;font-weight:600}
 </style>
 </head>
 <body data-screen="landing" data-auth="out">
+
+<!-- ===== Accès privé : page mot de passe (barrière côté client, mémorisée par appareil) ===== -->
+<div id="gate" hidden>
+  <img src="assets/logo.png" alt="Tindord" class="gate-logo" />
+  <h1>Accès privé</h1>
+  <p>Entre le mot de passe pour accéder à Tindord</p>
+  <form class="gate-form" id="gateForm">
+    <input id="gateInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" aria-label="Mot de passe" />
+    <button type="submit">Entrer</button>
+  </form>
+  <div class="gate-err" id="gateErr" aria-live="polite"></div>
+</div>
+<script>
+(function(){
+  var KEY='tindord_gate_ok';
+  var gate=document.getElementById('gate');
+  try{ if(localStorage.getItem(KEY)==='1'){ gate.remove(); return; } }catch(_){}
+  gate.hidden=false;
+  document.documentElement.style.overflow='hidden';
+  var form=document.getElementById('gateForm'),inp=document.getElementById('gateInput'),err=document.getElementById('gateErr');
+  setTimeout(function(){try{inp.focus();}catch(_){}} ,60);
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    if(inp.value.trim()==='8090'){
+      try{localStorage.setItem(KEY,'1');}catch(_){}
+      document.documentElement.style.overflow='';
+      gate.remove();
+    }else{
+      err.textContent='Mot de passe incorrect';
+      inp.value='';inp.focus();
+      try{gate.animate([{transform:'translateX(-7px)'},{transform:'translateX(7px)'},{transform:'translateX(0)'}],{duration:240});}catch(_){}
+    }
+  });
+})();
+</script>
 
 <div class="scene" aria-hidden="true">
   <div class="blob b1"></div>
