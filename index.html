@@ -736,6 +736,67 @@
   .onb-btn--next:hover{transform:translateY(-1px)}
   .onb-btn--next:disabled{opacity:.45;cursor:not-allowed;transform:none}
 
+  /* ===== Onboarding — single page (genre + pays + âge) ===== */
+  .onb-card--single{max-height:calc(100vh - 48px);overflow-y:auto;overflow-x:visible;padding:30px 36px 26px}
+  .onb-card--single .onb-step h2{font-size:28px}
+  .onb-card--single .onb-step .sub{margin-bottom:22px}
+  /* Label de section, aligné à gauche */
+  .onb-field-lbl{
+    display:block;text-align:left;font-size:12px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:#b9bbbe;margin:0 0 8px 2px;
+  }
+  /* Boutons genre plus compacts en page unique */
+  .onb-card--single .onb-opt{padding:16px 10px;gap:8px}
+  .onb-card--single .onb-opt .emoji{height:30px;font-size:28px}
+  .onb-card--single .onb-options{margin-bottom:6px}
+  .onb-card--single .onb-skip{margin:0 0 18px}
+  .onb-card--single .onb-age{padding:14px 16px;font-size:24px;margin-bottom:4px}
+  .onb-age-hint{text-align:left;color:#72767d;font-size:12px;margin:0 0 20px 2px}
+  .onb-age-hint.bad{color:#FF7EB6}
+
+  /* Sélecteur de pays (drapeaux images — fiable sur Windows, contrairement aux emoji) */
+  .onb-country{position:relative;margin-bottom:20px}
+  .onb-country-btn{
+    width:100%;box-sizing:border-box;display:flex;align-items:center;gap:10px;
+    padding:13px 14px;border-radius:14px;cursor:pointer;
+    background:rgba(255,255,255,.04);border:1.5px solid var(--stroke-2);
+    color:#fff;font-family:inherit;font-size:15px;font-weight:600;text-align:left;
+    transition:.18s ease;
+  }
+  .onb-country-btn:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.22)}
+  .onb-country[data-open="true"] .onb-country-btn{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.18)}
+  .onb-country-flag{flex:0 0 auto;width:28px;height:21px;border-radius:4px;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.06)}
+  .onb-country-flag img{width:100%;height:100%;object-fit:cover;display:block}
+  .onb-country-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .onb-country-name.placeholder{color:#72767d;font-weight:500}
+  .onb-country-caret{flex:0 0 auto;color:#b9bbbe;font-size:14px;transition:transform .18s ease}
+  .onb-country[data-open="true"] .onb-country-caret{transform:rotate(180deg)}
+  .onb-country-menu{
+    position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
+    background:rgba(20,18,32,.98);border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.7);
+    padding:8px;overflow:hidden;
+    backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  }
+  .onb-country-search{
+    width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;outline:none;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+    color:#fff;font-family:inherit;font-size:14px;margin-bottom:6px;
+  }
+  .onb-country-search:focus{border-color:rgba(145,70,255,.5)}
+  .onb-country-list{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+  .onb-country-item{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;
+    background:none;border:none;color:#fff;font-family:inherit;font-size:14px;font-weight:500;text-align:left;width:100%;
+  }
+  .onb-country-item:hover,.onb-country-item.active{background:rgba(145,70,255,.22)}
+  .onb-country-item .oc-flag{flex:0 0 auto;width:26px;height:19px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06)}
+  .onb-country-item .oc-flag img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* Drapeau du pays sur la carte de profil (dans le badge âge) */
+  .card-age-badge .cab-flag{display:inline-flex;width:24px;height:18px;border-radius:3px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  .card-age-badge .cab-flag img{width:100%;height:100%;object-fit:cover;display:block}
+
   /* ===== Swipe deck ===== */
   #screen-swipe{
     position:relative;z-index:2;flex:1 1 auto;flex-direction:column;
@@ -2866,15 +2927,13 @@
        ONBOARDING — 3 steps: gender, age, looking-for
        ============================================================ -->
   <section id="screen-onboarding" class="screen">
-    <div class="onb-card">
-      <div class="onb-progress" id="onbProgress">
-        <span class="done"></span><span></span><span></span>
-      </div>
+    <div class="onb-card onb-card--single">
+      <div class="onb-step">
+        <h2>Bienvenue sur Tindord</h2>
+        <p class="sub">Quelques infos pour bien démarrer</p>
 
-      <!-- Step 1: pronouns -->
-      <div class="onb-step" data-step="1">
-        <h2 data-i18n="onb_q1">Ton genre ?</h2>
-        <p class="sub" data-i18n="onb_q1_sub">Cette info aide à proposer les bonnes rencontres</p>
+        <!-- Genre -->
+        <label class="onb-field-lbl">Ton genre</label>
         <div class="onb-options three" id="onbGender">
           <button type="button" class="onb-opt" data-val="il"><span class="emoji emoji-bold">♂</span><span class="label">Homme</span></button>
           <button type="button" class="onb-opt" data-val="elle"><span class="emoji emoji-bold">♀</span><span class="label">Femme</span></button>
@@ -2886,35 +2945,28 @@
           </button>
         </div>
         <button type="button" class="onb-skip" data-val="hidden" id="onbGenderSkip">Je préfère ne pas dire</button>
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
-        </div>
-      </div>
 
-      <!-- Step 2: age -->
-      <div class="onb-step" data-step="2" hidden>
-        <h2 data-i18n="onb_q2">Quel âge as-tu ?</h2>
-        <p class="sub" data-i18n="onb_q2_sub">Tu dois avoir 16 ans ou plus</p>
-        <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="16" max="99" placeholder="18" />
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" data-go="1" data-i18n="back">Retour</button>
-          <button type="button" class="onb-btn onb-btn--next" id="onbNext2" disabled data-i18n="continue">Continuer</button>
+        <!-- Pays -->
+        <label class="onb-field-lbl">Ton pays</label>
+        <div class="onb-country" id="onbCountry">
+          <button type="button" class="onb-country-btn" id="onbCountryBtn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="onb-country-flag" id="onbCountryFlag"></span>
+            <span class="onb-country-name" id="onbCountryName">Choisis ton pays</span>
+            <span class="onb-country-caret">▾</span>
+          </button>
+          <div class="onb-country-menu" id="onbCountryMenu" hidden>
+            <input type="text" class="onb-country-search" id="onbCountrySearch" placeholder="Rechercher un pays…" autocomplete="off" />
+            <div class="onb-country-list" id="onbCountryList" role="listbox"></div>
+          </div>
         </div>
-      </div>
 
-      <!-- Step 3: looking for -->
-      <div class="onb-step" data-step="3" hidden>
-        <h2 data-i18n="onb_q3">Tu cherches quoi ?</h2>
-        <p class="sub" data-i18n="onb_q3_sub">Tu pourras changer plus tard dans ton profil</p>
-        <div class="onb-options four" id="onbLooking">
-          <button type="button" class="onb-opt" data-val="chill"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg></span><span class="label" data-i18n="look_chill">Chill</span></button>
-          <button type="button" class="onb-opt" data-val="game"><span class="emoji"><svg width="32" height="32" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span><span class="label" data-i18n="look_game">Jouer</span></button>
-          <button type="button" class="onb-opt" data-val="talk"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg></span><span class="label" data-i18n="look_talk">Discuter</span></button>
-          <button type="button" class="onb-opt" data-val="sleep"><span class="emoji"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg></span><span class="label" data-i18n="look_sleep">Sleepcall</span></button>
-        </div>
+        <!-- Âge -->
+        <label class="onb-field-lbl">Ton âge</label>
+        <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="18" max="99" placeholder="18" />
+        <p class="onb-age-hint" id="onbAgeHint">Tu dois avoir 18 ans ou plus</p>
+
         <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" data-go="2" data-i18n="back">Retour</button>
-          <button type="button" class="onb-btn onb-btn--next" id="onbFinish" disabled data-i18n="onb_finish">Découvrir Tindord</button>
+          <button type="button" class="onb-btn onb-btn--next" id="onbFinish" disabled>Découvrir Tindord</button>
         </div>
       </div>
     </div>
@@ -4472,48 +4524,102 @@
       hasProfile(){ return !!state.profile; },
     };
 
-    // ---------- Onboarding ----------
-    const draft = { gender:null, age:null, looking:null };
+    // ---------- Onboarding (page unique : genre + pays + âge ≥18) ----------
+    const COUNTRIES = [
+      {c:'fr',n:'France'},{c:'be',n:'Belgique'},{c:'ch',n:'Suisse'},{c:'ca',n:'Canada'},
+      {c:'lu',n:'Luxembourg'},{c:'mc',n:'Monaco'},{c:'gb',n:'Royaume-Uni'},{c:'us',n:'États-Unis'},
+      {c:'de',n:'Allemagne'},{c:'es',n:'Espagne'},{c:'it',n:'Italie'},{c:'pt',n:'Portugal'},
+      {c:'nl',n:'Pays-Bas'},{c:'ie',n:'Irlande'},{c:'se',n:'Suède'},{c:'no',n:'Norvège'},
+      {c:'dk',n:'Danemark'},{c:'fi',n:'Finlande'},{c:'pl',n:'Pologne'},{c:'cz',n:'Tchéquie'},
+      {c:'at',n:'Autriche'},{c:'gr',n:'Grèce'},{c:'ro',n:'Roumanie'},{c:'hu',n:'Hongrie'},
+      {c:'ru',n:'Russie'},{c:'ua',n:'Ukraine'},{c:'tr',n:'Turquie'},{c:'ma',n:'Maroc'},
+      {c:'dz',n:'Algérie'},{c:'tn',n:'Tunisie'},{c:'sn',n:'Sénégal'},{c:'ci',n:"Côte d'Ivoire"},
+      {c:'cm',n:'Cameroun'},{c:'cd',n:'RD Congo'},{c:'jp',n:'Japon'},{c:'kr',n:'Corée du Sud'},
+      {c:'cn',n:'Chine'},{c:'in',n:'Inde'},{c:'id',n:'Indonésie'},{c:'ph',n:'Philippines'},
+      {c:'vn',n:'Vietnam'},{c:'th',n:'Thaïlande'},{c:'au',n:'Australie'},{c:'nz',n:'Nouvelle-Zélande'},
+      {c:'br',n:'Brésil'},{c:'mx',n:'Mexique'},{c:'ar',n:'Argentine'},{c:'cl',n:'Chili'},
+      {c:'co',n:'Colombie'},{c:'pe',n:'Pérou'},{c:'za',n:'Afrique du Sud'},{c:'eg',n:'Égypte'},
+      {c:'ng',n:'Nigeria'},{c:'sa',n:'Arabie saoudite'},{c:'ae',n:'Émirats arabes unis'},
+      {c:'il',n:'Israël'},{c:'ht',n:'Haïti'}
+    ];
+    // Drapeaux en IMAGES (les emoji-drapeaux s'affichent comme "FR" sur Windows).
+    const flagUrl = (code) => `https://flagcdn.com/${code}.svg`;
+    const draft = { gender:null, country:null, age:null };
+
     function selectOpt(container, value){
       container.querySelectorAll('.onb-opt').forEach(b => b.classList.toggle('selected', b.dataset.val === value));
     }
+    function refreshOnbFinish(){
+      const ok = !!draft.gender && !!draft.country && draft.age != null;
+      document.getElementById('onbFinish').disabled = !ok;
+    }
+    // Genre
     document.getElementById('onbGender').addEventListener('click', e => {
       const b = e.target.closest('.onb-opt'); if (!b) return;
       draft.gender = b.dataset.val;
       selectOpt(b.parentElement, draft.gender);
       document.getElementById('onbGenderSkip')?.classList.remove('is-active');
-      document.getElementById('onbNext1').disabled = false;
+      refreshOnbFinish();
     });
-    // "Je préfère ne pas dire" — small text link below the 3 options
     document.getElementById('onbGenderSkip')?.addEventListener('click', e => {
       draft.gender = e.currentTarget.dataset.val; // 'hidden'
       document.querySelectorAll('#onbGender .onb-opt').forEach(b => b.classList.remove('selected'));
       e.currentTarget.classList.add('is-active');
-      document.getElementById('onbNext1').disabled = false;
+      refreshOnbFinish();
     });
+    // Âge (≥18)
     document.getElementById('onbAge').addEventListener('input', e => {
       const v = parseInt(e.target.value, 10);
-      draft.age = (v >= 16 && v <= 99) ? v : null;
-      document.getElementById('onbNext2').disabled = draft.age == null;
+      const valid = v >= 18 && v <= 99;
+      draft.age = valid ? v : null;
+      const hint = document.getElementById('onbAgeHint');
+      if (hint) hint.classList.toggle('bad', e.target.value !== '' && !valid);
+      refreshOnbFinish();
     });
-    document.getElementById('onbLooking').addEventListener('click', e => {
-      const b = e.target.closest('.onb-opt'); if (!b) return;
-      draft.looking = b.dataset.val;
-      selectOpt(b.parentElement, draft.looking);
-      document.getElementById('onbFinish').disabled = false;
-    });
-    function goStep(n){
-      document.querySelectorAll('.onb-step').forEach(s => {
-        s.hidden = parseInt(s.dataset.step, 10) !== n;
-      });
-      const dots = document.getElementById('onbProgress').children;
-      for (let i=0; i<dots.length; i++) dots[i].classList.toggle('done', i < n);
-    }
-    document.getElementById('onbNext1').addEventListener('click', () => goStep(2));
-    document.getElementById('onbNext2').addEventListener('click', () => goStep(3));
-    document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => goStep(parseInt(b.dataset.go, 10))));
+    // Pays — dropdown custom (recherche + drapeaux images)
+    (function initCountryPicker(){
+      const wrap = document.getElementById('onbCountry');
+      const btn  = document.getElementById('onbCountryBtn');
+      const menu = document.getElementById('onbCountryMenu');
+      const search = document.getElementById('onbCountrySearch');
+      const list = document.getElementById('onbCountryList');
+      const flagEl = document.getElementById('onbCountryFlag');
+      const nameEl = document.getElementById('onbCountryName');
+      if (!wrap || !btn || !menu || !list) return;
+      const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      function renderList(filter){
+        const f = norm(filter);
+        list.innerHTML = '';
+        COUNTRIES.filter(c => !f || norm(c.n).includes(f)).forEach(c => {
+          const it = document.createElement('button');
+          it.type = 'button'; it.className = 'onb-country-item'; it.dataset.code = c.c;
+          it.innerHTML = `<span class="oc-flag"><img src="${flagUrl(c.c)}" alt="" loading="lazy" decoding="async"></span><span>${escapeHtmlMini(c.n)}</span>`;
+          it.addEventListener('click', () => {
+            draft.country = { code:c.c, name:c.n };
+            flagEl.innerHTML = `<img src="${flagUrl(c.c)}" alt="">`;
+            nameEl.textContent = c.n; nameEl.classList.remove('placeholder');
+            close(); refreshOnbFinish();
+          });
+          list.appendChild(it);
+        });
+      }
+      function open(){ wrap.setAttribute('data-open','true'); btn.setAttribute('aria-expanded','true'); menu.hidden = false; search.value = ''; renderList(''); setTimeout(() => search.focus(), 30); }
+      function close(){ wrap.setAttribute('data-open','false'); btn.setAttribute('aria-expanded','false'); menu.hidden = true; }
+      btn.addEventListener('click', () => { menu.hidden ? open() : close(); });
+      search.addEventListener('input', () => renderList(search.value));
+      document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+      nameEl.classList.add('placeholder');
+      renderList('');
+    })();
+
     document.getElementById('onbFinish').addEventListener('click', () => {
-      state.profile = { gender:draft.gender, age:draft.age, looking:draft.looking, bio:'' };
+      state.profile = {
+        gender:  draft.gender,
+        country: draft.country || null,
+        age:     draft.age,
+        looking: 'game',
+        bio: ''
+      };
       save();
       setScreen('swipe');
     });
@@ -4660,6 +4766,7 @@
         tag: u.discordTag || 'moi',
         age: p.age || '',
         gender: p.gender || '',
+        country: p.country || null,
         looking: p.looking || 'game',
         status: 'online',
         nitro: !!u.decorationUrl || !!(u.boost && u.fakeNitro),
@@ -4902,10 +5009,13 @@
         autre:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
       };
       const gSym = GENDER_SYM[p.gender] || '';
-      const ageBadgeHtml = (p.age || gSym) ? `
+      const cc = p.country && p.country.code ? p.country.code : null;
+      const flagHtml = cc ? `<span class="cab-flag"><img src="https://flagcdn.com/${cc}.svg" alt="${escapeHtmlMini(p.country.name||'')}" loading="lazy" decoding="async"></span>` : '';
+      const ageBadgeHtml = (p.age || gSym || cc) ? `
         <div class="card-age-badge">
           ${p.age ? `<span class="cab-age">${p.age}</span>` : ''}
           ${gSym ? `<span class="cab-gender" data-g="${p.gender || ''}">${gSym}</span>` : ''}
+          ${flagHtml}
         </div>` : '';
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
