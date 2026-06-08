@@ -2198,14 +2198,47 @@
   }
   .gif-item .gif-del:hover{background:#ff4f80;border-color:#ff4f80}
 
-  /* ===== GIFs on swipe stage ===== */
-  .swipe-stage .swipe-gifs{position:absolute;inset:0;pointer-events:none;z-index:6}
-  .swipe-stage .swipe-gif{
-    position:absolute;width:120px;height:120px;border-radius:14px;overflow:hidden;
-    transform:translate(-50%,-50%);box-shadow:0 12px 32px rgba(0,0,0,.5);
+  /* ===== GIFs collés sur la carte (stickers) — taille/rotation libres ===== */
+  /* Le layer est enfant de la carte → coords en % de la carte, clippées à la carte. */
+  .swipe-card .swipe-gifs{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden;border-radius:inherit}
+  .swipe-card .swipe-gif{
+    position:absolute;border-radius:12px;overflow:hidden;
+    box-shadow:0 10px 28px rgba(0,0,0,.5);
     border:2px solid rgba(255,255,255,.20);
   }
-  .swipe-stage .swipe-gif img{width:100%;height:100%;object-fit:cover;display:block}
+  .swipe-card .swipe-gif img{width:100%;height:auto;display:block}
+
+  /* ===== GIF edit overlay (preview carte plein écran, comme l'éditeur de bulles) ===== */
+  .gef{position:fixed;inset:0;z-index:332;display:none;align-items:center;justify-content:center}
+  .gef[data-show="true"]{display:flex;animation:fadeInOverlay .25s ease-out}
+  .gef-backdrop{position:absolute;inset:0;background:rgba(8,9,14,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);cursor:pointer}
+  .gef-close{position:fixed;top:18px;right:18px;z-index:4;width:44px;height:44px;border-radius:50%;cursor:pointer;display:grid;place-items:center;color:#fff;background:rgba(20,21,26,.95);border:1px solid rgba(255,255,255,.10);box-shadow:0 8px 22px rgba(0,0,0,.6);transition:transform .15s ease,background .15s ease}
+  .gef-close:hover{transform:scale(1.06);background:rgba(255,79,160,.18);border-color:rgba(255,79,160,.45)}
+  .gef-stage{position:relative;z-index:1;width:100vw;height:100vh;display:grid;place-items:center}
+  .gef-card-wrap{position:relative;width:min(96vw,420px);height:min(86vh,620px);border-radius:20px;overflow:visible;box-shadow:0 30px 80px rgba(0,0,0,.7);animation:likerPop .35s cubic-bezier(.2,.7,.3,1.1)}
+  .gef-card-wrap .swipe-card{position:absolute !important;inset:0 !important;transform:none !important;cursor:default !important;border-radius:20px}
+  .gef-card-wrap .swipe-card .badge-stamp{display:none !important}
+  /* Couche d'édition par-dessus la carte (handles visibles → overflow visible) */
+  .gef-gif-layer{position:absolute;inset:0;z-index:5}
+  .gef-gif{position:absolute;touch-action:none;cursor:grab;will-change:transform}
+  .gef-gif.dragging{cursor:grabbing}
+  .gef-gif-inner{width:100%;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 0 2px rgba(88,101,242,.35)}
+  .gef-gif-inner img{width:100%;height:auto;display:block;pointer-events:none}
+  .gef-handle{position:absolute;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);z-index:6}
+  .gef-handle svg{width:15px;height:15px;display:block;pointer-events:none}
+  .gef-del{top:-14px;left:-14px;background:#2f3136;color:#fff;cursor:pointer}
+  .gef-del:hover{background:#ff4f80}
+  .gef-rotate{top:-14px;right:-14px;background:#5865F2;color:#fff;cursor:grab;touch-action:none}
+  .gef-resize{bottom:-14px;right:-14px;background:#3BD17C;color:#0c2a18;cursor:nwse-resize;touch-action:none}
+  /* Barre de recherche en bas de l'overlay */
+  .gef-add{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:4;width:min(94vw,440px);background:rgba(20,21,26,.96);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:10px;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+  .gef-add input{width:100%;box-sizing:border-box;padding:11px 14px;border-radius:11px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.14);color:#fff;font-family:inherit;font-size:14px;outline:none}
+  .gef-add input:focus{border-color:rgba(88,101,242,.6);box-shadow:0 0 0 4px rgba(88,101,242,.18)}
+  .gef-sugg{display:none;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;max-height:34vh;overflow-y:auto}
+  .gef-sugg.open{display:grid}
+  .gef-sugg .gef-sg-item{cursor:pointer;border-radius:9px;overflow:hidden;aspect-ratio:1;background:#000;border:1px solid rgba(255,255,255,.08)}
+  .gef-sugg .gef-sg-item img{width:100%;height:100%;object-fit:cover;display:block}
+  .gef-hint{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:4;color:#dcddde;font-size:12.5px;background:rgba(20,21,26,.9);padding:7px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08)}
 
   /* ===== Toggle switch ===== */
   .toggle{display:inline-flex;align-items:center;cursor:pointer;user-select:none}
@@ -3385,6 +3418,18 @@
           </div>
         </div>
 
+        <div class="acc-field">
+          <label>GIFs sur ta carte <small style="color:#b9bbbe;font-weight:400">(place, agrandis et oriente tes GIFs)</small></label>
+          <button type="button" class="acc-bulles-cta" id="accGifsCta">
+            <span class="acc-bulles-cta-ico">🎞️</span>
+            <span class="acc-bulles-cta-text">
+              <b>Mes GIFs</b>
+              <small id="accGifsCtaCount">0 / 5</small>
+            </span>
+            <span class="acc-bulles-cta-arrow">›</span>
+          </button>
+        </div>
+
         <!-- Bannière apparait dès que Fake Nitro est activé -->
         <div class="acc-field" id="boostBannerField" hidden>
           <label>Bannière personnalisée <small style="color:#b9bbbe;font-weight:400">(image, max 2 Mo)</small></label>
@@ -3610,6 +3655,24 @@
       <input class="acc-input" id="oeoSearch" type="text" placeholder="Recherche…" autocomplete="off" />
       <div class="oeo-sugg" id="oeoSugg"></div>
     </aside>
+  </div>
+
+  <!-- ✨ GIF edit overlay — comme l'éditeur de bulles, avec drag + redimensionnement + rotation -->
+  <div class="gef" id="gifEditOverlay" data-show="false" aria-hidden="true">
+    <div class="gef-backdrop" id="gefBackdrop"></div>
+    <button class="gef-close" id="gefClose" type="button" aria-label="Fermer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="gef-hint">Glisse pour déplacer · coin vert = taille · coin bleu = rotation</div>
+    <div class="gef-stage" id="gefStage">
+      <div class="gef-card-wrap" id="gefCardWrap">
+        <div class="gef-gif-layer" id="gefGifLayer"></div>
+      </div>
+    </div>
+    <div class="gef-add">
+      <input id="gefSearch" type="text" placeholder="Recherche un GIF (Giphy)…" autocomplete="off" />
+      <div class="gef-sugg" id="gefSugg"></div>
+    </div>
   </div>
 
   <!-- Game meta modal — ouvre après ajout d'une bulle game pour demander rank + clip -->
@@ -5086,13 +5149,14 @@
     }
 
     function renderSwipeGifs(p){
-      const stage = document.querySelector('.swipe-stage');
-      if (!stage) return;
-      let layer = stage.querySelector('.swipe-gifs');
+      // GIFs collés sur la carte du dessus (enfants de .swipe-card → coords en % de la carte)
+      const card = document.querySelector('#swipeWrap .swipe-card');
+      if (!card) return;
+      let layer = card.querySelector('.swipe-gifs');
       if (!layer) {
         layer = document.createElement('div');
         layer.className = 'swipe-gifs';
-        stage.appendChild(layer);
+        card.appendChild(layer);
       }
       layer.innerHTML = '';
       const isMe = p && p.isMe;
@@ -5100,8 +5164,12 @@
       gifs.forEach(g => {
         const el = document.createElement('div');
         el.className = 'swipe-gif';
-        el.style.left = g.x + '%';
-        el.style.top  = g.y + '%';
+        const w = (typeof g.w === 'number') ? g.w : 32;
+        const rot = (typeof g.rot === 'number') ? g.rot : 0;
+        el.style.left = (typeof g.x === 'number' ? g.x : 50) + '%';
+        el.style.top  = (typeof g.y === 'number' ? g.y : 30) + '%';
+        el.style.width = w + '%';
+        el.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
         el.innerHTML = `<img src="${g.full || g.preview}" alt="">`;
         layer.appendChild(el);
       });
@@ -7581,9 +7649,11 @@
     }
 
     function refreshGifCounter(){
-      const pill = document.getElementById('gifCounterPill');
       const n = ((state.user && state.user.gifs) || []).length;
+      const pill = document.getElementById('gifCounterPill');
       if (pill) pill.textContent = n + '/' + MAX_GIFS;
+      const ctaC = document.getElementById('accGifsCtaCount');
+      if (ctaC) ctaC.textContent = n + ' / ' + MAX_GIFS;
     }
 
     function renderGifStage(){
@@ -7669,7 +7739,7 @@
             if (!state.user || !state.user.boost) { openBoostModal(); return; }
             state.user.gifs = state.user.gifs || [];
             if (state.user.gifs.length >= MAX_GIFS) { showToast('🎞️', 'Limite atteinte', MAX_GIFS + ' GIFs max'); return; }
-            state.user.gifs.push({ preview:r.preview, full:r.full, x:50, y:30 });
+            state.user.gifs.push({ preview:r.preview, full:r.full, x:50, y:30, w:34, rot:0 });
             save();
             document.getElementById('gifInput').value = '';
             sugg.innerHTML=''; sugg.classList.remove('open');
@@ -7685,6 +7755,157 @@
       const s = document.getElementById('gifSugg');
       s.innerHTML=''; s.classList.remove('open');
     }, 200));
+
+    /* ===== GIF edit overlay (drag + redimensionnement + rotation, comme l'éditeur de bulles) ===== */
+    const GIF_W_MIN = 12, GIF_W_MAX = 75; // taille raisonnable (% largeur carte)
+    function openGifEditOverlay(){
+      const overlay = document.getElementById('gifEditOverlay');
+      const wrap    = document.getElementById('gefCardWrap');
+      const layer   = document.getElementById('gefGifLayer');
+      if (!overlay || !wrap || !layer) return;
+      const myP = (typeof buildUserProfile === 'function') ? buildUserProfile() : null;
+      [...wrap.querySelectorAll('.swipe-card')].forEach(c => c.remove());
+      if (myP) {
+        const card = buildCard(myP, false);
+        card.style.cssText += ';position:absolute !important;inset:0 !important;opacity:1 !important;transform:none !important;cursor:default !important;pointer-events:none';
+        wrap.insertBefore(card, layer); // carte sous la couche d'édition
+      }
+      overlay.setAttribute('data-show', 'true');
+      const se = document.getElementById('gefSearch'); if (se) se.value = '';
+      const sg = document.getElementById('gefSugg'); if (sg){ sg.innerHTML=''; sg.classList.remove('open'); }
+      requestAnimationFrame(renderGifEditItems);
+    }
+    function closeGifEditOverlay(){
+      const overlay = document.getElementById('gifEditOverlay');
+      if (overlay) overlay.setAttribute('data-show', 'false');
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+    }
+    function renderGifEditItems(){
+      const layer = document.getElementById('gefGifLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+      const gifs = (state.user && state.user.gifs) || [];
+      gifs.forEach((g, i) => layer.appendChild(makeEditGif(g, i, layer)));
+      refreshGifCounter();
+    }
+    function makeEditGif(g, idx, layer){
+      if (typeof g.x !== 'number') g.x = 50;
+      if (typeof g.y !== 'number') g.y = 30;
+      if (typeof g.w !== 'number') g.w = 34;
+      if (typeof g.rot !== 'number') g.rot = 0;
+      const el = document.createElement('div');
+      el.className = 'gef-gif';
+      const apply = () => {
+        el.style.left = g.x + '%';
+        el.style.top  = g.y + '%';
+        el.style.width = g.w + '%';
+        el.style.transform = `translate(-50%,-50%) rotate(${g.rot}deg)`;
+      };
+      apply();
+      el.innerHTML =
+        `<div class="gef-gif-inner"><img src="${g.preview || g.full}" alt="" draggable="false"></div>` +
+        `<button type="button" class="gef-handle gef-del" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>` +
+        `<div class="gef-handle gef-rotate" aria-label="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>` +
+        `<div class="gef-handle gef-resize" aria-label="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>`;
+      const center = () => { const r = el.getBoundingClientRect(); return { x: r.left + r.width/2, y: r.top + r.height/2 }; };
+      // Supprimer
+      const del = el.querySelector('.gef-del');
+      del.addEventListener('pointerdown', e => e.stopPropagation());
+      del.addEventListener('click', e => {
+        e.stopPropagation();
+        (state.user.gifs || []).splice(idx, 1);
+        save(); renderGifEditItems();
+      });
+      // Déplacer (corps)
+      let drag = null;
+      el.addEventListener('pointerdown', e => {
+        if (e.target.closest('.gef-handle')) return;
+        if (e.button !== undefined && e.button !== 0) return;
+        e.preventDefault();
+        try { el.setPointerCapture(e.pointerId); } catch(_){}
+        const lr = layer.getBoundingClientRect();
+        drag = { mx:e.clientX, my:e.clientY, x0:g.x, y0:g.y, lw:lr.width, lh:lr.height };
+        el.classList.add('dragging'); el.style.zIndex = '10';
+      });
+      el.addEventListener('pointermove', e => {
+        if (!drag) return;
+        g.x = Math.max(2, Math.min(98, drag.x0 + (e.clientX - drag.mx) / drag.lw * 100));
+        g.y = Math.max(2, Math.min(98, drag.y0 + (e.clientY - drag.my) / drag.lh * 100));
+        apply();
+      });
+      const endDrag = e => { if (!drag) return; drag = null; el.classList.remove('dragging'); el.style.zIndex=''; try{ el.releasePointerCapture(e.pointerId);}catch(_){} save(); };
+      el.addEventListener('pointerup', endDrag);
+      el.addEventListener('pointercancel', endDrag);
+      // Redimensionner (coin vert) — distance centre→pointeur (insensible à la rotation)
+      const rz = el.querySelector('.gef-resize');
+      rz.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        try { rz.setPointerCapture(e.pointerId); } catch(_){}
+        const c = center();
+        const d0 = Math.max(8, Math.hypot(e.clientX - c.x, e.clientY - c.y));
+        const w0 = g.w;
+        const mv = ev => { g.w = Math.max(GIF_W_MIN, Math.min(GIF_W_MAX, w0 * (Math.hypot(ev.clientX - c.x, ev.clientY - c.y) / d0))); apply(); };
+        const up = ev => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); try{ rz.releasePointerCapture(ev.pointerId);}catch(_){} save(); };
+        rz.addEventListener('pointermove', mv);
+        rz.addEventListener('pointerup', up);
+      });
+      // Rotation (coin bleu) — angle centre→pointeur
+      const ro = el.querySelector('.gef-rotate');
+      ro.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        try { ro.setPointerCapture(e.pointerId); } catch(_){}
+        const c = center();
+        const a0 = Math.atan2(e.clientY - c.y, e.clientX - c.x) * 180 / Math.PI;
+        const r0 = g.rot;
+        const mv = ev => { const a = Math.atan2(ev.clientY - c.y, ev.clientX - c.x) * 180 / Math.PI; g.rot = Math.round(r0 + (a - a0)); apply(); };
+        const up = ev => { ro.removeEventListener('pointermove', mv); ro.removeEventListener('pointerup', up); try{ ro.releasePointerCapture(ev.pointerId);}catch(_){} save(); };
+        ro.addEventListener('pointermove', mv);
+        ro.addEventListener('pointerup', up);
+      });
+      return el;
+    }
+    // Recherche d'ajout dans l'overlay GIF
+    let _gefDebounce = null;
+    (function(){
+      const se = document.getElementById('gefSearch');
+      if (!se) return;
+      se.addEventListener('input', e => {
+        const val = e.target.value.trim();
+        const sugg = document.getElementById('gefSugg');
+        if (val.length < 2) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+        clearTimeout(_gefDebounce);
+        _gefDebounce = setTimeout(async () => {
+          const results = await searchGiphy(val);
+          if (!results.length) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+          sugg.innerHTML = '';
+          results.forEach(r => {
+            const it = document.createElement('div');
+            it.className = 'gef-sg-item';
+            it.innerHTML = `<img src="${r.preview}" alt="">`;
+            it.addEventListener('pointerdown', ev => {
+              ev.preventDefault();
+              if (!state.user || !state.user.boost) { openBoostModal(); return; }
+              state.user.gifs = state.user.gifs || [];
+              if (state.user.gifs.length >= MAX_GIFS) { showToast('🎞️', 'Limite atteinte', MAX_GIFS + ' GIFs max'); return; }
+              state.user.gifs.push({ preview:r.preview, full:r.full, x:50, y:35, w:34, rot:0 });
+              save();
+              se.value = ''; sugg.innerHTML=''; sugg.classList.remove('open');
+              renderGifEditItems();
+              showToast('🎞️', 'GIF ajouté', 'Déplace · agrandis · oriente');
+            });
+            sugg.appendChild(it);
+          });
+          sugg.classList.add('open');
+        }, 320);
+      });
+      se.addEventListener('blur', () => setTimeout(() => { const s = document.getElementById('gefSugg'); if (s){ s.innerHTML=''; s.classList.remove('open'); } }, 200));
+    })();
+    document.getElementById('gefClose')?.addEventListener('click', closeGifEditOverlay);
+    document.getElementById('gefBackdrop')?.addEventListener('click', closeGifEditOverlay);
+    document.getElementById('accGifsCta')?.addEventListener('click', () => {
+      if (!state.user || !state.user.boost) { openBoostModal(); return; }
+      openGifEditOverlay();
+    });
 
     /* ===== Boost banner + pricing modal ===== */
     function refreshBoostUI(){
