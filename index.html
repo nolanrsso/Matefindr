@@ -699,6 +699,14 @@
   .onb-select:focus{border-color:rgba(145,70,255,.6);background-color:rgba(255,255,255,.07);box-shadow:0 0 0 4px rgba(145,70,255,.18)}
   .onb-select option{background:#1a1a20;color:#fff}
 
+  /* Formulaire fusionné (âge + genre + pays) */
+  .onb-merged .onb-merged-block{margin-bottom:18px;text-align:left}
+  .onb-merged .onb-merged-block:last-of-type{margin-bottom:8px}
+  .onb-merged .onb-merged-lbl{display:block;font-size:13.5px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:.01em}
+  .onb-merged .onb-age{margin-bottom:0;width:100%;box-sizing:border-box}
+  .onb-merged .onb-options{margin:0}
+  .onb-merged .onb-skip{margin-top:8px}
+
   /* Custom country picker — affiche les vraies images de drapeaux (flagcdn) */
   .ctry-picker{position:relative;width:100%;margin-bottom:8px}
   .ctry-trigger{
@@ -3079,7 +3087,7 @@
   <section id="screen-onboarding" class="screen">
     <div class="onb-card">
       <div class="onb-progress" id="onbProgress">
-        <span></span><span></span><span></span><span></span>
+        <span></span><span></span>
       </div>
 
       <!-- Step 0: welcome (grande page) -->
@@ -3092,50 +3100,41 @@
         </div>
       </div>
 
-      <!-- Step 1: age -->
-      <div class="onb-step" data-step="1" hidden>
-        <h2 data-i18n="onb_q2">Quel âge as-tu ?</h2>
-        <p class="sub" data-i18n="onb_q2_sub">Tu dois avoir 18 ans ou plus</p>
-        <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="18" max="99" placeholder="18" />
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" data-go="0" data-i18n="back">Retour</button>
-          <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
-        </div>
-      </div>
+      <!-- Step 1: âge + genre + pays sur une seule page -->
+      <div class="onb-step onb-merged" data-step="1" hidden>
+        <h2>Parle-nous de toi</h2>
+        <p class="sub">Quelques infos pour démarrer (toutes obligatoires)</p>
 
-      <!-- Step 2: gender -->
-      <div class="onb-step" data-step="2" hidden>
-        <h2 data-i18n="onb_q1">Ton genre ?</h2>
-        <p class="sub" data-i18n="onb_q1_sub">Cette info aide à proposer les bonnes rencontres</p>
-        <div class="onb-options three" id="onbGender">
-          <button type="button" class="onb-opt" data-val="il"><span class="emoji emoji-bold">♂</span><span class="label">Homme</span></button>
-          <button type="button" class="onb-opt" data-val="elle"><span class="emoji emoji-bold">♀</span><span class="label">Femme</span></button>
-          <button type="button" class="onb-opt" data-val="autre">
-            <span class="emoji">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>
-            </span>
-            <span class="label">Autre</span>
-          </button>
+        <div class="onb-merged-block">
+          <label class="onb-merged-lbl" for="onbAge">Âge <small style="color:#b9bbbe;font-weight:400">(18 ans minimum)</small></label>
+          <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="18" max="99" placeholder="18" />
         </div>
-        <button type="button" class="onb-skip" data-val="hidden" id="onbGenderSkip">Je préfère ne pas dire</button>
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" data-go="1" data-i18n="back">Retour</button>
-          <button type="button" class="onb-btn onb-btn--next" id="onbNext2" disabled data-i18n="continue">Continuer</button>
-        </div>
-      </div>
 
-      <!-- Step 3: country -->
-      <div class="onb-step" data-step="3" hidden>
-        <h2>D'où viens-tu ?</h2>
-        <p class="sub">Ton drapeau apparaîtra sur ton profil</p>
-        <!-- Picker custom (avec images flagcdn) ; le <select> reste pour la logique existante -->
-        <div class="ctry-picker" id="onbCountryPicker" data-open="false">
-          <button type="button" class="ctry-trigger" id="onbCountryTrigger">
-            <span class="ctry-name ctry-placeholder">Choisis ton pays…</span>
-          </button>
-          <div class="ctry-panel">
-            <input type="text" class="ctry-search" id="onbCountrySearch" placeholder="Rechercher un pays…" autocomplete="off" />
-            <div class="ctry-list" id="onbCountryList"></div>
+        <div class="onb-merged-block">
+          <span class="onb-merged-lbl">Genre</span>
+          <div class="onb-options three" id="onbGender">
+            <button type="button" class="onb-opt" data-val="il"><span class="emoji emoji-bold">♂</span><span class="label">Homme</span></button>
+            <button type="button" class="onb-opt" data-val="elle"><span class="emoji emoji-bold">♀</span><span class="label">Femme</span></button>
+            <button type="button" class="onb-opt" data-val="autre">
+              <span class="emoji">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>
+              </span>
+              <span class="label">Autre</span>
+            </button>
+          </div>
+          <button type="button" class="onb-skip" data-val="hidden" id="onbGenderSkip">Je préfère ne pas dire</button>
+        </div>
+
+        <div class="onb-merged-block">
+          <span class="onb-merged-lbl">Pays <small style="color:#b9bbbe;font-weight:400">(drapeau affiché sur ta carte)</small></span>
+          <div class="ctry-picker" id="onbCountryPicker" data-open="false">
+            <button type="button" class="ctry-trigger" id="onbCountryTrigger">
+              <span class="ctry-name ctry-placeholder">Choisis ton pays…</span>
+            </button>
+            <div class="ctry-panel">
+              <input type="text" class="ctry-search" id="onbCountrySearch" placeholder="Rechercher un pays…" autocomplete="off" />
+              <div class="ctry-list" id="onbCountryList"></div>
+            </div>
           </div>
         </div>
         <select class="onb-select" id="onbCountry" style="display:none">
@@ -3178,13 +3177,15 @@
           <option value="AU" data-flag="🇦🇺">🇦🇺 Australie</option>
           <option value="OTHER" data-flag="🏳️">🏳️ Autre</option>
         </select>
+        </div><!-- /.onb-merged-block country -->
+
         <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" data-go="2" data-i18n="back">Retour</button>
-          <button type="button" class="onb-btn onb-btn--next" id="onbNext3" disabled data-i18n="continue">Continuer</button>
+          <button type="button" class="onb-btn onb-btn--prev" data-go="0" data-i18n="back">Retour</button>
+          <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
         </div>
       </div>
 
-      <!-- Step 4: personnalisation (skippable) -->
+      <!-- Step 2: personnalisation (skippable) -->
       <div class="onb-step onb-perso" data-step="4" hidden>
         <h2>Personnalise ton profil</h2>
         <p class="sub">Optionnel — tout est modifiable à tout moment dans les paramètres.</p>
@@ -4889,32 +4890,35 @@
     }
     window.__initOnboarding = initOnboarding;
 
-    // Step 2 — genre
+    // Step 1 — page fusionnée : âge + genre + pays (validation unifiée)
+    function refreshStep1Validation(){
+      const next = $onb('onbNext1');
+      if (!next) return;
+      next.disabled = !(draft.age != null && draft.gender && draft.country);
+    }
     $onb('onbGender').addEventListener('click', e => {
       const b = e.target.closest('.onb-opt'); if (!b) return;
       draft.gender = b.dataset.val;
       selectOpt(b.parentElement, draft.gender);
       $onb('onbGenderSkip')?.classList.remove('is-active');
-      $onb('onbNext2').disabled = false;
+      refreshStep1Validation();
     });
     $onb('onbGenderSkip')?.addEventListener('click', e => {
       draft.gender = e.currentTarget.dataset.val; // 'hidden'
       document.querySelectorAll('#onbGender .onb-opt').forEach(b => b.classList.remove('selected'));
       e.currentTarget.classList.add('is-active');
-      $onb('onbNext2').disabled = false;
+      refreshStep1Validation();
     });
-    // Step 1 — âge
     $onb('onbAge').addEventListener('input', e => {
       const v = parseInt(e.target.value, 10);
       draft.age = (v >= 18 && v <= 99) ? v : null;
-      $onb('onbNext1').disabled = draft.age == null;
+      refreshStep1Validation();
     });
-    // Step 3 — pays (select hidden + picker custom synchronisés)
     $onb('onbCountry').addEventListener('change', e => {
       const opt = e.target.selectedOptions[0];
       draft.country = e.target.value || null;
       draft.countryFlag = opt ? (opt.getAttribute('data-flag') || '') : '';
-      $onb('onbNext3').disabled = !draft.country;
+      refreshStep1Validation();
     });
 
     /* Country picker custom — affiche les vraies images flagcdn dans le dropdown */
@@ -4974,14 +4978,14 @@
       document.querySelectorAll('.onb-step').forEach(s => {
         s.hidden = parseInt(s.dataset.step, 10) !== n;
       });
-      const dots = $onb('onbProgress').children; // 4 dots for steps 1..4
-      for (let i=0; i<dots.length; i++) dots[i].classList.toggle('done', i < n);
+      // 2 dots : step 1 (formulaire fusionné) et step 4 (perso). step 0 = bienvenue, sans dot.
+      const dots = $onb('onbProgress').children;
+      const stepIdx = (n === 0) ? 0 : (n === 1 ? 1 : 2);
+      for (let i=0; i<dots.length; i++) dots[i].classList.toggle('done', i < stepIdx);
       try { $onb('screen-onboarding').scrollTop = 0; } catch(_){}
     }
     $onb('onbStart').addEventListener('click', () => goStep(1));
-    $onb('onbNext1').addEventListener('click', () => goStep(2));
-    $onb('onbNext2').addEventListener('click', () => goStep(3));
-    $onb('onbNext3').addEventListener('click', () => goStep(4));
+    $onb('onbNext1').addEventListener('click', () => goStep(4));
     document.querySelectorAll('#screen-onboarding [data-go]').forEach(b => b.addEventListener('click', () => goStep(parseInt(b.dataset.go, 10))));
 
     function finishOnboarding(openBubbles){
