@@ -4764,7 +4764,10 @@
     let state = { user:null, profile:null };
     try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
 
-    function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(_){} }
+    function save(){
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(_){}
+      try { if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); } catch(_){}
+    }
     function tx(k){
       const code = (document.documentElement.lang || 'fr').toUpperCase();
       return (I18N[code] && I18N[code][k]) || (I18N.FR[k]) || k;
@@ -4828,6 +4831,9 @@
         } catch (e) { console.warn('restore archive failed', e); }
         save(); setAuth(true);
         try { window.__discordJoinDM && window.__discordJoinDM(); } catch(_){}
+        // Sync + premier fetch (peuple immédiatement la liste des autres profils)
+        try { if (typeof syncMyProfileToCloud === 'function') syncMyProfileToCloud(); } catch(_){}
+        try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
         setScreen(state.profile ? 'landing' : 'onboarding');
       },
       go(screen){ setScreen(screen); },
@@ -5019,7 +5025,9 @@
     // ---------- Swipe deck ----------
     // Mock profiles. Each has nitro flag, joinedOn date, and an `orbs` array
     // — bubbles that orbit the card. Click an orb to hear/see its content.
-    const PROFILES = [
+    // Bots retirés — la liste est désormais alimentée par Supabase (table public.profiles).
+    // Cf. _remoteProfiles ci-dessous et fetchOtherProfiles() qui hydrate ce cache.
+    const _PROFILES_LEGACY = [
       { name:'Alex', tag:'alex', age:21, gender:'male', looking:'game', status:'online', nitro:true, boost:true,
         joinedOn:'14 oct. 2025',
         activity:{type:'game', title:'CS2', sub:'En partie — Dust2 16-12'},
@@ -5188,14 +5196,69 @@
       };
     }
 
+    /* ===== Cloud sync (Supabase) — la liste de profils provient des vrais utilisateurs ===== */
+    let _remoteProfiles = []; // hydraté depuis Supabase
+    let _remoteFetchedAt = 0;
+    let _syncTimer = null;
+
+    /* UPSERT du profil courant dans Supabase. Debounce pour éviter le spam. */
+    function scheduleCloudSync(){
+      clearTimeout(_syncTimer);
+      _syncTimer = setTimeout(syncMyProfileToCloud, 800);
+    }
+    async function syncMyProfileToCloud(){
+      try {
+        if (!window.__supa) return;
+        const { data: { session } } = await window.__supa.auth.getSession();
+        if (!session) return;
+        const my = buildUserProfile();
+        if (!my) return;
+        delete my.isMe;
+        const { error } = await window.__supa.from('profiles').upsert({
+          id: session.user.id,
+          data: my,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+        if (error) console.warn('[Tindord] sync profile failed', error);
+      } catch (e) { console.warn('[Tindord] sync profile error', e); }
+    }
+    window.__syncMyProfileToCloud = syncMyProfileToCloud;
+    window.__scheduleCloudSync = scheduleCloudSync;
+
+    /* SELECT tous les autres profils (cache 30s pour ne pas spam). */
+    async function fetchOtherProfiles(force){
+      try {
+        if (!window.__supa) return _remoteProfiles;
+        if (!force && Date.now() - _remoteFetchedAt < 30000) return _remoteProfiles;
+        const { data: { session } } = await window.__supa.auth.getSession();
+        if (!session) return _remoteProfiles;
+        const { data, error } = await window.__supa.from('profiles')
+          .select('id, data, updated_at')
+          .neq('id', session.user.id)
+          .order('updated_at', { ascending: false })
+          .limit(200);
+        if (error) { console.warn('[Tindord] fetch profiles failed', error); return _remoteProfiles; }
+        _remoteProfiles = (data || []).map(r => r.data).filter(Boolean);
+        _remoteFetchedAt = Date.now();
+        return _remoteProfiles;
+      } catch (e) { console.warn('[Tindord] fetch profiles error', e); return _remoteProfiles; }
+    }
+    window.__fetchOtherProfiles = fetchOtherProfiles;
+
     function genderFilteredProfiles(){
       const f = state.user && state.user.boost && state.user.genderFilter;
-      if (!f || f === 'all') return PROFILES;
+      const pool = _remoteProfiles;
+      if (!f || f === 'all') return pool;
       const map = { il:['male','il'], elle:['female','elle'] };
       const accept = map[f] || [];
-      return PROFILES.filter(p => accept.includes(p.gender));
+      return pool.filter(p => accept.includes(p.gender));
     }
-    function ensureDeck(){
+    async function ensureDeck(){
+      // Rafraichit la liste depuis Supabase (cache 30s)
+      await fetchOtherProfiles();
+      return ensureDeckSync();
+    }
+    function ensureDeckSync(){
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
       const myP = buildUserProfile();
