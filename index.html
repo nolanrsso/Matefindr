@@ -3057,8 +3057,8 @@
       <!-- Step 1: age -->
       <div class="onb-step" data-step="1" hidden>
         <h2 data-i18n="onb_q2">Quel âge as-tu ?</h2>
-        <p class="sub" data-i18n="onb_q2_sub">Tu dois avoir 16 ans ou plus</p>
-        <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="16" max="99" placeholder="18" />
+        <p class="sub" data-i18n="onb_q2_sub">Tu dois avoir 18 ans ou plus</p>
+        <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="18" max="99" placeholder="18" />
         <div class="onb-actions">
           <button type="button" class="onb-btn onb-btn--prev" data-go="0" data-i18n="back">Retour</button>
           <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
@@ -4358,7 +4358,7 @@
         onb_q1_sub:   'Cette info aide à proposer les bonnes rencontres',
         pronoun_autre:'Non binaire',
         onb_q2:       'Quel âge as-tu ?',
-        onb_q2_sub:   'Tu dois avoir 16 ans ou plus',
+        onb_q2_sub:   'Tu dois avoir 18 ans ou plus',
         onb_q3:       'Tu cherches quoi ?',
         onb_q3_sub:   'Tu pourras changer plus tard dans ton profil',
         gender_male:  'Homme',
@@ -4443,7 +4443,7 @@
         onb_q1_sub:   'Helps us suggest better matches',
         pronoun_autre:'Non-binary',
         onb_q2:       'How old are you?',
-        onb_q2_sub:   'You must be 16 or older',
+        onb_q2_sub:   'You must be 18 or older',
         onb_q3:       'What are you looking for?',
         onb_q3_sub:   'You can change this later in your profile',
         gender_male:  'Male',
@@ -4858,7 +4858,7 @@
     // Step 1 — âge
     $onb('onbAge').addEventListener('input', e => {
       const v = parseInt(e.target.value, 10);
-      draft.age = (v >= 16 && v <= 99) ? v : null;
+      draft.age = (v >= 18 && v <= 99) ? v : null;
       $onb('onbNext1').disabled = draft.age == null;
     });
     // Step 3 — pays
@@ -5366,7 +5366,6 @@
           ${socialHtml}
           ${guildsHtml}
         </div>
-        <div class="lookfor" data-look="${p.looking}" title="${lookLabel}">${LOOK_EMOJI[p.looking] || ''}</div>
       `;
       if (isTop) attachDrag(c);
       // Voice-memo player on the card (if any)
