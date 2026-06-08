@@ -324,6 +324,12 @@
   .bubble svg{width:46%;height:46%;color:#fff;pointer-events:none}
   .bubble .face{width:100%;height:100%;display:grid;place-items:center;border-radius:50%;font-family:"Clash Display",sans-serif;font-weight:700;font-size:22px;pointer-events:none}
   .bubble .glow{position:absolute;inset:-2px;border-radius:50%;filter:blur(18px);opacity:.55;z-index:-1;pointer-events:none}
+  /* Cover image (album / jeu / anime) — remplit parfaitement le cercle */
+  .bubble .b-img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center;pointer-events:none;display:block}
+  /* Logo détouré (Valorant…) — contenu sur fond de marque */
+  .bubble .b-logo{width:60%;height:60%;border-radius:0;object-fit:contain;pointer-events:none;display:block;filter:drop-shadow(0 2px 6px rgba(0,0,0,.45))}
+  /* Glyphe (♂ ♀) */
+  .bubble .b-glyph{width:100%;height:100%;display:grid;place-items:center;border-radius:50%;font-weight:800;font-size:32px;line-height:1;color:#fff;pointer-events:none}
 
   /* Particles */
   .particle{
@@ -673,8 +679,8 @@
   .onb-welcome-avatar{
     width:120px;height:120px;border-radius:50%;margin:0 auto 22px;
     display:grid;place-items:center;font-size:52px;overflow:hidden;
-    background:linear-gradient(135deg,#FF7EB6,#9146FF);
-    box-shadow:0 0 0 4px rgba(255,255,255,.14) inset, 0 18px 50px rgba(145,70,255,.5);
+    background:linear-gradient(135deg,#5865F2,#404EED);
+    box-shadow:0 0 0 4px rgba(255,255,255,.14) inset, 0 18px 50px rgba(88,101,242,.5);
   }
   .onb-welcome-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
   .onb-welcome .onb-actions{margin-top:26px}
@@ -847,7 +853,10 @@
   .swipe-stage .orbit .orb:hover{transform:scale(1.12);border-color:rgba(255,255,255,.42)}
   .swipe-stage .orbit .orb:active{transform:scale(.93)}
   .swipe-stage .orbit .orb svg{width:42px;height:42px;position:relative;z-index:2;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
-  .swipe-stage .orbit .orb .orb-cover{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;z-index:2}
+  .swipe-stage .orbit .orb .orb-cover{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center;z-index:2}
+  /* Pochettes verticales (anime / film / série) : on cadre vers le haut pour ne pas couper les visages */
+  .swipe-stage .orbit .orb[data-kind="anime"] .orb-cover,
+  .swipe-stage .orbit .orb[data-kind="film"] .orb-cover{object-position:center 20%}
   /* Kind-specific vibrant colors :
      - music = green (Spotify-like)
      - anime = deep purple
@@ -903,17 +912,21 @@
   /* Common orbs — the displayed profile shares this bubble with me. Stand out with
      a bright golden glow + scale-up + pulsing badge so they read as "we both like this". */
   .swipe-stage .orbit .orb--common{
-    transform:scale(1.12);
-    border-color:#FFD83D !important;
+    transform:scale(1.18);
+    border-color:#FFE680 !important;
+    filter:brightness(1.22) saturate(1.18);
     box-shadow:
-      inset 0 0 0 2px rgba(255,255,255,.35),
-      inset 0 -10px 22px rgba(0,0,0,.28),
-      0 0 0 3px rgba(255,216,61,.85),
-      0 0 26px 6px rgba(255,216,61,.95),
-      0 0 70px 18px rgba(255,170,40,.65),
+      inset 0 0 0 2.5px rgba(255,255,255,.6),
+      inset 0 -10px 22px rgba(0,0,0,.22),
+      0 0 0 3px rgba(255,234,128,.95),
+      0 0 34px 9px rgba(255,221,90,1),
+      0 0 90px 26px rgba(255,180,50,.85),
+      0 0 140px 50px rgba(255,150,40,.45),
       0 14px 30px rgba(0,0,0,.55) !important;
-    animation:orbCommonPulse 2.2s ease-in-out infinite;
+    animation:orbCommonPulse 1.9s ease-in-out infinite;
   }
+  /* La pochette/image d'une bulle commune devient plus lumineuse */
+  .swipe-stage .orbit .orb--common .orb-cover{filter:brightness(1.18) saturate(1.2) contrast(1.05)}
   .swipe-stage .orbit .orb--common::after{
     content:"✨";position:absolute;top:-6px;right:-6px;z-index:4;
     width:24px;height:24px;border-radius:50%;
@@ -923,8 +936,8 @@
     animation:orbCommonStarSpin 5s linear infinite;
   }
   @keyframes orbCommonPulse{
-    0%,100% { filter:drop-shadow(0 0 0 transparent); }
-    50%     { filter:drop-shadow(0 0 18px rgba(255,216,61,.75)); }
+    0%,100% { filter:brightness(1.22) saturate(1.18) drop-shadow(0 0 6px rgba(255,216,61,.5)); }
+    50%     { filter:brightness(1.4) saturate(1.3) drop-shadow(0 0 28px rgba(255,221,90,.95)); }
   }
   @keyframes orbCommonStarSpin{to{transform:rotate(360deg)}}
   .swipe-stage .orbit .orb--common:hover{transform:scale(1.22)}
@@ -2354,9 +2367,11 @@
   /* Clip the cover image with clip-path so the round shape stays clean
      without clipping the overflowing × / + / rank-orbit children. */
   .oeo-orb img{
-    width:100%;height:100%;object-fit:cover;border-radius:50%;
+    width:100%;height:100%;object-fit:cover;object-position:center;border-radius:50%;
     clip-path:circle(50%);-webkit-clip-path:circle(50%);
   }
+  .oeo-orb[data-kind="anime"] img,
+  .oeo-orb[data-kind="film"] img{object-position:center 20%}
   .oeo-orb .oeo-orb-ico{font-size:30px}
   .oeo-orb[data-kind="music"]{border-color:rgba(80,255,150,.85);box-shadow:0 12px 30px rgba(29,185,84,.45)}
   .oeo-orb[data-kind="game"]{border-color:rgba(141,203,255,.85);box-shadow:0 12px 30px rgba(47,123,216,.45)}
@@ -2682,7 +2697,9 @@
     pointer-events:none;z-index:1;
   }
   .acc-orb-circle svg{width:28px;height:28px;color:#fff;position:relative;z-index:2}
-  .acc-orb-circle .orb-cover{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;z-index:2}
+  .acc-orb-circle .orb-cover{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center;z-index:2}
+  .acc-orb-circle[data-kind="anime"] .orb-cover,
+  .acc-orb-circle[data-kind="film"] .orb-cover{object-position:center 20%}
   .acc-orb-circle[data-kind="music"]{background:linear-gradient(145deg,#1ed760,#1DB954,#0e7a38);box-shadow:0 8px 24px rgba(29,185,84,.5)}
   .acc-orb-circle[data-kind="game"] {background:linear-gradient(145deg,#FFD080,#FFB66E,#FF4FA0);box-shadow:0 8px 24px rgba(255,79,160,.5)}
   .acc-orb-circle[data-kind="anime"]{background:linear-gradient(145deg,#FF9CC0,#FF7EB6,#b020b8);box-shadow:0 8px 24px rgba(192,38,211,.5)}
@@ -3112,8 +3129,8 @@
           <div class="onb-colors">
             <span class="onb-field-lbl">Couleur de profil</span>
             <div class="onb-color-wheels">
-              <input type="color" id="onbColor1" value="#9146FF" title="Couleur principale" />
-              <input type="color" id="onbColor2" value="#6B2BFF" title="Couleur secondaire" />
+              <input type="color" id="onbColor1" value="#5865F2" title="Couleur principale" />
+              <input type="color" id="onbColor2" value="#404EED" title="Couleur secondaire" />
             </div>
           </div>
           <div class="onb-photo">
@@ -3228,25 +3245,6 @@
               <label>Bio</label>
               <textarea id="accBio" maxlength="280" placeholder="Parle un peu de toi…"></textarea>
             </div>
-            <div class="acc-field" id="accColorBlock">
-              <label style="display:block">Couleur de profil</label>
-              <div class="acc-color-wheel-row">
-                <label class="acc-color-wheel" title="Couleur principale">
-                  <span class="acc-color-wheel-lbl">Primaire</span>
-                  <input type="color" id="accProfileColor" value="#9146FF" />
-                </label>
-                <label class="acc-color-wheel" title="Couleur secondaire (pour le dégradé)">
-                  <span class="acc-color-wheel-lbl">Secondaire</span>
-                  <input type="color" id="accProfileColor2" value="#6B2BFF" />
-                </label>
-                <button type="button" class="acc-color-reset" id="accColorReset" title="Réinitialiser">↺</button>
-              </div>
-              <!-- Hidden palette rows kept for the existing bindProfileColor() handler -->
-              <div style="display:none">
-                <div class="acc-color-row" data-target="profileColor"></div>
-                <div class="acc-color-row" data-target="profileColor2"></div>
-              </div>
-            </div>
             <div class="acc-field">
               <button type="button" class="acc-bulles-cta" id="accBullesCta">
                 <span class="acc-bulles-cta-ico">🫧</span>
@@ -3256,6 +3254,25 @@
                 </span>
                 <span class="acc-bulles-cta-arrow">›</span>
               </button>
+            </div>
+            <div class="acc-field" id="accColorBlock">
+              <label style="display:block">Couleur de profil</label>
+              <div class="acc-color-wheel-row">
+                <label class="acc-color-wheel" title="Couleur principale">
+                  <span class="acc-color-wheel-lbl">Primaire</span>
+                  <input type="color" id="accProfileColor" value="#5865F2" />
+                </label>
+                <label class="acc-color-wheel" title="Couleur secondaire (pour le dégradé)">
+                  <span class="acc-color-wheel-lbl">Secondaire</span>
+                  <input type="color" id="accProfileColor2" value="#404EED" />
+                </label>
+                <button type="button" class="acc-color-reset" id="accColorReset" title="Réinitialiser">↺</button>
+              </div>
+              <!-- Hidden palette rows kept for the existing bindProfileColor() handler -->
+              <div style="display:none">
+                <div class="acc-color-row" data-target="profileColor"></div>
+                <div class="acc-color-row" data-target="profileColor2"></div>
+              </div>
             </div>
           </div>
           <div class="acc-profil-col">
@@ -3354,6 +3371,20 @@
           <label class="toggle"><input type="checkbox" id="boostFakeNitro" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
         </div>
 
+        <div class="acc-field">
+          <label>Badge Boost sur le pseudo <small style="color:#b9bbbe;font-weight:400">(pseudo doré + étoile sur ta carte)</small></label>
+          <label class="toggle"><input type="checkbox" id="boostShowName" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+        </div>
+
+        <div class="acc-field">
+          <label>Musique d'entrée du profil <small style="color:#b9bbbe;font-weight:400">(joue quand on arrive sur ta carte, s'arrête au swipe)</small></label>
+          <div class="swipe-music-current" id="swipeMusicCurrent" hidden></div>
+          <div class="acc-orb-input-wrap">
+            <input class="acc-input" id="swipeMusicInput" type="text" placeholder="Recherche un son (titre, artiste…)" autocomplete="off" />
+            <div class="spotify-sugg" id="swipeMusicSugg"></div>
+          </div>
+        </div>
+
         <!-- Bannière apparait dès que Fake Nitro est activé -->
         <div class="acc-field" id="boostBannerField" hidden>
           <label>Bannière personnalisée <small style="color:#b9bbbe;font-weight:400">(image, max 2 Mo)</small></label>
@@ -3389,9 +3420,6 @@
               <button type="button" class="acc-deco-tile" data-deco="none"><span class="deco-avi">A</span></button>
             </div>
           </div>
-          <input id="swipeMusicInput" type="text" />
-          <div id="swipeMusicCurrent"></div>
-          <div id="swipeMusicSugg"></div>
           <select id="boostGenderFilter"><option value="all">Tous</option><option value="il">il</option><option value="elle">elle</option></select>
           <button id="openLikedMe" type="button"></button>
           <span id="gifCounterPill"></span>
@@ -3831,6 +3859,15 @@
     sparkle:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6L12 2Z"/></svg>',
     star:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.4 7 .7-5.3 4.7 1.6 6.8L12 17.7l-6.2 3.4 1.6-6.8L2.1 9.6l7-.7L12 2.5Z"/></svg>',
     target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>',
+    discord:'<svg viewBox="0 0 127 96" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2.04 20.94 9.86 43.7 9.86 64.64 0 .87.7 1.76 1.38 2.66 2.04a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.15c2.64-27.38-4.51-51.11-18.91-72.14ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69Z"/></svg>',
+  };
+
+  /* Images de marque pour le hub (CDN stables, hotlink OK) — fallback emoji si échec */
+  const HUB_MEDIA = {
+    carti:      'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ba/1e/05/ba1e058e-5637-e53c-563c-f5b9a1a6c344/20UM1IM18331.rgb.jpg/300x300bb.jpg',
+    minecraft:  'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/c9/81/16/c981164e-410c-7a07-d76b-3a8e4238793b/AppIcon-0-0-1x_U007emarketing-0-10-0-85-220.png/300x300bb.jpg',
+    tokyoghoul: 'https://cdn.myanimelist.net/images/anime/1498/134443.jpg',
+    valorant:   'https://cdn.simpleicons.org/valorant/ffffff',
   };
 
   const AVATAR_PALETTES = [
@@ -3842,18 +3879,15 @@
   ];
 
   const CONFIG = [
-    { kind:'icon', icon:'pad',    size:78, hue:'#9146FF' },
-    { kind:'avatar', letter:'L',  size:68, palette:0 },
-    { kind:'icon', icon:'mic',    size:62, hue:'#5BE9FF' },
-    { kind:'avatar', letter:'M',  size:84, palette:3 },
-    { kind:'icon', icon:'heart',  size:54, hue:'#FF7EB6' },
-    { kind:'avatar', letter:'S',  size:58, palette:2 },
-    { kind:'icon', icon:'chat',   size:50, hue:'#5BE9FF' },
-    { kind:'icon', icon:'bolt',   size:46, hue:'#FF7EB6' },
-    { kind:'avatar', letter:'A',  size:60, palette:1 },
-    { kind:'icon', icon:'star',   size:52, hue:'#9146FF' },
-    { kind:'icon', icon:'target', size:56, hue:'#FF7EB6' },
-    { kind:'icon', icon:'sparkle',size:44, hue:'#5BE9FF' },
+    { kind:'img',   src:HUB_MEDIA.carti,      fb:'💿', size:84, hue:'#c0152b' },
+    { kind:'logo',  src:HUB_MEDIA.valorant,   fb:'🎯', size:70, hue:'#FF4655', bg:'linear-gradient(150deg,#FF4655,#8a1020)' },
+    { kind:'img',   src:HUB_MEDIA.minecraft,  fb:'⛏️', size:74, hue:'#5d9c3c' },
+    { kind:'img',   src:HUB_MEDIA.tokyoghoul, fb:'🎭', size:80, hue:'#8a0f1a' },
+    { kind:'glyph', glyph:'♂', size:56, hue:'#5B8DEF', color:'#9DC3FF' },
+    { kind:'glyph', glyph:'♀', size:52, hue:'#FF7EB6', color:'#FFB3D8' },
+    { kind:'icon',  icon:'chat',    size:56, hue:'#5BE9FF' },
+    { kind:'icon',  icon:'discord', size:68, hue:'#5865F2' },
+    { kind:'icon',  icon:'heart',   size:60, hue:'#FF4FA0' },
   ];
 
   let W = layer.clientWidth, H = layer.clientHeight;
@@ -3879,6 +3913,14 @@
 
     if (cfg.kind === 'icon'){
       el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div>${ICONS[cfg.icon]}`;
+    } else if (cfg.kind === 'glyph'){
+      el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div><div class="b-glyph" style="color:${cfg.color || '#fff'}">${cfg.glyph}</div>`;
+    } else if (cfg.kind === 'img' || cfg.kind === 'logo'){
+      if (cfg.bg) el.style.background = cfg.bg;
+      const cls = cfg.kind === 'logo' ? 'b-logo' : 'b-img';
+      el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div><img class="${cls}" src="${cfg.src}" alt="" loading="lazy">`;
+      const img = el.querySelector('img');
+      img.addEventListener('error', () => { img.outerHTML = `<div class="b-glyph">${cfg.fb || '✨'}</div>`; });
     } else {
       const p = AVATAR_PALETTES[cfg.palette];
       el.innerHTML = `<div class="glow" style="background:${p[0]}"></div><div class="face" style="background:linear-gradient(135deg,${p[0]},${p[1]});color:${p[2]}">${cfg.letter}</div>`;
@@ -4713,18 +4755,25 @@
     }
     function $onb(id){ return document.getElementById(id); }
 
-    // Populate the welcome "Hey, X !" page from any known name/avatar
+    // Populate the welcome "Hey, X !" page from any known name/avatar (priorité au compte Discord connecté)
     function initOnboarding(){
       let name = 'toi', avatarUrl = null;
       try {
-        name = (window.__discordUser && window.__discordUser.username)
+        const u = state.user || {};
+        name = u.displayName
+            || (window.__discordUser && window.__discordUser.username)
             || (document.getElementById('accName') && document.getElementById('accName').textContent.trim())
             || (state.profile && state.profile.pseudo) || 'toi';
-        avatarUrl = (window.__discordUser && window.__discordUser.avatarUrl) || null;
+        avatarUrl = u.avatarUrl
+            || (window.__discordUser && window.__discordUser.avatarUrl)
+            || null;
       } catch(_){}
-      const nEl = $onb('onbWelcomeName'); if (nEl) nEl.textContent = name && name !== '—' ? name : 'toi';
+      const nEl = $onb('onbWelcomeName'); if (nEl) nEl.textContent = (name && name !== '—' && name.trim()) ? name : 'toi';
       const av = $onb('onbWelcomeAvatar');
-      if (av && avatarUrl) av.innerHTML = '<img src="'+avatarUrl+'" alt="">';
+      if (av) {
+        if (avatarUrl) { av.classList.add('has-img'); av.innerHTML = '<img src="'+avatarUrl+'" alt="">'; }
+        else { av.classList.remove('has-img'); av.textContent = '🎉'; }
+      }
       goStep(0);
     }
     window.__initOnboarding = initOnboarding;
@@ -4959,12 +5008,13 @@
         nitro: !!u.decorationUrl || !!(u.boost && u.fakeNitro),
         fakeDeco: (u.boost && u.fakeNitro) ? (u.fakeDeco || null) : null,
         boost: !!u.boost,
+        showBoostName: u.boostShowName !== false,
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
         activity: {type:'game', title:'Tindord', sub:'Swipe en cours…'},
         games: [p.game].filter(Boolean),
         bio: p.bio || '✏️ Complète ton profil dans Mon compte !',
         common: {friends:0, servers:0},
-        c1:'#FF7EB6', c2:'#9146FF',
+        c1:'#5865F2', c2:'#404EED',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
         bannerUrl: u.bannerUrl || null,
@@ -5004,11 +5054,9 @@
       wrap.appendChild(buildCard(p, true));
       renderOrbs(p);
       renderSwipeGifs(p);
-      // Auto-play the profile's entry music
-      // Voice memo on the card replaces the auto-play music. No auto music anymore.
-      if (_swipeMusicAudio) { _swipeMusicAudio.pause(); _swipeMusicAudio = null; }
-      const smBox = document.getElementById('swipeMusic');
-      if (smBox) smBox.setAttribute('data-show', 'false');
+      // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
+      // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
+      playProfileEntryMusic(p);
     }
 
     /* (legacy) Plays the profile owner's entry music when the card is displayed.
@@ -5218,7 +5266,7 @@
         <div class="body">
           <div>
             <div class="name-row">
-              <span class="name${p.boost ? ' name--boost' : ''}">${p.name}${p.boost ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
+              <span class="name${(p.boost && p.showBoostName !== false) ? ' name--boost' : ''}">${p.name}${(p.boost && p.showBoostName !== false) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
               ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
             </div>
             <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
@@ -7146,8 +7194,8 @@
       // Hydrate color wheels from state
       const cw1 = document.getElementById('accProfileColor');
       const cw2 = document.getElementById('accProfileColor2');
-      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#9146FF';
-      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#6B2BFF';
+      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#5865F2';
+      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#404EED';
       // Update "Mes bulles" CTA counter
       if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
       const s = u.socials || {};
@@ -7259,6 +7307,17 @@
       const tg = document.getElementById('boostFakeNitro');
       _toggleBoostBannerField(!!(tg && tg.checked));
     }, 0);
+
+    /* ===== Boost: afficher / masquer le badge Boost sur le pseudo ===== */
+    const _boostShowNameTg = document.getElementById('boostShowName');
+    if (_boostShowNameTg) _boostShowNameTg.addEventListener('change', e => {
+      if (!state.user || !state.user.boost) { e.target.checked = true; openBoostModal(); return; }
+      state.user.boostShowName = e.target.checked;
+      save();
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+      if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+      showToast('👑', e.target.checked ? 'Badge Boost affiché' : 'Badge Boost masqué', 'Apparence de ton pseudo');
+    });
 
     /* ===== Boost: Gender filter ===== */
     document.getElementById('boostGenderFilter').addEventListener('change', e => {
@@ -7653,6 +7712,8 @@
       // Note: do NOT touch boostSection.hidden here — that's controlled by the tab switcher.
       // We only sync the form fields with the boost state.
       document.getElementById('boostFakeNitro').checked = !!(state.user && state.user.fakeNitro);
+      const _bsn = document.getElementById('boostShowName');
+      if (_bsn) _bsn.checked = !(state.user && state.user.boostShowName === false);
       document.getElementById('boostGenderFilter').value = (state.user && state.user.genderFilter) || 'all';
       renderSwipeMusicCurrent();
       renderGifStage();
@@ -8838,6 +8899,7 @@
               genderFilter: u.genderFilter || null,
               boost: u.boost || null,
               boostPlan: u.boostPlan || null,
+              boostShowName: (u.boostShowName === false) ? false : null,
             },
             savedAt: Date.now(),
           };
