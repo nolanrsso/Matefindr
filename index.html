@@ -2243,7 +2243,7 @@
     display:grid;place-items:center;
   }
   .oeo-card-wrap{
-    position:relative;width:min(96vw,420px);height:min(86vh,620px);
+    position:relative;width:min(92vw,380px);height:min(calc(100vh - 240px),620px);
     border-radius:20px;overflow:hidden;
     box-shadow:0 30px 80px rgba(0,0,0,.7);
     animation:likerPop .35s cubic-bezier(.2,.7,.3,1.1);
@@ -2254,7 +2254,7 @@
   /* Mini orb tiles (existing bubbles) + "+" FAB positioned around the card */
   .oeo-orb,
   .oeo-add-fab{
-    position:absolute;width:78px;height:78px;border-radius:50%;
+    position:absolute;width:115px;height:115px;border-radius:50%;
     display:grid;place-items:center;color:#fff;
     transition:transform .2s ease, box-shadow .2s ease, background .2s ease, top .3s cubic-bezier(.2,.7,.3,1), left .3s cubic-bezier(.2,.7,.3,1);
     animation:oeoFloat 4.2s ease-in-out infinite;
@@ -3212,7 +3212,7 @@
         </div>
 
         <hr style="border:none;border-top:1px solid rgba(255,255,255,.08);margin:22px 0 14px" />
-        <h3 style="color:#FF7EB6">Zone dangereuse</h3>
+        <h3 style="color:#FF7EB6">Suppression du compte</h3>
         <div class="acc-danger-zone">
           <button type="button" class="acc-btn acc-btn--ghost" id="accLogout" data-i18n="logout" style="width:100%;margin-bottom:10px">Se déconnecter</button>
           <button type="button" class="acc-btn acc-btn--danger" id="accDeleteAccount" style="width:100%;margin-left:0">Supprimer mon compte</button>
@@ -8048,7 +8048,7 @@
       const cRect = wrap.getBoundingClientRect();
       const cx = (cRect.left + cRect.width / 2) - sRect.left;
       const cy = (cRect.top  + cRect.height / 2) - sRect.top;
-      const orbR = 39; // mini orb = 78px
+      const orbR = 57.5; // mini orb = 115px (même taille qu'au swipe → aperçu fidèle)
       const pad = 6;
       // Si le panel "+" est ouvert (à droite), on réduit la zone utile pour ne pas
       // poser de bulles sous le panel.
@@ -8318,18 +8318,6 @@
           } else {
             const titles = curatedMatches(q, oeoKind, 10);
             results = titles.map(t => ({ name:t, sub:'', cover:null, orb:{ kind: oeoKind, title: t } }));
-            // Fire-and-forget : prefetch covers
-            results.forEach(async (r, i) => {
-              const cv = await fetchSuggCover(oeoKind, r.orb.title);
-              if (cv) {
-                r.cover = cv; r.orb.cover = cv;
-                const node = sugg.children[i];
-                if (node) {
-                  const img = node.querySelector('img');
-                  if (img) img.src = cv;
-                }
-              }
-            });
           }
           if (!results.length) {
             sugg.innerHTML = '<div style="color:#72767d;font-size:12.5px;padding:8px">Aucun résultat</div>';
@@ -8344,6 +8332,22 @@
               (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
               `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
               `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
+            // Charge la cover (jeu/film) en arrière-plan et l'insère dans CE nœud
+            // une fois prête (avant : le prefetch ciblait les mauvais nœuds → jamais affichée).
+            if (!r.cover && oeoKind !== 'music') {
+              fetchSuggCover(oeoKind, r.orb.title).then(cv => {
+                if (!cv) return;
+                r.cover = cv; r.orb.cover = cv;
+                const holder = item.querySelector('.sp-no-cover');
+                if (holder) {
+                  const img = document.createElement('img');
+                  img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.src = cv;
+                  holder.replaceWith(img);
+                } else {
+                  const img = item.querySelector('img'); if (img) img.src = cv;
+                }
+              }).catch(()=>{});
+            }
             item.addEventListener('click', async () => {
               // Make sure we have a cover before adding
               if (!r.cover && oeoKind !== 'music') {
