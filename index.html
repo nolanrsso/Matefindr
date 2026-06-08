@@ -5317,7 +5317,7 @@
       }
       layer.innerHTML = '';
       const isMe = p && p.isMe;
-      const gifs = isMe && state.user && state.user.boost ? (state.user.gifs || []) : [];
+      const gifs = isMe && state.user ? (state.user.gifs || []) : [];
       gifs.forEach(g => {
         const el = document.createElement('div');
         el.className = 'swipe-gif';
@@ -7180,6 +7180,21 @@
     /* Try Wikidata cover variants for games and pick the best image.
        Strategy: prefer opaque, but ALWAYS return something if available
        (fallback to transparent/logo). */
+    /* iTunes Search — rapide (200-400ms) et fiable pour les jeux populaires (Minecraft,
+       Fortnite, Among Us, Roblox, etc.). Retourne une image opaque carrée 512x512. */
+    async function itunesGameCover(title){
+      try {
+        const r = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(title) + '&entity=software&limit=3');
+        const d = await r.json();
+        if (!d.results || !d.results.length) return null;
+        // Prend le 1er résultat dont le nom matche raisonnablement
+        const q = title.toLowerCase();
+        const best = d.results.find(it => (it.trackName || '').toLowerCase().includes(q)) || d.results[0];
+        // artworkUrl100 → 512x512 pour une meilleure qualité
+        return (best.artworkUrl512 || best.artworkUrl100 || '').replace(/\/100x100bb\.(jpg|png)$/, '/512x512bb.$1');
+      } catch { return null; }
+    }
+
     async function gameCoverOpaque(title){
       // Manual override (forced URL) — verify it loads before using
       const ovr = GAME_COVER_OVERRIDES[title];
@@ -7188,6 +7203,11 @@
       }
       const allowLogo = !!(ovr && ovr.logo);
 
+      // === Premier essai : iTunes (rapide, opaque, fiable) ===
+      const itu = await itunesGameCover(title);
+      if (itu && await imageLoads(itu)) return itu;
+
+      // === Fallback : Wikidata (plus lent, plus de couverture) ===
       const qid = await wikiWikibaseId(title);
       if (!qid) return null;
       const props = ['P18', 'P154', 'P2716'];
@@ -7896,7 +7916,7 @@
           it.innerHTML = `<img src="${r.preview}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
           it.addEventListener('mousedown', (ev) => {
             ev.preventDefault();
-            if (!state.user || !state.user.boost) { openBoostModal(); return; }
+            state.user = state.user || {};
             state.user.gifs = state.user.gifs || [];
             if (state.user.gifs.length >= MAX_GIFS) { showToast('🎞️', 'Limite atteinte', MAX_GIFS + ' GIFs max'); return; }
             state.user.gifs.push({ preview:r.preview, full:r.full, x:50, y:30, w:34, rot:0 });
@@ -8044,7 +8064,7 @@
             it.innerHTML = `<img src="${r.preview}" alt="">`;
             it.addEventListener('pointerdown', ev => {
               ev.preventDefault();
-              if (!state.user || !state.user.boost) { openBoostModal(); return; }
+              state.user = state.user || {};
               state.user.gifs = state.user.gifs || [];
               if (state.user.gifs.length >= MAX_GIFS) { showToast('🎞️', 'Limite atteinte', MAX_GIFS + ' GIFs max'); return; }
               state.user.gifs.push({ preview:r.preview, full:r.full, x:50, y:35, w:34, rot:0 });
@@ -8063,7 +8083,6 @@
     document.getElementById('gefClose')?.addEventListener('click', closeGifEditOverlay);
     document.getElementById('gefBackdrop')?.addEventListener('click', closeGifEditOverlay);
     document.getElementById('accGifsCta')?.addEventListener('click', () => {
-      if (!state.user || !state.user.boost) { openBoostModal(); return; }
       openGifEditOverlay();
     });
 
