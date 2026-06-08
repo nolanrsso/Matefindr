@@ -2976,17 +2976,7 @@
        SWIPE deck
        ============================================================ -->
   <section id="screen-swipe" class="screen">
-    <!-- Floating "my status" — bottom-left, change what I'm looking for at any time -->
-    <button class="my-status" id="myStatusBtn" type="button" aria-label="Changer mon statut" data-look="game">
-      <span class="ms-emoji" id="myStatusEmoji">🎮</span>
-      <span id="myStatusLabel" data-i18n="look_game">Une game</span>
-    </button>
-    <div class="ms-pop" id="myStatusPop" data-open="false" role="menu">
-      <button type="button" data-val="chill"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg></span><span class="lbl"><b data-i18n="look_chill">Chill</b><small data-i18n="look_chill_sub">Détente, discussions</small></span></button>
-      <button type="button" data-val="game"><span class="emo"><svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg></span><span class="lbl"><b data-i18n="look_game">Jouer</b><small data-i18n="look_game_sub">Tryhard ou casual</small></span></button>
-      <button type="button" data-val="talk"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg></span><span class="lbl"><b data-i18n="look_talk">Discuter</b><small data-i18n="look_talk_sub">Conversation tranquille</small></span></button>
-      <button type="button" data-val="sleep"><span class="emo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg></span><span class="lbl"><b data-i18n="look_sleep">Sleepcall</b><small data-i18n="look_sleep_sub">Voix douce pour s'endormir</small></span></button>
-    </div>
+    <!-- "Looking for" / statut retiré -->
 
     <!-- Toolbar : raccourcis pendant le swipe -->
     <div class="swipe-tools" id="swipeTools">
@@ -5064,7 +5054,6 @@
           ${socialHtml}
           ${guildsHtml}
         </div>
-        <div class="lookfor" data-look="${p.looking}" title="${lookLabel}">${LOOK_EMOJI[p.looking] || ''}</div>
       `;
       if (isTop) attachDrag(c);
       // Voice-memo player on the card (if any)
@@ -5971,41 +5960,9 @@
     document.getElementById('swipeYes').addEventListener('click', () => { const t = topCard(); if (t) commitSwipe('yes', t); });
     document.getElementById('swipeNo').addEventListener('click',  () => { const t = topCard(); if (t) commitSwipe('no',  t); });
 
-    // ---------- My-status floating control ----------
-    const LOOK_EMO = { chill:'🛋️', game:'🎮', now:'⌨️', sleep:'💤' };
-    function refreshMyStatusUI(){
-      const cur = (state.profile && state.profile.looking) || 'game';
-      const btn = document.getElementById('myStatusBtn');
-      btn.setAttribute('data-look', cur);
-      document.getElementById('myStatusEmoji').textContent = LOOK_EMO[cur] || '🎮';
-      const lbl = document.getElementById('myStatusLabel');
-      lbl.setAttribute('data-i18n', 'look_' + cur);
-      lbl.textContent = tx('look_' + cur);
-      document.querySelectorAll('#myStatusPop button').forEach(b => b.classList.toggle('selected', b.dataset.val === cur));
-    }
-    const msBtn = document.getElementById('myStatusBtn');
-    const msPop = document.getElementById('myStatusPop');
-    msBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      msPop.setAttribute('data-open', msPop.getAttribute('data-open') === 'true' ? 'false' : 'true');
-    });
-    msPop.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-val]');
-      if (!b) return;
-      state.profile = state.profile || { gender:null, age:null, looking:null, bio:'' };
-      state.profile.looking = b.dataset.val;
-      save();
-      refreshMyStatusUI();
-      msPop.setAttribute('data-open', 'false');
-      showToast(LOOK_EMO[state.profile.looking] || '🎮', tx('saved'), tx('look_' + state.profile.looking));
-    });
-    document.addEventListener('click', (e) => {
-      if (msPop.getAttribute('data-open') === 'true' && !msPop.contains(e.target) && !msBtn.contains(e.target)) {
-        msPop.setAttribute('data-open', 'false');
-      }
-    });
-    // Make sure the status pill is correct as soon as we land on swipe
-    if (document.body.getAttribute('data-screen') === 'swipe') refreshMyStatusUI();
+    // ---------- "Looking for" / statut — fonctionnalité retirée ----------
+    // Conservé en no-op pour les appels existants (setScreen, renderAccount…).
+    function refreshMyStatusUI(){ /* retiré */ }
 
     // ---------- Messages panel ----------
     const CONVOS = [
