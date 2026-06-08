@@ -75,7 +75,8 @@
   .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 
   /* ------------- Layout ------------- */
-  main{position:relative;z-index:2;height:100vh;display:flex;flex-direction:column}
+  /* main z:6 → la carte (dans main) passe DEVANT les bulles fullscreen (.orbit z:5) */
+  main{position:relative;z-index:6;height:100vh;display:flex;flex-direction:column}
 
   /* Header */
   header{
@@ -2243,15 +2244,17 @@
   }
   .gif-item .gif-del:hover{background:#ff4f80;border-color:#ff4f80}
 
-  /* ===== GIFs collés sur la carte (stickers) — taille/rotation libres ===== */
-  /* Le layer est enfant de la carte → coords en % de la carte, clippées à la carte. */
-  .swipe-card .swipe-gifs{position:absolute;inset:0;pointer-events:none;z-index:6;overflow:hidden;border-radius:inherit}
-  .swipe-card .swipe-gif{
-    position:absolute;border-radius:12px;overflow:hidden;
+  /* ===== GIFs en arrière-plan (derrière les bulles ET la carte) =====
+     Layer fixe dans body → z-index dans le root context :
+       1 = GIFs (arrière)   /   .swipe-stage .orbit z:5 = bulles (milieu)   /   main z:6 = carte (devant) */
+  .swipe-gifs-bg{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:visible}
+  .swipe-gifs-bg .swipe-gif{
+    position:fixed;border-radius:12px;overflow:hidden;
     box-shadow:0 10px 28px rgba(0,0,0,.5);
     border:2px solid rgba(255,255,255,.20);
+    transform-origin:center center;
   }
-  .swipe-card .swipe-gif img{width:100%;height:auto;display:block}
+  .swipe-gifs-bg .swipe-gif img{width:100%;height:auto;display:block}
 
   /* ===== GIF edit overlay (preview carte plein écran, comme l'éditeur de bulles) ===== */
   .gef{position:fixed;inset:0;z-index:332;display:none;align-items:center;justify-content:center}
@@ -4777,7 +4780,11 @@
       if (name === 'account') renderAccount();
       if (name === 'onboarding' && typeof window.__initOnboarding === 'function') window.__initOnboarding();
       if (name === 'swipe')   { deckIdx = 0; ensureDeck(); refreshMyStatusUI(); refreshSwipeTools(); }
-      if (name !== 'swipe')   { stopSwipeMusic(); if (typeof orbSimStop === 'function') orbSimStop(); }
+      if (name !== 'swipe')   {
+        stopSwipeMusic();
+        if (typeof orbSimStop === 'function') orbSimStop();
+        const _gb = document.getElementById('swipeGifsBg'); if (_gb) _gb.remove();
+      }
     }
     function setAuth(on){
       document.body.setAttribute('data-auth', on ? 'in' : 'out');
@@ -5305,31 +5312,51 @@
       } catch {}
     }
 
+    /* GIFs en couche d'arrière-plan (body > .swipe-gifs-bg, z:1) :
+       - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
+       - positions calculées en pixels viewport à partir des % de la carte
+       - se mettent à jour à chaque resize */
+    let _swipeGifsResize = null;
     function renderSwipeGifs(p){
-      // GIFs collés sur la carte du dessus (enfants de .swipe-card → coords en % de la carte)
-      const card = document.querySelector('#swipeWrap .swipe-card');
-      if (!card) return;
-      let layer = card.querySelector('.swipe-gifs');
-      if (!layer) {
-        layer = document.createElement('div');
-        layer.className = 'swipe-gifs';
-        card.appendChild(layer);
+      // Nettoie l'ancien layer s'il existe
+      const old = document.getElementById('swipeGifsBg');
+      if (old) old.remove();
+      if (_swipeGifsResize) {
+        window.removeEventListener('resize', _swipeGifsResize);
+        _swipeGifsResize = null;
       }
-      layer.innerHTML = '';
       const isMe = p && p.isMe;
-      const gifs = isMe && state.user ? (state.user.gifs || []) : [];
-      gifs.forEach(g => {
+      const gifs = (isMe && state.user) ? (state.user.gifs || []) : [];
+      if (!gifs.length) return;
+      const wrap = document.getElementById('swipeWrap');
+      if (!wrap) return;
+      const layer = document.createElement('div');
+      layer.id = 'swipeGifsBg';
+      layer.className = 'swipe-gifs-bg';
+      const items = gifs.map(g => {
         const el = document.createElement('div');
         el.className = 'swipe-gif';
-        const w = (typeof g.w === 'number') ? g.w : 32;
-        const rot = (typeof g.rot === 'number') ? g.rot : 0;
-        el.style.left = (typeof g.x === 'number' ? g.x : 50) + '%';
-        el.style.top  = (typeof g.y === 'number' ? g.y : 30) + '%';
-        el.style.width = w + '%';
-        el.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
         el.innerHTML = `<img src="${g.full || g.preview}" alt="">`;
         layer.appendChild(el);
+        return { el, g };
       });
+      document.body.appendChild(layer);
+      function reposition(){
+        const wr = wrap.getBoundingClientRect();
+        items.forEach(({ el, g }) => {
+          const w = (typeof g.w === 'number') ? g.w : 32;
+          const wpx = (w / 100) * wr.width;
+          const cx = wr.left + ((typeof g.x === 'number' ? g.x : 50) / 100) * wr.width;
+          const cy = wr.top  + ((typeof g.y === 'number' ? g.y : 30) / 100) * wr.height;
+          el.style.left = (cx - wpx / 2) + 'px';
+          el.style.top  = (cy - wpx / 2) + 'px';
+          el.style.width = wpx + 'px';
+          el.style.transform = `rotate(${g.rot || 0}deg)`;
+        });
+      }
+      reposition();
+      _swipeGifsResize = () => reposition();
+      window.addEventListener('resize', _swipeGifsResize);
     }
     /* Bind the play button of the profile voice-memo widget on a card */
     function bindCardVoice(card){
