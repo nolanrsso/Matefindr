@@ -2015,20 +2015,20 @@
   .acc-profil-col{display:flex;flex-direction:column;gap:8px;min-width:0}
   @media (max-width:780px){ .acc-profil-top{grid-template-columns:1fr} }
 
-  /* ===== NOUVEAU layout profil — hero + sections empilées ===== */
+  /* ===== NOUVEAU layout profil — hero + grille 2 colonnes (desktop) sans scroll ===== */
   .acc-hero{
-    display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:start;
-    margin-bottom:18px;padding-bottom:18px;
+    display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;
+    margin-bottom:12px;padding-bottom:12px;
     border-bottom:1px solid rgba(255,255,255,.07);
   }
-  .acc-hero-side{display:flex;flex-direction:column;gap:10px;min-width:0}
-  .acc-hero-side--right{align-self:start}
-  .acc-hero-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;align-self:start}
+  .acc-hero-side{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .acc-hero-side--right{align-self:center}
+  .acc-hero-avatar{display:flex;flex-direction:column;align-items:center;gap:4px;align-self:center}
   .acc-hero-avatar-circle{
-    position:relative;width:120px;height:120px;border-radius:50%;cursor:pointer;
+    position:relative;width:96px;height:96px;border-radius:50%;cursor:pointer;
     background:linear-gradient(135deg,#5865F2 0%,#404EED 100%);
     display:grid;place-items:center;overflow:hidden;color:rgba(255,255,255,.85);
-    box-shadow:0 10px 28px rgba(88,101,242,.45), 0 0 0 3px rgba(255,255,255,.08) inset;
+    box-shadow:0 8px 22px rgba(88,101,242,.45), 0 0 0 3px rgba(255,255,255,.08) inset;
     border:3px solid rgba(255,255,255,.12);
     transition:transform .18s ease, box-shadow .18s ease;
   }
@@ -2051,11 +2051,25 @@
   .acc-field--compact textarea{
     font-size:13.5px;padding:9px 11px;border-radius:10px;
   }
-  .acc-field--compact textarea{min-height:60px !important;max-height:120px !important;line-height:1.4}
+  .acc-field--compact textarea{min-height:46px !important;max-height:80px !important;line-height:1.4}
   /* Rangées (Mes bulles, Vocal, Comptes liés, Resync) */
-  .acc-row{margin-bottom:14px}
+  .acc-row{margin-bottom:0}
   .acc-row > h3{font-size:14px}
   .acc-row:last-child{margin-bottom:0}
+  /* Layout grille : sur desktop, 2 colonnes pour les rangées sous le hero (pas de scroll) */
+  @media (min-width:721px){
+    .acc-tab--profil:not([hidden]){
+      display:grid !important;
+      grid-template-columns:1fr 1fr;
+      gap:12px 18px;
+      align-content:start;
+    }
+    .acc-tab--profil .acc-hero{grid-column:1 / -1}
+    .acc-tab--profil .acc-row--resync{grid-column:1 / -1;margin-top:4px}
+    /* Comptes liés peut être un peu plus grand → on lui donne sa colonne mais reste compact */
+    .acc-tab--profil .acc-row--socials .acc-social{gap:6px}
+    .acc-tab--profil .acc-row--voice{align-self:start}
+  }
   /* Responsive : sur écran étroit, on empile (pseudo/bio EN-DESSOUS de l'avatar) */
   @media (max-width:720px){
     .acc-hero{grid-template-columns:1fr;gap:14px;text-align:center}
@@ -3432,7 +3446,7 @@
         </div>
 
         <!-- 1) Mes bulles -->
-        <div class="acc-row">
+        <div class="acc-row acc-row--bulles">
           <button type="button" class="acc-bulles-cta" id="accBullesCta">
             <span class="acc-bulles-cta-ico">🫧</span>
             <span class="acc-bulles-cta-text">
@@ -3443,8 +3457,33 @@
           </button>
         </div>
 
-        <!-- 2) Vocal du profil -->
-        <div class="acc-row">
+        <!-- 2) Comptes liés (REMONTÉS, juste après les bulles) -->
+        <div class="acc-row acc-row--socials">
+          <h3 style="margin:0 0 8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
+          <div class="acc-social">
+            <div class="acc-social-row" data-kind="instagram">
+              <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
+              <span class="so-name">Instagram</span>
+              <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
+              <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
+            </div>
+            <div class="acc-social-row" data-kind="tiktok">
+              <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
+              <span class="so-name">TikTok</span>
+              <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
+              <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
+            </div>
+            <div class="acc-social-row" data-kind="spotify">
+              <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
+              <span class="so-name">Spotify</span>
+              <input type="text" id="socSp" placeholder="username" autocomplete="off" />
+              <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3) Vocal du profil (deplace plus bas, car moins important visuellement) -->
+        <div class="acc-row acc-row--voice">
           <div class="acc-voice" id="accVoiceBlock">
             <span class="acc-voice-lbl">Vocal du profil <small style="color:#72767d;font-weight:400;font-size:11px">(5s max — joue à l'arrivée sur ton profil)</small></span>
             <button type="button" class="acc-voice-record" id="accVoiceFab" title="Enregistrer un vocal" data-state="idle">
@@ -3472,33 +3511,8 @@
           </div>
         </div>
 
-        <!-- 3) Comptes liés -->
-        <div class="acc-row">
-          <h3 style="margin:0 0 8px" data-i18n="acc_socials">Comptes liés <small style="color:#b9bbbe;font-weight:400;font-size:11px">(cliquables sur la carte)</small></h3>
-          <div class="acc-social">
-            <div class="acc-social-row" data-kind="instagram">
-              <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg></span>
-              <span class="so-name">Instagram</span>
-              <input type="text" id="socIg" placeholder="@username" autocomplete="off" />
-              <button type="button" id="socIgBtn" data-i18n="connect">Connecter</button>
-            </div>
-            <div class="acc-social-row" data-kind="tiktok">
-              <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg></span>
-              <span class="so-name">TikTok</span>
-              <input type="text" id="socTt" placeholder="@username" autocomplete="off" />
-              <button type="button" id="socTtBtn" data-i18n="connect">Connecter</button>
-            </div>
-            <div class="acc-social-row" data-kind="spotify">
-              <span class="so-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg></span>
-              <span class="so-name">Spotify</span>
-              <input type="text" id="socSp" placeholder="username" autocomplete="off" />
-              <button type="button" id="socSpBtn" data-i18n="connect">Connecter</button>
-            </div>
-          </div>
-        </div>
-
         <!-- 4) Resync Discord -->
-        <div class="acc-row">
+        <div class="acc-row acc-row--resync">
           <button type="button" class="acc-btn acc-btn--ghost acc-resync-btn" id="accResyncDiscord" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="accResyncIco"><path d="M3 12a9 9 0 0 1 15.5-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.4L3 16"/><path d="M3 21v-5h5"/></svg>
             <span id="accResyncLabel">Remettre à jour mon compte Discord</span>
