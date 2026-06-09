@@ -1040,9 +1040,10 @@
   .orbit .orb-wrap:nth-child(6){bottom:4%;right:5%;  animation-delay:-3s}
   @media (max-width:780px){
     .swipe-stage{width:96vw;height:78vh}
-    .orbit .orb{width:70px;height:70px}
-    .orbit .orb svg{width:28px;height:28px}
-    .orb-label{font-size:9px;max-width:72px}
+    /* Note : les bulles restent à 115px partout (swipe + éditeur) — la classe
+       .orbit--dynamic appliquée au runtime force 115px et l'éditeur lit
+       cette taille via JS pour rester à la MÊME ÉCHELLE. */
+    .orb-label{font-size:9px;max-width:96px}
   }
   /* Le swipe est ACTIVÉ dès que l'écran est en portrait (hauteur > largeur) */
   @media (orientation:portrait){
@@ -8931,7 +8932,18 @@
       const cRect = wrap.getBoundingClientRect();
       const cx = (cRect.left + cRect.width / 2) - sRect.left;
       const cy = (cRect.top  + cRect.height / 2) - sRect.top;
-      const orbR = 57.5; // mini orb = 115px (= meme taille qu'en swipe)
+      // Lit la taille effective depuis le CSS — suit automatiquement les media queries
+      // (115px desktop, 70px mobile <780px). Garde l'éditeur À LA MÊME ÉCHELLE que le swipe.
+      const orbR = (function(){
+        const probe = document.createElement('div');
+        probe.className = 'oeo-orb';
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        stage.appendChild(probe);
+        const w = probe.offsetWidth || 115;
+        probe.remove();
+        return w / 2;
+      })();
       const pad = 6;
       // Si le panel "+" est ouvert (à droite), on réduit la zone utile pour ne pas
       // poser de bulles sous le panel.
