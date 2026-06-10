@@ -103,27 +103,28 @@
   @keyframes starTwinkle{0%,100%{opacity:.45}50%{opacity:1}}
   @keyframes starDrift{from{transform:translate(0,0)}to{transform:translate(-340px,-340px)}}
 
+  /* Les fonds personnalisés ne s'appliquent QUE pendant le swipe d'un profil */
   /* Fond NOIR ÉTOILÉ — gradient violet profond + étoiles, blobs cachés */
-  body[data-bg="stars"] .scene{
+  body[data-screen="swipe"][data-bg="stars"] .scene{
     background:
       radial-gradient(1000px 720px at 50% -8%, #221354 0%, transparent 60%),
       radial-gradient(820px 640px at 92% 112%, #2a1250 0%, transparent 55%),
       radial-gradient(700px 600px at 6% 100%, #150a30 0%, transparent 55%),
       #04030a;
   }
-  body[data-bg="stars"] .blob{display:none}
-  body[data-bg="stars"] .bg-stars{display:block}
+  body[data-screen="swipe"][data-bg="stars"] .blob{display:none}
+  body[data-screen="swipe"][data-bg="stars"] .bg-stars{display:block}
 
   /* Fond ROSE — dégradé stylé magenta/rose, blob cyan caché */
-  body[data-bg="pink"] .scene{
+  body[data-screen="swipe"][data-bg="pink"] .scene{
     background:
       radial-gradient(1100px 800px at 50% -10%, #ff5fae 0%, transparent 55%),
       radial-gradient(900px 720px at 100% 105%, #c026d3 0%, transparent 52%),
       radial-gradient(760px 640px at 0% 100%, #7a1850 0%, transparent 58%),
       linear-gradient(165deg, #2c0a26 0%, #1a0414 60%, #11030d 100%);
   }
-  body[data-bg="pink"] .blob.b3{display:none}
-  body[data-bg="pink"] .blob.b2{opacity:.92}
+  body[data-screen="swipe"][data-bg="pink"] .blob.b3{display:none}
+  body[data-screen="swipe"][data-bg="pink"] .blob.b2{opacity:.92}
 
   /* Sélecteur de fond (onglet Boost) */
   .bg-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
@@ -5492,6 +5493,13 @@
 
     /* (legacy) Plays the profile owner's entry music when the card is displayed.
        No longer called automatically — voice memo replaces this behavior. */
+    function _smSetPlayingUI(playing){
+      const cov = document.getElementById('smCover');
+      if (cov) cov.classList.toggle('is-paused', !playing);
+      const ip = document.getElementById('smIcoPlay'), ipa = document.getElementById('smIcoPause');
+      if (ip)  ip.style.display  = playing ? 'none' : '';
+      if (ipa) ipa.style.display = playing ? '' : 'none';
+    }
     async function playProfileEntryMusic(p){
       if (_swipeMusicAudio) { _swipeMusicAudio.pause(); _swipeMusicAudio = null; }
       const box = document.getElementById('swipeMusic');
@@ -5505,16 +5513,32 @@
         _swipeMusicAudio = new Audio(track.previewUrl);
         _swipeMusicAudio.loop = true;
         _swipeMusicAudio.volume = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : 0.35;
-        _swipeMusicAudio.play().catch(() => {});
         document.getElementById('smTitle').textContent = track.title;
         document.getElementById('smArtist').textContent = track.artist || '';
         document.getElementById('smCover').style.backgroundImage = track.cover ? `url('${track.cover}')` : '';
-        document.getElementById('smCover').classList.remove('is-paused');
-        document.getElementById('smIcoPlay').style.display = 'none';
-        document.getElementById('smIcoPause').style.display = '';
         if (box) box.setAttribute('data-show', 'true');
+        // Tente l'autoplay ; si bloqué (Brave/Safari), le chip reste en pause et
+        // démarrera au premier geste utilisateur (cf. _bindAudioUnlock).
+        try { await _swipeMusicAudio.play(); _smSetPlayingUI(true); }
+        catch(_) { _smSetPlayingUI(false); }
       } catch {}
     }
+    /* Débloque l'autoplay : au premier geste de l'utilisateur, si une musique d'entrée
+       est en attente (chip affiché mais en pause car autoplay bloqué), on la lance. */
+    let _audioUnlockBound = false;
+    function _bindAudioUnlock(){
+      if (_audioUnlockBound) return;
+      _audioUnlockBound = true;
+      const tryResume = () => {
+        const box = document.getElementById('swipeMusic');
+        if (_swipeMusicAudio && _swipeMusicAudio.paused && box && box.getAttribute('data-show') === 'true') {
+          _swipeMusicAudio.play().then(() => _smSetPlayingUI(true)).catch(() => {});
+        }
+      };
+      document.addEventListener('pointerdown', tryResume, true);
+      document.addEventListener('keydown', tryResume, true);
+    }
+    _bindAudioUnlock();
 
     /* GIFs en couche d'arrière-plan (body > .swipe-gifs-bg, z:1) :
        - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
