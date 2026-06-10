@@ -5509,16 +5509,66 @@
         const my = buildUserProfile();
         if (!my) return;
         delete my.isMe;
-        const { error } = await window.__supa.from('profiles').upsert({
+        // Colonnes "legacy" du schéma existant (lisibles par tous, même sans colonne data)
+        const base = {
           id: session.user.id,
-          data: my,
+          display_name: my.name || null,
+          avatar_url: my.avatarUrl || null,
+          banner_url: my.bannerUrl || null,
+          decoration_url: my.decorationUrl || null,
+          bio: my.bio || null,
+          look_for: my.looking || null,
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-        if (error) console.warn('[Tindord] sync profile failed', error);
+        };
+        if (state.user && state.user.discordId) base.discord_id = state.user.discordId;
+        // 1) Essai avec la colonne data (profil COMPLET : âge, genre, pays, gifs, fond, etc.)
+        let { error } = await window.__supa.from('profiles').upsert({ ...base, data: my }, { onConflict: 'id' });
+        // 2) Si la colonne data n'existe pas encore → upsert legacy seul (ne casse pas)
+        if (error && /data/i.test((error.message || '') + (error.details || ''))) {
+          ({ error } = await window.__supa.from('profiles').upsert(base, { onConflict: 'id' }));
+        }
+        if (error) console.warn('[Tindord] sync profile failed', error.message || error);
       } catch (e) { console.warn('[Tindord] sync profile error', e); }
     }
     window.__syncMyProfileToCloud = syncMyProfileToCloud;
     window.__scheduleCloudSync = scheduleCloudSync;
+
+    /* Convertit une ligne Supabase (data jsonb OU colonnes legacy) en profil pour buildCard. */
+    function rowToProfile(r){
+      if (!r) return null;
+      // Profil complet stocké dans data → on l'utilise tel quel
+      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; return p; }
+      // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
+      if (!r.display_name && !r.avatar_url) return null;
+      const subByKind = {music:'musique', game:'jeu', anime:'série', film:'film'};
+      const emoByKind = {music:'🎵', game:'🎮', anime:'📺', film:'🎬'};
+      let bubbles = [];
+      if (Array.isArray(r.bubbles)) bubbles = r.bubbles;
+      else if (r.bubbles && Array.isArray(r.bubbles.userOrbs)) bubbles = r.bubbles.userOrbs;
+      const orbs = bubbles.map(o => ({
+        kind: o.kind, title: o.title,
+        sub: (o.kind === 'game' && o.rank) ? o.rank : (subByKind[o.kind] || ''),
+        emoji: emoByKind[o.kind] || '✨',
+        cover: o.cover || null, previewUrl: o.previewUrl || null,
+        rank: o.rank || null, customX: o.customX, customY: o.customY,
+      }));
+      return {
+        name: r.display_name || 'Tindord',
+        tag: r.discord_tag || (r.discord_id ? String(r.discord_id).slice(0, 8) : 'user'),
+        age: r.age || '', gender: r.gender || '', country: r.country || '', countryFlag: '',
+        looking: r.look_for || 'chill', status: 'online',
+        nitro: !!r.decoration_url, boost: false,
+        joinedOn: r.created_at ? new Date(r.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}) : 'récemment',
+        activity: {type:'game', title:'Tindord', sub:'Sur Tindord'},
+        games: [], bio: r.bio || '',
+        common: {friends:0, servers:0},
+        c1:'#5865F2', c2:'#404EED',
+        initial: (r.display_name || 'T').charAt(0).toUpperCase(),
+        avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
+        accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
+        orbs, socials:{}, isMe:false,
+      };
+    }
 
     /* SELECT tous les autres profils (cache 30s pour ne pas spam). */
     async function fetchOtherProfiles(force){
@@ -5526,14 +5576,12 @@
         if (!window.__supa) return _remoteProfiles;
         if (!force && Date.now() - _remoteFetchedAt < 30000) return _remoteProfiles;
         const { data: { session } } = await window.__supa.auth.getSession();
-        if (!session) return _remoteProfiles;
-        const { data, error } = await window.__supa.from('profiles')
-          .select('id, data, updated_at')
-          .neq('id', session.user.id)
-          .order('updated_at', { ascending: false })
-          .limit(200);
-        if (error) { console.warn('[Tindord] fetch profiles failed', error); return _remoteProfiles; }
-        _remoteProfiles = (data || []).map(r => r.data).filter(Boolean);
+        const myId = session && session.user && session.user.id;
+        let q = window.__supa.from('profiles').select('*').order('updated_at', { ascending: false }).limit(200);
+        if (myId) q = q.neq('id', myId);
+        const { data, error } = await q;
+        if (error) { console.warn('[Tindord] fetch profiles failed', error.message || error); return _remoteProfiles; }
+        _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean);
         _remoteFetchedAt = Date.now();
         return _remoteProfiles;
       } catch (e) { console.warn('[Tindord] fetch profiles error', e); return _remoteProfiles; }
