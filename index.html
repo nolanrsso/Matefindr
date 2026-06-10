@@ -103,28 +103,29 @@
   @keyframes starTwinkle{0%,100%{opacity:.45}50%{opacity:1}}
   @keyframes starDrift{from{transform:translate(0,0)}to{transform:translate(-340px,-340px)}}
 
-  /* Les fonds personnalisés ne s'appliquent QUE pendant le swipe d'un profil */
+  /* Les fonds personnalisés ne s'appliquent QUE pendant le swipe d'un profil
+     (pas sur le deck vide → :not([data-swipe-empty="true"])) */
   /* Fond NOIR ÉTOILÉ — gradient violet profond + étoiles, blobs cachés */
-  body[data-screen="swipe"][data-bg="stars"] .scene{
+  body[data-screen="swipe"]:not([data-swipe-empty="true"])[data-bg="stars"] .scene{
     background:
       radial-gradient(1000px 720px at 50% -8%, #221354 0%, transparent 60%),
       radial-gradient(820px 640px at 92% 112%, #2a1250 0%, transparent 55%),
       radial-gradient(700px 600px at 6% 100%, #150a30 0%, transparent 55%),
       #04030a;
   }
-  body[data-screen="swipe"][data-bg="stars"] .blob{display:none}
-  body[data-screen="swipe"][data-bg="stars"] .bg-stars{display:block}
+  body[data-screen="swipe"]:not([data-swipe-empty="true"])[data-bg="stars"] .blob{display:none}
+  body[data-screen="swipe"]:not([data-swipe-empty="true"])[data-bg="stars"] .bg-stars{display:block}
 
   /* Fond ROSE — dégradé stylé magenta/rose, blob cyan caché */
-  body[data-screen="swipe"][data-bg="pink"] .scene{
+  body[data-screen="swipe"]:not([data-swipe-empty="true"])[data-bg="pink"] .scene{
     background:
       radial-gradient(1100px 800px at 50% -10%, #ff5fae 0%, transparent 55%),
       radial-gradient(900px 720px at 100% 105%, #c026d3 0%, transparent 52%),
       radial-gradient(760px 640px at 0% 100%, #7a1850 0%, transparent 58%),
       linear-gradient(165deg, #2c0a26 0%, #1a0414 60%, #11030d 100%);
   }
-  body[data-screen="swipe"][data-bg="pink"] .blob.b3{display:none}
-  body[data-screen="swipe"][data-bg="pink"] .blob.b2{opacity:.92}
+  body[data-screen="swipe"]:not([data-swipe-empty="true"])[data-bg="pink"] .blob.b3{display:none}
+  body[data-screen="swipe"]:not([data-swipe-empty="true"])[data-bg="pink"] .blob.b2{opacity:.92}
 
   /* Sélecteur de fond (onglet Boost) */
   .bg-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
@@ -5480,8 +5481,12 @@
       if (deckIdx >= total) {
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
         renderOrbs(null);
+        renderSwipeGifs(null);              // retire les GIFs (plus de carte)
+        playProfileEntryMusic(null);        // coupe la musique d'entrée
+        document.body.setAttribute('data-swipe-empty', 'true'); // revert le fond perso
         return;
       }
+      document.body.removeAttribute('data-swipe-empty');
       const p = (myP && deckIdx === 0) ? myP : pool[deckIdx - offset];
       wrap.appendChild(buildCard(p, true));
       renderOrbs(p);
