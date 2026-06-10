@@ -1537,6 +1537,21 @@
 
   /* Action buttons — blended with the "draggable gradient icon" aesthetic */
   .swipe-actions{display:flex;gap:22px;align-items:center;justify-content:center}
+  /* Mode APERÇU complet : on cache like/nope et on montre "Quitter l'aperçu" */
+  .preview-exit-btn{display:none}
+  body[data-preview="true"] .swipe-btn--no,
+  body[data-preview="true"] .swipe-btn--yes{display:none !important}
+  body[data-preview="true"] .preview-exit-btn{
+    display:inline-flex;align-items:center;gap:9px;padding:14px 26px;border-radius:999px;cursor:pointer;
+    background:linear-gradient(135deg,#2f3136,#1c1d22);color:#fff;border:1.5px solid rgba(255,255,255,.18);
+    font-family:inherit;font-size:15px;font-weight:700;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);transition:transform .15s ease, background .15s ease;
+  }
+  body[data-preview="true"] .preview-exit-btn:hover{transform:translateY(-2px);background:linear-gradient(135deg,#3a3d44,#26272e)}
+  /* En aperçu : on masque la toolbar swipe + les FABs (heart, messages) pour rester clean */
+  body[data-preview="true"] .swipe-toolbar,
+  body[data-preview="true"] #heartFab,
+  body[data-preview="true"] #msgFab{display:none !important}
   .swipe-btn{
     position:relative;width:68px;height:68px;border-radius:22px;border:none;cursor:pointer;
     display:grid;place-items:center;color:#fff;padding:14px;
@@ -3485,6 +3500,10 @@
       <button class="swipe-btn swipe-btn--yes" id="swipeYes" type="button" aria-label="Liker">
         <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#0d3a00" stroke-width="3.5"><path d="M14 26 L22 33 L35 16"/></svg>
       </button>
+      <button class="preview-exit-btn" id="previewExitBtn" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Quitter l'aperçu
+      </button>
     </div>
   </section>
 
@@ -5027,6 +5046,7 @@
         stopSwipeMusic();
         if (typeof orbSimStop === 'function') orbSimStop();
         const _gb = document.getElementById('swipeGifsBg'); if (_gb) _gb.remove();
+        _previewMode = false; document.body.removeAttribute('data-preview'); // sort du mode aperçu
       }
     }
     function setAuth(on){
@@ -5394,6 +5414,7 @@
         ] },
     ];
     let deckIdx = 0;
+    let _previewMode = false; // true = aperçu complet de SA carte (pas de swipe, bouton "Quitter")
 
     function buildUserProfile(){
       const u = state.user || {};
@@ -6655,13 +6676,15 @@
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend', onUp);
         card.style.transition = '';
-        if (Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
+        // En mode aperçu : la carte rebondit toujours (pas de swipe possible)
+        if (!_previewMode && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
         else { card.style.transform = ''; like.style.opacity = 0; nope.style.opacity = 0; setDir(null); }
       }
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });
     }
     function commitSwipe(dir, cardEl){
+      if (_previewMode) return; // pas de swipe en mode aperçu
       const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
@@ -7772,10 +7795,18 @@
       el.addEventListener('input',  refreshAccountPreview);
       el.addEventListener('change', refreshAccountPreview);
     });
-    /* Aperçu complet : ouvre le swipe sur SA propre carte (bulles + GIFs + fond rendus en vrai) */
+    /* Aperçu complet : ouvre le swipe sur SA propre carte (bulles + GIFs + fond rendus en vrai),
+       en MODE APERÇU → pas de swipe, un bouton "Quitter l'aperçu" remplace like/nope. */
     document.getElementById('accPreviewFull')?.addEventListener('click', () => {
+      _previewMode = true;
+      document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
       if (typeof setScreen === 'function') setScreen('swipe');
+    });
+    document.getElementById('previewExitBtn')?.addEventListener('click', () => {
+      _previewMode = false;
+      document.body.removeAttribute('data-preview');
+      if (typeof setScreen === 'function') setScreen('account');
     });
     // Pseudo → met à jour le titre du header en live
     document.getElementById('accPseudo').addEventListener('input', (e) => {
