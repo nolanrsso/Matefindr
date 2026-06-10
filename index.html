@@ -927,6 +927,10 @@
   }
   .onb-age:focus{border-color:rgba(145,70,255,.6);background:rgba(255,255,255,.07);box-shadow:0 0 0 4px rgba(145,70,255,.18)}
   .onb-actions{display:flex;gap:10px;margin-top:6px}
+  .onb-actions--single{justify-content:center}
+  .onb-actions--single .onb-btn{min-width:200px}
+  /* Avatar de bienvenue plus compact quand il coiffe le formulaire fusionné */
+  .onb-merged .onb-welcome-avatar{width:80px;height:80px;font-size:36px;margin:0 auto 12px}
   .onb-btn{
     flex:1;padding:13px 18px;border-radius:13px;border:none;cursor:pointer;
     font-family:inherit;font-weight:700;font-size:14.5px;
@@ -3364,19 +3368,10 @@
         <span></span><span></span>
       </div>
 
-      <!-- Step 0: welcome (grande page) -->
-      <div class="onb-step onb-welcome" data-step="0">
+      <!-- Étape 1 : bienvenue + âge + genre + pays sur une seule page -->
+      <div class="onb-step onb-merged" data-step="1">
         <div class="onb-welcome-avatar" id="onbWelcomeAvatar">🎉</div>
         <h2>Hey, <span id="onbWelcomeName">toi</span> !</h2>
-        <p class="sub">Bienvenue sur Tindord ✨<br>Configurons ton profil en quelques étapes.</p>
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--next" id="onbStart">C'est parti</button>
-        </div>
-      </div>
-
-      <!-- Step 1: âge + genre + pays sur une seule page -->
-      <div class="onb-step onb-merged" data-step="1" hidden>
-        <h2>Parle-nous de toi</h2>
         <p class="sub">Quelques infos pour démarrer (toutes obligatoires)</p>
 
         <div class="onb-merged-block">
@@ -3451,10 +3446,8 @@
           <option value="AU" data-flag="🇦🇺">🇦🇺 Australie</option>
           <option value="OTHER" data-flag="🏳️">🏳️ Autre</option>
         </select>
-        </div><!-- /.onb-merged-block country -->
 
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" data-go="0" data-i18n="back">Retour</button>
+        <div class="onb-actions onb-actions--single">
           <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
         </div>
       </div>
@@ -5222,7 +5215,7 @@
         if (avatarUrl) { av.classList.add('has-img'); av.innerHTML = '<img src="'+avatarUrl+'" alt="">'; }
         else { av.classList.remove('has-img'); av.textContent = '🎉'; }
       }
-      goStep(0);
+      goStep(1);
     }
     window.__initOnboarding = initOnboarding;
 
@@ -5314,13 +5307,13 @@
       document.querySelectorAll('.onb-step').forEach(s => {
         s.hidden = parseInt(s.dataset.step, 10) !== n;
       });
-      // 2 dots : step 1 (formulaire fusionné) et step 4 (perso). step 0 = bienvenue, sans dot.
+      // 2 dots : step 1 (bienvenue + formulaire) et step 4 (perso)
       const dots = $onb('onbProgress').children;
-      const stepIdx = (n === 0) ? 0 : (n === 1 ? 1 : 2);
+      const stepIdx = (n === 1) ? 1 : 2;
       for (let i=0; i<dots.length; i++) dots[i].classList.toggle('done', i < stepIdx);
       try { $onb('screen-onboarding').scrollTop = 0; } catch(_){}
     }
-    $onb('onbStart').addEventListener('click', () => goStep(1));
+    $onb('onbStart')?.addEventListener('click', () => goStep(1));
     $onb('onbNext1').addEventListener('click', () => goStep(4));
     document.querySelectorAll('#screen-onboarding [data-go]').forEach(b => b.addEventListener('click', () => goStep(parseInt(b.dataset.go, 10))));
 
