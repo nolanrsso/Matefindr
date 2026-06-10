@@ -2298,6 +2298,36 @@
   .acc-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
   /* Respecte l'attribut [hidden] (sinon display:flex ci-dessus l'écrase → champs Banniere/Deco toujours visibles) */
   .acc-field[hidden]{display:none !important}
+
+  /* ===== Panneau Fake Nitro ===== */
+  .fn-panel{
+    grid-column:1 / -1;
+    border-radius:16px;padding:14px 16px;margin-bottom:14px;
+    background:linear-gradient(160deg, rgba(145,70,255,.14), rgba(255,79,160,.07));
+    border:1px solid rgba(145,70,255,.32);
+    transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .fn-panel.is-on{
+    border-color:rgba(255,79,160,.55);
+    background:linear-gradient(160deg, rgba(145,70,255,.2), rgba(255,79,160,.12));
+    box-shadow:0 0 0 1px rgba(255,79,160,.25), 0 12px 34px rgba(145,70,255,.28);
+  }
+  .fn-head{display:flex;align-items:center;gap:12px}
+  .fn-ico{
+    flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;
+    background:linear-gradient(135deg,#9146FF,#FF4FA0);box-shadow:0 6px 16px rgba(145,70,255,.55);
+  }
+  .fn-panel.is-on .fn-ico{animation:fnPulse 1.6s ease-in-out infinite}
+  @keyframes fnPulse{0%,100%{box-shadow:0 6px 16px rgba(145,70,255,.55)}50%{box-shadow:0 8px 26px rgba(255,79,160,.8)}}
+  .fn-head-txt{flex:1;min-width:0}
+  .fn-head-txt b{display:block;font-size:15px;font-weight:800;font-family:"Clash Display",sans-serif}
+  .fn-head-txt small{display:block;color:#b9bbbe;font-size:11.5px;margin-top:2px;line-height:1.3}
+  .fn-toggle{flex:0 0 auto;margin:0 !important}
+  .fn-hint{margin-top:10px;font-size:12px;color:#c9b6ff;background:rgba(145,70,255,.12);border:1px dashed rgba(145,70,255,.35);border-radius:10px;padding:8px 11px}
+  .fn-panel.is-on .fn-hint{display:none}
+  .fn-body{margin-top:12px;display:flex;flex-direction:column;gap:14px}
+  .fn-panel:not(.is-on) .fn-body{display:none}
+  .fn-body .acc-field{margin:0 !important}
   .acc-field label{font-size:12.5px;font-weight:600;color:var(--ink-dim);letter-spacing:.02em}
   .acc-field .val{
     padding:12px 14px;border-radius:11px;
@@ -3724,9 +3754,43 @@
       <div class="acc-section boost-only acc-tab" data-tab="boost" id="boostSection" hidden>
         <h3>Tindord Boost</h3>
 
-        <div class="acc-field">
-          <label>Fake Nitro <small style="color:#b9bbbe;font-weight:400">(anneau animé + bannière custom)</small></label>
-          <label class="toggle"><input type="checkbox" id="boostFakeNitro" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+        <!-- ✨ Fake Nitro — panneau dédié -->
+        <div class="fn-panel" id="fnPanel">
+          <div class="fn-head">
+            <span class="fn-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg></span>
+            <div class="fn-head-txt">
+              <b>Fake Nitro</b>
+              <small>Anneau animé autour de l'avatar + bannière &amp; décoration custom sur ta carte</small>
+            </div>
+            <label class="toggle fn-toggle"><input type="checkbox" id="boostFakeNitro" /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+          </div>
+          <div class="fn-hint" id="fnHint">Active Fake Nitro pour débloquer la bannière et la décoration d'avatar ✨</div>
+          <div class="fn-body">
+            <!-- Bannière -->
+            <div class="acc-field" id="boostBannerField" hidden>
+              <label>Bannière personnalisée <small style="color:#b9bbbe;font-weight:400">(image, max 2 Mo)</small></label>
+              <div class="acc-banner-row">
+                <div class="acc-banner-prev" id="accBannerPrev" aria-label="Aperçu bannière"></div>
+                <div class="acc-banner-actions">
+                  <input type="file" id="accBannerFile" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" />
+                  <button type="button" class="acc-btn acc-btn--ghost" id="accBannerImport">Importer</button>
+                  <button type="button" class="acc-btn acc-btn--ghost" id="accBannerReset" hidden>Reset</button>
+                </div>
+              </div>
+            </div>
+            <!-- Décoration Discord -->
+            <div class="acc-field" id="boostDiscordDecoField" hidden>
+              <label>Décoration d'avatar <small style="color:#b9bbbe;font-weight:400">(les vraies décos animées du shop Discord)</small></label>
+              <input type="text" id="ddDecoSearch" class="acc-input" placeholder="Rechercher (ex: phoenix, rainbow, cat…)" style="margin-bottom:8px" />
+              <div class="dd-deco-grid" id="ddDecoGrid">
+                <button type="button" class="dd-deco-tile dd-deco-tile--none" data-hash="" title="Aucune">
+                  <div class="dd-deco-empty">✕</div>
+                  <span class="dd-deco-name">Aucune</span>
+                </button>
+                <!-- Items injectés via JS depuis assets/discord-decos.json -->
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="acc-field">
@@ -3762,34 +3826,6 @@
             </span>
             <span class="acc-bulles-cta-arrow">›</span>
           </button>
-        </div>
-
-        <!-- Bannière apparait dès que Fake Nitro est activé -->
-        <div class="acc-field" id="boostBannerField" hidden>
-          <label>Bannière personnalisée <small style="color:#b9bbbe;font-weight:400">(image, max 2 Mo)</small></label>
-          <div class="acc-banner-row">
-            <div class="acc-banner-prev" id="accBannerPrev" aria-label="Aperçu bannière"></div>
-            <div class="acc-banner-actions">
-              <input type="file" id="accBannerFile" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" />
-              <button type="button" class="acc-btn acc-btn--ghost" id="accBannerImport">Importer</button>
-              <button type="button" class="acc-btn acc-btn--ghost" id="accBannerReset" hidden>Reset</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Décoration Discord — les vraies décos animées du shop Discord, accessibles via le CDN public -->
-        <div class="acc-field" id="boostDiscordDecoField" hidden>
-          <label>Décoration Discord
-            <small style="color:#b9bbbe;font-weight:400">(les vraies décorations animées du shop Discord)</small>
-          </label>
-          <input type="text" id="ddDecoSearch" class="acc-input" placeholder="Rechercher (ex: phoenix, rainbow, cat…)" style="margin-bottom:8px" />
-          <div class="dd-deco-grid" id="ddDecoGrid">
-            <button type="button" class="dd-deco-tile dd-deco-tile--none" data-hash="" title="Aucune">
-              <div class="dd-deco-empty">✕</div>
-              <span class="dd-deco-name">Aucune</span>
-            </button>
-            <!-- Items injectés via JS depuis assets/discord-decos.json -->
-          </div>
         </div>
 
         <!-- Éléments cachés : DOM gardé pour le JS legacy (filtres, GIFs, musique d'entrée…) -->
@@ -7932,6 +7968,8 @@
       if (f) f.hidden = !show;
       const d = document.getElementById('boostDiscordDecoField');
       if (d) d.hidden = !show;
+      const panel = document.getElementById('fnPanel');
+      if (panel) panel.classList.toggle('is-on', !!show);  // glow + révèle le corps du panneau
     }
     document.getElementById('boostFakeNitro').addEventListener('change', e => {
       state.user = state.user || {};
