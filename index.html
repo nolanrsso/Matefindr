@@ -72,6 +72,92 @@
   @keyframes drift3{0%{transform:translate(0,0) scale(1)}100%{transform:translate(80px,-60px) scale(1.1)}}
   @keyframes drift4{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-90px,-100px) scale(0.95)}}
 
+  /* ===== Fonds personnalisables (Boost) ===== */
+  /* Couche d'étoiles — affichée seulement pour le fond "stars" */
+  .bg-stars{display:none;position:absolute;inset:0;pointer-events:none}
+  .bg-stars::before,.bg-stars::after{content:"";position:absolute;inset:-60%;background-repeat:repeat}
+  /* Petites étoiles denses qui scintillent */
+  .bg-stars::before{
+    background-image:
+      radial-gradient(1.4px 1.4px at 20px 30px, rgba(255,255,255,.95), transparent),
+      radial-gradient(1px 1px at 90px 110px, rgba(255,255,255,.7), transparent),
+      radial-gradient(1.6px 1.6px at 160px 60px, rgba(255,255,255,.9), transparent),
+      radial-gradient(1px 1px at 210px 180px, rgba(255,255,255,.6), transparent),
+      radial-gradient(1.2px 1.2px at 120px 230px, rgba(255,255,255,.8), transparent),
+      radial-gradient(1px 1px at 290px 90px, rgba(255,255,255,.65), transparent),
+      radial-gradient(1.3px 1.3px at 330px 200px, rgba(255,255,255,.85), transparent);
+    background-size:340px 340px;
+    animation:starTwinkle 5.5s ease-in-out infinite, starDrift 120s linear infinite;
+  }
+  /* Grosses étoiles éparses + halo rosé */
+  .bg-stars::after{
+    background-image:
+      radial-gradient(2.4px 2.4px at 60px 80px, rgba(255,255,255,1), transparent),
+      radial-gradient(2px 2px at 250px 150px, rgba(255,210,240,.9), transparent),
+      radial-gradient(2.6px 2.6px at 410px 260px, rgba(210,225,255,.95), transparent),
+      radial-gradient(2px 2px at 480px 60px, rgba(255,255,255,.9), transparent);
+    background-size:560px 560px;
+    animation:starTwinkle 7s ease-in-out infinite reverse, starDrift 200s linear infinite reverse;
+    opacity:.9;
+  }
+  @keyframes starTwinkle{0%,100%{opacity:.45}50%{opacity:1}}
+  @keyframes starDrift{from{transform:translate(0,0)}to{transform:translate(-340px,-340px)}}
+
+  /* Fond NOIR ÉTOILÉ — gradient violet profond + étoiles, blobs cachés */
+  body[data-bg="stars"] .scene{
+    background:
+      radial-gradient(1000px 720px at 50% -8%, #221354 0%, transparent 60%),
+      radial-gradient(820px 640px at 92% 112%, #2a1250 0%, transparent 55%),
+      radial-gradient(700px 600px at 6% 100%, #150a30 0%, transparent 55%),
+      #04030a;
+  }
+  body[data-bg="stars"] .blob{display:none}
+  body[data-bg="stars"] .bg-stars{display:block}
+
+  /* Fond ROSE — dégradé stylé magenta/rose, blob cyan caché */
+  body[data-bg="pink"] .scene{
+    background:
+      radial-gradient(1100px 800px at 50% -10%, #ff5fae 0%, transparent 55%),
+      radial-gradient(900px 720px at 100% 105%, #c026d3 0%, transparent 52%),
+      radial-gradient(760px 640px at 0% 100%, #7a1850 0%, transparent 58%),
+      linear-gradient(165deg, #2c0a26 0%, #1a0414 60%, #11030d 100%);
+  }
+  body[data-bg="pink"] .blob.b3{display:none}
+  body[data-bg="pink"] .blob.b2{opacity:.92}
+
+  /* Sélecteur de fond (onglet Boost) */
+  .bg-picker{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+  .bg-tile{
+    display:flex;flex-direction:column;gap:7px;padding:0;border:none;background:none;cursor:pointer;
+    color:#b9bbbe;font-family:inherit;font-size:12px;font-weight:600;align-items:stretch;
+  }
+  .bg-tile-prev{
+    position:relative;width:100%;aspect-ratio:16/10;border-radius:12px;overflow:hidden;
+    border:2px solid rgba(255,255,255,.12);box-shadow:0 6px 16px rgba(0,0,0,.45);
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .bg-tile:hover .bg-tile-prev{transform:translateY(-2px)}
+  .bg-tile.is-active .bg-tile-prev{border-color:#9146FF;box-shadow:0 0 0 2px rgba(145,70,255,.45), 0 8px 20px rgba(145,70,255,.35)}
+  .bg-tile.is-active{color:#fff}
+  .bg-prev-default{background:
+    radial-gradient(60px 40px at 40% 10%, #7a2bff 0%, transparent 70%),
+    radial-gradient(50px 40px at 100% 100%, #ff5fae 0%, transparent 70%),
+    #0D0B1E}
+  .bg-prev-stars{background:
+    radial-gradient(40px 30px at 50% 0%, #221354 0%, transparent 70%),
+    #04030a}
+  .bg-prev-stars::after{content:"";position:absolute;inset:0;background-image:
+    radial-gradient(1px 1px at 14px 12px,#fff,transparent),
+    radial-gradient(1px 1px at 40px 30px,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 70px 16px,#fff,transparent),
+    radial-gradient(1px 1px at 90px 40px,#fff,transparent),
+    radial-gradient(1px 1px at 55px 48px,#fff,transparent);
+    background-repeat:repeat}
+  .bg-prev-pink{background:
+    radial-gradient(50px 40px at 50% 0%, #ff5fae 0%, transparent 65%),
+    radial-gradient(50px 40px at 100% 100%, #c026d3 0%, transparent 60%),
+    linear-gradient(165deg,#2c0a26,#11030d)}
+
   .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
 
   /* ------------- Layout ------------- */
@@ -3045,6 +3131,7 @@
   <div class="blob b2"></div>
   <div class="blob b3"></div>
   <div class="blob b4"></div>
+  <div class="bg-stars" aria-hidden="true"></div>
 </div>
 <div class="grain" aria-hidden="true"></div>
 
@@ -3567,6 +3654,15 @@
         <div class="acc-field">
           <label>Badge Boost sur le pseudo <small style="color:#b9bbbe;font-weight:400">(pseudo doré + étoile sur ta carte)</small></label>
           <label class="toggle"><input type="checkbox" id="boostShowName" checked /><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+        </div>
+
+        <div class="acc-field">
+          <label>Fond d'écran <small style="color:#b9bbbe;font-weight:400">(personnalise l'arrière-plan du site)</small></label>
+          <div class="bg-picker" id="bgPicker">
+            <button type="button" class="bg-tile is-active" data-bg="default"><span class="bg-tile-prev bg-prev-default"></span><span>Défaut</span></button>
+            <button type="button" class="bg-tile" data-bg="stars"><span class="bg-tile-prev bg-prev-stars"></span><span>Nuit étoilée</span></button>
+            <button type="button" class="bg-tile" data-bg="pink"><span class="bg-tile-prev bg-prev-pink"></span><span>Rose</span></button>
+          </div>
         </div>
 
         <div class="acc-field">
@@ -7689,6 +7785,33 @@
       showToast('👑', e.target.checked ? 'Badge Boost affiché' : 'Badge Boost masqué', 'Apparence de ton pseudo');
     });
 
+    /* ===== Boost: Fond d'écran personnalisé ===== */
+    function applyBgChoice(bg){
+      const v = bg || 'default';
+      if (v === 'default') document.body.removeAttribute('data-bg');
+      else document.body.setAttribute('data-bg', v);
+      const picker = document.getElementById('bgPicker');
+      if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.toggle('is-active', t.dataset.bg === v));
+    }
+    window.__applyBgChoice = applyBgChoice;
+    (function bindBgPicker(){
+      const picker = document.getElementById('bgPicker');
+      if (!picker) return;
+      picker.querySelectorAll('.bg-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+          const bg = tile.dataset.bg;
+          state.user = state.user || {};
+          state.user.boostBg = bg;
+          save();
+          applyBgChoice(bg);
+          const label = (tile.textContent || '').trim();
+          showToast('🎨', 'Fond mis à jour', label);
+        });
+      });
+    })();
+    // Applique le fond sauvegardé dès le chargement
+    applyBgChoice(state.user && state.user.boostBg);
+
     /* ===== Boost: Gender filter ===== */
     document.getElementById('boostGenderFilter').addEventListener('change', e => {
       if (!state.user || !state.user.boost) { e.target.value = 'all'; openBoostModal(); return; }
@@ -8234,6 +8357,7 @@
       document.getElementById('boostFakeNitro').checked = !!(state.user && state.user.fakeNitro);
       const _bsn = document.getElementById('boostShowName');
       if (_bsn) _bsn.checked = !(state.user && state.user.boostShowName === false);
+      if (typeof applyBgChoice === 'function') applyBgChoice(state.user && state.user.boostBg);
       document.getElementById('boostGenderFilter').value = (state.user && state.user.genderFilter) || 'all';
       renderSwipeMusicCurrent();
       renderGifStage();
@@ -9537,6 +9661,7 @@
               boost: u.boost || null,
               boostPlan: u.boostPlan || null,
               boostShowName: (u.boostShowName === false) ? false : null,
+              boostBg: u.boostBg || null,
             },
             savedAt: Date.now(),
           };
