@@ -326,8 +326,6 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
         <div class="voice editable" id="voiceSlot"><span class="empty">Clique pour enregistrer un vocal</span></div>
-        <div class="label-mini">Musique d'entrée</div>
-        <div class="music-chip" id="musicChip"><span class="empty">Aucune musique — bouton « Musique » en bas</span></div>
       </div>
     </section>
   </div>
@@ -489,22 +487,32 @@ function orbLayout(n){
 }
 function renderOrbs(){
   const layer=$('orbLayer'); layer.innerHTML='';
+  // Taille PROPORTIONNELLE à la carte → vrai aperçu (même ratio que le site : orbe ≈ 25% de la carte)
+  const cardW=(document.getElementById('card')&&document.getElementById('card').offsetWidth)||380;
+  const D=Math.round(cardW*0.25);
   const pos=orbLayout(S.orbs.length);
   S.orbs.forEach((o,i)=>{
     const p=pos[i]; const wrap=document.createElement('div'); wrap.className='orb-wrap';
     wrap.style.left=(50+p.rx*100)+'%'; wrap.style.top=(50+p.ry*100)+'%';
     const orb=document.createElement('div'); orb.className='orb'; orb.dataset.kind=o.kind;
+    orb.style.width=D+'px'; orb.style.height=D+'px';
     orb.innerHTML = o.cover?`<img src="${o.cover}" alt="">`:ORB_ICON[o.kind];
+    const svg=orb.querySelector('svg'); if(svg){ svg.style.width=Math.round(D*0.42)+'px'; svg.style.height=Math.round(D*0.42)+'px'; }
     const del=document.createElement('div'); del.className='orb-del'; del.textContent='✕';
+    del.style.width=Math.round(D*0.28)+'px'; del.style.height=Math.round(D*0.28)+'px'; del.style.fontSize=Math.round(D*0.15)+'px';
     del.addEventListener('click',e=>{e.stopPropagation();S.orbs.splice(i,1);renderOrbs();toast('Bulle retirée');const h=document.getElementById('orbHint');if(h)h.textContent=`${S.orbs.length}/${ORB_MAX} bulles · clique une bulle pour la retirer`;});
     orb.appendChild(del);
     const lbl=document.createElement('div'); lbl.className='orb-label'; lbl.textContent=o.title;
+    lbl.style.maxWidth=(D+24)+'px'; lbl.style.fontSize=Math.max(9,Math.round(D*0.13))+'px';
     const col=document.createElement('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center';
     col.appendChild(orb); col.appendChild(lbl);
     wrap.appendChild(col); layer.appendChild(wrap);
   });
   if(typeof persist==='function') persist();
 }
+// Re-render des bulles au resize (garde l'échelle proportionnelle à la carte)
+let _orbRz=null;
+window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{if(S.orbs.length)renderOrbs();},150);});
 
 /* ===== 2. GIFS = stickers sur la carte (drag + resize + rotation), comme le site ===== */
 const GIF_MAX=5;
@@ -609,7 +617,7 @@ function selectTrack(t){stopAudition();music.sel=t;music.startSec=0;const sh=$('
 function drawWave(t){const cv=document.getElementById('waveCanvas'),ctx=cv.getContext('2d');ctx.clearRect(0,0,cv.width,cv.height);let seed=0;for(const ch of(t.title+t.artist))seed=(seed*31+ch.charCodeAt(0))>>>0;const rand=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/2**32;};const n=110;for(let i=0;i<n;i++){const v=.18+rand()*.82*(.6+.4*Math.sin(i/n*Math.PI));const h=v*(cv.height-16);ctx.fillStyle='rgba(255,255,255,.30)';ctx.fillRect(i*(cv.width/n)+1.5,cv.height/2-h/2,5,h);}}
 function bindWindow(t){const scrub=document.getElementById('scrub'),win=document.getElementById('winSel'),lbl=document.getElementById('winLbl');const winSec=Math.min(30,t.durSec);const update=()=>{const W=scrub.clientWidth;win.style.width=winSec/t.durSec*W+'px';win.style.left=music.startSec/t.durSec*W+'px';lbl.textContent='🎯 Fenêtre jouée : '+fmt(music.startSec)+' → '+fmt(music.startSec+winSec);};const setFromX=px=>{const W=scrub.clientWidth;const w=winSec/t.durSec*W;music.startSec=clamp(px-w/2,0,W-w)/W*t.durSec;update();};let drag=null;win.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();win.setPointerCapture(e.pointerId);drag={x:e.clientX,s:music.startSec};});win.addEventListener('pointermove',e=>{if(!drag)return;const W=scrub.clientWidth;music.startSec=clamp(drag.s+(e.clientX-drag.x)/W*t.durSec,0,t.durSec-winSec);update();});const up=()=>drag=null;win.addEventListener('pointerup',up);win.addEventListener('pointercancel',up);scrub.addEventListener('pointerdown',e=>{if(e.target===win)return;setFromX(e.clientX-scrub.getBoundingClientRect().left);});if(t.durSec<=30){win.style.cursor='default';lbl.textContent='🎯 Extrait complet (≤ 30 s)';}update();}
 let chipAudio=null;
-function renderMusicChip(){const chip=$('musicChip');if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}chipAudio=new Audio(m.previewUrl);chipAudio.volume=.5;chipAudio.play().catch(()=>{});};}
+function renderMusicChip(){const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}chipAudio=new Audio(m.previewUrl);chipAudio.volume=.5;chipAudio.play().catch(()=>{});};}
 
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
