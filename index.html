@@ -8439,6 +8439,36 @@
 
     /* ===== GIF edit overlay (drag + redimensionnement + rotation, comme l'éditeur de bulles) ===== */
     const GIF_W_MIN = 12, GIF_W_MAX = 75; // taille raisonnable (% largeur carte)
+    /* Affiche les BULLES en read-only (contexte) autour de la carte d'un éditeur */
+    function renderContextOrbs(wrapEl){
+      if (!wrapEl) return;
+      [...wrapEl.querySelectorAll('.ctx-orb')].forEach(n => n.remove());
+      const orbs = (state.profile && state.profile.userOrbs) || [];
+      if (!orbs.length || typeof orbRelLayout !== 'function') return;
+      const { rel } = orbRelLayout(orbs, false);
+      orbs.forEach(o => {
+        const r = rel.get(o); if (!r) return;
+        const el = document.createElement('div');
+        el.className = 'ctx-orb';
+        el.style.cssText = `position:absolute;width:58px;height:58px;border-radius:50%;left:${(50+r.rx*100).toFixed(2)}%;top:${(50+r.ry*100).toFixed(2)}%;transform:translate(-50%,-50%);pointer-events:none;z-index:6;overflow:hidden;border:2px solid rgba(255,255,255,.55);box-shadow:0 6px 16px rgba(0,0,0,.55);background:#1c1d22;display:grid;place-items:center;color:#fff`;
+        el.innerHTML = o.cover ? `<img src="${o.cover}" alt="" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:22px">${({music:'🎵',game:'🎮',film:'🎬',anime:'📺',voice:'🎤'}[o.kind]||'🫧')}</span>`;
+        wrapEl.appendChild(el);
+      });
+    }
+    /* Affiche les GIFs en read-only (contexte) sur la carte d'un éditeur (sous les bulles) */
+    function renderContextGifs(wrapEl){
+      if (!wrapEl) return;
+      [...wrapEl.querySelectorAll('.ctx-gif')].forEach(n => n.remove());
+      const gifs = (state.user && state.user.gifs) || [];
+      gifs.forEach(g => {
+        const el = document.createElement('div');
+        el.className = 'ctx-gif';
+        el.style.cssText = `position:absolute;left:${g.x}%;top:${g.y}%;width:${g.w||34}%;transform:translate(-50%,-50%) rotate(${g.rot||0}deg);pointer-events:none;z-index:4;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,.22);box-shadow:0 8px 20px rgba(0,0,0,.5);opacity:.9`;
+        el.innerHTML = `<img src="${g.preview||g.full}" alt="" style="width:100%;height:auto;display:block">`;
+        wrapEl.appendChild(el);
+      });
+    }
+
     function openGifEditOverlay(){
       const overlay = document.getElementById('gifEditOverlay');
       const wrap    = document.getElementById('gefCardWrap');
@@ -8454,7 +8484,7 @@
       overlay.setAttribute('data-show', 'true');
       const se = document.getElementById('gefSearch'); if (se) se.value = '';
       const sg = document.getElementById('gefSugg'); if (sg){ sg.innerHTML=''; sg.classList.remove('open'); }
-      requestAnimationFrame(renderGifEditItems);
+      requestAnimationFrame(() => { renderGifEditItems(); renderContextOrbs(wrap); }); // montre aussi les bulles
     }
     function closeGifEditOverlay(){
       const overlay = document.getElementById('gifEditOverlay');
@@ -9320,6 +9350,7 @@
         const card = buildCard(myP, false);
         card.style.cssText += ';position:absolute !important;inset:0 !important;opacity:1 !important;transform:none !important;cursor:default !important;pointer-events:auto';
         wrap.appendChild(card);
+        if (typeof renderContextGifs === 'function') renderContextGifs(wrap); // montre aussi les GIFs (contexte)
       } else {
         wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#b9bbbe">Pas encore de profil — connecte-toi d\'abord.</div>';
       }
