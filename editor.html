@@ -227,18 +227,25 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .music-now .mi small{color:var(--dim);font-size:10.5px}
 @media(max-width:560px){.music-now{bottom:78px;max-width:62vw}}
 
-/* panneau « yeux » : masquer visuellement carte / bulles / GIFs (éditeur uniquement, non sauvegardé) */
-.eye-panel{position:fixed;top:62px;right:16px;z-index:40;display:flex;flex-direction:column;gap:6px}
-.eye-btn{display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:12px;border:1px solid var(--stroke-2);
-  background:linear-gradient(180deg, rgba(28,22,58,.82), rgba(18,12,42,.82));backdrop-filter:blur(16px);
-  color:var(--dim);font-family:inherit;font-weight:700;font-size:11.5px;cursor:pointer;transition:color .14s ease,border-color .14s ease}
-.eye-btn:hover{color:#fff}
-.eye-btn svg{width:16px;height:16px;flex:0 0 auto}
-.eye-btn.off{color:#FF7EB6;border-color:rgba(255,126,182,.45);background:linear-gradient(180deg, rgba(58,22,46,.82), rgba(42,12,32,.82))}
+/* yeux : icône œil seule, posée sur le bouton associé (Bulles, GIFs) et sur la carte.
+   Masque visuellement l'élément dans l'éditeur uniquement (non sauvegardé). */
+.tool-wrap{position:relative;display:inline-flex}
+.eye-dot{position:absolute;top:-5px;right:-5px;width:22px;height:22px;border-radius:50%;z-index:3;cursor:pointer;
+  display:grid;place-items:center;color:#fff;border:2px solid #0d0b1e;
+  background:linear-gradient(135deg,#A65BFF,#6B2BFF);box-shadow:0 3px 9px rgba(107,43,255,.5);transition:.14s ease}
+.eye-dot svg{width:12px;height:12px}
+.eye-dot:hover{transform:scale(1.12)}
+.eye-dot.off{background:linear-gradient(135deg,#FF7EB6,#C92866);box-shadow:0 3px 9px rgba(255,79,160,.55)}
+/* œil de la carte : coin haut-droit de la carte */
+.eye-dot--card{position:absolute;top:6px;right:6px;z-index:7;width:26px;height:26px}
+.eye-dot--card svg{width:14px;height:14px}
+/* séparateur + bouton Aperçu collé à droite des 5 outils, dans la même barre */
+.tool-sep{width:1px;height:34px;background:var(--stroke-2);margin:0 2px;align-self:center}
+.tool--preview{color:#C7A5FF}
+.tool--preview:hover{background:rgba(145,70,255,.18);color:#fff}
 .hide-card #card{opacity:0;pointer-events:none}
 .hide-orbs #orbLayer{opacity:0;pointer-events:none}
 .hide-gifs #stickerLayer{opacity:0;pointer-events:none}
-@media(max-width:560px){.eye-panel{top:54px;right:10px}.eye-btn span{display:none}.eye-btn{padding:8px}}
 
 /* ===================== SHEET ===================== */
 .sheet{position:fixed;left:50%;bottom:92px;transform:translate(-50%,18px);z-index:39;width:min(94vw,520px);max-height:54vh;overflow:hidden auto;border-radius:20px;padding:16px;
@@ -356,7 +363,6 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 <div class="grain" aria-hidden="true"></div>
 
 <header class="topbar">
-  <button class="top-btn top-btn--preview" id="btnPreview" title="Aperçu de ton profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Aperçu</span></button>
   <img src="assets/logo.svg" alt="Tindord" class="logo">
   <span class="crumb">/ éditeur de profil</span>
   <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
@@ -366,6 +372,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
   <div class="card-zone">
     <div class="sticker-layer" id="stickerLayer"></div>
     <div class="orb-layer" id="orbLayer"></div>
+    <button class="eye-dot eye-dot--card" data-eye="card" title="Afficher / masquer la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
     <section class="card" id="card">
       <div class="banner editable" id="bannerSlot" title="Changer la bannière"><div class="ph">Clique pour ajouter une bannière (image ou GIF)</div></div>
       <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
@@ -382,23 +389,24 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 </main>
 
 <nav class="toolbar">
-  <button class="tool" data-tool="bubbles" title="Bulles" aria-label="Bulles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="9" r="4"/><circle cx="16" cy="7" r="3"/><circle cx="15" cy="16" r="4.5"/></svg></button>
-  <button class="tool" data-tool="gifs" title="GIFs" aria-label="GIFs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M2.5 9h4.5M2.5 15h4.5M17 9h4.5M17 15h4.5"/></svg></button>
+  <span class="tool-wrap">
+    <button class="tool" data-tool="bubbles" title="Bulles" aria-label="Bulles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="9" r="4"/><circle cx="16" cy="7" r="3"/><circle cx="15" cy="16" r="4.5"/></svg></button>
+    <button class="eye-dot" data-eye="orbs" title="Afficher / masquer les bulles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  </span>
+  <span class="tool-wrap">
+    <button class="tool" data-tool="gifs" title="GIFs" aria-label="GIFs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M2.5 9h4.5M2.5 15h4.5M17 9h4.5M17 15h4.5"/></svg></button>
+    <button class="eye-dot" data-eye="gifs" title="Afficher / masquer les GIFs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  </span>
   <button class="tool" data-tool="bg" title="Fond" aria-label="Fond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 16l-5-5L5 21"/></svg></button>
   <button class="tool" data-tool="color" title="Couleur" aria-label="Couleur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.7-.8 1.7-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11.5" cy="7.5" r="1"/><circle cx="16" cy="9.5" r="1"/></svg></button>
   <button class="tool" data-tool="music" title="Musique" aria-label="Musique"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+  <span class="tool-sep"></span>
+  <button class="tool tool--preview" id="btnPreview" title="Aperçu de ton profil" aria-label="Aperçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
 </nav>
 
-<button class="act-fab act-cancel" id="btnCancel" title="Annuler les modifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Annuler</span></button>
-<button class="act-fab act-save" id="btnSave" title="Sauvegarder le profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Sauvegarder</span></button>
+<button class="act-fab act-cancel" id="btnBack" title="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span>Retour</span></button>
 
 <div class="music-now" id="musicNow" title="Écouter / pause"></div>
-
-<div class="eye-panel" id="eyePanel">
-  <button class="eye-btn" data-eye="card" title="Afficher / masquer la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Carte</span></button>
-  <button class="eye-btn" data-eye="orbs" title="Afficher / masquer les bulles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Bulles</span></button>
-  <button class="eye-btn" data-eye="gifs" title="Afficher / masquer les GIFs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>GIFs</span></button>
-</div>
 
 <div class="sheet" id="sheet"></div>
 
@@ -520,7 +528,7 @@ function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML='<s
 
 /* ===== SHEET ===== */
 let activeTool=null;
-document.querySelectorAll('.tool').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
+document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
 const sheetHeader=t=>`<h3>${t}<button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
@@ -844,7 +852,7 @@ function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)r
 let nowAudio=null;
 function renderMusicNow(){const el=$('musicNow');if(!el)return;if(!S.music){el.classList.remove('show');el.innerHTML='';if(nowAudio){nowAudio.pause();nowAudio=null;}return;}const m=S.music;el.innerHTML=`<span class="cov" style="background-image:url('${m.cover||''}')"></span><span class="mi"><span class="note">Musique d'entrée</span><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span>`;el.classList.add('show');el.onclick=()=>{if(nowAudio&&!nowAudio.paused){nowAudio.pause();nowAudio=null;return;}nowAudio=new Audio(m.previewUrl);nowAudio.volume=.5;nowAudio.play().catch(()=>{});};}
 /* yeux : masquer visuellement carte / bulles / GIFs (éditeur uniquement, pas sauvegardé) */
-document.querySelectorAll('.eye-btn').forEach(btn=>{btn.addEventListener('click',()=>{const on=document.body.classList.toggle('hide-'+btn.dataset.eye);btn.classList.toggle('off',on);});});
+document.querySelectorAll('.eye-dot').forEach(btn=>{btn.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();const on=document.body.classList.toggle('hide-'+btn.dataset.eye);btn.classList.toggle('off',on);});});
 
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
@@ -908,15 +916,10 @@ applyColor(S.c1);
 drawIdleWave();
 hydrateFromSite();
 
-/* ===== Boutons Annuler (rouge) / Sauvegarder (vert) qui encadrent la toolbar ===== */
-$('btnSave').addEventListener('click',()=>{saveNow();toast('✅ Profil sauvegardé');setTimeout(()=>{location.href='index.html';},650);});
-$('btnCancel').addEventListener('click',()=>{
-  clearTimeout(_persistT);
-  try{ if(_entrySnapshot===null) localStorage.removeItem(STATE_KEY); else localStorage.setItem(STATE_KEY,_entrySnapshot); }catch(_){}
-  toast('Modifications annulées');
-  setTimeout(()=>{location.href='index.html';},500);
-});
-/* Aperçu (haut-gauche) : sauvegarde puis ouvre l'app pour voir le profil. */
+/* ===== Bas de l'écran : Retour (gauche). Aperçu est collé à la barre d'outils. ===== */
+/* Retour (bas-gauche) : tes modifs sont déjà enregistrées en continu → on revient à l'app. */
+$('btnBack').addEventListener('click',()=>{ saveNow(); toast('✅ Profil enregistré'); setTimeout(()=>{location.href='index.html';},500); });
+/* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
 $('btnPreview').addEventListener('click',()=>{ saveNow(); location.href='index.html#preview'; });
 /* Paramètres (haut-droite) : sauvegarde puis ouvre l'écran compte/paramètres. */
 $('btnSettings').addEventListener('click',()=>{ saveNow(); location.href='index.html#account'; });
