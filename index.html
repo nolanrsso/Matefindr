@@ -463,13 +463,15 @@
 
   /* Hide bubble-only landing extras on non-landing screens (decluttering) */
   body:not([data-screen="landing"]) .corner-ctrl--discord{display:none}
+  /* Connecté : sur l'accueil, le coin bas-gauche devient le bouton Messages (plus le Discord) */
+  body[data-auth="in"] .corner-ctrl--discord{display:none}
   body[data-auth="in"] #langSwitch{display:none}
-  /* Bouton Messages : visible sur swipe quand connecté, caché ailleurs */
+  /* Bouton Messages : visible sur swipe + accueil quand connecté, caché ailleurs */
   body[data-auth="out"] #msgFab,
   body[data-screen="account"] #msgFab,
-  body[data-screen="landing"] #msgFab,
   body[data-screen="onboarding"] #msgFab,
   body[data-screen="account"] .bf-fab{display:none !important}
+  body[data-auth="in"][data-screen="landing"] #msgFab{display:grid !important}
 
   /* Liker full-profile overlay */
   .liker-overlay{
@@ -2626,7 +2628,8 @@
   .liked-empty p{margin:6px 0;font-size:14px;line-height:1.4}
   .liked-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer;transition:.12s}
   .liked-item:hover{background:rgba(255,255,255,.05)}
-  .liked-item .lavi{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:"Clash Display",sans-serif;font-weight:800;font-size:18px;color:#fff;flex:0 0 auto}
+  .liked-item .lavi{width:44px;height:44px;border-radius:50%;overflow:hidden;display:grid;place-items:center;font-family:"Clash Display",sans-serif;font-weight:800;font-size:18px;color:#fff;flex:0 0 auto}
+  .liked-item .lavi img{width:100%;height:100%;object-fit:cover;display:block}
   .liked-item .li-info{flex:1;min-width:0}
   .liked-item .li-info b{display:block;font-size:14px;color:#fff}
   .liked-item .li-info small{font-size:11.5px;color:#b9bbbe}
@@ -5737,6 +5740,9 @@
       if (ipa) ipa.style.display = playing ? '' : 'none';
     }
     async function playProfileEntryMusic(p){
+      // Nouveau profil : on coupe la bulle de musique éventuellement en cours et on réinitialise le relais.
+      _swipeMusicPausedForOrb = false;
+      if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) { _spotifyAudio._userStopped = true; try { _spotifyAudio.pause(); } catch(_){} _spotifyAudio = null; document.querySelectorAll('.interest-orb.playing,.orb.playing').forEach(o=>o.classList.remove('playing')); }
       if (_swipeMusicAudio) { _swipeMusicAudio.pause(); _swipeMusicAudio = null; }
       const box = document.getElementById('swipeMusic');
       if (box) box.setAttribute('data-show', 'false');
@@ -5766,6 +5772,8 @@
       if (_audioUnlockBound) return;
       _audioUnlockBound = true;
       const tryResume = () => {
+        // Ne pas relancer la musique d'entrée si une bulle de musique joue (ou l'a volontairement coupée).
+        if (_spotifyAudio || _swipeMusicPausedForOrb) return;
         const box = document.getElementById('swipeMusic');
         if (_swipeMusicAudio && _swipeMusicAudio.paused && box && box.getAttribute('data-show') === 'true') {
           _swipeMusicAudio.play().then(() => _smSetPlayingUI(true)).catch(() => {});
@@ -6532,6 +6540,24 @@
       return items;
     }
     let _spotifyAudio = null;
+    let _swipeMusicPausedForOrb = false;
+    // Volume cible d'une bulle de musique = même réglage que la musique d'entrée.
+    function orbMusicTarget(){
+      const v = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
+      return v * ENTRY_MUSIC_GAIN;
+    }
+    // Quand une bulle de musique démarre : on met en pause la musique d'entrée (pas de superposition).
+    function pauseProfileMusicForOrb(){
+      if (_swipeMusicAudio && !_swipeMusicAudio.paused) { _swipeMusicAudio.pause(); _smSetPlayingUI(false); _swipeMusicPausedForOrb = true; }
+    }
+    // Quand plus aucune bulle ne joue : on relance la musique d'entrée si on l'avait coupée.
+    function resumeProfileMusicAfterOrb(){
+      if (!_swipeMusicPausedForOrb) return;
+      _swipeMusicPausedForOrb = false;
+      if (_swipeMusicAudio && _swipeMusicAudio.paused) {
+        _swipeMusicAudio.play().then(() => _smSetPlayingUI(true)).catch(() => {});
+      }
+    }
 
     /* Audio fade helpers */
     function fadeIn(audio, target=0.45, dur=700){
@@ -6767,12 +6793,14 @@
           fadeOutAndStop(_spotifyAudio);
           _spotifyAudio = null;
           el.classList.remove('playing');
+          resumeProfileMusicAfterOrb();
           return;
         }
         // Different orb: stop previous, start new
         if (_spotifyAudio) { _spotifyAudio._userStopped = true; fadeOutAndStop(_spotifyAudio); _spotifyAudio = null; }
         el.classList.add('playing');
         const playUrl = (url, name, sub) => {
+          pauseProfileMusicForOrb();
           const a = new Audio(url);
           a._orbEl = el;
           a._userStopped = false;
@@ -6780,8 +6808,8 @@
           const startSec = (state.user && typeof state.user.musicStartTime === 'number') ? state.user.musicStartTime : 0;
           if (startSec > 0) a.currentTime = Math.min(startSec, 28);
           a.play().catch(() => {});
-          fadeIn(a, 0.45, 700);
-          a.addEventListener('ended', () => { el.classList.remove('playing'); if (_spotifyAudio === a) _spotifyAudio = null; });
+          fadeIn(a, orbMusicTarget(), 700);
+          a.addEventListener('ended', () => { el.classList.remove('playing'); if (_spotifyAudio === a) { _spotifyAudio = null; resumeProfileMusicAfterOrb(); } });
           // Anti-cutoff : si l'audio est pausé sans intervention utilisateur (swipe, re-render,
           // perte de focus de l'onglet…), on le redémarre automatiquement.
           a.addEventListener('pause', () => {
@@ -7044,20 +7072,31 @@
 
     // Create a match from a liker → match animation, then fly to msg-fab + badge
     window.createMatchFromLiker = function(p){
-      const id = 'm_' + Date.now();
       const idx = LIKED_ME.findIndex(x => x.tag === p.tag);
       if (idx >= 0) LIKED_ME.splice(idx, 1);
       // Discord notification (match)
       if (typeof sendDiscordNotif === 'function') sendDiscordNotif('match', p);
-      // Inject the new convo as UNREAD so the badge increments
-      CONVOS.unshift({
-        id, name: p.name, tag: p.tag, c1: p.c1, c2: p.c2, initial: p.initial,
-        t: "à l'instant", unread: true,
-        last: 'Vous venez de matcher 🎉',
-        msgs: [{ who: 'system', text: `🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }],
-      });
+      // Anti-doublon : jamais 2 conversations avec la même personne (par tag, sinon uid).
+      const existing = CONVOS.find(c => (p.tag && c.tag === p.tag) || (p.uid && c.uid === p.uid));
+      let id;
+      if (existing) {
+        id = existing.id;
+        existing.unread = true;
+        // remonte la conversation existante en tête de liste
+        const ci = CONVOS.indexOf(existing);
+        if (ci > 0) CONVOS.splice(0, 0, CONVOS.splice(ci, 1)[0]);
+      } else {
+        id = 'm_' + Date.now();
+        CONVOS.unshift({
+          id, name: p.name, tag: p.tag, uid: p.uid || null, c1: p.c1, c2: p.c2, initial: p.initial, avatarUrl: p.avatarUrl || null,
+          t: "à l'instant", unread: true,
+          last: 'Vous venez de matcher 🎉',
+          msgs: [{ who: 'system', text: `🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }],
+        });
+      }
       // Close the liked panel + refresh
       if (typeof renderLikedMe === 'function') renderLikedMe();
+      if (typeof renderMsgList === 'function') renderMsgList();
       document.getElementById('likedPanel').setAttribute('data-open', 'false');
       // Trigger the match overlay animation, then fly to bottom-left
       playMatchAnimation(p, id);
@@ -8154,7 +8193,7 @@
         it.className = 'liked-item' + (unlocked ? ' liked-item--clickable' : ' liked-item--locked');
         it.dataset.idx = String(idx);
         it.innerHTML =
-          `<div class="lavi" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.initial}</div>` +
+          `<div class="lavi" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="" loading="lazy">` : p.initial}</div>` +
           `<div class="li-info">
              <b class="${unlocked ? '' : 'li-blur'}">${escapeHtmlMini(p.name)} · ${p.age}</b>
              <small class="${unlocked ? '' : 'li-blur'}">@${escapeHtmlMini(p.tag)}</small>
