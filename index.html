@@ -5655,14 +5655,9 @@
       } catch(e){ console.warn('[Tindord] like error', e); }
     }
     function triggerMatch(p){
-      const id = 'm_' + Date.now();
-      if (typeof CONVOS !== 'undefined' && !CONVOS.some(c => c.tag === p.tag)) {
-        CONVOS.unshift({ id, name:p.name, tag:p.tag, c1:p.c1||'#5865F2', c2:p.c2||'#404EED', initial:p.initial||(p.name||'?')[0],
-          t:"à l'instant", unread:true, last:'Vous venez de matcher 🎉',
-          msgs:[{ who:'system', text:`🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }] });
-        if (typeof renderMsgList === 'function') renderMsgList();
-      }
-      if (typeof playMatchAnimation === 'function') playMatchAnimation(p, id);
+      // Like réciproque détecté → crée le match en DB (l'autre est notifié via Realtime) + anim.
+      if (typeof startMatch === 'function') startMatch(p, { unread:false });
+      else if (typeof playMatchAnimation === 'function') playMatchAnimation(p, 'm_'+Date.now());
     }
     /* Récupère les profils qui M'ONT liké (pour le panneau + badge cœur). */
     async function fetchLikesReceived(){
@@ -5673,9 +5668,15 @@
         const myId = session.user.id;
         const { data: rows } = await window.__supa.from('likes').select('liker_id, created_at').eq('liked_id', myId).order('created_at',{ascending:false}).limit(100);
         if (!rows || !rows.length) return [];
-        const ids = rows.map(r => r.liker_id);
+        // Exclure ceux à qui j'ai déjà répondu (like en retour = match) → ils quittent le panneau.
+        let likedBack = new Set();
+        try { const { data: mine } = await window.__supa.from('likes').select('liked_id').eq('liker_id', myId);
+              likedBack = new Set((mine||[]).map(r => r.liked_id)); } catch(_){}
+        const fresh = rows.filter(r => !likedBack.has(r.liker_id));
+        if (!fresh.length) return [];
+        const ids = fresh.map(r => r.liker_id);
         const { data: profs } = await window.__supa.from('profiles').select('*').in('id', ids);
-        return rows.map(r => { const pr = (profs||[]).find(p => p.id === r.liker_id); return pr ? rowToProfile(pr) : null; }).filter(Boolean);
+        return fresh.map(r => { const pr = (profs||[]).find(p => p.id === r.liker_id); return pr ? rowToProfile(pr) : null; }).filter(Boolean);
       } catch(e){ console.warn('[Tindord] fetch likes error', e); return []; }
     }
     async function refreshLikesReceived(){
@@ -7011,7 +7012,7 @@
         el.className = 'msg-item' + (c.unread ? '' : ' read');
         el.dataset.id = c.id;
         el.innerHTML = `
-          <div class="avi" style="background:linear-gradient(135deg, ${c.c1}, ${c.c2})">${c.initial}</div>
+          <div class="avi" style="background:linear-gradient(135deg, ${c.c1}, ${c.c2});overflow:hidden">${c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : c.initial}</div>
           <div class="info">
             <div class="top"><b>${c.name}</b><span class="t">${c.t}</span></div>
             <p>${c.last}</p>
@@ -7028,8 +7029,10 @@
       activeConvo = c;
       c.unread = false;
       panel.setAttribute('data-view', 'chat');
-      document.getElementById('msgChatAvi').style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
-      document.getElementById('msgChatAvi').textContent = c.initial;
+      const chatAvi = document.getElementById('msgChatAvi');
+      chatAvi.style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
+      chatAvi.style.overflow = 'hidden';
+      chatAvi.innerHTML = c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : escapeHtml(c.initial || '');
       document.getElementById('msgChatName').textContent = c.name;
       document.getElementById('msgChatSub').textContent = '@' + c.tag;
       chatBody.innerHTML = c.msgs.map(m => `<div class="msg-bubble ${m.who}">${escapeHtml(m.text)}</div>`).join('');
@@ -7066,9 +7069,171 @@
       el.textContent = v;
       chatBody.appendChild(el);
       chatBody.scrollTop = chatBody.scrollHeight;
-      // Plus de réponse automatique de bot — les vrais messages passeront par Supabase.
+      // Envoi réel vers Supabase (l'autre le reçoit via Realtime).
+      if (activeConvo.matchId && window.__supa) {
+        rtMyId().then(me => {
+          if (!me) return;
+          window.__supa.from('messages').insert({ match_id: activeConvo.matchId, sender_id: me, body: v })
+            .then(({ error }) => { if (error) console.warn('[Tindord] send msg', error.message || error); });
+        });
+      }
+      renderMsgList();
     });
     renderMsgList();
+
+    /* ===================================================================
+       TEMPS RÉEL — matches + messages (Supabase). Relie les 2 clients :
+       like réciproque → match (animation chez les 2), conversations live.
+       Échoue en silence si les tables n'existent pas encore.
+       =================================================================== */
+    const RT = { myId:null, ready:false, convoByMatch:new Map() };
+    async function rtMyId(){
+      if (RT.myId) return RT.myId;
+      try { const { data:{ session } } = await window.__supa.auth.getSession(); RT.myId = (session && session.user && session.user.id) || null; } catch(_){}
+      return RT.myId;
+    }
+    async function rtProfile(otherId){
+      let p = (typeof _remoteProfiles !== 'undefined') && _remoteProfiles.find(x => x.uid === otherId);
+      if (p) return p;
+      try { const { data } = await window.__supa.from('profiles').select('*').eq('id', otherId).limit(1);
+            if (data && data[0] && typeof rowToProfile === 'function') return rowToProfile(data[0]); } catch(_){}
+      return null;
+    }
+    // Crée (ou retrouve) la ligne match normalisée (user_a < user_b). Renvoie son id.
+    async function ensureMatchRow(otherId){
+      const me = await rtMyId();
+      if (!me || !otherId || !window.__supa) return null;
+      const a = me < otherId ? me : otherId, b = me < otherId ? otherId : me;
+      try {
+        const { data, error } = await window.__supa.from('matches')
+          .upsert({ user_a:a, user_b:b }, { onConflict:'user_a,user_b' }).select('id').limit(1);
+        if (error) { console.warn('[Tindord] match upsert', error.message || error); return null; }
+        return (data && data[0] && data[0].id) || null;
+      } catch(e){ console.warn('[Tindord] match err', e); return null; }
+    }
+    // Construit/maj une conversation locale liée à un matchId.
+    function rtUpsertConvo(matchId, otherId, p, opts){
+      opts = opts || {};
+      let c = CONVOS.find(x => x.matchId === matchId)
+           || (p && CONVOS.find(x => (p.tag && x.tag === p.tag) || (otherId && x.uid === otherId)));
+      if (!c) {
+        c = { id:'m_'+matchId, matchId, uid:otherId,
+              name:(p&&p.name)||'Match', tag:(p&&p.tag)||'',
+              c1:(p&&p.c1)||'#5865F2', c2:(p&&p.c2)||'#404EED',
+              initial:(p&&p.initial)||(((p&&p.name)||'?').charAt(0)), avatarUrl:(p&&p.avatarUrl)||null,
+              t:"à l'instant", unread:!!opts.unread,
+              last:opts.last || 'Vous venez de matcher 🎉',
+              msgs: (opts.system === false) ? [] : [{ who:'system', text:`🎉 C'est un match${(p&&p.name)?` avec ${p.name}`:''} ! Lancez la conversation.` }] };
+        CONVOS.unshift(c);
+      } else {
+        c.matchId = matchId; if (otherId) c.uid = otherId;
+        if (p) { if(p.name)c.name=p.name; if(p.tag)c.tag=p.tag; if(p.avatarUrl)c.avatarUrl=p.avatarUrl; if(p.c1)c.c1=p.c1; if(p.c2)c.c2=p.c2; if(p.initial)c.initial=p.initial; }
+        if (opts.unread) c.unread = true;
+      }
+      RT.convoByMatch.set(matchId, c);
+      return c;
+    }
+    // Point d'entrée unique « démarrer un match » (swipe réciproque OU clic cœur dans les likes).
+    async function startMatch(p, opts){
+      opts = opts || {};
+      let c;
+      if (p && p.uid) {
+        const matchId = await ensureMatchRow(p.uid);
+        if (matchId) c = rtUpsertConvo(matchId, p.uid, p, { unread:!!opts.unread });
+      }
+      if (!c) { // fallback hors-ligne / sans uid
+        const id = 'm_' + Date.now();
+        c = CONVOS.find(x => p && p.tag && x.tag === p.tag);
+        if (!c) { c = { id, name:p.name, tag:p.tag, uid:p.uid||null, c1:p.c1||'#5865F2', c2:p.c2||'#404EED',
+              initial:p.initial||(p.name||'?').charAt(0), avatarUrl:p.avatarUrl||null,
+              t:"à l'instant", unread:!!opts.unread, last:'Vous venez de matcher 🎉',
+              msgs:[{ who:'system', text:`🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }] }; CONVOS.unshift(c); }
+      }
+      if (typeof renderMsgList === 'function') renderMsgList();
+      if (typeof playMatchAnimation === 'function') playMatchAnimation(p, c.id);
+      return c;
+    }
+    // Retrouve un match par son id (vérifie via RLS qu'il m'appartient) et crée la convo.
+    async function rtResolveMatch(matchId){
+      const me = await rtMyId(); if (!me) return null;
+      try {
+        const { data } = await window.__supa.from('matches').select('*').eq('id', matchId).limit(1);
+        if (!data || !data[0]) return null;
+        const m = data[0]; const other = m.user_a === me ? m.user_b : m.user_a;
+        const p = await rtProfile(other);
+        return rtUpsertConvo(matchId, other, p, { system:false });
+      } catch(_){ return null; }
+    }
+    // Message entrant (Realtime) — n'affiche QUE les messages des autres dans mes convos.
+    function rtHandleIncomingMessage(row){
+      rtMyId().then(async me => {
+        if (!me || row.sender_id === me) return; // mes propres messages sont déjà affichés (optimiste)
+        let c = RT.convoByMatch.get(row.match_id) || CONVOS.find(x => x.matchId === row.match_id);
+        if (!c) c = await rtResolveMatch(row.match_id); // match créé hors session
+        if (!c) return; // pas un de mes matchs → ignoré
+        if (c.msgs.some(m => m._id === row.id)) return;
+        c.msgs.push({ who:'them', text:row.body, _id:row.id });
+        c.last = row.body; c.t = "à l'instant";
+        if (activeConvo && activeConvo.matchId === c.matchId) {
+          const el = document.createElement('div'); el.className = 'msg-bubble them'; el.textContent = row.body;
+          chatBody.appendChild(el); chatBody.scrollTop = chatBody.scrollHeight;
+          c.unread = false;
+        } else { c.unread = true; }
+        renderMsgList();
+      });
+    }
+    // Nouveau match (Realtime) — l'autre utilisateur reçoit l'animation en même temps que moi.
+    function rtHandleNewMatch(row){
+      rtMyId().then(async me => {
+        if (!me || (row.user_a !== me && row.user_b !== me)) return;
+        if (RT.convoByMatch.has(row.id)) return; // c'est moi qui l'ai initié → déjà animé
+        const other = row.user_a === me ? row.user_b : row.user_a;
+        const p = await rtProfile(other);
+        const c = rtUpsertConvo(row.id, other, p, { unread:true });
+        renderMsgList();
+        if (typeof playMatchAnimation === 'function' && p) playMatchAnimation(p, c.id);
+        if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
+      });
+    }
+    // Charge mes conversations existantes (matchs + historique) au démarrage.
+    async function rtLoadConversations(){
+      const me = await rtMyId(); if (!me || !window.__supa) return;
+      let matches = [];
+      try {
+        const { data, error } = await window.__supa.from('matches').select('*')
+          .or(`user_a.eq.${me},user_b.eq.${me}`).order('created_at', { ascending:false }).limit(200);
+        if (error) { console.warn('[Tindord] load matches', error.message || error); return; }
+        matches = data || [];
+      } catch(_){ return; }
+      for (const m of matches) {
+        const other = m.user_a === me ? m.user_b : m.user_a;
+        const p = await rtProfile(other);
+        const c = rtUpsertConvo(m.id, other, p, { system:true });
+        try {
+          const { data: msgs } = await window.__supa.from('messages').select('*')
+            .eq('match_id', m.id).order('created_at', { ascending:true }).limit(500);
+          if (msgs && msgs.length) {
+            c.msgs = msgs.map(r => ({ who: r.sender_id === me ? 'me' : 'them', text:r.body, _id:r.id }));
+            c.last = msgs[msgs.length-1].body;
+          }
+        } catch(_){}
+      }
+      renderMsgList();
+    }
+    // Abonnement Realtime (idempotent).
+    async function rtStart(){
+      if (RT.ready || !window.__supa) return;
+      const me = await rtMyId(); if (!me) return;
+      RT.ready = true;
+      await rtLoadConversations();
+      try {
+        window.__supa.channel('rt-'+me)
+          .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => rtHandleIncomingMessage(payload.new))
+          .on('postgres_changes', { event:'INSERT', schema:'public', table:'matches'  }, payload => rtHandleNewMatch(payload.new))
+          .subscribe();
+      } catch(e){ console.warn('[Tindord] realtime subscribe', e); }
+    }
+    window.__rtStart = rtStart;
 
     // Create a match from a liker → match animation, then fly to msg-fab + badge
     window.createMatchFromLiker = function(p){
@@ -7076,30 +7241,13 @@
       if (idx >= 0) LIKED_ME.splice(idx, 1);
       // Discord notification (match)
       if (typeof sendDiscordNotif === 'function') sendDiscordNotif('match', p);
-      // Anti-doublon : jamais 2 conversations avec la même personne (par tag, sinon uid).
-      const existing = CONVOS.find(c => (p.tag && c.tag === p.tag) || (p.uid && c.uid === p.uid));
-      let id;
-      if (existing) {
-        id = existing.id;
-        existing.unread = true;
-        // remonte la conversation existante en tête de liste
-        const ci = CONVOS.indexOf(existing);
-        if (ci > 0) CONVOS.splice(0, 0, CONVOS.splice(ci, 1)[0]);
-      } else {
-        id = 'm_' + Date.now();
-        CONVOS.unshift({
-          id, name: p.name, tag: p.tag, uid: p.uid || null, c1: p.c1, c2: p.c2, initial: p.initial, avatarUrl: p.avatarUrl || null,
-          t: "à l'instant", unread: true,
-          last: 'Vous venez de matcher 🎉',
-          msgs: [{ who: 'system', text: `🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }],
-        });
-      }
+      // Crée le vrai match en DB (anti-doublon géré par startMatch/Realtime) + notifie l'autre.
+      if (typeof startMatch === 'function') startMatch(p, { unread:true });
+      else playMatchAnimation(p, 'm_'+Date.now());
       // Close the liked panel + refresh
       if (typeof renderLikedMe === 'function') renderLikedMe();
-      if (typeof renderMsgList === 'function') renderMsgList();
+      if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
       document.getElementById('likedPanel').setAttribute('data-open', 'false');
-      // Trigger the match overlay animation, then fly to bottom-left
-      playMatchAnimation(p, id);
     };
 
     function playMatchAnimation(p, convoId){
@@ -8213,12 +8361,19 @@
           it.querySelector('.lavi').addEventListener('click', (e) => { e.stopPropagation(); openLikerProfile(p); });
           it.querySelector('.li-info').addEventListener('click', (e) => { e.stopPropagation(); openLikerProfile(p); });
           heartBtn.addEventListener('click', (e) => { e.stopPropagation(); createMatchFromLiker(p); });
-          xBtn.addEventListener('click', (e) => {
+          xBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const i = LIKED_ME.findIndex(x => x.tag === p.tag);
             if (i >= 0) LIKED_ME.splice(i, 1);
             renderLikedMe();
             if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
+            // Supprime le like en DB pour qu'il ne réapparaisse pas au prochain refresh.
+            try {
+              if (window.__supa && p.uid) {
+                const { data:{ session } } = await window.__supa.auth.getSession();
+                if (session) await window.__supa.from('likes').delete().eq('liker_id', p.uid).eq('liked_id', session.user.id);
+              }
+            } catch(_){}
           });
         }
         list.appendChild(it);
@@ -10090,6 +10245,7 @@
         if (session) {
           const u = await userFromSupabaseSession(session);
           if (u) window.__tindord.onLogin(u);
+          if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
         }
         window.__supa.auth.onAuthStateChange(async (event, s) => {
           console.log('[Tindord] auth event:', event, 'provider_token:', !!s?.provider_token);
@@ -10101,6 +10257,7 @@
             }
             const u = await userFromSupabaseSession(s);
             if (u) window.__tindord.onLogin(u);
+            if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
           }
         });
 
