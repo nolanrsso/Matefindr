@@ -177,7 +177,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 /* ===================== AFFORDANCE D'ÉDITION ===================== */
 .editable{position:relative;transition:outline-color .18s ease;outline:2px solid transparent;outline-offset:2px;border-radius:13px}
 .banner.editable{border-radius:0}
-.avatar.editable{border-radius:50%}
+.avatar.editable{border-radius:50%;position:absolute}
 .editable:hover{outline-color:rgba(255,255,255,.55)}
 .editable::after{content:"✎";position:absolute;top:-8px;right:-8px;z-index:5;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;font-size:11px;font-weight:900;opacity:0;transform:scale(.6);transition:.18s ease;box-shadow:0 4px 12px rgba(145,70,255,.6);pointer-events:none}
 .editable:hover::after{opacity:1;transform:scale(1)}
@@ -204,6 +204,31 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .act-cancel{left:22px;background:linear-gradient(180deg,#FF5A6E,#D11F3C)}
 .act-save{right:22px;background:linear-gradient(180deg,#3BD17C,#1EA362)}
 @media(max-width:560px){.act-fab{padding:12px 15px;font-size:0;gap:0}.act-fab svg{width:22px;height:22px}}
+
+/* étiquette « musique d'entrée » juste au-dessus du bouton Annuler */
+.music-now{position:fixed;left:22px;bottom:84px;z-index:41;max-width:240px;display:none;align-items:center;gap:9px;padding:8px 12px;border-radius:14px;
+  background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(18,12,42,.94));border:1px solid var(--stroke-2);
+  backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.5);cursor:pointer}
+.music-now.show{display:flex}
+.music-now .cov{width:32px;height:32px;border-radius:8px;flex:0 0 auto;background:#222 center/cover;box-shadow:0 3px 10px rgba(0,0,0,.5)}
+.music-now .mi{min-width:0;line-height:1.22}
+.music-now .mi .note{font-size:9px;color:#C7A5FF;font-weight:800;letter-spacing:.05em;text-transform:uppercase;display:block}
+.music-now .mi b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.music-now .mi small{color:var(--dim);font-size:10.5px}
+@media(max-width:560px){.music-now{bottom:78px;max-width:62vw}}
+
+/* panneau « yeux » : masquer visuellement carte / bulles / GIFs (éditeur uniquement, non sauvegardé) */
+.eye-panel{position:fixed;top:62px;right:16px;z-index:40;display:flex;flex-direction:column;gap:6px}
+.eye-btn{display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:12px;border:1px solid var(--stroke-2);
+  background:linear-gradient(180deg, rgba(28,22,58,.82), rgba(18,12,42,.82));backdrop-filter:blur(16px);
+  color:var(--dim);font-family:inherit;font-weight:700;font-size:11.5px;cursor:pointer;transition:color .14s ease,border-color .14s ease}
+.eye-btn:hover{color:#fff}
+.eye-btn svg{width:16px;height:16px;flex:0 0 auto}
+.eye-btn.off{color:#FF7EB6;border-color:rgba(255,126,182,.45);background:linear-gradient(180deg, rgba(58,22,46,.82), rgba(42,12,32,.82))}
+.hide-card #card{opacity:0;pointer-events:none}
+.hide-orbs #orbLayer{opacity:0;pointer-events:none}
+.hide-gifs #stickerLayer{opacity:0;pointer-events:none}
+@media(max-width:560px){.eye-panel{top:54px;right:10px}.eye-btn span{display:none}.eye-btn{padding:8px}}
 
 /* ===================== SHEET ===================== */
 .sheet{position:fixed;left:50%;bottom:92px;transform:translate(-50%,18px);z-index:39;width:min(94vw,520px);max-height:54vh;overflow:hidden auto;border-radius:20px;padding:16px;
@@ -356,6 +381,14 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 <button class="act-fab act-cancel" id="btnCancel" title="Annuler les modifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Annuler</span></button>
 <button class="act-fab act-save" id="btnSave" title="Sauvegarder le profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>Sauvegarder</span></button>
 
+<div class="music-now" id="musicNow" title="Écouter / pause"></div>
+
+<div class="eye-panel" id="eyePanel">
+  <button class="eye-btn" data-eye="card" title="Afficher / masquer la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Carte</span></button>
+  <button class="eye-btn" data-eye="orbs" title="Afficher / masquer les bulles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Bulles</span></button>
+  <button class="eye-btn" data-eye="gifs" title="Afficher / masquer les GIFs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>GIFs</span></button>
+</div>
+
 <div class="sheet" id="sheet"></div>
 
 <div class="modal" id="cropModal"><div class="box">
@@ -417,10 +450,10 @@ function hslToHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12;const a=s*Math.min
 /* ===== CROP (photo + bannière) ===== */
 const crop={url:null,shape:'circle',tx:0,ty:0,scale:1,nw:0,nh:0,onOk:null,maxX:0,maxY:0};
 function openCrop(url,shape,title,onOk){
-  Object.assign(crop,{url,shape,tx:0,ty:0,scale:1,nw:0,nh:0,onOk,maxX:0,maxY:0});
+  Object.assign(crop,{url,shape,tx:0,ty:0,scale:1.15,nw:0,nh:0,onOk,maxX:0,maxY:0});
   $('cropTitle').textContent=title;
   const f=$('cropFrame');f.className='crop-frame '+(shape==='circle'?'circle':'banner');
-  const img=$('cropImg');img.style.transform='translate(-50%,-50%)';$('cropZoom').value=100;
+  const img=$('cropImg');img.style.transform='translate(-50%,-50%)';$('cropZoom').value=115;
   $('cropModal').classList.add('open');
   // attendre que la frame ait ses dimensions (modale affichée) puis charger l'image
   requestAnimationFrame(()=>{
@@ -679,7 +712,7 @@ function renderOrbs(){
     orb.appendChild(del);
     const lbl=document.createElement('div'); lbl.className='orb-label'; lbl.textContent=o.title;
     lbl.style.maxWidth=(D+24)+'px'; lbl.style.fontSize=Math.max(9,Math.round(D*0.13))+'px';
-    const col=document.createElement('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center;pointer-events:none';
+    const col=document.createElement('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center';
     col.appendChild(orb); col.appendChild(lbl);
     wrap.appendChild(col);
     // === drag : placer la bulle où on veut autour de la carte ===
@@ -730,7 +763,7 @@ function makeSticker(g,idx,layer){
   // déplacer
   let drag=null;
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:g.x,y0:g.y,lw:lr.width,lh:lr.height};el.classList.add('dragging');el.style.zIndex='10';});
-  el.addEventListener('pointermove',e=>{if(!drag)return;g.x=clamp(drag.x0+(e.clientX-drag.mx)/drag.lw*100,-40,140);g.y=clamp(drag.y0+(e.clientY-drag.my)/drag.lh*100,-40,140);apply();});
+  el.addEventListener('pointermove',e=>{if(!drag)return;g.x=clamp(drag.x0+(e.clientX-drag.mx)/drag.lw*100,-15,115);g.y=clamp(drag.y0+(e.clientY-drag.my)/drag.lh*100,-15,115);apply();});
   const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';try{el.releasePointerCapture(e.pointerId);}catch(_){}const half=g.w/2;if(g.x+half>10&&g.x-half<90&&g.y+half>10&&g.y-half<90)toast('⚠️ Superposition déconseillée sur la carte');persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   // taille
@@ -795,7 +828,12 @@ function renderMusicSheet(sh){
 }
 function selectTrack(t){stopAudition();music.sel=t;music.startSec=0;const sh=$('sheet');sh.querySelector('#trackList').innerHTML=`<div class="sugg" style="border-color:rgba(145,70,255,.6)"><img src="${t.cover}"><span class="ti"><b>${esc(t.title)}</b><small>${esc(t.artist)}</small></span></div>`;sh.querySelector('#selZone').hidden=false;const audBtn=sh.querySelector('#audBtn');audBtn.onclick=()=>{if(music.audio&&!music.audio.paused){stopAudition();return;}music.audio=new Audio(t.previewUrl);music.audio.volume=.5;music.audio.play().catch(()=>toast('Lecture bloquée — re-clique'));audBtn.textContent='⏸ Pause';music.audio.addEventListener('ended',stopAudition);};sh.querySelector('#musicOk').onclick=()=>{S.music=Object.assign({},t,{startSec:0});renderMusicChip();persist();closeSheet();toast('Musique d\'entrée enregistrée');};}
 let chipAudio=null;
-function renderMusicChip(){const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}chipAudio=new Audio(m.previewUrl);chipAudio.volume=.5;chipAudio.play().catch(()=>{});};}
+function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}chipAudio=new Audio(m.previewUrl);chipAudio.volume=.5;chipAudio.play().catch(()=>{});};}
+/* étiquette « musique d'entrée » au-dessus du bouton Annuler */
+let nowAudio=null;
+function renderMusicNow(){const el=$('musicNow');if(!el)return;if(!S.music){el.classList.remove('show');el.innerHTML='';if(nowAudio){nowAudio.pause();nowAudio=null;}return;}const m=S.music;el.innerHTML=`<span class="cov" style="background-image:url('${m.cover||''}')"></span><span class="mi"><span class="note">Musique d'entrée</span><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span>`;el.classList.add('show');el.onclick=()=>{if(nowAudio&&!nowAudio.paused){nowAudio.pause();nowAudio=null;return;}nowAudio=new Audio(m.previewUrl);nowAudio.volume=.5;nowAudio.play().catch(()=>{});};}
+/* yeux : masquer visuellement carte / bulles / GIFs (éditeur uniquement, pas sauvegardé) */
+document.querySelectorAll('.eye-btn').forEach(btn=>{btn.addEventListener('click',()=>{const on=document.body.classList.toggle('hide-'+btn.dataset.eye);btn.classList.toggle('off',on);});});
 
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
