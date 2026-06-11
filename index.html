@@ -10039,9 +10039,24 @@
     document.getElementById('orbPreviewBtn').addEventListener('click', openOrbEditOverlay);
     document.getElementById('accountChip').addEventListener('click', (e) => {
       e.preventDefault();
-      const cur = document.body.getAttribute('data-screen');
-      setScreen(cur === 'account' ? 'swipe' : 'account');
+      // Clic sur « mon compte » → ouvre directement l'éditeur de profil.
+      location.href = 'editor.html';
     });
+    /* Retour depuis l'éditeur : #account → écran paramètres, #preview → aperçu complet. */
+    (function handleEditorReturn(){
+      const h = location.hash;
+      if (h !== '#account' && h !== '#preview') return;
+      let tries = 0;
+      const iv = setInterval(() => {
+        tries++;
+        if (document.body.getAttribute('data-auth') === 'in' && typeof setScreen === 'function') {
+          clearInterval(iv);
+          setScreen('account');
+          if (h === '#preview') { const b = document.getElementById('accPreviewFull'); if (b) setTimeout(() => b.click(), 350); }
+          try { history.replaceState(null, '', location.pathname); } catch(_){}
+        } else if (tries > 80) { clearInterval(iv); }
+      }, 150);
+    })();
     /* Dirty-state tracking: snapshot of editable fields at render time.
        If any field differs from the snapshot, the floating save bar appears. */
     let _accSnapshot = null;

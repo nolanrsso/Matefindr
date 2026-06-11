@@ -71,7 +71,16 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .topbar{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:14px;padding:12px 22px}
 .topbar .logo{height:46px;width:auto;display:block;filter:drop-shadow(0 4px 18px rgba(255,31,158,.55))}
 .topbar .crumb{color:var(--dim);font-size:13px;font-weight:600}
-.topbar .note{margin-left:auto;color:var(--dim);font-size:11.5px;border:1px dashed var(--stroke-2);border-radius:999px;padding:5px 12px}
+.topbar .note{color:var(--dim);font-size:11.5px;border:1px dashed var(--stroke-2);border-radius:999px;padding:5px 12px}
+/* Boutons topbar : Aperçu (gauche) / Paramètres (droite) */
+.top-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:13px;border:1px solid var(--stroke-2);cursor:pointer;
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));backdrop-filter:blur(18px) saturate(150%);
+  color:#fff;font-family:inherit;font-weight:700;font-size:13px;transition:transform .12s ease,filter .16s ease,border-color .14s ease}
+.top-btn:hover{transform:translateY(-1px);filter:brightness(1.1);border-color:rgba(255,255,255,.28)}
+.top-btn:active{transform:translateY(0) scale(.97)}
+.top-btn svg{width:17px;height:17px}
+.top-btn--settings{margin-left:auto}
+@media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{padding:9px 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}}
 
 .stage{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:70px 16px 110px}
 .card-zone{position:relative}
@@ -140,9 +149,10 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .banner img{object-fit:cover}
 .banner .ph{display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600;letter-spacing:.03em}
 .avatar{
+  /* Identique à la vraie carte (.swipe-card .avatar-wrap) : 140px, anneau 8px, top 74 / left 20 */
   position:absolute;left:20px;top:74px;
-  width:132px;height:132px;border-radius:50%;cursor:pointer;z-index:3;
-  border:6px solid var(--card);overflow:hidden;
+  width:140px;height:140px;border-radius:50%;cursor:pointer;z-index:3;
+  border:8px solid var(--card);overflow:hidden;
   background:linear-gradient(135deg, var(--pink), var(--violet));
   box-shadow:0 8px 26px rgba(145,70,255,.5);
 }
@@ -346,9 +356,10 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 <div class="grain" aria-hidden="true"></div>
 
 <header class="topbar">
+  <button class="top-btn top-btn--preview" id="btnPreview" title="Aperçu de ton profil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span>Aperçu</span></button>
   <img src="assets/logo.svg" alt="Tindord" class="logo">
   <span class="crumb">/ éditeur de profil</span>
-  <span class="note">Tout est modifiable en cliquant directement sur la carte</span>
+  <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
 </header>
 
 <main class="stage">
@@ -905,6 +916,10 @@ $('btnCancel').addEventListener('click',()=>{
   toast('Modifications annulées');
   setTimeout(()=>{location.href='index.html';},500);
 });
+/* Aperçu (haut-gauche) : sauvegarde puis ouvre l'app pour voir le profil. */
+$('btnPreview').addEventListener('click',()=>{ saveNow(); location.href='index.html#preview'; });
+/* Paramètres (haut-droite) : sauvegarde puis ouvre l'écran compte/paramètres. */
+$('btnSettings').addEventListener('click',()=>{ saveNow(); location.href='index.html#account'; });
 </script>
 </body>
 </html>
