@@ -701,6 +701,7 @@
   }
   .msg-bubble.them{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:4px}
   .msg-bubble.me  {align-self:flex-end;background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;border-bottom-right-radius:4px;box-shadow:0 6px 18px rgba(64,78,237,.35)}
+  .msg-bubble .msg-time{display:block;margin-top:3px;font-size:9.5px;line-height:1;opacity:.55;text-align:right;font-variant-numeric:tabular-nums}
   .msg-input{
     flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);
   }
@@ -7037,7 +7038,8 @@
       chatAvi.innerHTML = c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : escapeHtml(c.initial || '');
       document.getElementById('msgChatName').textContent = c.name;
       document.getElementById('msgChatSub').textContent = '@' + c.tag;
-      chatBody.innerHTML = c.msgs.map(m => `<div class="msg-bubble ${m.who}">${escapeHtml(m.text)}</div>`).join('');
+      chatBody.innerHTML = '';
+      c.msgs.forEach(m => chatBody.appendChild(msgBubbleEl(m)));
       chatBody.scrollTop = chatBody.scrollHeight;
       setTimeout(() => msgInputField.focus(), 200);
       renderMsgList();
@@ -7066,10 +7068,7 @@
       activeConvo.last = v;
       activeConvo.t    = t;
       msgInputField.value = '';
-      const el = document.createElement('div');
-      el.className = 'msg-bubble me';
-      el.textContent = v;
-      chatBody.appendChild(el);
+      chatBody.appendChild(msgBubbleEl({ who:'me', text:v, t }));
       chatBody.scrollTop = chatBody.scrollHeight;
       // Envoi réel vers Supabase (l'autre le reçoit via Realtime).
       if (activeConvo.matchId && window.__supa) {
@@ -7088,7 +7087,14 @@
        like réciproque → match (animation chez les 2), conversations live.
        Échoue en silence si les tables n'existent pas encore.
        =================================================================== */
-    const RT = { myId:null, ready:false, convoByMatch:new Map(), lastMatchAt:null, lastMsgAt:null, pollTimer:null };
+    const RT = { myId:null, ready:false, convoByMatch:new Map(), seenMsgIds:new Set(), pollTimer:null };
+    function fmtMsgTime(iso){ try { return new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }); } catch(_){ return ''; } }
+    function msgBubbleEl(m){
+      const el = document.createElement('div');
+      el.className = 'msg-bubble ' + m.who;
+      el.innerHTML = escapeHtml(m.text) + ((m.t && m.who !== 'system') ? `<span class="msg-time">${m.t}</span>` : '');
+      return el;
+    }
     async function rtMyId(){
       if (RT.myId) return RT.myId;
       try { const { data:{ session } } = await window.__supa.auth.getSession(); RT.myId = (session && session.user && session.user.id) || null; } catch(_){}
@@ -7168,17 +7174,19 @@
     }
     // Message entrant (Realtime) — n'affiche QUE les messages des autres dans mes convos.
     function rtHandleIncomingMessage(row){
+      RT.seenMsgIds.add(row.id);
       rtMyId().then(async me => {
         if (!me || row.sender_id === me) return; // mes propres messages sont déjà affichés (optimiste)
         let c = RT.convoByMatch.get(row.match_id) || CONVOS.find(x => x.matchId === row.match_id);
         if (!c) c = await rtResolveMatch(row.match_id); // match créé hors session
         if (!c) return; // pas un de mes matchs → ignoré
         if (c.msgs.some(m => m._id === row.id)) return;
-        c.msgs.push({ who:'them', text:row.body, _id:row.id });
+        const tm = fmtMsgTime(row.created_at);
+        c.msgs.push({ who:'them', text:row.body, _id:row.id, t:tm });
         c.last = row.body; c.t = "à l'instant";
         if (activeConvo && activeConvo.matchId === c.matchId) {
-          const el = document.createElement('div'); el.className = 'msg-bubble them'; el.textContent = row.body;
-          chatBody.appendChild(el); chatBody.scrollTop = chatBody.scrollHeight;
+          chatBody.appendChild(msgBubbleEl({ who:'them', text:row.body, t:tm }));
+          chatBody.scrollTop = chatBody.scrollHeight;
           c.unread = false;
         } else { c.unread = true; }
         renderMsgList();
@@ -7207,9 +7215,7 @@
         if (error) { console.warn('[Tindord] load matches', error.message || error); return; }
         matches = data || [];
       } catch(_){ return; }
-      let maxMatch = RT.lastMatchAt, maxMsg = RT.lastMsgAt;
       for (const m of matches) {
-        if (!maxMatch || m.created_at > maxMatch) maxMatch = m.created_at;
         const other = m.user_a === me ? m.user_b : m.user_a;
         const p = await rtProfile(other);
         const c = rtUpsertConvo(m.id, other, p, { system:true });
@@ -7217,34 +7223,33 @@
           const { data: msgs } = await window.__supa.from('messages').select('*')
             .eq('match_id', m.id).order('created_at', { ascending:true }).limit(500);
           if (msgs && msgs.length) {
-            c.msgs = msgs.map(r => ({ who: r.sender_id === me ? 'me' : 'them', text:r.body, _id:r.id }));
+            c.msgs = msgs.map(r => { RT.seenMsgIds.add(r.id); return { who: r.sender_id === me ? 'me' : 'them', text:r.body, _id:r.id, t:fmtMsgTime(r.created_at) }; });
             c.last = msgs[msgs.length-1].body;
-            const lastAt = msgs[msgs.length-1].created_at;
-            if (!maxMsg || lastAt > maxMsg) maxMsg = lastAt;
           }
         } catch(_){}
       }
-      RT.lastMatchAt = maxMatch;
-      RT.lastMsgAt = maxMsg;
       renderMsgList();
     }
-    // Filet de sécurité : sondage léger toutes les 2 s → instantané même si le Realtime ne délivre pas.
+    // Filet de sécurité : sondage toutes les 2 s. Suivi par ID (anti-décalage d'horloge) →
+    // instantané et fiable même si le Realtime ne délivre pas.
     async function rtPoll(){
       if (!RT.ready || !window.__supa) return;
       const me = RT.myId; if (!me) return;
       try {
-        // 1) nouveaux matchs (l'autre vient de me liker) → animation chez moi aussi
-        let q = window.__supa.from('matches').select('*').or(`user_a.eq.${me},user_b.eq.${me}`).order('created_at', { ascending:true }).limit(50);
-        if (RT.lastMatchAt) q = q.gt('created_at', RT.lastMatchAt);
-        const { data: matches } = await q;
-        if (matches) for (const m of matches) { if (!RT.lastMatchAt || m.created_at > RT.lastMatchAt) RT.lastMatchAt = m.created_at; rtHandleNewMatch(m); }
-        // 2) nouveaux messages de mes conversations
+        // 1) nouveaux matchs : ceux pas encore connus (convoByMatch fait office de curseur)
+        const { data: matches } = await window.__supa.from('matches').select('*')
+          .or(`user_a.eq.${me},user_b.eq.${me}`).order('created_at', { ascending:true }).limit(100);
+        if (matches) for (const m of matches) { if (!RT.convoByMatch.has(m.id)) rtHandleNewMatch(m); }
+        // 2) nouveaux messages : derniers messages de mes convos, on traite les ID jamais vus
         const ids = Array.from(RT.convoByMatch.keys());
         if (ids.length) {
-          let mq = window.__supa.from('messages').select('*').in('match_id', ids).order('created_at', { ascending:true }).limit(100);
-          if (RT.lastMsgAt) mq = mq.gt('created_at', RT.lastMsgAt);
-          const { data: msgs } = await mq;
-          if (msgs) for (const row of msgs) { if (!RT.lastMsgAt || row.created_at > RT.lastMsgAt) RT.lastMsgAt = row.created_at; rtHandleIncomingMessage(row); }
+          const { data: msgs } = await window.__supa.from('messages').select('*')
+            .in('match_id', ids).order('created_at', { ascending:false }).limit(60);
+          if (msgs) msgs.slice().reverse().forEach(row => {
+            if (RT.seenMsgIds.has(row.id)) return;
+            RT.seenMsgIds.add(row.id);
+            if (row.sender_id !== me) rtHandleIncomingMessage(row);
+          });
         }
       } catch(_){}
     }
@@ -7253,9 +7258,6 @@
       if (RT.ready || !window.__supa) return;
       const me = await rtMyId(); if (!me) return;
       RT.ready = true;
-      // Base temporelle : on n'anime/affiche que ce qui arrive APRÈS le chargement initial.
-      RT.lastMatchAt = new Date().toISOString();
-      RT.lastMsgAt = new Date().toISOString();
       await rtLoadConversations();
       try {
         window.__supa.channel('rt-'+me)
