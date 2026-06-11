@@ -673,11 +673,13 @@
   }
   .msg-item.read .dot{display:none}
 
-  /* Chat view (inside the panel) */
-  .msg-chat{display:none;flex:1 1 auto;flex-direction:column}
+  /* Chat view (inside the panel) — head + input fixes, body scrolle (min-height:0 indispensable) */
+  .msg-chat{display:none;flex:1 1 auto;flex-direction:column;min-height:0}
   .msg-panel[data-view="chat"] .msg-list{display:none}
   .msg-panel[data-view="chat"] .msg-chat{display:flex}
-  .msg-chat-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+  /* En vue conversation, on masque l'entête "Messages" du panneau (la conv a son propre entête) */
+  .msg-panel[data-view="chat"] .msg-head{display:none}
+  .msg-chat-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.06)}
   .msg-back{
     width:30px;height:30px;border-radius:8px;cursor:pointer;display:grid;place-items:center;
     background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#b9bbbe;
@@ -690,7 +692,7 @@
   }
   .msg-chat-head b{font-size:14.5px;font-weight:700;display:block}
   .msg-chat-head small{color:#8b8c92;font-size:11.5px}
-  .msg-chat-body{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .msg-chat-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
   .msg-bubble{
     max-width:78%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;
     word-break:break-word;
@@ -698,7 +700,7 @@
   .msg-bubble.them{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:4px}
   .msg-bubble.me  {align-self:flex-end;background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;border-bottom-right-radius:4px;box-shadow:0 6px 18px rgba(64,78,237,.35)}
   .msg-input{
-    display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);
+    flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);
   }
   .msg-input input{
     flex:1 1 auto;padding:11px 14px;border-radius:12px;
@@ -6382,12 +6384,16 @@
           it.x += it.vx;
           it.y += it.vy;
 
-          // Bounce off viewport edges
-          const margin = it.r + 4;
-          if (it.x < margin)        { it.x = margin;        it.vx = Math.abs(it.vx); }
-          else if (it.x > sw - margin) { it.x = sw - margin; it.vx = -Math.abs(it.vx); }
-          if (it.y < margin)        { it.y = margin;        it.vy = Math.abs(it.vy); }
-          else if (it.y > sh - margin) { it.y = sh - margin; it.vy = -Math.abs(it.vy); }
+          // Rebond dans une ZONE limitée (pas tout l'écran) — bulles restent autour de la carte
+          const zoneMX = sw * 0.06;          // marge horizontale (6% de chaque côté)
+          const zoneTop = sh * 0.12;         // marge haute (sous le header)
+          const zoneBot = sh * 0.90;         // marge basse (au-dessus des boutons swipe)
+          const minX = zoneMX + it.r, maxX = sw - zoneMX - it.r;
+          const minY = zoneTop + it.r, maxY = zoneBot - it.r;
+          if (it.x < minX)      { it.x = minX; it.vx = Math.abs(it.vx); }
+          else if (it.x > maxX) { it.x = maxX; it.vx = -Math.abs(it.vx); }
+          if (it.y < minY)      { it.y = minY; it.vy = Math.abs(it.vy); }
+          else if (it.y > maxY) { it.y = maxY; it.vy = -Math.abs(it.vy); }
         }
         // Pairwise interactions :
         // 1. Personal-space repulsion (soft) when close but not touching
@@ -8509,7 +8515,16 @@
         g.y = Math.max(-30, Math.min(130, drag.y0 + (e.clientY - drag.my) / drag.lh * 100));
         apply();
       });
-      const endDrag = e => { if (!drag) return; drag = null; el.classList.remove('dragging'); el.style.zIndex=''; try{ el.releasePointerCapture(e.pointerId);}catch(_){} save(); };
+      const endDrag = e => {
+        if (!drag) return; drag = null; el.classList.remove('dragging'); el.style.zIndex='';
+        try{ el.releasePointerCapture(e.pointerId);}catch(_){}
+        save();
+        // Avertissement si le GIF chevauche la carte de profil
+        const half = (g.w || 34) / 2;
+        if (g.x + half > 10 && g.x - half < 90 && g.y + half > 10 && g.y - half < 90 && typeof showToast === 'function') {
+          showToast('⚠️', 'Superposition déconseillée', 'Évite de poser un GIF sur la carte de profil');
+        }
+      };
       el.addEventListener('pointerup', endDrag);
       el.addEventListener('pointercancel', endDrag);
       // Redimensionner (coin vert) — distance centre→pointeur (insensible à la rotation)
