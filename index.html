@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Tindord — Trouve ton duo, pas juste un pseudo</title>
-<meta name="description" content="Tindord — l'app de matchmaking gaming-friendly. Swipe des profils Discord, partage tes bulles musique/jeu/série, et trouve ton duo." />
+<title>Tindord - Swipe des profils discord</title>
+<meta name="description" content="Swipe des profils discord et like les profils qui te plaises. Match avec quelqu'un et parle avec lui" />
 <meta name="theme-color" content="#0D0B1E" />
+<!-- Favicon : les 4 premières lettres du logo "tind" (carré violet) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237a2bff'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial Black,Arial,sans-serif' font-weight='900' font-size='26' fill='white'%3Etind%3C/text%3E%3C/svg%3E" />
 <meta name="referrer" content="no-referrer-when-downgrade" />
 <!-- Security : restrict resource origins. Discord webhooks + Supabase + media CDNs are allowed.
      Inline styles/scripts allowed because this is a single-file SPA. -->
@@ -1049,21 +1051,19 @@
   /* Common orbs — the displayed profile shares this bubble with me. Stand out with
      a bright golden glow + scale-up + pulsing badge so they read as "we both like this". */
   .swipe-stage .orbit .orb--common{
-    transform:scale(1.18);
+    transform:scale(1.08);
     border-color:#FFE680 !important;
-    filter:brightness(1.22) saturate(1.18);
     box-shadow:
-      inset 0 0 0 2.5px rgba(255,255,255,.6),
-      inset 0 -10px 22px rgba(0,0,0,.22),
-      0 0 0 3px rgba(255,234,128,.95),
-      0 0 34px 9px rgba(255,221,90,1),
-      0 0 90px 26px rgba(255,180,50,.85),
-      0 0 140px 50px rgba(255,150,40,.45),
-      0 14px 30px rgba(0,0,0,.55) !important;
-    animation:orbCommonPulse 1.9s ease-in-out infinite;
+      inset 0 0 0 1.5px rgba(255,255,255,.4),
+      inset 0 -10px 22px rgba(0,0,0,.24),
+      0 0 0 2px rgba(255,224,128,.7),
+      0 0 16px 3px rgba(255,221,90,.55),
+      0 0 36px 8px rgba(255,180,50,.28),
+      0 14px 30px rgba(0,0,0,.5) !important;
+    animation:orbCommonPulse 2.6s ease-in-out infinite;
   }
-  /* La pochette/image d'une bulle commune devient plus lumineuse */
-  .swipe-stage .orbit .orb--common .orb-cover{filter:brightness(1.18) saturate(1.2) contrast(1.05)}
+  /* La pochette d'une bulle commune : très légèrement plus lumineuse */
+  .swipe-stage .orbit .orb--common .orb-cover{filter:brightness(1.06) saturate(1.08)}
   .swipe-stage .orbit .orb--common::after{
     content:"✨";position:absolute;top:-6px;right:-6px;z-index:4;
     width:24px;height:24px;border-radius:50%;
@@ -1073,8 +1073,8 @@
     animation:orbCommonStarSpin 5s linear infinite;
   }
   @keyframes orbCommonPulse{
-    0%,100% { filter:brightness(1.22) saturate(1.18) drop-shadow(0 0 6px rgba(255,216,61,.5)); }
-    50%     { filter:brightness(1.4) saturate(1.3) drop-shadow(0 0 28px rgba(255,221,90,.95)); }
+    0%,100% { filter:brightness(1.03) drop-shadow(0 0 3px rgba(255,216,61,.35)); }
+    50%     { filter:brightness(1.1) drop-shadow(0 0 10px rgba(255,221,90,.5)); }
   }
   @keyframes orbCommonStarSpin{to{transform:rotate(360deg)}}
   .swipe-stage .orbit .orb--common:hover{transform:scale(1.22)}
@@ -1778,8 +1778,10 @@
     color:#dcddde;font-family:inherit;font-weight:700;font-size:13.5px;
     transition:.16s ease;
   }
+  .acc-langs button{display:flex;align-items:center;justify-content:center;gap:8px}
   .acc-langs button:hover{background:rgba(255,255,255,.08);color:#fff}
   .acc-langs button.active{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 0 0 3px rgba(255,255,255,.05)}
+  .acc-lang-flag{width:22px;height:16px;object-fit:cover;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.3);flex:0 0 auto}
 
   /* Custom banner upload */
   .acc-banner-row{display:flex;align-items:center;gap:12px;margin-top:6px}
@@ -3376,7 +3378,7 @@
 
         <div class="onb-merged-block">
           <label class="onb-merged-lbl" for="onbAge">Âge <small style="color:#b9bbbe;font-weight:400">(18 ans minimum)</small></label>
-          <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="18" max="99" placeholder="18" />
+          <input class="onb-age" id="onbAge" type="number" inputmode="numeric" min="18" max="99" placeholder="Ton âge" />
         </div>
 
         <div class="onb-merged-block">
@@ -3843,17 +3845,15 @@
         <div class="acc-field">
           <label data-i18n="acc_lang">Langue</label>
           <div class="acc-langs" id="accLangs">
-            <button type="button" data-val="FR">🇫🇷 Français</button>
-            <button type="button" data-val="EN">🇬🇧 English</button>
+            <button type="button" data-val="FR"><img src="https://flagcdn.com/fr.svg" alt="FR" class="acc-lang-flag"> Français</button>
+            <button type="button" data-val="EN"><img src="https://flagcdn.com/gb.svg" alt="EN" class="acc-lang-flag"> English</button>
           </div>
         </div>
-        <div class="acc-grid2" style="margin-top:14px">
-          <div class="acc-field"><label data-i18n="acc_gender">Genre</label><div class="val" id="accGender">—</div></div>
-          <div class="acc-field"><label data-i18n="acc_age">Âge</label><div class="val" id="accAge">—</div></div>
-        </div>
+        <!-- Genre + Âge retirés des paramètres (placeholders gardés pour le JS) -->
+        <div style="display:none"><span id="accGender">—</span><span id="accAge">—</span></div>
         <div class="acc-field" style="margin-top:14px">
-          <label>Volume musique d'entrée <span id="musicVolVal" style="color:#b9bbbe;font-weight:400;margin-left:6px">21%</span></label>
-          <input type="range" id="musicVolume" min="0" max="100" value="21" style="width:100%;accent-color:#9146FF;margin-top:6px" />
+          <label>Volume de la musique <span id="musicVolVal" style="color:#b9bbbe;font-weight:400;margin-left:6px">50%</span></label>
+          <input type="range" id="musicVolume" min="0" max="100" value="50" style="width:100%;accent-color:#9146FF;margin-top:6px" />
         </div>
         <div class="acc-field" style="margin-top:14px">
           <label>Debut de la musique <span id="musicStartVal" style="color:#b9bbbe;font-weight:400;margin-left:6px">0s</span></label>
@@ -5215,6 +5215,17 @@
         if (avatarUrl) { av.classList.add('has-img'); av.innerHTML = '<img src="'+avatarUrl+'" alt="">'; }
         else { av.classList.remove('has-img'); av.textContent = '🎉'; }
       }
+      // Préremplit pseudo (depuis Discord) + bio (étape perso)
+      try {
+        const u = state.user || {};
+        const pseudoEl = $onb('onbPseudo');
+        if (pseudoEl && !pseudoEl.value && (u.displayName || name !== 'toi')) {
+          pseudoEl.value = u.displayName || name;
+          draft.pseudo = pseudoEl.value;
+        }
+        const bioEl = $onb('onbBio');
+        if (bioEl && !bioEl.value && u.bio) { bioEl.value = u.bio; draft.bio = u.bio; }
+      } catch(_){}
       goStep(1);
     }
     window.__initOnboarding = initOnboarding;
@@ -5468,6 +5479,9 @@
     ];
     let deckIdx = 0;
     let _previewMode = false; // true = aperçu complet de SA carte (pas de swipe, bouton "Quitter")
+    // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
+    const ENTRY_MUSIC_GAIN = 0.55;
+    const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
 
     function buildUserProfile(){
       const u = state.user || {};
@@ -5676,7 +5690,7 @@
       try {
         _swipeMusicAudio = new Audio(track.previewUrl);
         _swipeMusicAudio.loop = true;
-        _swipeMusicAudio.volume = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : 0.35;
+        _swipeMusicAudio.volume = ((state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL) * ENTRY_MUSIC_GAIN;
         document.getElementById('smTitle').textContent = track.title;
         document.getElementById('smArtist').textContent = track.artist || '';
         document.getElementById('smCover').style.backgroundImage = track.cover ? `url('${track.cover}')` : '';
@@ -6274,13 +6288,13 @@
             }
           }
 
-          // Mouse repulsion (music = soft, others = strong)
+          // Mouse repulsion — identique pour toutes les bulles
           if (m.has){
             const dx = it.x - m.x;
             const dy = it.y - m.y;
             const d2 = dx*dx + dy*dy;
-            const range  = it.isMusic ? 90 : 90;
-            const fScale = it.isMusic ? 0.55 : 0.40;
+            const range  = 100;
+            const fScale = 0.42;
             if (d2 < range*range){
               const d = Math.sqrt(d2) || 1;
               const force = (1 - d/range);
@@ -6289,23 +6303,22 @@
             }
           }
 
-          // Subtle motion — music orbs drift a bit more visibly, others move identically.
-          const breathAmp = it.isMusic ? 4 : 1;
-          const jitter   = it.isMusic ? 0.18 : 0.05;
-          const maxSp    = it.isMusic ? 2.6 : 1.4;
-          const breathX = Math.cos(it.phase * 0.6) * breathAmp;
-          const breathY = Math.sin(it.phase * 0.5) * breathAmp;
-          const sk = it.isMusic ? 0.045 : 0.04;
+          // Mouvement subtil — TOUTES les bulles bougent pareil (les bulles musique ne
+          // vibrent plus). Un peu plus d'amplitude qu'avant pour qu'elles soient moins fixes,
+          // mais le ressort (sk) les garde ancrées à leur position.
+          const breathAmp = 3.2;
+          const jitter   = 0.045;
+          const maxSp    = 1.7;
+          const breathX = Math.cos(it.phase * 0.55) * breathAmp;
+          const breathY = Math.sin(it.phase * 0.45) * breathAmp;
+          const sk = 0.034;  // ressort un peu plus mou → balancement plus ample, reste ancré
           it.vx += ((it.ax + breathX) - it.x) * sk;
           it.vy += ((it.ay + breathY) - it.y) * sk;
-          // Random jitter for organic feel
           it.vx += (Math.random() - 0.5) * jitter;
           it.vy += (Math.random() - 0.5) * jitter;
-          // Damping (lighter for music so motion stays lively)
-          const damp = it.isMusic ? 0.86 : 0.80;
+          const damp = 0.84;
           it.vx *= damp;
           it.vy *= damp;
-          // Hard cap max speed
           const sp = Math.hypot(it.vx, it.vy);
           if (sp > maxSp) { it.vx = it.vx / sp * maxSp; it.vy = it.vy / sp * maxSp; }
 
@@ -6973,18 +6986,7 @@
       el.textContent = v;
       chatBody.appendChild(el);
       chatBody.scrollTop = chatBody.scrollHeight;
-      // Simulate a reply after a short delay
-      setTimeout(() => {
-        const replies = ['Trop bien !', 'Carrément 🔥', 'Ok ça marche', 'Mdr', 'On y va alors ?'];
-        const r = replies[Math.floor(Math.random()*replies.length)];
-        const t2 = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
-        activeConvo.msgs.push({ who:'them', text:r, t:t2 });
-        activeConvo.last = r; activeConvo.t = t2;
-        const e2 = document.createElement('div'); e2.className = 'msg-bubble them'; e2.textContent = r;
-        chatBody.appendChild(e2); chatBody.scrollTop = chatBody.scrollHeight;
-        // Discord notification (new message)
-        if (typeof sendDiscordNotif === 'function') sendDiscordNotif('message', activeConvo, r);
-      }, 900 + Math.random()*900);
+      // Plus de réponse automatique de bot — les vrais messages passeront par Supabase.
     });
     renderMsgList();
 
@@ -7833,7 +7835,7 @@
       const _accAgeEl = document.getElementById('accAge');
       const _ccAcc = (p.country && /^[A-Z]{2}$/i.test(p.country)) ? p.country.toUpperCase() : null;
       _accAgeEl.innerHTML = (p.age ? p.age : '—') + (_ccAcc ? `  <img src="https://flagcdn.com/${_ccAcc.toLowerCase()}.svg" alt="${_ccAcc}" style="width:22px;height:16px;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-left:4px">` : (p.countryFlag ? '  ' + p.countryFlag : ''));
-      const vol = typeof u.musicVolume === 'number' ? u.musicVolume : 0.21;
+      const vol = typeof u.musicVolume === 'number' ? u.musicVolume : DEFAULT_MUSIC_VOL;
       const volSlider = document.getElementById('musicVolume');
       if (volSlider) { volSlider.value = Math.round(vol * 100); document.getElementById('musicVolVal').textContent = Math.round(vol * 100) + '%'; }
       const startSec = typeof u.musicStartTime === 'number' ? u.musicStartTime : 0;
@@ -8656,8 +8658,8 @@
       sl.addEventListener('input', () => {
         const v = parseInt(sl.value, 10) / 100;
         document.getElementById('musicVolVal').textContent = Math.round(v * 100) + '%';
-        if (_swipeMusicAudio) _swipeMusicAudio.volume = v;
-        if (_spotifyAudio) _spotifyAudio.volume = v;
+        if (_swipeMusicAudio) _swipeMusicAudio.volume = v * ENTRY_MUSIC_GAIN;
+        if (_spotifyAudio) _spotifyAudio.volume = v * ENTRY_MUSIC_GAIN;
         state.user = state.user || {};
         state.user.musicVolume = v;
         save();
