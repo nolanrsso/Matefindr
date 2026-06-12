@@ -91,16 +91,14 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .stage{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:70px 16px 110px}
 .card-zone{position:relative}
 
-/* ===================== ZONES DE PLACEMENT (guide visible pendant le drag) ===================== */
-.drop-guide{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .16s ease}
+/* ===================== ZONE DE PLACEMENT (tout l'écran, sous la topbar et au-dessus de la toolbar) ===================== */
+.drop-guide{position:fixed;top:62px;left:14px;right:14px;bottom:96px;z-index:8;pointer-events:none;opacity:0;transition:opacity .16s ease;
+  border:2px dashed rgba(145,70,255,.5);border-radius:26px}
 .drop-guide.show{opacity:1}
-.drop-guide .gz{position:absolute;inset:0;border:2px dashed rgba(145,70,255,.6);border-radius:20px;box-shadow:0 0 0 9999px rgba(13,11,30,.28)}
-.drop-guide .gz::after{content:"Zone GIFs";position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.06em;color:#C7A5FF;text-transform:uppercase}
-.drop-guide .oz{position:absolute;inset:-26% -52%;border:2px dashed rgba(91,233,255,.5);border-radius:50%}
-.drop-guide .oz::after{content:"Zone bulles";position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.06em;color:#9FE9FF;text-transform:uppercase}
-.drop-guide[data-mode="gif"] .oz{display:none}
-.drop-guide[data-mode="orb"] .gz{opacity:.35}
-.drop-guide[data-mode="orb"] .gz::after{display:none}
+.drop-guide::after{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;content:"Zone de placement";color:#C7A5FF}
+.drop-guide[data-mode="orb"]{border-color:rgba(91,233,255,.55)}
+.drop-guide[data-mode="orb"]::after{content:"Zone des bulles";color:#9FE9FF}
+.drop-guide[data-mode="gif"]::after{content:"Zone des GIFs";color:#C7A5FF}
 
 /* ===================== BULLES (orbes d'intérêt, comme le site) ===================== */
 .orb-layer{position:absolute;inset:0;z-index:4;pointer-events:none}
@@ -197,6 +195,9 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .voice .vmic{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(135deg,#9146FF,#6B2BFF);color:#fff;box-shadow:0 4px 14px rgba(107,43,255,.4)}
 .voice .vmic svg{width:18px;height:18px}
 .voice:hover .vmic{transform:scale(1.06)}
+.voice .vdel{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:rgba(255,79,160,.16);color:#FF7EB6;border:1px solid rgba(255,79,160,.35);cursor:pointer;transition:.14s ease}
+.voice .vdel svg{width:14px;height:14px}
+.voice .vdel:hover{background:rgba(255,79,160,.32);color:#fff}
 .voice:hover .vp{transform:scale(1.08)}
 .voice .vw{flex:1;display:flex;align-items:center;gap:2.5px;height:26px}
 .voice .vw i{width:3px;border-radius:2px;background:rgba(255,255,255,.85)}
@@ -268,15 +269,24 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .eye-dot--card:hover{transform:translateX(-50%) scale(1.12)}
 /* séparateurs + boutons Retour (gauche) / Aperçu (droite), symétriques autour des 5 outils */
 .tool-sep{width:1px;height:34px;background:var(--stroke-2);margin:0 2px;align-self:center}
-.tool--preview{color:#C7A5FF}
+.tool--preview{color:#C7A5FF;width:auto;display:flex;align-items:center;gap:7px;padding:0 15px}
 .tool--preview:hover{background:rgba(145,70,255,.18);color:#fff}
+.tool--gif{font-weight:800;letter-spacing:.02em}
+.tool-word{font-weight:700;font-size:14px;line-height:1}
+.tool--gif .tool-word{font-size:15px}
 .tool--back{color:#FF9DB6}
 .tool--back:hover{background:rgba(255,79,160,.16);color:#fff}
 
-/* Bouton resync Discord (topbar) */
-.top-btn--resync{color:#9FE9FF}
-.top-btn--resync.spinning svg{animation:spin 1s linear infinite}
+/* Bouton « Mettre à jour Discord » — bas-gauche */
+.disc-fab{position:fixed;left:22px;bottom:26px;z-index:41;display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:16px;border:none;cursor:pointer;
+  background:linear-gradient(140deg,#5865F2,#404EED);color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;
+  box-shadow:0 14px 38px rgba(64,78,237,.45),0 0 0 1px rgba(255,255,255,.08) inset;transition:transform .13s ease,filter .16s ease}
+.disc-fab:hover{transform:translateY(-2px);filter:brightness(1.08)}
+.disc-fab:active{transform:translateY(0) scale(.97)}
+.disc-fab svg{width:18px;height:18px}
+.disc-fab.spinning svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:560px){.disc-fab span{display:none}.disc-fab{padding:13px}}
 
 /* Connexions (logos d'apps) */
 .connections{display:flex;flex-wrap:wrap;gap:9px}
@@ -285,9 +295,9 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .conn img{width:22px;height:22px;object-fit:contain;opacity:.5;transition:opacity .14s}
 .conn.set{border-color:rgba(91,233,255,.5);background:rgba(91,233,255,.10)}
 .conn.set img{opacity:1}
-.conn .conn-check{position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;background:#3BD17C;border:2px solid var(--card);display:none;place-items:center}
-.conn.set .conn-check{display:grid}
-.conn .conn-check svg{width:9px;height:9px;color:#0c2a18}
+.conn .conn-del{position:absolute;right:-5px;top:-5px;width:17px;height:17px;border-radius:50%;background:#FF4FA0;border:2px solid var(--card);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 6px rgba(255,79,160,.5)}
+.conn .conn-del svg{width:9px;height:9px;color:#fff}
+.conn .conn-del:hover{transform:scale(1.15)}
 /* popover pseudo */
 .conn-pop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:85;width:min(90vw,320px);padding:16px;border-radius:18px;
   background:linear-gradient(180deg, rgba(28,22,58,.98), rgba(18,12,42,.98));border:1px solid var(--stroke-2);box-shadow:0 30px 80px rgba(0,0,0,.7)}
@@ -421,14 +431,12 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 
 <header class="topbar">
   <img src="assets/logo.svg" alt="Tindord" class="logo">
-  <button class="top-btn top-btn--resync" id="btnResync" title="Re-synchroniser avatar, bannière et déco depuis Discord"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Mettre à jour Discord</span></button>
   <span class="crumb">/ éditeur de profil</span>
   <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
 </header>
 
 <main class="stage">
   <div class="card-zone">
-    <div class="drop-guide" id="dropGuide"><div class="oz"></div><div class="gz"></div></div>
     <div class="sticker-layer" id="stickerLayer"></div>
     <div class="orb-layer" id="orbLayer"></div>
     <button class="eye-dot eye-dot--card" data-eye="card" title="Masquer la carte (aperçu)" aria-label="Masquer la carte"></button>
@@ -458,15 +466,19 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
     <button class="eye-dot" data-eye="orbs" title="Masquer les bulles (aperçu)" aria-label="Masquer les bulles"></button>
   </span>
   <span class="tool-wrap">
-    <button class="tool" data-tool="gifs" title="GIFs" aria-label="GIFs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M2.5 9h4.5M2.5 15h4.5M17 9h4.5M17 15h4.5"/></svg></button>
+    <button class="tool tool--gif" data-tool="gifs" title="GIFs" aria-label="GIFs"><span class="tool-word">GIF</span></button>
     <button class="eye-dot" data-eye="gifs" title="Masquer les GIFs (aperçu)" aria-label="Masquer les GIFs"></button>
   </span>
   <button class="tool" data-tool="bg" title="Fond" aria-label="Fond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 16l-5-5L5 21"/></svg></button>
   <button class="tool" data-tool="color" title="Couleur" aria-label="Couleur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.7-.8 1.7-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11.5" cy="7.5" r="1"/><circle cx="16" cy="9.5" r="1"/></svg></button>
   <button class="tool" data-tool="music" title="Musique" aria-label="Musique"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
   <span class="tool-sep"></span>
-  <button class="tool tool--preview" id="btnPreview" title="Aperçu de ton profil" aria-label="Aperçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button class="tool tool--preview" id="btnPreview" title="Aperçu de ton profil" aria-label="Aperçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg><span class="tool-word">Aperçu</span></button>
 </nav>
+
+<div class="drop-guide" id="dropGuide" aria-hidden="true"></div>
+
+<button class="disc-fab" id="btnResync" title="Recharger ton profil depuis Discord"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Mettre à jour Discord</span></button>
 
 <div class="music-now" id="musicNow" title="Écouter / pause"></div>
 
@@ -479,6 +491,12 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 </div>
 
 <div class="sheet" id="sheet"></div>
+
+<div class="modal" id="discModal"><div class="box">
+  <h3>Recharger depuis Discord</h3>
+  <p style="color:var(--dim);font-size:14px;line-height:1.55;margin:0 0 18px">Êtes-vous sûr de vouloir recharger votre profil avec votre profil Discord du moment ?<br>Ça remplacera ton avatar, ta bannière, ta décoration et ton nom par ceux de Discord.</p>
+  <div class="row-end"><button class="btn" id="discCancel">Annuler</button><button class="btn primary" id="discOk">Recharger</button></div>
+</div></div>
 
 <div class="modal" id="cropModal"><div class="box">
   <h3 id="cropTitle">Recadrer</h3>
@@ -495,7 +513,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
     <button class="rec-btn" id="recBtn" title="Enregistrer"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></button>
     <div class="rec-prev" id="recPrev" hidden><button class="btn" id="recPlay">▶</button><div class="bar"><i id="recBar"></i></div><span id="recDur" style="color:var(--dim);font-size:12px">0:00</span></div>
   </div>
-  <div class="row-end"><button class="btn ghost-danger" id="recDiscard">Jeter</button><button class="btn" id="recClose">Fermer</button><button class="btn primary" id="recOk" disabled>Confirmer</button></div>
+  <div class="row-end"><button class="btn ghost-danger" id="recDiscard" title="Supprimer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><button class="btn" id="recClose">Fermer</button><button class="btn primary" id="recOk" disabled>Confirmer</button></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -596,7 +614,7 @@ $('recDiscard').addEventListener('click',()=>{if(rec.url){URL.revokeObjectURL(re
 $('recOk').addEventListener('click',()=>{if(!rec.url)return;S.voice={url:rec.url,dur:rec.dur};rec.url=null;renderVoice();persist();closeVoiceModal();toast('Vocal enregistré sur ton profil');});
 let voiceAudio=null;
 const VMIC_SVG='<span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span>';
-function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.textContent='▶';const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);slot.append(play,wave,t);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.textContent='▶';return;}voiceAudio=new Audio(S.voice.url);voiceAudio.play();play.textContent='⏸';voiceAudio.addEventListener('ended',()=>play.textContent='▶');});}
+function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.textContent='▶';const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.textContent='▶';return;}voiceAudio=new Audio(S.voice.url);voiceAudio.play();play.textContent='⏸';voiceAudio.addEventListener('ended',()=>play.textContent='▶');});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
 
 /* ===== SHEET ===== */
 let activeTool=null;
@@ -774,6 +792,14 @@ function addOrb(o){
   toast('Bulle ajoutée');
 }
 /* layout : colonnes symétriques gauche/droite, max 3 par colonne (comme orbRelLayout) */
+/* Zone de placement = tout l'écran sous la barre du haut et AU-DESSUS de la barre d'outils. */
+function stageBounds(margin){
+  const tb=document.querySelector('.toolbar');
+  const topbar=document.querySelector('.topbar');
+  const top=(topbar?topbar.getBoundingClientRect().bottom:56)+margin;
+  const bottom=(tb?tb.getBoundingClientRect().top:window.innerHeight)-margin;
+  return {minX:margin, maxX:window.innerWidth-margin, minY:top, maxY:Math.max(top,bottom)};
+}
 /* Guide visuel des zones de placement (affiché pendant un drag). */
 function showGuide(mode){const g=$('dropGuide');if(!g)return;g.setAttribute('data-mode',mode);g.classList.add('show');}
 function hideGuide(){const g=$('dropGuide');if(g)g.classList.remove('show');}
@@ -827,8 +853,8 @@ function renderOrbs(){
     wrap.appendChild(col);
     // === drag : placer la bulle où on veut autour de la carte ===
     let drag=null;
-    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:o.x,y0:o.y,lw:lr.width||1,lh:lr.height||1,moved:false};wrap.classList.add('dragging');showGuide('orb');});
-    wrap.addEventListener('pointermove',e=>{if(!drag)return;const ddx=(e.clientX-drag.mx)/drag.lw*100,ddy=(e.clientY-drag.my)/drag.lh*100;if(Math.abs(ddx)+Math.abs(ddy)>1.2)drag.moved=true;o.x=clamp(drag.x0+ddx,-55,155);o.y=clamp(drag.y0+ddy,-45,145);wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
+    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const or=orb.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};wrap.classList.add('dragging');showGuide('orb');});
+    wrap.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.mx)+Math.abs(e.clientY-drag.my)>2)drag.moved=true;const bnd=stageBounds(D/2+10);const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();o.x=(cx-lr.left)/lr.width*100;o.y=(cy-lr.top)/lr.height*100;wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
     const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');hideGuide();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved)persist();};
     wrap.addEventListener('pointerup',endDrag);wrap.addEventListener('pointercancel',endDrag);
     layer.appendChild(wrap);
@@ -872,8 +898,8 @@ function makeSticker(g,idx,layer){
   el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.gifs.splice(idx,1);renderGifs();toast('GIF retiré');const h=document.getElementById('gifHint');if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;});
   // déplacer
   let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:g.x,y0:g.y,lw:lr.width,lh:lr.height};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
-  el.addEventListener('pointermove',e=>{if(!drag)return;g.x=clamp(drag.x0+(e.clientX-drag.mx)/drag.lw*100,-10,110);g.y=clamp(drag.y0+(e.clientY-drag.my)/drag.lh*100,-10,110);apply();});
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
+  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();g.x=(cx-lr.left)/lr.width*100;g.y=(cy-lr.top)/lr.height*100;apply();});
   const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   // taille
@@ -963,22 +989,24 @@ const CONN_APPS=[
   {id:'x',name:'X',color:'ffffff'},
   {id:'instagram',name:'Instagram',color:'E4405F'},
   {id:'tiktok',name:'TikTok',color:'ffffff'},
-  {id:'discord',name:'Discord',color:'5865F2'},
   {id:'riotgames',name:'Riot Games',color:'EB0029'},
   {id:'epicgames',name:'Epic Games',color:'ffffff'},
-  {id:'github',name:'GitHub',color:'ffffff'},
-  {id:'reddit',name:'Reddit',color:'FF4500'},
 ];
 const connLogo=a=>`https://cdn.simpleicons.org/${a.id}/${a.color}`;
-const CONN_CHECK='<span class="conn-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>';
+const CONN_DEL='<span class="conn-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>';
 function renderConnections(){
   const box=$('connections'); if(!box) return; box.innerHTML='';
-  CONN_APPS.forEach(a=>{
+  // Apps connectées affichées en premier.
+  const ordered=CONN_APPS.slice().sort((a,b)=>(S.connections[a.id]?0:1)-(S.connections[b.id]?0:1));
+  ordered.forEach(a=>{
     const set=!!(S.connections&&S.connections[a.id]);
     const b=document.createElement('button'); b.type='button'; b.className='conn'+(set?' set':'');
     b.title=set?`${a.name} : ${S.connections[a.id]}`:`Ajouter ${a.name}`;
-    b.innerHTML=`<img src="${connLogo(a)}" alt="${esc(a.name)}" loading="lazy">${CONN_CHECK}`;
-    b.addEventListener('click',()=>openConnPop(a));
+    b.innerHTML=`<img src="${connLogo(a)}" alt="${esc(a.name)}" loading="lazy">`+(set?CONN_DEL:'');
+    b.addEventListener('click',e=>{
+      if(e.target.closest('.conn-del')){ e.stopPropagation(); delete S.connections[a.id]; renderConnections(); persist(); toast('Connexion retirée'); return; }
+      openConnPop(a);
+    });
     box.appendChild(b);
   });
 }
@@ -1026,9 +1054,11 @@ async function resyncDiscord(){
   }catch(_){ toast('Erreur réseau'); }
   finally{ btn&&btn.classList.remove('spinning'); }
 }
-$('btnResync').addEventListener('click',resyncDiscord);
+$('btnResync').addEventListener('click',()=>{ $('discModal').classList.add('open'); });
+$('discCancel').addEventListener('click',()=>$('discModal').classList.remove('open'));
+$('discOk').addEventListener('click',()=>{ $('discModal').classList.remove('open'); resyncDiscord(); });
 
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('connPop').hidden)closeConnPop();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('discModal').classList.contains('open'))$('discModal').classList.remove('open');else if(!$('connPop').hidden)closeConnPop();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
 /* ===================================================================
    PONT avec le vrai profil Tindord (localStorage tindord_state, même
@@ -1047,7 +1077,8 @@ function writeState(){
   if(S.banner){ st.user.bannerUrl=S.banner.url; st.user.bannerCustom=true; }
   st.user.profileColor=S.c1; st.user.profileColor2=S.c2;
   if(S.bg.type==='preset') st.user.boostBg=S.bg.value;
-  st.profile.userOrbs=S.orbs.map(o=>({kind:o.kind,title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,x:o.x,y:o.y}));
+  // x/y = % de la carte (50=centre) pour l'éditeur ; customX/customY = fractions depuis le centre, lues par la carte de swipe.
+  st.profile.userOrbs=S.orbs.map(o=>{const r={kind:o.kind,title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,x:o.x,y:o.y};if(typeof o.x==='number'&&typeof o.y==='number'){r.customX=(o.x-50)/100;r.customY=(o.y-50)/100;}return r;});
   st.user.gifs=S.gifs.map(g=>({preview:g.url,full:g.url,x:g.x,y:g.y,w:g.w,rot:g.rot}));
   if(S.music) st.user.swipeMusic={title:S.music.title,artist:S.music.artist,cover:S.music.cover,previewUrl:S.music.previewUrl,startSec:S.music.startSec};
   if(S.voice) st.user.profileVoice=S.voice.url;
@@ -1087,7 +1118,9 @@ function hydrateFromSite(){
   }
   if(u.boostBg){ applyBg({type:'preset',value:u.boostBg}); }
   if(Array.isArray(p.userOrbs)&&p.userOrbs.length){
-    S.orbs=p.userOrbs.map(o=>({kind:(o.kind==='anime'?'film':o.kind),title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,x:typeof o.x==='number'?o.x:undefined,y:typeof o.y==='number'?o.y:undefined}))
+    S.orbs=p.userOrbs.map(o=>({kind:(o.kind==='anime'?'film':o.kind),title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,
+        x:typeof o.x==='number'?o.x:(typeof o.customX==='number'?50+o.customX*100:undefined),
+        y:typeof o.y==='number'?o.y:(typeof o.customY==='number'?50+o.customY*100:undefined)}))
       .filter(o=>['music','game','film'].includes(o.kind)).slice(0,ORB_MAX);
     renderOrbs();
   }
