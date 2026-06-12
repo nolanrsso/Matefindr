@@ -5650,20 +5650,28 @@
     }
 
     /* SELECT tous les autres profils (cache 30s pour ne pas spam). */
+    let _profilesInFlight = null;
     async function fetchOtherProfiles(force){
-      try {
-        if (!window.__supa) return _remoteProfiles;
-        if (!force && Date.now() - _remoteFetchedAt < 30000) return _remoteProfiles;
-        const { data: { session } } = await window.__supa.auth.getSession();
-        const myId = session && session.user && session.user.id;
-        let q = window.__supa.from('profiles').select('*').order('updated_at', { ascending: false }).limit(200);
-        if (myId) q = q.neq('id', myId);
-        const { data, error } = await q;
-        if (error) { console.warn('[Tindord] fetch profiles failed', error.message || error); return _remoteProfiles; }
-        _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean);
-        _remoteFetchedAt = Date.now();
-        return _remoteProfiles;
-      } catch (e) { console.warn('[Tindord] fetch profiles error', e); return _remoteProfiles; }
+      if (!window.__supa) return _remoteProfiles;
+      if (!force && Date.now() - _remoteFetchedAt < 30000) return _remoteProfiles;
+      if (_profilesInFlight) return _profilesInFlight; // évite les requêtes concurrentes (lag)
+      _profilesInFlight = (async () => {
+        try {
+          const { data: { session } } = await window.__supa.auth.getSession();
+          const myId = session && session.user && session.user.id;
+          let q = window.__supa.from('profiles').select('*').order('updated_at', { ascending: false }).limit(200);
+          if (myId) q = q.neq('id', myId);
+          // Timeout 8s : un Supabase lent ne doit jamais bloquer indéfiniment.
+          const result = await Promise.race([q, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]);
+          const { data, error } = result;
+          if (error) { console.warn('[Tindord] fetch profiles failed', error.message || error); return _remoteProfiles; }
+          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean);
+          _remoteFetchedAt = Date.now();
+          return _remoteProfiles;
+        } catch (e) { console.warn('[Tindord] fetch profiles error', e); return _remoteProfiles; }
+        finally { _profilesInFlight = null; }
+      })();
+      return _profilesInFlight;
     }
     window.__fetchOtherProfiles = fetchOtherProfiles;
 
@@ -5726,10 +5734,17 @@
       const accept = map[f] || [];
       return pool.filter(p => accept.includes(p.gender));
     }
-    async function ensureDeck(){
-      // Rafraichit la liste depuis Supabase (cache 30s)
-      await fetchOtherProfiles();
-      return ensureDeckSync();
+    function ensureDeck(){
+      // Rendu IMMÉDIAT (depuis le cache + ta propre carte) → jamais d'écran blanc/bloqué
+      // en attendant le réseau Supabase. Le rafraîchissement se fait en arrière-plan.
+      ensureDeckSync();
+      const wasEmpty = document.body.getAttribute('data-swipe-empty') === 'true';
+      fetchOtherProfiles().then(() => {
+        if (document.body.getAttribute('data-screen') !== 'swipe') return;
+        // On ne re-rend QUE si on était sur le deck vide et que de nouveaux profils sont arrivés
+        // (évite de relancer la musique / faire clignoter la carte déjà affichée).
+        if (wasEmpty) ensureDeckSync();
+      }).catch(() => {});
     }
     function ensureDeckSync(){
       const wrap = document.getElementById('swipeWrap');
@@ -7292,21 +7307,32 @@
       const me = RT.myId; if (!me) return;
       try {
         // 1) nouveaux matchs : ceux pas encore connus (convoByMatch fait office de curseur)
-        const { data: matches } = await window.__supa.from('matches').select('*')
+        const { data: matches, error: mErr } = await window.__supa.from('matches').select('*')
           .or(`user_a.eq.${me},user_b.eq.${me}`).order('created_at', { ascending:true }).limit(100);
+        if (mErr) throw mErr;
         if (matches) for (const m of matches) { if (!RT.convoByMatch.has(m.id)) rtHandleNewMatch(m); }
         // 2) nouveaux messages : derniers messages de mes convos, on traite les ID jamais vus
         const ids = Array.from(RT.convoByMatch.keys());
         if (ids.length) {
-          const { data: msgs } = await window.__supa.from('messages').select('*')
+          const { data: msgs, error: msgErr } = await window.__supa.from('messages').select('*')
             .in('match_id', ids).order('created_at', { ascending:false }).limit(60);
+          if (msgErr) throw msgErr;
           if (msgs) msgs.slice().reverse().forEach(row => {
             if (RT.seenMsgIds.has(row.id)) return;
             RT.seenMsgIds.add(row.id);
             if (row.sender_id !== me) rtHandleIncomingMessage(row);
           });
         }
-      } catch(_){}
+        RT.pollFails = 0;
+      } catch(e){
+        // Coupe-circuit : si matches/messages n'existent pas (SQL pas encore lancé),
+        // on arrête le sondage après 3 échecs pour ne pas marteler Supabase (cause de lag).
+        RT.pollFails = (RT.pollFails || 0) + 1;
+        if (RT.pollFails >= 3 && RT.pollTimer) {
+          clearInterval(RT.pollTimer); RT.pollTimer = null;
+          console.warn('[Tindord] sondage Realtime arrêté (tables matches/messages manquantes ?)', e && e.message);
+        }
+      }
     }
     // Abonnement Realtime (idempotent).
     async function rtStart(){
