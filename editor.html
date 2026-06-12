@@ -171,16 +171,16 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
   /* Identique à la vraie carte (.swipe-card .avatar-wrap) : 140px, anneau 8px, top 74 / left 20 */
   position:absolute;left:20px;top:74px;
   width:140px;height:140px;border-radius:50%;cursor:pointer;z-index:3;
-  border:8px solid var(--card);overflow:visible; /* visible → la déco peut dépasser du cercle */
+  border:8px solid var(--card);overflow:hidden; /* clippe l'image (zoom inclus) dans le cercle */
   background:linear-gradient(135deg, var(--pink), var(--violet));
   box-shadow:0 8px 26px rgba(145,70,255,.5);
 }
-.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%} /* l'image se clippe elle-même en cercle */
-.avatar .ph{width:100%;height:100%;display:grid;place-items:center;font-size:52px;font-weight:800;font-family:"Clash Display",sans-serif;color:#fff;border-radius:50%}
-/* Décoration d'avatar Discord (déposée par-dessus, dépasse comme sur la vraie carte) */
-.avatar .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain;pointer-events:none;z-index:4}
-/* Point de statut (en ligne) — comme la carte de swipe */
-.avatar .status-dot{position:absolute;right:2px;bottom:2px;width:22px;height:22px;border-radius:50%;border:5px solid var(--card);box-sizing:content-box;z-index:5;background:#3ba55d}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar .ph{width:100%;height:100%;display:grid;place-items:center;font-size:52px;font-weight:800;font-family:"Clash Display",sans-serif;color:#fff}
+/* Couche séparée (NON clippée) pour la déco + le statut, alignée sur l'avatar → la déco peut dépasser. */
+.avatar-deco{position:absolute;left:20px;top:74px;width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:6}
+.avatar-deco .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain}
+.avatar-deco .status-dot{position:absolute;right:2px;bottom:2px;width:22px;height:22px;border-radius:50%;border:5px solid var(--card);box-sizing:content-box;background:#3ba55d}
 .body{position:relative;padding:96px 18px 18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
 .username{
   margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.05;
@@ -194,6 +194,9 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .label-mini{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.65);text-transform:uppercase;margin-bottom:-6px}
 .voice{display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:13px;cursor:pointer;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12)}
 .voice .vp{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:rgba(0,0,0,.35);color:#fff;transition:transform .15s ease}
+.voice .vmic{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(135deg,#9146FF,#6B2BFF);color:#fff;box-shadow:0 4px 14px rgba(107,43,255,.4)}
+.voice .vmic svg{width:18px;height:18px}
+.voice:hover .vmic{transform:scale(1.06)}
 .voice:hover .vp{transform:scale(1.08)}
 .voice .vw{flex:1;display:flex;align-items:center;gap:2.5px;height:26px}
 .voice .vw i{width:3px;border-radius:2px;background:rgba(255,255,255,.85)}
@@ -269,6 +272,34 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .tool--preview:hover{background:rgba(145,70,255,.18);color:#fff}
 .tool--back{color:#FF9DB6}
 .tool--back:hover{background:rgba(255,79,160,.16);color:#fff}
+
+/* Bouton resync Discord (topbar) */
+.top-btn--resync{color:#9FE9FF}
+.top-btn--resync.spinning svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Connexions (logos d'apps) */
+.connections{display:flex;flex-wrap:wrap;gap:9px}
+.conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease;padding:0}
+.conn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.3)}
+.conn img{width:22px;height:22px;object-fit:contain;opacity:.5;transition:opacity .14s}
+.conn.set{border-color:rgba(91,233,255,.5);background:rgba(91,233,255,.10)}
+.conn.set img{opacity:1}
+.conn .conn-check{position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;background:#3BD17C;border:2px solid var(--card);display:none;place-items:center}
+.conn.set .conn-check{display:grid}
+.conn .conn-check svg{width:9px;height:9px;color:#0c2a18}
+/* popover pseudo */
+.conn-pop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:85;width:min(90vw,320px);padding:16px;border-radius:18px;
+  background:linear-gradient(180deg, rgba(28,22,58,.98), rgba(18,12,42,.98));border:1px solid var(--stroke-2);box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.conn-pop[hidden]{display:none}
+.conn-pop-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.conn-pop-head img{width:26px;height:26px;object-fit:contain}
+.conn-pop-head b{font-size:15px}
+.conn-pop input{width:100%;padding:11px 13px;border-radius:11px;font:inherit;color:#fff;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2);outline:none}
+.conn-pop input:focus{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
+.conn-pop-actions{display:flex;justify-content:space-between;gap:9px;margin-top:13px}
+.conn-pop-backdrop{position:fixed;inset:0;z-index:84;background:rgba(8,9,14,.55);backdrop-filter:blur(6px)}
+.conn-pop-backdrop[hidden]{display:none}
 .hide-card #card{opacity:0;pointer-events:none}
 .hide-orbs #orbLayer{opacity:0;pointer-events:none}
 .hide-gifs #stickerLayer{opacity:0;pointer-events:none}
@@ -390,6 +421,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 
 <header class="topbar">
   <img src="assets/logo.svg" alt="Tindord" class="logo">
+  <button class="top-btn top-btn--resync" id="btnResync" title="Re-synchroniser avatar, bannière et déco depuis Discord"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Mettre à jour Discord</span></button>
   <span class="crumb">/ éditeur de profil</span>
   <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
 </header>
@@ -403,13 +435,16 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
     <section class="card" id="card">
       <div class="banner editable" id="bannerSlot" title="Changer la bannière"><div class="ph">Clique pour ajouter une bannière (image ou GIF)</div></div>
       <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
+      <div class="avatar-deco" id="avatarDeco" aria-hidden="true"></div>
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Tindord_user</h1>
         <div class="tag">@tindord · en ligne sur Tindord</div>
         <div class="divider"></div>
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
-        <div class="voice editable" id="voiceSlot"><span class="empty">Clique pour enregistrer un vocal</span></div>
+        <div class="voice editable" id="voiceSlot"><span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span><span class="empty">Clique pour enregistrer un vocal</span></div>
+        <div class="label-mini">Connexions</div>
+        <div class="connections" id="connections"></div>
       </div>
     </section>
   </div>
@@ -434,6 +469,14 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 </nav>
 
 <div class="music-now" id="musicNow" title="Écouter / pause"></div>
+
+<!-- Petit popover pour saisir le pseudo d'une connexion -->
+<div class="conn-pop-backdrop" id="connBackdrop" hidden></div>
+<div class="conn-pop" id="connPop" hidden>
+  <div class="conn-pop-head"><img id="connPopLogo" alt=""><b id="connPopName"></b></div>
+  <input id="connPopInput" maxlength="40" placeholder="Ton pseudo sur l'app…" autocomplete="off">
+  <div class="conn-pop-actions"><button class="btn ghost-danger" id="connPopRemove">Retirer</button><button class="btn primary" id="connPopSave">Enregistrer</button></div>
+</div>
 
 <div class="sheet" id="sheet"></div>
 
@@ -475,6 +518,7 @@ const S = {
   c1:'#9146FF', c2:'#4a1bc1',
   orbs:[],     // {kind,title,sub,cover}
   gifs:[],     // {url,x,y,w,rot}   (x,y = % carte, w = % largeur carte)
+  connections:{}, // {appId: pseudo}
 };
 let toastT=null; function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
 
@@ -551,7 +595,8 @@ $('recClose').addEventListener('click',closeVoiceModal);
 $('recDiscard').addEventListener('click',()=>{if(rec.url){URL.revokeObjectURL(rec.url);rec.url=null;}$('recPrev').hidden=true;$('recOk').disabled=true;$('recTimer').textContent='0:00';drawIdleWave();});
 $('recOk').addEventListener('click',()=>{if(!rec.url)return;S.voice={url:rec.url,dur:rec.dur};rec.url=null;renderVoice();persist();closeVoiceModal();toast('Vocal enregistré sur ton profil');});
 let voiceAudio=null;
-function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML='<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.textContent='▶';const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);slot.append(play,wave,t);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.textContent='▶';return;}voiceAudio=new Audio(S.voice.url);voiceAudio.play();play.textContent='⏸';voiceAudio.addEventListener('ended',()=>play.textContent='▶');});}
+const VMIC_SVG='<span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span>';
+function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.textContent='▶';const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);slot.append(play,wave,t);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.textContent='▶';return;}voiceAudio=new Audio(S.voice.url);voiceAudio.play();play.textContent='⏸';voiceAudio.addEventListener('ended',()=>play.textContent='▶');});}
 
 /* ===== SHEET ===== */
 let activeTool=null;
@@ -909,7 +954,81 @@ document.querySelectorAll('.eye-dot').forEach(btn=>{
   });
 });
 
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
+/* ===== CONNEXIONS (logos d'apps + pseudo, façon Discord) ===== */
+const CONN_APPS=[
+  {id:'spotify',name:'Spotify',color:'1DB954'},
+  {id:'steam',name:'Steam',color:'ffffff'},
+  {id:'twitch',name:'Twitch',color:'9146FF'},
+  {id:'youtube',name:'YouTube',color:'FF0000'},
+  {id:'x',name:'X',color:'ffffff'},
+  {id:'instagram',name:'Instagram',color:'E4405F'},
+  {id:'tiktok',name:'TikTok',color:'ffffff'},
+  {id:'discord',name:'Discord',color:'5865F2'},
+  {id:'riotgames',name:'Riot Games',color:'EB0029'},
+  {id:'epicgames',name:'Epic Games',color:'ffffff'},
+  {id:'github',name:'GitHub',color:'ffffff'},
+  {id:'reddit',name:'Reddit',color:'FF4500'},
+];
+const connLogo=a=>`https://cdn.simpleicons.org/${a.id}/${a.color}`;
+const CONN_CHECK='<span class="conn-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>';
+function renderConnections(){
+  const box=$('connections'); if(!box) return; box.innerHTML='';
+  CONN_APPS.forEach(a=>{
+    const set=!!(S.connections&&S.connections[a.id]);
+    const b=document.createElement('button'); b.type='button'; b.className='conn'+(set?' set':'');
+    b.title=set?`${a.name} : ${S.connections[a.id]}`:`Ajouter ${a.name}`;
+    b.innerHTML=`<img src="${connLogo(a)}" alt="${esc(a.name)}" loading="lazy">${CONN_CHECK}`;
+    b.addEventListener('click',()=>openConnPop(a));
+    box.appendChild(b);
+  });
+}
+let _connApp=null;
+function openConnPop(a){
+  _connApp=a;
+  $('connPopLogo').src=connLogo(a); $('connPopName').textContent=a.name;
+  $('connPopInput').value=(S.connections&&S.connections[a.id])||'';
+  $('connPopRemove').style.display=(S.connections&&S.connections[a.id])?'':'none';
+  $('connBackdrop').hidden=false; $('connPop').hidden=false;
+  setTimeout(()=>$('connPopInput').focus(),50);
+}
+function closeConnPop(){ $('connBackdrop').hidden=true; $('connPop').hidden=true; _connApp=null; }
+$('connPopSave').addEventListener('click',()=>{
+  if(!_connApp)return; const v=$('connPopInput').value.trim();
+  if(v) S.connections[_connApp.id]=v; else delete S.connections[_connApp.id];
+  renderConnections(); persist(); closeConnPop(); toast('Connexion enregistrée');
+});
+$('connPopRemove').addEventListener('click',()=>{ if(!_connApp)return; delete S.connections[_connApp.id]; renderConnections(); persist(); closeConnPop(); toast('Connexion retirée'); });
+$('connPopInput').addEventListener('keydown',e=>{ if(e.key==='Enter')$('connPopSave').click(); });
+$('connBackdrop').addEventListener('click',closeConnPop);
+renderConnections();
+
+/* ===== REMETTRE À JOUR LE PROFIL DISCORD (re-fetch via le token stocké) ===== */
+async function resyncDiscord(){
+  const token=localStorage.getItem('tindord_discord_token');
+  if(!token){ toast('Reconnecte-toi sur le site d\'abord'); return; }
+  const btn=$('btnResync'); btn&&btn.classList.add('spinning');
+  try{
+    const r=await fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok){ toast('Échec — reconnecte-toi sur le site'); return; }
+    const d=await r.json();
+    const ext=h=>h&&h.startsWith('a_')?'gif':'png';
+    const st=readSite(); st.user=st.user||{};
+    if(d.id) st.user.discordId=d.id;
+    st.user.displayName=d.global_name||d.username||st.user.displayName;
+    st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
+    if(d.avatar) st.user.avatarUrl=`https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.${ext(d.avatar)}?size=256`;
+    if(!st.user.bannerCustom) st.user.bannerUrl=d.banner?`https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext(d.banner)}?size=600`:null;
+    st.user.decorationUrl=d.avatar_decoration_data&&d.avatar_decoration_data.asset?`https://cdn.discordapp.com/avatar-decoration-presets/${d.avatar_decoration_data.asset}.png?size=128`:st.user.decorationUrl;
+    localStorage.setItem(STATE_KEY,JSON.stringify(st));
+    // recharge la carte depuis l'état mis à jour
+    S.banner=null; hydrateFromSite();
+    toast('✅ Profil Discord mis à jour');
+  }catch(_){ toast('Erreur réseau'); }
+  finally{ btn&&btn.classList.remove('spinning'); }
+}
+$('btnResync').addEventListener('click',resyncDiscord);
+
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('connPop').hidden)closeConnPop();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
 /* ===================================================================
    PONT avec le vrai profil Tindord (localStorage tindord_state, même
@@ -932,6 +1051,7 @@ function writeState(){
   st.user.gifs=S.gifs.map(g=>({preview:g.url,full:g.url,x:g.x,y:g.y,w:g.w,rot:g.rot}));
   if(S.music) st.user.swipeMusic={title:S.music.title,artist:S.music.artist,cover:S.music.cover,previewUrl:S.music.previewUrl,startSec:S.music.startSec};
   if(S.voice) st.user.profileVoice=S.voice.url;
+  st.profile.connections=Object.assign({},S.connections);
   try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
 }
 function persist(){ clearTimeout(_persistT); _persistT=setTimeout(writeState,400); }
@@ -940,10 +1060,10 @@ window.__persist = persist;
 /* Décoration d'avatar Discord + point de statut, déposés par-dessus l'avatar (réappliqués après tout setCroppedMedia). */
 let _decorationUrl=null;
 function applyAvatarDeco(){
-  const slot=$('avatarSlot'); if(!slot) return;
-  slot.querySelectorAll('.avi-deco,.status-dot').forEach(e=>e.remove());
-  const dot=document.createElement('span'); dot.className='status-dot'; dot.title='En ligne'; slot.appendChild(dot);
-  if(_decorationUrl){ const d=document.createElement('img'); d.className='avi-deco'; d.src=_decorationUrl; d.alt=''; slot.appendChild(d); }
+  const layer=$('avatarDeco'); if(!layer) return;
+  layer.innerHTML='';
+  const dot=document.createElement('span'); dot.className='status-dot'; dot.title='En ligne'; layer.appendChild(dot);
+  if(_decorationUrl){ const d=document.createElement('img'); d.className='avi-deco'; d.src=_decorationUrl; d.alt=''; layer.appendChild(d); }
 }
 function hydrateFromSite(){
   const st=readSite(); const u=st.user||{}, p=st.profile||{};
@@ -977,6 +1097,7 @@ function hydrateFromSite(){
   }
   if(u.swipeMusic){ S.music={title:u.swipeMusic.title,artist:u.swipeMusic.artist||'',cover:u.swipeMusic.cover||'',previewUrl:u.swipeMusic.previewUrl||'',durSec:30,startSec:u.swipeMusic.startSec||0}; renderMusicChip(); }
   if(u.profileVoice){ S.voice={url:u.profileVoice,dur:5}; renderVoice(); }
+  if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); if(typeof renderConnections==='function') renderConnections(); }
 }
 
 applyColor(S.c1);
