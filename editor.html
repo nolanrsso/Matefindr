@@ -85,6 +85,17 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .stage{position:fixed;inset:0;z-index:2;display:grid;place-items:center;padding:70px 16px 110px}
 .card-zone{position:relative}
 
+/* ===================== ZONES DE PLACEMENT (guide visible pendant le drag) ===================== */
+.drop-guide{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .16s ease}
+.drop-guide.show{opacity:1}
+.drop-guide .gz{position:absolute;inset:0;border:2px dashed rgba(145,70,255,.6);border-radius:20px;box-shadow:0 0 0 9999px rgba(13,11,30,.28)}
+.drop-guide .gz::after{content:"Zone GIFs";position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.06em;color:#C7A5FF;text-transform:uppercase}
+.drop-guide .oz{position:absolute;inset:-26% -52%;border:2px dashed rgba(91,233,255,.5);border-radius:50%}
+.drop-guide .oz::after{content:"Zone bulles";position:absolute;top:4px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;letter-spacing:.06em;color:#9FE9FF;text-transform:uppercase}
+.drop-guide[data-mode="gif"] .oz{display:none}
+.drop-guide[data-mode="orb"] .gz{opacity:.35}
+.drop-guide[data-mode="orb"] .gz::after{display:none}
+
 /* ===================== BULLES (orbes d'intérêt, comme le site) ===================== */
 .orb-layer{position:absolute;inset:0;z-index:4;pointer-events:none}
 .orb-wrap{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;animation:orbFloat 5s ease-in-out infinite;touch-action:none}
@@ -94,25 +105,27 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .orb-wrap.dragging .orb{cursor:grabbing}
 @keyframes orbFloat{0%,100%{transform:translate(-50%,-50%)}50%{transform:translate(-50%,calc(-50% - 8px))}}
 .orb{
-  position:relative;width:78px;height:78px;border-radius:50%;overflow:hidden;cursor:grab;
+  /* overflow NON masqué → le bouton ✕ (qui dépasse) reste cliquable. L'image est clippée en cercle elle-même. */
+  position:relative;width:78px;height:78px;border-radius:50%;cursor:grab;
   display:grid;place-items:center;color:#fff;background:#1c1d22;
   border:2px solid rgba(255,255,255,.25);
   box-shadow:0 12px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06) inset;
   transition:transform .18s ease, box-shadow .18s ease;
 }
 .orb:hover{transform:scale(1.08)}
-.orb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.orb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .orb svg{width:32px;height:32px;position:relative;z-index:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
 .orb[data-kind="music"]{border-color:rgba(80,255,150,.85);box-shadow:0 0 0 2px rgba(29,185,84,.4),0 0 22px 4px rgba(30,215,96,.7),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="game"]{border-color:rgba(141,203,255,.9);box-shadow:0 0 0 2px rgba(47,123,216,.5),0 0 22px 4px rgba(141,203,255,.7),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="film"]{border-color:rgba(199,165,255,.85);box-shadow:0 0 0 2px rgba(139,92,246,.5),0 0 22px 4px rgba(199,165,255,.7),0 12px 30px rgba(0,0,0,.5)}
 .orb-del{
-  position:absolute;top:-4px;right:-4px;width:22px;height:22px;border-radius:50%;z-index:3;
-  background:linear-gradient(135deg,#FF4FA0,#C92866);color:#fff;border:1.5px solid #0d0b1e;
-  display:grid;place-items:center;font-size:11px;font-weight:800;cursor:pointer;
-  opacity:0;transform:scale(.6);transition:.15s ease;box-shadow:0 3px 9px rgba(255,79,160,.55);
+  /* Toujours visible (plus de clipping) → on peut retirer la bulle d'un clic. */
+  position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;z-index:6;
+  background:linear-gradient(135deg,#FF4FA0,#C92866);color:#fff;border:2px solid #0d0b1e;
+  display:grid;place-items:center;font-size:13px;font-weight:800;cursor:pointer;line-height:1;
+  opacity:1;transform:scale(1);transition:transform .12s ease;box-shadow:0 3px 10px rgba(255,79,160,.6);
 }
-.orb-wrap:hover .orb-del{opacity:1;transform:scale(1)}
+.orb-del:hover{transform:scale(1.15)}
 .orb-label{
   margin-top:6px;text-align:center;font-size:10.5px;font-weight:700;color:#fff;max-width:96px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 8px rgba(0,0,0,.9);
@@ -134,7 +147,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 
 /* ===================== CARTE DE PROFIL (style .swipe-card) ===================== */
 .card{
-  position:relative;z-index:3;width:min(92vw,400px);
+  position:relative;z-index:3;width:min(92vw,380px);
   border-radius:20px;overflow:hidden;
   background:linear-gradient(180deg, var(--c1) 0%, var(--c2) 100%);
   border:1px solid rgba(255,255,255,.06);
@@ -370,6 +383,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 
 <main class="stage">
   <div class="card-zone">
+    <div class="drop-guide" id="dropGuide"><div class="oz"></div><div class="gz"></div></div>
     <div class="sticker-layer" id="stickerLayer"></div>
     <div class="orb-layer" id="orbLayer"></div>
     <button class="eye-dot eye-dot--card" data-eye="card" title="Afficher / masquer la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -702,28 +716,47 @@ function addOrb(o){
   toast('Bulle ajoutée');
 }
 /* layout : colonnes symétriques gauche/droite, max 3 par colonne (comme orbRelLayout) */
+/* Guide visuel des zones de placement (affiché pendant un drag). */
+function showGuide(mode){const g=$('dropGuide');if(!g)return;g.setAttribute('data-mode',mode);g.classList.add('show');}
+function hideGuide(){const g=$('dropGuide');if(g)g.classList.remove('show');}
+/* MÊMES constantes que la carte de swipe (index.html ORB_LAYOUT) → placement identique. */
+const ORB_LAYOUT={COL0:0.735,COL_GAP:0.42,ROW_STEP:0.215,MAX_PER_COL:4};
+/* Hauteur de référence = ratio de la vraie carte de swipe (380 × 620) → l'écart vertical
+   des bulles est identique à l'écran de swipe, peu importe la hauteur réelle de la carte éditeur. */
+const SWIPE_CARD_ASPECT=620/380;
 function orbLayout(n){
-  const left=[],right=[];for(let i=0;i<n;i++)(i%2===0?left:right).push(i);
+  const {COL0,COL_GAP,ROW_STEP,MAX_PER_COL}=ORB_LAYOUT;
   const pos=new Array(n);
-  const place=(arr,sign)=>{const COL0=0.62,STEP=0.26;arr.forEach((idx,k)=>{const c=Math.floor(k/3);const row=k%3;const rx=sign*(COL0+c*0.34);const startRy=-((Math.min(arr.length-c*3,3)-1)*STEP)/2;pos[idx]={rx,ry:startRy+row*STEP};});};
-  place(left,-1);place(right,1);
+  const sides=[[],[]];for(let i=0;i<n;i++)sides[i%2].push(i);
+  sides.forEach((arr,s)=>{const sign=s===0?-1:1;
+    for(let c=0;c*MAX_PER_COL<arr.length;c++){
+      const chunk=arr.slice(c*MAX_PER_COL,c*MAX_PER_COL+MAX_PER_COL);
+      const rx=sign*(COL0+c*COL_GAP);
+      const startRy=-((chunk.length-1)*ROW_STEP)/2;
+      chunk.forEach((idx,r)=>pos[idx]={rx,ry:startRy+r*ROW_STEP});
+    }
+  });
   return pos;
 }
 function renderOrbs(){
   const layer=$('orbLayer'); layer.innerHTML='';
-  // Taille PROPORTIONNELLE à la carte → vrai aperçu (même ratio que le site : orbe ≈ 25% de la carte)
-  const cardW=(document.getElementById('card')&&document.getElementById('card').offsetWidth)||380;
-  const D=Math.round(cardW*0.25);
-  // positions par défaut (layout symétrique) seulement pour les bulles non encore placées
+  const card=document.getElementById('card');
+  const cardW=(card&&card.offsetWidth)||380;
+  const cardH=(card&&card.offsetHeight)||(cardW*SWIPE_CARD_ASPECT);
+  // Orbe = 115px sur une carte de 380 (ratio exact du swipe ≈ 0.302).
+  const D=Math.round(cardW*0.302);
+  // ry est une fraction de la HAUTEUR de la carte de swipe → on convertit vers la hauteur réelle.
+  const refH=cardW*SWIPE_CARD_ASPECT;
+  const vScale=refH/cardH; // garde l'écart vertical à l'échelle du swipe
   const pos=orbLayout(S.orbs.length);
   S.orbs.forEach((o,i)=>{
-    if(typeof o.x!=='number'||typeof o.y!=='number'){const p=pos[i];o.x=50+p.rx*100;o.y=50+p.ry*100;}
+    if(typeof o.x!=='number'||typeof o.y!=='number'){const p=pos[i];o.x=50+p.rx*100;o.y=50+p.ry*vScale*100;}
     const wrap=document.createElement('div'); wrap.className='orb-wrap';
     wrap.style.left=o.x+'%'; wrap.style.top=o.y+'%';
     const orb=document.createElement('div'); orb.className='orb'; orb.dataset.kind=o.kind;
     orb.style.width=D+'px'; orb.style.height=D+'px';
     orb.innerHTML = o.cover?`<img src="${o.cover}" alt="">`:ORB_ICON[o.kind];
-    const svg=orb.querySelector('svg'); if(svg){ svg.style.width=Math.round(D*0.42)+'px'; svg.style.height=Math.round(D*0.42)+'px'; }
+    const svg=orb.querySelector('svg'); if(svg){ svg.style.width=Math.round(D*0.34)+'px'; svg.style.height=Math.round(D*0.34)+'px'; }
     const del=document.createElement('div'); del.className='orb-del'; del.textContent='✕';
     del.style.width=Math.round(D*0.28)+'px'; del.style.height=Math.round(D*0.28)+'px'; del.style.fontSize=Math.round(D*0.15)+'px';
     del.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -736,9 +769,9 @@ function renderOrbs(){
     wrap.appendChild(col);
     // === drag : placer la bulle où on veut autour de la carte ===
     let drag=null;
-    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:o.x,y0:o.y,lw:lr.width||1,lh:lr.height||1,moved:false};wrap.classList.add('dragging');});
-    wrap.addEventListener('pointermove',e=>{if(!drag)return;const ddx=(e.clientX-drag.mx)/drag.lw*100,ddy=(e.clientY-drag.my)/drag.lh*100;if(Math.abs(ddx)+Math.abs(ddy)>1.2)drag.moved=true;o.x=clamp(drag.x0+ddx,-45,145);o.y=clamp(drag.y0+ddy,-45,145);wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
-    const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved)persist();};
+    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:o.x,y0:o.y,lw:lr.width||1,lh:lr.height||1,moved:false};wrap.classList.add('dragging');showGuide('orb');});
+    wrap.addEventListener('pointermove',e=>{if(!drag)return;const ddx=(e.clientX-drag.mx)/drag.lw*100,ddy=(e.clientY-drag.my)/drag.lh*100;if(Math.abs(ddx)+Math.abs(ddy)>1.2)drag.moved=true;o.x=clamp(drag.x0+ddx,-55,155);o.y=clamp(drag.y0+ddy,-45,145);wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
+    const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');hideGuide();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved)persist();};
     wrap.addEventListener('pointerup',endDrag);wrap.addEventListener('pointercancel',endDrag);
     layer.appendChild(wrap);
   });
@@ -781,9 +814,9 @@ function makeSticker(g,idx,layer){
   el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.gifs.splice(idx,1);renderGifs();toast('GIF retiré');const h=document.getElementById('gifHint');if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;});
   // déplacer
   let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:g.x,y0:g.y,lw:lr.width,lh:lr.height};el.classList.add('dragging');el.style.zIndex='10';});
-  el.addEventListener('pointermove',e=>{if(!drag)return;g.x=clamp(drag.x0+(e.clientX-drag.mx)/drag.lw*100,-15,115);g.y=clamp(drag.y0+(e.clientY-drag.my)/drag.lh*100,-15,115);apply();});
-  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';try{el.releasePointerCapture(e.pointerId);}catch(_){}const half=g.w/2;if(g.x+half>10&&g.x-half<90&&g.y+half>10&&g.y-half<90)toast('⚠️ Superposition déconseillée sur la carte');persist();};
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const lr=layer.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,x0:g.x,y0:g.y,lw:lr.width,lh:lr.height};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
+  el.addEventListener('pointermove',e=>{if(!drag)return;g.x=clamp(drag.x0+(e.clientX-drag.mx)/drag.lw*100,-10,110);g.y=clamp(drag.y0+(e.clientY-drag.my)/drag.lh*100,-10,110);apply();});
+  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   // taille
   const rz=el.querySelector('.sk-size');
