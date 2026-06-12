@@ -21,6 +21,12 @@
   --violet:#9146FF; --violet-2:#6B2BFF; --pink:#FF7EB6; --pink-2:#FF4FA0; --cyan:#5BE9FF;
 }
 *{box-sizing:border-box}
+/* Scrollbar sombre (cohérent avec le site) */
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:content-box}
 html,body{margin:0;height:100%}
 body{
   background:var(--bg);color:var(--ink);

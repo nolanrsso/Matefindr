@@ -53,6 +53,13 @@
     --stroke-2:  rgba(255,255,255,0.14);
   }
   *{box-sizing:border-box}
+  /* Scrollbar sombre sur tout le site (Firefox + WebKit) */
+  *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:content-box}
+  ::-webkit-scrollbar-corner{background:transparent}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-family:"Inter",system-ui,sans-serif}
   html,body{height:100%;overflow:hidden}
 
@@ -689,19 +696,32 @@
   }
   .msg-back:hover{background:rgba(255,255,255,.08);color:#fff}
   .msg-chat-head .avi{
-    width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
-    font-family:"Clash Display",sans-serif;font-weight:800;font-size:16px;color:#fff;
+    width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:16px;color:#fff;flex:0 0 auto;
   }
-  .msg-chat-head b{font-size:14.5px;font-weight:700;display:block}
+  .msg-chat-head .avi:hover{filter:brightness(1.08)}
+  .msg-chat-id{cursor:pointer;min-width:0}
+  .msg-chat-id:hover b{text-decoration:underline}
+  .msg-chat-head b{font-size:14.5px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .msg-chat-head small{color:#8b8c92;font-size:11.5px}
-  .msg-chat-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px}
+  .msg-close--chat{margin-left:auto;flex:0 0 auto}
+  .msg-chat-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  /* Ligne message = avatar de l'expéditeur + colonne [heure au-dessus, bulle] */
+  .msg-row{display:flex;align-items:flex-end;gap:8px;max-width:100%}
+  .msg-row.me{flex-direction:row-reverse}
+  .msg-avi{width:30px;height:30px;border-radius:50%;flex:0 0 auto;overflow:hidden;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;font-family:"Clash Display",sans-serif}
+  .msg-avi img{width:100%;height:100%;object-fit:cover;display:block}
+  .msg-col{display:flex;flex-direction:column;max-width:74%;min-width:0}
+  .msg-row.me .msg-col{align-items:flex-end}
+  .msg-row.them .msg-col{align-items:flex-start}
+  .msg-time{font-size:9.5px;line-height:1;opacity:.5;margin:0 7px 3px;font-variant-numeric:tabular-nums;color:#b9bbbe}
   .msg-bubble{
-    max-width:78%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;
+    max-width:100%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;
     word-break:break-word;
   }
-  .msg-bubble.them{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:4px}
-  .msg-bubble.me  {align-self:flex-end;background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;border-bottom-right-radius:4px;box-shadow:0 6px 18px rgba(64,78,237,.35)}
-  .msg-bubble .msg-time{display:block;margin-top:3px;font-size:9.5px;line-height:1;opacity:.55;text-align:right;font-variant-numeric:tabular-nums}
+  .msg-bubble.them{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:4px}
+  .msg-bubble.me  {background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;border-bottom-right-radius:4px;box-shadow:0 6px 18px rgba(64,78,237,.35)}
+  .msg-bubble.system{align-self:center;max-width:90%;text-align:center;background:rgba(255,255,255,.04);color:#b9bbbe;font-size:12.5px;border-radius:12px}
   .msg-input{
     flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);
   }
@@ -3995,8 +4015,11 @@
         <button class="msg-back" id="msgBack" type="button" aria-label="Retour">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div class="avi" id="msgChatAvi">A</div>
-        <div><b id="msgChatName">—</b><small id="msgChatSub">—</small></div>
+        <div class="avi" id="msgChatAvi" title="Voir le profil">A</div>
+        <div class="msg-chat-id" title="Voir le profil"><b id="msgChatName">—</b><small id="msgChatSub">—</small></div>
+        <button class="msg-close msg-close--chat" id="msgCloseChat" type="button" aria-label="Fermer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
       </div>
       <div class="msg-chat-body" id="msgChatBody"></div>
       <form class="msg-input" id="msgInput">
@@ -7038,11 +7061,24 @@
       chatAvi.innerHTML = c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : escapeHtml(c.initial || '');
       document.getElementById('msgChatName').textContent = c.name;
       document.getElementById('msgChatSub').textContent = '@' + c.tag;
+      // Clic sur l'avatar / le nom → ouvre le profil de la personne.
+      const openProf = (e) => { if (e) e.stopPropagation(); openConvoProfile(c); };
+      chatAvi.onclick = openProf;
+      const nameWrap = document.getElementById('msgChatName').parentElement;
+      if (nameWrap) nameWrap.onclick = openProf;
       chatBody.innerHTML = '';
-      c.msgs.forEach(m => chatBody.appendChild(msgBubbleEl(m)));
+      c.msgs.forEach(m => chatBody.appendChild(msgBubbleEl(m, c)));
       chatBody.scrollTop = chatBody.scrollHeight;
       setTimeout(() => msgInputField.focus(), 200);
       renderMsgList();
+    }
+    // Ouvre le profil complet d'une personne depuis sa conversation.
+    async function openConvoProfile(c){
+      if (!c) return;
+      let p = null;
+      try { if (c.uid && typeof rtProfile === 'function') p = await rtProfile(c.uid); } catch(_){}
+      if (!p) p = { name:c.name, tag:c.tag, c1:c.c1, c2:c.c2, initial:c.initial, avatarUrl:c.avatarUrl, age:'', orbs:[] };
+      if (typeof openLikerProfile === 'function') openLikerProfile(p);
     }
     function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
@@ -7052,6 +7088,7 @@
       renderMsgList();
     });
     document.getElementById('msgClose').addEventListener('click', () => panel.setAttribute('data-open', 'false'));
+    document.getElementById('msgCloseChat').addEventListener('click', () => panel.setAttribute('data-open', 'false'));
     document.getElementById('msgBack').addEventListener('click', () => { panel.setAttribute('data-view', 'list'); activeConvo = null; });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && panel.getAttribute('data-open') === 'true') {
@@ -7068,7 +7105,7 @@
       activeConvo.last = v;
       activeConvo.t    = t;
       msgInputField.value = '';
-      chatBody.appendChild(msgBubbleEl({ who:'me', text:v, t }));
+      chatBody.appendChild(msgBubbleEl({ who:'me', text:v, t }, activeConvo));
       chatBody.scrollTop = chatBody.scrollHeight;
       // Envoi réel vers Supabase (l'autre le reçoit via Realtime).
       if (activeConvo.matchId && window.__supa) {
@@ -7089,11 +7126,25 @@
        =================================================================== */
     const RT = { myId:null, ready:false, convoByMatch:new Map(), seenMsgIds:new Set(), pollTimer:null };
     function fmtMsgTime(iso){ try { return new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }); } catch(_){ return ''; } }
-    function msgBubbleEl(m){
-      const el = document.createElement('div');
-      el.className = 'msg-bubble ' + m.who;
-      el.innerHTML = escapeHtml(m.text) + ((m.t && m.who !== 'system') ? `<span class="msg-time">${m.t}</span>` : '');
-      return el;
+    function msgBubbleEl(m, c){
+      if (m.who === 'system') {
+        const s = document.createElement('div'); s.className = 'msg-bubble system'; s.textContent = m.text; return s;
+      }
+      const me = m.who === 'me';
+      const u = (state && state.user) || {};
+      const avatarUrl = me ? u.avatarUrl : (c && c.avatarUrl);
+      const initial = me ? ((u.displayName || 'M').charAt(0).toUpperCase()) : ((c && c.initial) || '?');
+      const c1 = me ? '#5865F2' : ((c && c.c1) || '#5865F2');
+      const c2 = me ? '#404EED' : ((c && c.c2) || '#404EED');
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + m.who;
+      row.innerHTML =
+        `<div class="msg-avi" style="background:linear-gradient(135deg,${c1},${c2})">${avatarUrl ? `<img src="${avatarUrl}" alt="">` : escapeHtml(initial)}</div>` +
+        `<div class="msg-col">` +
+          (m.t ? `<span class="msg-time">${m.t}</span>` : '') +
+          `<div class="msg-bubble ${m.who}">${escapeHtml(m.text)}</div>` +
+        `</div>`;
+      return row;
     }
     async function rtMyId(){
       if (RT.myId) return RT.myId;
@@ -7185,7 +7236,7 @@
         c.msgs.push({ who:'them', text:row.body, _id:row.id, t:tm });
         c.last = row.body; c.t = "à l'instant";
         if (activeConvo && activeConvo.matchId === c.matchId) {
-          chatBody.appendChild(msgBubbleEl({ who:'them', text:row.body, t:tm }));
+          chatBody.appendChild(msgBubbleEl({ who:'them', text:row.body, t:tm }, c));
           chatBody.scrollTop = chatBody.scrollHeight;
           c.unread = false;
         } else { c.unread = true; }
