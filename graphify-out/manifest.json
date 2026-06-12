@@ -1,10 +1,386 @@
 {
-  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\.claude\\worktrees\\jovial-dewdney-26eb9d\\index.html": {
-    "mtime": 1779431852.3388581,
-    "hash": "5b748d4c2ae351c50c48dee1b2be8111"
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\supabase\\schema.sql": {
+    "mtime": 1780876942.3763614,
+    "hash": "1a5e8faec1091b883d2100b9de8799fc"
   },
-  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\.claude\\worktrees\\jovial-dewdney-26eb9d\\v2\\index.html": {
-    "mtime": 1779088419.8623238,
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\supabase\\functions\\notify\\index.ts": {
+    "mtime": 1780876942.3743124,
+    "hash": "9e6736896f7298f573e5b07259b6ed75"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\editor.html": {
+    "mtime": 1781264015.4441552,
+    "hash": "f91ad5adebf7ce6532f3eeaf954cff45"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\index.html": {
+    "mtime": 1781245548.6633337,
+    "hash": "3631e3781e4eb0e67c8778c4b2274c88"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\supabase\\README.md": {
+    "mtime": 1780876942.3658068,
+    "hash": "859bde34167aee7d6daf2a75d664b06e"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\tindord\\README.md": {
+    "mtime": 1778807371.0,
+    "hash": "85fdc0a535523c3b610db79bb0c34f04"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\tindord\\chats\\chat1.md": {
+    "mtime": 1778807371.0,
+    "hash": "2eb80f929e475aec665ca8c1d7ac84da"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\tindord\\project\\Tindord Landing.html": {
+    "mtime": 1778807371.0,
+    "hash": "8f7a358c9b2601c790c1256f8f9e5a9c"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\v2\\index.html": {
+    "mtime": 1778810335.1490767,
     "hash": "fefadce0577598d742b6202ec5507315"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\pasted-1778804327034-0.png": {
+    "mtime": 1778808015.700141,
+    "hash": "23051c5188ab367ebc7cd049c4d56a44"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\pasted-1778805277116-0.png": {
+    "mtime": 1778808015.7871635,
+    "hash": "6de8a94069ba670feb73972ff0d1e935"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\logo-gold.png": {
+    "mtime": 1780876942.1011274,
+    "hash": "c6794b64d8689f0893d681b51a9e91d3"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\logo-gold.svg": {
+    "mtime": 1780876942.1051593,
+    "hash": "ff926819b5b4994954477f31e5a3f58b"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\logo.png": {
+    "mtime": 1780876942.1071746,
+    "hash": "96b12f142f3301d99b016df42f6c9cdb"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\logo.svg": {
+    "mtime": 1780876942.1071746,
+    "hash": "32649e51544735eea020431f8ba160c9"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\apex-legends.png": {
+    "mtime": 1780876941.973503,
+    "hash": "1fe12efab03e71eed957f635f446eca0"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\counter-strike-2.png": {
+    "mtime": 1780876941.973503,
+    "hash": "3c0c6e4582e9af86aabf59062ab35687"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\dota-2.png": {
+    "mtime": 1780876941.9867482,
+    "hash": "e3b4088c4560766db737804d204188ae"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\fortnite.png": {
+    "mtime": 1780876941.9983635,
+    "hash": "794f94b64d140fe85b56e9a800de9897"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\genshin-impact.png": {
+    "mtime": 1780876942.0068252,
+    "hash": "00bde59c52d477ab3d1d9d6d3214d3c5"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\gta-v.png": {
+    "mtime": 1780876942.014894,
+    "hash": "eb5796034b0cd55de861a384c183527d"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\league-of-legends.png": {
+    "mtime": 1780876942.0169463,
+    "hash": "060dd9c321d4df4844826f7a5d994770"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\minecraft.png": {
+    "mtime": 1780876942.0293498,
+    "hash": "cac53bbabac689960dd5ff58d54fef81"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\overwatch-2.png": {
+    "mtime": 1780876942.0397031,
+    "hash": "a14e3b12acd4904b4cb21655b04cadb9"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\pubg.webp": {
+    "mtime": 1780876942.0445082,
+    "hash": "b230b607dd252c146d5f527d6552a8bb"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\r6-siege.png": {
+    "mtime": 1780876942.0500476,
+    "hash": "b397ed3712c1ee7ef288dafd56e1b18e"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\roblox.png": {
+    "mtime": 1780876942.05622,
+    "hash": "9cec2903311ff58e913fead2280d8fba"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\rocket-league.webp": {
+    "mtime": 1780876942.0647004,
+    "hash": "d5927bab5effe1084c40f192905d7ffd"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\valorant.png": {
+    "mtime": 1780876942.0647004,
+    "hash": "ca2dfa52fc21c0febb1452fb7b89fa4f"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\games\\warzone.png": {
+    "mtime": 1780876942.0839627,
+    "hash": "df081b91414bd301520757b6ed024a83"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\_fortnite_full.png": {
+    "mtime": 1780876942.1165354,
+    "hash": "b84984b792793ae7540fafa600d9584b"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\_league-of-legends_full.png": {
+    "mtime": 1780876942.121578,
+    "hash": "95169e2c524b0ce7fd2c7c84a7bdf16d"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\_rocket-league_full.png": {
+    "mtime": 1780876942.130758,
+    "hash": "0bbd05a759b96d23206fb34df32e4e5f"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\_valorant_full.png": {
+    "mtime": 1780876942.1464252,
+    "hash": "b4b69c0ae02db20990c17ca42f8a1582"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\bronze.png": {
+    "mtime": 1780876942.1496313,
+    "hash": "4ccd4fef85557a57d75b7b419bb72f4e"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\champion.png": {
+    "mtime": 1780876942.1536672,
+    "hash": "582af6cea7b85b907be7ef001b4893d5"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\diamond.png": {
+    "mtime": 1780876942.1567128,
+    "hash": "085dab54a0ff93f021ce332cac3c6c52"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\elite.png": {
+    "mtime": 1780876942.159642,
+    "hash": "505e5bbda8a607255c1df714300aec99"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\gold.png": {
+    "mtime": 1780876942.1652148,
+    "hash": "a9b88a3ed8eb8e643cd919503d2a58ff"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\platinum.png": {
+    "mtime": 1780876942.1652148,
+    "hash": "d253adfbd18a7ad5a32f64726b5e6790"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\silver.png": {
+    "mtime": 1780876942.171464,
+    "hash": "28960149f46e98f73359a03adbe057f8"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\fortnite\\unreal.png": {
+    "mtime": 1780876942.1755197,
+    "hash": "d21d6e7dae895b50259055f5f5058164"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\bronze.png": {
+    "mtime": 1780876942.1795619,
+    "hash": "0061e52f412913ffa7c2c84ae3e34183"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\challenger.png": {
+    "mtime": 1780876942.1805274,
+    "hash": "b531ed8e680bdd93213c4f8febd786c5"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\diamond.png": {
+    "mtime": 1780876942.1839664,
+    "hash": "0c424ab5d7af57195dfceba79dd9cc17"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\emerald.png": {
+    "mtime": 1780876942.187857,
+    "hash": "0c424ab5d7af57195dfceba79dd9cc17"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\gold.png": {
+    "mtime": 1780876942.187857,
+    "hash": "5ee29f35f2fdf3b15251117bbde58444"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\grandmaster.png": {
+    "mtime": 1780876942.187857,
+    "hash": "738f5ed0363b1b4eddf059e272dbe17e"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\iron.png": {
+    "mtime": 1780876942.1973052,
+    "hash": "852315fd7f1643f5fafee1278f54f8a8"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\master.png": {
+    "mtime": 1780876942.19932,
+    "hash": "935fe6c0f301c6b365f231e0001be11f"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\platinum.png": {
+    "mtime": 1780876942.2013557,
+    "hash": "4f1daf1e7a0ec2485081fd7435d244ed"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\league-of-legends\\silver.png": {
+    "mtime": 1780876942.2041414,
+    "hash": "a196c2adf7dd95fba6acdc081bea8aa8"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\bronze.png": {
+    "mtime": 1780876942.2041414,
+    "hash": "1b8deba8884377a41e38a5a10fe5c034"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\champion.png": {
+    "mtime": 1780876942.2124016,
+    "hash": "42080f5bf17f03f34b2bcada06e1b10d"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\diamond.png": {
+    "mtime": 1780876942.2161224,
+    "hash": "7d56e0659cfbb3ae3af3239d5b100a7c"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\gold.png": {
+    "mtime": 1780876942.2161224,
+    "hash": "c01a69ad855ff65c17fa49b372fbd5e4"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\grand_champion.png": {
+    "mtime": 1780876942.2204492,
+    "hash": "a336ecbc573a953b540dd1edb70ca838"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\platinum.png": {
+    "mtime": 1780876942.2204492,
+    "hash": "0437b2d8ac109a601c0193c914072380"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\silver.png": {
+    "mtime": 1780876942.226061,
+    "hash": "be371780b02600b5bda9270893a46244"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\rocket-league\\supersonic_legend.png": {
+    "mtime": 1780876942.226061,
+    "hash": "e1180c40eb89de6e9b79c96db2457685"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\ascendant.png": {
+    "mtime": 1780876942.230098,
+    "hash": "9c9b417e863f98eaef3eb1b4bc62267e"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\ascendant_1.png": {
+    "mtime": 1780876942.2327724,
+    "hash": "7a34316f8c33e7a34020b789064ea0f7"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\ascendant_2.png": {
+    "mtime": 1780876942.235785,
+    "hash": "9c9b417e863f98eaef3eb1b4bc62267e"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\ascendant_3.png": {
+    "mtime": 1780876942.2519028,
+    "hash": "d07c1e1775c93c8ef1b48c7ad393a327"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\bronze.png": {
+    "mtime": 1780876942.2519028,
+    "hash": "d7efa8d9b2ef30dfcff9e62d7ddded0c"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\bronze_1.png": {
+    "mtime": 1780876942.2601483,
+    "hash": "8ae31cc1a34934585d4f3c1a8967eee3"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\bronze_2.png": {
+    "mtime": 1780876942.2601483,
+    "hash": "d7efa8d9b2ef30dfcff9e62d7ddded0c"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\bronze_3.png": {
+    "mtime": 1780876942.264176,
+    "hash": "16a2f6c4b68eb5056041676608e317fd"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\diamond.png": {
+    "mtime": 1780876942.2682538,
+    "hash": "44e844a3ae47852bebaecda48b6c0f50"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\diamond_1.png": {
+    "mtime": 1780876942.2682538,
+    "hash": "e6e9d183a2324e1ccac7c32db282ffbb"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\diamond_2.png": {
+    "mtime": 1780876942.2682538,
+    "hash": "44e844a3ae47852bebaecda48b6c0f50"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\diamond_3.png": {
+    "mtime": 1780876942.2765582,
+    "hash": "1b6e6f959b0c6dcd2d32abd3517c67cb"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\gold.png": {
+    "mtime": 1780876942.2765582,
+    "hash": "a5a769e77b2cdc2f9af5a4e903c945bd"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\gold_1.png": {
+    "mtime": 1780876942.2817912,
+    "hash": "d0f09cf3970c12bb43efa6826ef86686"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\gold_2.png": {
+    "mtime": 1780876942.284329,
+    "hash": "a5a769e77b2cdc2f9af5a4e903c945bd"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\gold_3.png": {
+    "mtime": 1780876942.284329,
+    "hash": "ff9e03c6122c9d58c7b6b24cb720dcb3"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\immortal.png": {
+    "mtime": 1780876942.284329,
+    "hash": "ee04de0014c3286b7c357769ed8f97f7"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\immortal_1.png": {
+    "mtime": 1780876942.2927108,
+    "hash": "4bc9664bedf07b9d674d7b0144b42310"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\immortal_2.png": {
+    "mtime": 1780876942.2947304,
+    "hash": "ee04de0014c3286b7c357769ed8f97f7"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\immortal_3.png": {
+    "mtime": 1780876942.2967477,
+    "hash": "909c8323b3cd30882e96c97c5d90ed05"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\iron.png": {
+    "mtime": 1780876942.3007889,
+    "hash": "c4b12f366bbc90dbaf888a06676c388a"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\iron_1.png": {
+    "mtime": 1780876942.3048284,
+    "hash": "e4264707b939a1a55024e4293209064f"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\iron_2.png": {
+    "mtime": 1780876942.3048284,
+    "hash": "c4b12f366bbc90dbaf888a06676c388a"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\iron_3.png": {
+    "mtime": 1780876942.306844,
+    "hash": "6ca024bd535e558aaa30fc3c7abbb8ed"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\platinum.png": {
+    "mtime": 1780876942.3096251,
+    "hash": "0ca487ff43a833192a832bdb5e8034df"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\platinum_1.png": {
+    "mtime": 1780876942.3136544,
+    "hash": "219326325bd9881e0cfb0c23cfc20b46"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\platinum_2.png": {
+    "mtime": 1780876942.3136544,
+    "hash": "0ca487ff43a833192a832bdb5e8034df"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\platinum_3.png": {
+    "mtime": 1780876942.3156686,
+    "hash": "9276afe5c20a399f638e5cd0c36d0c3f"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\radiant.png": {
+    "mtime": 1780876942.319196,
+    "hash": "d6819c3c648ae7594469a9c8df5deea2"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\silver.png": {
+    "mtime": 1780876942.3212078,
+    "hash": "b82c2f6acbbd1b8210030599ac13e262"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\silver_1.png": {
+    "mtime": 1780876942.3232217,
+    "hash": "7f36c703fd664fe78685693a144a48d7"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\silver_2.png": {
+    "mtime": 1780876942.3252337,
+    "hash": "b82c2f6acbbd1b8210030599ac13e262"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\assets\\ranks\\valorant\\silver_3.png": {
+    "mtime": 1780876942.3272448,
+    "hash": "745ea47ccee5c6a6e27d2255c81afbf4"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\tindord\\project\\_debug_header.png": {
+    "mtime": 1778807371.0,
+    "hash": "4a88e03b5d2a33eb6eb66fcde5cff79d"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\tindord\\project\\uploads\\pasted-1778804327034-0.png": {
+    "mtime": 1778807371.0,
+    "hash": "23051c5188ab367ebc7cd049c4d56a44"
+  },
+  "C:\\Users\\nolan\\OneDrive\\Documents\\claude\\Tindord\\tindord\\project\\uploads\\pasted-1778805277116-0.png": {
+    "mtime": 1778807371.0,
+    "hash": "6de8a94069ba670feb73972ff0d1e935"
   }
 }

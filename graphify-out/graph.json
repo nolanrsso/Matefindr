@@ -1,7 +1,125 @@
 {
   "directed": false,
   "multigraph": false,
-  "graph": {},
+  "graph": {
+    "hyperedges": [
+      {
+        "nodes": [
+          "index_msg_fab",
+          "index_heart_fab",
+          "index_badge_fab"
+        ],
+        "label": "Bottom-row FAB stack (auth=in only)",
+        "relation": "conceptually_related_to",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "index.html",
+        "source_location": "body[data-auth=in] .bf-fab"
+      },
+      {
+        "nodes": [
+          "index_liked_me_panel",
+          "index_liker_overlay",
+          "index_create_match_from_liker",
+          "index_match_overlay"
+        ],
+        "label": "Liker-to-Match Flow Pipeline",
+        "relation": "calls",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "index.html",
+        "source_location": "L5160-5239 L5810-5905"
+      },
+      {
+        "nodes": [
+          "index_bulles_mouse_repulsion",
+          "index_bulles_pairwise_collision",
+          "index_forbidden_zones"
+        ],
+        "label": "Bulles Physics Forces (3 systems)",
+        "relation": "implements",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "index.html",
+        "source_location": "L4500-4700"
+      },
+      {
+        "id": "editorhtml_he_sync",
+        "label": "Editor\u2194app profile sync over tindord_state",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "editor.html",
+        "nodes": [
+          "editorhtml_localstorage_bridge",
+          "editorhtml_tindord_state_key",
+          "editorhtml_state_object",
+          "v2index_main_app"
+        ]
+      },
+      {
+        "id": "editorhtml_he_card_layers",
+        "label": "Profile card overlay layers (orbs + GIFs + placement zone)",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "editor.html",
+        "nodes": [
+          "editorhtml_interest_orbs",
+          "editorhtml_gif_stickers",
+          "editorhtml_placement_zone"
+        ]
+      },
+      {
+        "id": "editorhtml_he_discord",
+        "label": "Discord-derived profile (avatar/deco/resync)",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "editor.html",
+        "nodes": [
+          "editorhtml_avatar_deco_layer",
+          "editorhtml_discord_resync",
+          "editorhtml_avatar_crop"
+        ]
+      },
+      {
+        "label": "Notification pipeline (insert \u2192 trigger \u2192 webhook \u2192 edge fn \u2192 Discord)",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "supabase/README.md",
+        "nodes": [
+          "likes_table",
+          "reciprocal_match_trigger",
+          "database_webhooks",
+          "notify_edge_function",
+          "discord_user_webhook"
+        ]
+      },
+      {
+        "label": "Bubble interaction system",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "tindord/project/Tindord Landing.html",
+        "nodes": [
+          "bubble_field",
+          "bubble_repulsion",
+          "bubble_explosion",
+          "bubble_collisions",
+          "bubble_respawn"
+        ]
+      },
+      {
+        "label": "Visual design language",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "tindord/chats/chat1.md",
+        "nodes": [
+          "color_palette",
+          "typography",
+          "glassmorphism",
+          "mesh_gradient_bg"
+        ]
+      }
+    ]
+  },
   "nodes": [
     {
       "label": "Tindord Application (v2 Landing)",
@@ -12,7 +130,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "tindord application (v2 landing)",
       "id": "v2_tindord_app"
     },
@@ -25,7 +143,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "v2 screen: landing / hero",
       "id": "v2_screen_landing"
     },
@@ -38,7 +156,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "v2 auth modal (discord + google + email)",
       "id": "v2_auth_modal"
     },
@@ -51,7 +169,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "v2 animated bubble field",
       "id": "v2_bubble_layer"
     },
@@ -64,7 +182,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "v2 i18n dictionary (fr/en, landing-only)",
       "id": "v2_i18n"
     },
@@ -77,7 +195,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "v2 language switcher",
       "id": "v2_lang_switcher"
     },
@@ -90,7 +208,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "external api: google oauth2 (v2 only)",
       "id": "api_google_oauth"
     },
@@ -103,7 +221,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 7,
+      "community": 8,
       "norm_label": "design decision: v1 full spa vs v2 landing-only",
       "id": "rationale_v1_vs_v2"
     },
@@ -116,7 +234,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "landing screen (hero)",
       "id": "index_screen_landing"
     },
@@ -129,7 +247,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "onboarding screen",
       "id": "index_screen_onboarding"
     },
@@ -142,7 +260,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "swipe screen",
       "id": "index_screen_swipe"
     },
@@ -155,7 +273,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "account screen",
       "id": "index_screen_account"
     },
@@ -168,7 +286,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "header & brand nav",
       "id": "index_header"
     },
@@ -181,7 +299,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "auth modal (providers + email)",
       "id": "index_auth_modal"
     },
@@ -194,7 +312,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "language switcher",
       "id": "index_lang_switch"
     },
@@ -207,7 +325,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 6,
       "norm_label": "messages panel & fab",
       "id": "index_messages_panel"
     },
@@ -220,7 +338,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 3,
       "norm_label": "boost modal (2-col upsell)",
       "id": "index_boost_modal"
     },
@@ -233,7 +351,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "badge picker panel",
       "id": "index_badge_picker_panel"
     },
@@ -246,7 +364,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 3,
       "norm_label": "liked me panel (boost)",
       "id": "index_liked_panel"
     },
@@ -259,7 +377,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "swipe music mini player",
       "id": "index_swipe_music_widget"
     },
@@ -272,7 +390,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "supabase auth module",
       "id": "index_module_supabase_auth"
     },
@@ -285,7 +403,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "discord oauth module",
       "id": "index_module_discord_oauth"
     },
@@ -298,7 +416,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "discord resync button",
       "id": "index_module_discord_resync"
     },
@@ -311,7 +429,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "bubble field (landing physics)",
       "id": "index_module_bubble_field"
     },
@@ -324,7 +442,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "swipe deck & drag",
       "id": "index_module_swipe_deck"
     },
@@ -337,7 +455,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "profile orbs (bubbles)",
       "id": "index_module_orbs"
     },
@@ -350,7 +468,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "spotify search integration",
       "id": "index_module_spotify"
     },
@@ -363,7 +481,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "itunes preview fallback",
       "id": "index_module_itunes_preview"
     },
@@ -376,7 +494,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "anime/wiki search",
       "id": "index_module_anime_wiki_search"
     },
@@ -389,7 +507,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "orb music player (fade)",
       "id": "index_module_music_player"
     },
@@ -402,7 +520,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "swipe background music player",
       "id": "index_module_swipe_music_player"
     },
@@ -415,7 +533,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 3,
       "norm_label": "giphy gif search & stage",
       "id": "index_module_giphy"
     },
@@ -428,7 +546,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "discord badge picker",
       "id": "index_module_badge_picker"
     },
@@ -441,7 +559,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 3,
       "norm_label": "boost plan (tindord boost)",
       "id": "index_module_boost"
     },
@@ -454,7 +572,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 6,
       "norm_label": "messages/chat module",
       "id": "index_module_messages"
     },
@@ -467,7 +585,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "i18n / language module",
       "id": "index_module_i18n"
     },
@@ -480,7 +598,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "account render & preview",
       "id": "index_module_account_render"
     },
@@ -493,7 +611,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "account floating save bar",
       "id": "index_module_account_save_bar"
     },
@@ -506,7 +624,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 0,
+      "community": 3,
       "norm_label": "state.user (live user model)",
       "id": "index_state_user"
     },
@@ -519,7 +637,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "state.profile",
       "id": "index_state_profile"
     },
@@ -532,7 +650,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "state.user.profilecolor",
       "id": "index_state_profilecolor"
     },
@@ -545,7 +663,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "state.user.decorationurl",
       "id": "index_state_decoration_url"
     },
@@ -558,7 +676,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "state.user.publicflags",
       "id": "index_state_public_flags"
     },
@@ -571,7 +689,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "state.user.premiumtype",
       "id": "index_state_premium_type"
     },
@@ -584,7 +702,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "state.profile.userorbs",
       "id": "index_state_user_orbs"
     },
@@ -597,7 +715,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "state.user.swipemusic",
       "id": "index_state_swipe_music"
     },
@@ -610,7 +728,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 3,
       "norm_label": "state.user.gifs",
       "id": "index_state_gifs"
     },
@@ -623,7 +741,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 8,
+      "community": 3,
       "norm_label": "state.user.boost / boostplan",
       "id": "index_state_boost"
     },
@@ -636,7 +754,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "state.user.socials",
       "id": "index_state_socials"
     },
@@ -649,7 +767,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "state.user.stats (viewed/liked)",
       "id": "index_state_stats"
     },
@@ -662,7 +780,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "_accsnapshot (dirty-tracking)",
       "id": "index_state_acc_snapshot"
     },
@@ -675,7 +793,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "dirty-state tracking via json snapshot",
       "id": "index_pattern_dirty_state_tracking"
     },
@@ -688,7 +806,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 6,
       "norm_label": "floating action button (fab) pattern",
       "id": "index_pattern_fab"
     },
@@ -701,7 +819,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "conic-gradient nitro avatar ring",
       "id": "index_pattern_nitro_conic_ring"
     },
@@ -714,7 +832,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "localstorage discord token fallback",
       "id": "index_pattern_localstorage_token"
     },
@@ -727,7 +845,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 4,
+      "community": 0,
       "norm_label": "discord cdn url builders (banner/avatar/deco)",
       "id": "index_pattern_discord_cdn_urls"
     },
@@ -740,7 +858,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 3,
+      "community": 0,
       "norm_label": "setscreen() single-page screen switcher",
       "id": "index_pattern_screen_switcher"
     },
@@ -753,7 +871,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 5,
+      "community": 6,
       "norm_label": "6-orb orbital layout around swipe card",
       "id": "index_pattern_orbit_layout"
     },
@@ -766,7 +884,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 2,
+      "community": 3,
       "norm_label": "background backfill of orb covers",
       "id": "index_pattern_backfill_covers"
     },
@@ -779,9 +897,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_voice_memo_recorder",
-      "community": 0,
-      "norm_label": "voice memo recorder (5s mediarecorder)"
+      "community": 7,
+      "norm_label": "voice memo recorder (5s mediarecorder)",
+      "id": "index_voice_memo_recorder"
     },
     {
       "label": "Account Voice Player Widget",
@@ -792,9 +910,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_acc_voice_player",
-      "community": 0,
-      "norm_label": "account voice player widget"
+      "community": 7,
+      "norm_label": "account voice player widget",
+      "id": "index_acc_voice_player"
     },
     {
       "label": "Swipe Card Voice Memo Widget",
@@ -805,9 +923,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_card_voice_widget",
-      "community": 0,
-      "norm_label": "swipe card voice memo widget"
+      "community": 7,
+      "norm_label": "swipe card voice memo widget",
+      "id": "index_card_voice_widget"
     },
     {
       "label": "state.user.profileVoice (audio blob URL)",
@@ -818,9 +936,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_state_user_profile_voice",
-      "community": 0,
-      "norm_label": "state.user.profilevoice (audio blob url)"
+      "community": 7,
+      "norm_label": "state.user.profilevoice (audio blob url)",
+      "id": "index_state_user_profile_voice"
     },
     {
       "label": "Messages FAB (bottom-left)",
@@ -831,9 +949,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_msg_fab",
-      "community": 1,
-      "norm_label": "messages fab (bottom-left)"
+      "community": 4,
+      "norm_label": "messages fab (bottom-left)",
+      "id": "index_msg_fab"
     },
     {
       "label": "Heart FAB (likes received)",
@@ -844,9 +962,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_heart_fab",
-      "community": 1,
-      "norm_label": "heart fab (likes received)"
+      "community": 4,
+      "norm_label": "heart fab (likes received)",
+      "id": "index_heart_fab"
     },
     {
       "label": "Badge FAB (looking_for picker)",
@@ -857,9 +975,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_badge_fab",
-      "community": 9,
-      "norm_label": "badge fab (looking_for picker)"
+      "community": 7,
+      "norm_label": "badge fab (looking_for picker)",
+      "id": "index_badge_fab"
     },
     {
       "label": "Badge FAB Popup (chill/game/talk/sleep)",
@@ -870,9 +988,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_badge_fab_popup",
-      "community": 9,
-      "norm_label": "badge fab popup (chill/game/talk/sleep)"
+      "community": 7,
+      "norm_label": "badge fab popup (chill/game/talk/sleep)",
+      "id": "index_badge_fab_popup"
     },
     {
       "label": "Boost Banner (outside acc-card)",
@@ -883,9 +1001,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_boost_fab_banner",
-      "community": 8,
-      "norm_label": "boost banner (outside acc-card)"
+      "community": 3,
+      "norm_label": "boost banner (outside acc-card)",
+      "id": "index_boost_fab_banner"
     },
     {
       "label": "Discord FAB (account screen)",
@@ -896,9 +1014,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_acc_discord_fab",
-      "community": 10,
-      "norm_label": "discord fab (account screen)"
+      "community": 11,
+      "norm_label": "discord fab (account screen)",
+      "id": "index_acc_discord_fab"
     },
     {
       "label": "looking_for Selector (4 values)",
@@ -909,9 +1027,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_looking_for_selector",
-      "community": 9,
-      "norm_label": "looking_for selector (4 values)"
+      "community": 7,
+      "norm_label": "looking_for selector (4 values)",
+      "id": "index_looking_for_selector"
     },
     {
       "label": "Match Animation Overlay",
@@ -922,9 +1040,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_match_overlay",
-      "community": 1,
-      "norm_label": "match animation overlay"
+      "community": 4,
+      "norm_label": "match animation overlay",
+      "id": "index_match_overlay"
     },
     {
       "label": "Fly-to-FAB Animation Pattern",
@@ -935,9 +1053,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_fly_to_fab",
-      "community": 1,
-      "norm_label": "fly-to-fab animation pattern"
+      "community": 4,
+      "norm_label": "fly-to-fab animation pattern",
+      "id": "index_fly_to_fab"
     },
     {
       "label": "createMatchFromLiker() Function",
@@ -948,9 +1066,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_create_match_from_liker",
-      "community": 1,
-      "norm_label": "creatematchfromliker() function"
+      "community": 4,
+      "norm_label": "creatematchfromliker() function",
+      "id": "index_create_match_from_liker"
     },
     {
       "label": "Liker Full-Profile Overlay",
@@ -961,9 +1079,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_liker_overlay",
-      "community": 1,
-      "norm_label": "liker full-profile overlay"
+      "community": 4,
+      "norm_label": "liker full-profile overlay",
+      "id": "index_liker_overlay"
     },
     {
       "label": "Liked-Me List (blurred non-boost)",
@@ -974,9 +1092,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_liked_me_panel",
-      "community": 1,
-      "norm_label": "liked-me list (blurred non-boost)"
+      "community": 4,
+      "norm_label": "liked-me list (blurred non-boost)",
+      "id": "index_liked_me_panel"
     },
     {
       "label": "Bulles Fullscreen Orbit Module",
@@ -987,9 +1105,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_bulles_orbit_fullscreen",
-      "community": 6,
-      "norm_label": "bulles fullscreen orbit module"
+      "community": 9,
+      "norm_label": "bulles fullscreen orbit module",
+      "id": "index_bulles_orbit_fullscreen"
     },
     {
       "label": "Bulles Physics Simulation (drift+repulsion+collision)",
@@ -1000,9 +1118,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_bulles_physics",
-      "community": 6,
-      "norm_label": "bulles physics simulation (drift+repulsion+collision)"
+      "community": 4,
+      "norm_label": "bulles physics simulation (drift+repulsion+collision)",
+      "id": "index_bulles_physics"
     },
     {
       "label": "Bulles Mouse Repulsion",
@@ -1013,9 +1131,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_bulles_mouse_repulsion",
-      "community": 6,
-      "norm_label": "bulles mouse repulsion"
+      "community": 4,
+      "norm_label": "bulles mouse repulsion",
+      "id": "index_bulles_mouse_repulsion"
     },
     {
       "label": "Bulles Pairwise Collision (elastic)",
@@ -1026,9 +1144,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_bulles_pairwise_collision",
-      "community": 6,
-      "norm_label": "bulles pairwise collision (elastic)"
+      "community": 4,
+      "norm_label": "bulles pairwise collision (elastic)",
+      "id": "index_bulles_pairwise_collision"
     },
     {
       "label": "Forbidden UI Zones (nav/FAB exclusion)",
@@ -1039,9 +1157,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_forbidden_zones",
-      "community": 1,
-      "norm_label": "forbidden ui zones (nav/fab exclusion)"
+      "community": 4,
+      "norm_label": "forbidden ui zones (nav/fab exclusion)",
+      "id": "index_forbidden_zones"
     },
     {
       "label": "Wikidata Cover Fetcher (P18/P154/P2716)",
@@ -1052,9 +1170,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_wikidata_cover_fetch",
-      "community": 6,
-      "norm_label": "wikidata cover fetcher (p18/p154/p2716)"
+      "community": 9,
+      "norm_label": "wikidata cover fetcher (p18/p154/p2716)",
+      "id": "index_wikidata_cover_fetch"
     },
     {
       "label": "Image Transparency Detection",
@@ -1065,9 +1183,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_image_transparency_check",
-      "community": 6,
-      "norm_label": "image transparency detection"
+      "community": 9,
+      "norm_label": "image transparency detection",
+      "id": "index_image_transparency_check"
     },
     {
       "label": "GAME_COVER_OVERRIDES Map",
@@ -1078,9 +1196,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_game_cover_overrides",
-      "community": 6,
-      "norm_label": "game_cover_overrides map"
+      "community": 9,
+      "norm_label": "game_cover_overrides map",
+      "id": "index_game_cover_overrides"
     },
     {
       "label": "Spotify Client Credentials Token",
@@ -1091,9 +1209,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_spotify_token",
-      "community": 6,
-      "norm_label": "spotify client credentials token"
+      "community": 9,
+      "norm_label": "spotify client credentials token",
+      "id": "index_spotify_token"
     },
     {
       "label": "Deezer Preview Fallback (JSONP)",
@@ -1104,9 +1222,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_deezer_preview",
-      "community": 6,
-      "norm_label": "deezer preview fallback (jsonp)"
+      "community": 9,
+      "norm_label": "deezer preview fallback (jsonp)",
+      "id": "index_deezer_preview"
     },
     {
       "label": "iTunes Preview Fallback",
@@ -1117,9 +1235,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_itunes_preview",
-      "community": 6,
-      "norm_label": "itunes preview fallback"
+      "community": 9,
+      "norm_label": "itunes preview fallback",
+      "id": "index_itunes_preview"
     },
     {
       "label": "Preview Fallback Chain (Spotify->Deezer->iTunes)",
@@ -1130,9 +1248,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_preview_fallback_chain",
-      "community": 6,
-      "norm_label": "preview fallback chain (spotify->deezer->itunes)"
+      "community": 9,
+      "norm_label": "preview fallback chain (spotify->deezer->itunes)",
+      "id": "index_preview_fallback_chain"
     },
     {
       "label": "Archive/Restore on Discord Reconnect",
@@ -1143,9 +1261,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_archive_restore",
-      "community": 0,
-      "norm_label": "archive/restore on discord reconnect"
+      "community": 7,
+      "norm_label": "archive/restore on discord reconnect",
+      "id": "index_archive_restore"
     },
     {
       "label": "Onboarding Genre (3 options + skip link)",
@@ -1156,9 +1274,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_onboarding_gender",
-      "community": 0,
-      "norm_label": "onboarding genre (3 options + skip link)"
+      "community": 3,
+      "norm_label": "onboarding genre (3 options + skip link)",
+      "id": "index_onboarding_gender"
     },
     {
       "label": "Age+Gender Badge Below Banner",
@@ -1169,9 +1287,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_card_age_badge",
-      "community": 0,
-      "norm_label": "age+gender badge below banner"
+      "community": 3,
+      "norm_label": "age+gender badge below banner",
+      "id": "index_card_age_badge"
     },
     {
       "label": "My Status Button + Popup",
@@ -1182,9 +1300,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_my_status_btn",
-      "community": 9,
-      "norm_label": "my status button + popup"
+      "community": 7,
+      "norm_label": "my status button + popup",
+      "id": "index_my_status_btn"
     },
     {
       "label": "Boost Tab (2-col layout)",
@@ -1195,9 +1313,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_boost_tab",
-      "community": 1,
-      "norm_label": "boost tab (2-col layout)"
+      "community": 4,
+      "norm_label": "boost tab (2-col layout)",
+      "id": "index_boost_tab"
     },
     {
       "label": "Swipe Card (preview-mode capable)",
@@ -1208,9 +1326,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_swipe_card",
-      "community": 0,
-      "norm_label": "swipe card (preview-mode capable)"
+      "community": 7,
+      "norm_label": "swipe card (preview-mode capable)",
+      "id": "index_swipe_card"
     },
     {
       "label": "Account Live Profile Preview",
@@ -1221,9 +1339,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_acc_preview",
-      "community": 0,
-      "norm_label": "account live profile preview"
+      "community": 7,
+      "norm_label": "account live profile preview",
+      "id": "index_acc_preview"
     },
     {
       "label": "Dirty-State Tracking Pattern",
@@ -1234,9 +1352,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_dirty_state_tracking",
-      "community": 0,
-      "norm_label": "dirty-state tracking pattern"
+      "community": 7,
+      "norm_label": "dirty-state tracking pattern",
+      "id": "index_dirty_state_tracking"
     },
     {
       "label": "msg-fab Pulse Animation",
@@ -1247,9 +1365,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_msg_fab_pulse",
-      "community": 1,
-      "norm_label": "msg-fab pulse animation"
+      "community": 4,
+      "norm_label": "msg-fab pulse animation",
+      "id": "index_msg_fab_pulse"
     },
     {
       "label": "CONVOS Array (chat threads)",
@@ -1260,9 +1378,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_convos_array",
-      "community": 1,
-      "norm_label": "convos array (chat threads)"
+      "community": 4,
+      "norm_label": "convos array (chat threads)",
+      "id": "index_convos_array"
     },
     {
       "label": "LIKED_ME Array",
@@ -1273,9 +1391,9 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_liked_me_array",
-      "community": 1,
-      "norm_label": "liked_me array"
+      "community": 4,
+      "norm_label": "liked_me array",
+      "id": "index_liked_me_array"
     },
     {
       "label": "Card Voice Playing State (data-playing)",
@@ -1286,9 +1404,814 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "id": "index_card_voice_state",
-      "community": 0,
-      "norm_label": "card voice playing state (data-playing)"
+      "community": 7,
+      "norm_label": "card voice playing state (data-playing)",
+      "id": "index_card_voice_state"
+    },
+    {
+      "label": "index.ts",
+      "file_type": "code",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L1",
+      "id": "functions_notify_index_ts",
+      "community": 10,
+      "norm_label": "index.ts"
+    },
+    {
+      "label": "avatarFallback()",
+      "file_type": "code",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L24",
+      "id": "notify_index_avatarfallback",
+      "community": 10,
+      "norm_label": "avatarfallback()"
+    },
+    {
+      "label": "loadPrefs()",
+      "file_type": "code",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L30",
+      "id": "notify_index_loadprefs",
+      "community": 10,
+      "norm_label": "loadprefs()"
+    },
+    {
+      "label": "sendWebhook()",
+      "file_type": "code",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L43",
+      "id": "notify_index_sendwebhook",
+      "community": 10,
+      "norm_label": "sendwebhook()"
+    },
+    {
+      "label": "Profile editor (editor.html)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "1-1149",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Standalone HTML/CSS/vanilla-JS editor for the Tindord profile card; edits a card preview and syncs to the main app.",
+      "id": "editorhtml_profile_editor",
+      "community": 1,
+      "norm_label": "profile editor (editor.html)"
+    },
+    {
+      "label": "Editor state object (S)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "532-540",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_state_object",
+      "community": 1,
+      "norm_label": "editor state object (s)"
+    },
+    {
+      "label": "localStorage bridge (hydrateFromSite/writeState)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "1063-1138",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Editor and main app share the same origin, so localStorage key tindord_state is the sync channel: hydrateFromSite reads the app profile in, writeState pushes edits back out.",
+      "id": "editorhtml_localstorage_bridge",
+      "community": 1,
+      "norm_label": "localstorage bridge (hydratefromsite/writestate)"
+    },
+    {
+      "label": "tindord_state (shared localStorage key)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "1067-1068",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_tindord_state_key",
+      "community": 1,
+      "norm_label": "tindord_state (shared localstorage key)"
+    },
+    {
+      "label": "persist() debounced autosave",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "1088-1089",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Edits autosave continuously (400ms debounce) so Retour/Aper\u00e7u/Param\u00e8tres never lose changes; saveNow flushes immediately.",
+      "id": "editorhtml_persist_debounce",
+      "community": 1,
+      "norm_label": "persist() debounced autosave"
+    },
+    {
+      "label": "Entry snapshot (cancel baseline)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "1069-1070",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_entry_snapshot",
+      "community": 1,
+      "norm_label": "entry snapshot (cancel baseline)"
+    },
+    {
+      "label": "Avatar crop (zoom/pan)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "558-601",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Pan implemented as real CSS translate (works on both axes, unlike object-position) then converted to object-position % for card display.",
+      "id": "editorhtml_avatar_crop",
+      "community": 1,
+      "norm_label": "avatar crop (zoom/pan)"
+    },
+    {
+      "label": "Avatar decoration layer (Discord)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "178-181",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Decoration + status dot live in a separate non-clipped layer over the avatar so the decoration can overflow the circular avatar.",
+      "id": "editorhtml_avatar_deco_layer",
+      "community": 1,
+      "norm_label": "avatar decoration layer (discord)"
+    },
+    {
+      "label": "Banner crop/upload",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "600-601",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_banner_picker",
+      "community": 12,
+      "norm_label": "banner crop/upload"
+    },
+    {
+      "label": "Interest bubbles (orbs) \u2014 swipe-scale layout",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "103-137",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Same music/game/film orb system as the main swipe card; placement is transferred at swipe via customX/customY fractions from center.",
+      "id": "editorhtml_interest_orbs",
+      "community": 1,
+      "norm_label": "interest bubbles (orbs) \u2014 swipe-scale layout"
+    },
+    {
+      "label": "Orb search (Spotify/Deezer/iTunes/Jikan/Wikidata)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "636-689",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Music uses Spotify with Deezer/iTunes preview fallbacks; game/film use curated lists with Jikan/iTunes/Wikidata covers \u2014 mirrors the site's bubble search.",
+      "id": "editorhtml_orb_search",
+      "community": 1,
+      "norm_label": "orb search (spotify/deezer/itunes/jikan/wikidata)"
+    },
+    {
+      "label": "GIF stickers (Giphy)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "139-150",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_gif_stickers",
+      "community": 1,
+      "norm_label": "gif stickers (giphy)"
+    },
+    {
+      "label": "Placement zone (stage clamp)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "94-102",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Drop guide spans the whole screen clamped below the topbar and above the toolbar; orbs and GIFs are dragged anywhere in that zone.",
+      "id": "editorhtml_placement_zone",
+      "community": 1,
+      "norm_label": "placement zone (stage clamp)"
+    },
+    {
+      "label": "Background picker",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "356-367",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_background_picker",
+      "community": 1,
+      "norm_label": "background picker"
+    },
+    {
+      "label": "Profile color (card gradient)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "543-552",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Single hue picks c1; c2 is derived by darkening 55% so the card gradient is one coherent color.",
+      "id": "editorhtml_profile_color",
+      "community": 1,
+      "norm_label": "profile color (card gradient)"
+    },
+    {
+      "label": "Entry music picker (scrub window)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "381-389",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "editorhtml_entry_music",
+      "community": 1,
+      "norm_label": "entry music picker (scrub window)"
+    },
+    {
+      "label": "Voice memo (10s)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "603-617",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "MediaRecorder capture auto-stops at 10s with a live waveform; recording stays editor-local until confirmed, then written to profileVoice.",
+      "id": "editorhtml_voice_memo",
+      "community": 1,
+      "norm_label": "voice memo (10s)"
+    },
+    {
+      "label": "Connections (app logos + username)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "291-312",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "App logos (simpleicons) with a popover to enter the username, persisted in profile.connections.",
+      "id": "editorhtml_connections",
+      "community": 1,
+      "norm_label": "connections (app logos + username)"
+    },
+    {
+      "label": "Discord resync button",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "1033-1059",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Re-fetches avatar/banner/decoration/name from Discord using the stored OAuth token, behind a confirmation modal so it doesn't silently overwrite the card.",
+      "id": "editorhtml_discord_resync",
+      "community": 1,
+      "norm_label": "discord resync button"
+    },
+    {
+      "label": "Eye toggles (hide preview)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "257-315",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Eye icons hide card/orbs/gifs for a clean preview; editor-only, never persisted.",
+      "id": "editorhtml_eye_toggles",
+      "community": 1,
+      "norm_label": "eye toggles (hide preview)"
+    },
+    {
+      "label": "Toolbar (Retour / outils / Aper\u00e7u)",
+      "file_type": "document",
+      "source_file": "editor.html",
+      "source_location": "461-477",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Retour (left) and Aper\u00e7u (right) are symmetric around the 5 tools; both saveNow before navigating back to the app.",
+      "id": "editorhtml_toolbar",
+      "community": 1,
+      "norm_label": "toolbar (retour / outils / apercu)"
+    },
+    {
+      "label": "Tindord main app \u2014 v2 variant (v2/index.html)",
+      "file_type": "document",
+      "source_file": "v2/index.html",
+      "source_location": "1-1024",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "v2/index.html is a variant/copy of the main swipe app sharing the same design tokens and the tindord_state contract; captured as a single node rather than re-extracting the whole app.",
+      "id": "v2index_main_app",
+      "community": 1,
+      "norm_label": "tindord main app \u2014 v2 variant (v2/index.html)"
+    },
+    {
+      "label": "Supabase backend",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "supabase_backend",
+      "community": 5,
+      "norm_label": "supabase backend"
+    },
+    {
+      "label": "Server-side Discord notifications",
+      "file_type": "rationale",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "server_side_notifications",
+      "community": 5,
+      "norm_label": "server-side discord notifications"
+    },
+    {
+      "label": "likes table (public.likes)",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "likes_table",
+      "community": 5,
+      "norm_label": "likes table (public.likes)"
+    },
+    {
+      "label": "matches table (public.matches)",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "matches_table",
+      "community": 5,
+      "norm_label": "matches table (public.matches)"
+    },
+    {
+      "label": "messages table (public.messages)",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "messages_table",
+      "community": 5,
+      "norm_label": "messages table (public.messages)"
+    },
+    {
+      "label": "user_notif_prefs table",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "user_notif_prefs_table",
+      "community": 5,
+      "norm_label": "user_notif_prefs table"
+    },
+    {
+      "label": "Reciprocal-like match trigger",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "reciprocal_match_trigger",
+      "community": 5,
+      "norm_label": "reciprocal-like match trigger"
+    },
+    {
+      "label": "notify edge function",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "notify_edge_function",
+      "community": 5,
+      "norm_label": "notify edge function"
+    },
+    {
+      "label": "--no-verify-jwt deploy flag",
+      "file_type": "rationale",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "no_verify_jwt",
+      "community": 5,
+      "norm_label": "--no-verify-jwt deploy flag"
+    },
+    {
+      "label": "Database Webhooks (notif_like/match/message)",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "database_webhooks",
+      "community": 5,
+      "norm_label": "database webhooks (notif_like/match/message)"
+    },
+    {
+      "label": "Discord user webhook",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "discord_user_webhook",
+      "community": 5,
+      "norm_label": "discord user webhook"
+    },
+    {
+      "label": "RLS policies",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "rls_policies",
+      "community": 5,
+      "norm_label": "rls policies"
+    },
+    {
+      "label": "Discord webhook rate-limit (~30/min)",
+      "file_type": "rationale",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "webhook_rate_limit",
+      "community": 5,
+      "norm_label": "discord webhook rate-limit (~30/min)"
+    },
+    {
+      "label": "schema.sql",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "schema_sql",
+      "community": 5,
+      "norm_label": "schema.sql"
+    },
+    {
+      "label": "syncNotifPrefs() client upsert",
+      "file_type": "document",
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "sync_notif_prefs",
+      "community": 5,
+      "norm_label": "syncnotifprefs() client upsert"
+    },
+    {
+      "label": "Claude Design handoff bundle",
+      "file_type": "document",
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "handoff_bundle",
+      "community": 2,
+      "norm_label": "claude design handoff bundle"
+    },
+    {
+      "label": "Read chat transcripts first",
+      "file_type": "rationale",
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "read_chat_first",
+      "community": 2,
+      "norm_label": "read chat transcripts first"
+    },
+    {
+      "label": "Pixel-perfect recreation directive",
+      "file_type": "rationale",
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "pixel_perfect_recreate",
+      "community": 2,
+      "norm_label": "pixel-perfect recreation directive"
+    },
+    {
+      "label": "Tindord Landing page",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "landing_page",
+      "community": 2,
+      "norm_label": "tindord landing page"
+    },
+    {
+      "label": "Violet/Pink color palette (#0D0B1E/#9146FF/#FF7EB6)",
+      "file_type": "document",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "color_palette",
+      "community": 2,
+      "norm_label": "violet/pink color palette (#0d0b1e/#9146ff/#ff7eb6)"
+    },
+    {
+      "label": "Clash Display + Inter typography",
+      "file_type": "document",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "typography",
+      "community": 2,
+      "norm_label": "clash display + inter typography"
+    },
+    {
+      "label": "Animated mesh gradient background (blobs)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "mesh_gradient_bg",
+      "community": 2,
+      "norm_label": "animated mesh gradient background (blobs)"
+    },
+    {
+      "label": "Glassmorphism (20px blur frosted glass)",
+      "file_type": "document",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "glassmorphism",
+      "community": 2,
+      "norm_label": "glassmorphism (20px blur frosted glass)"
+    },
+    {
+      "label": "Interactive floating bubble field",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "bubble_field",
+      "community": 2,
+      "norm_label": "interactive floating bubble field"
+    },
+    {
+      "label": "Mouse repulsion (~170px field)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "bubble_repulsion",
+      "community": 2,
+      "norm_label": "mouse repulsion (~170px field)"
+    },
+    {
+      "label": "Click explosion (flash/ring/shards/sparks/shockwave)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "bubble_explosion",
+      "community": 2,
+      "norm_label": "click explosion (flash/ring/shards/sparks/shockwave)"
+    },
+    {
+      "label": "Bubble-bubble elastic collisions",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "bubble_collisions",
+      "community": 2,
+      "norm_label": "bubble-bubble elastic collisions"
+    },
+    {
+      "label": "15s respawn from left/right wall",
+      "file_type": "rationale",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "bubble_respawn",
+      "community": 2,
+      "norm_label": "15s respawn from left/right wall"
+    },
+    {
+      "label": "pointer-events layering fix (title editable)",
+      "file_type": "rationale",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "pointer_events_fix",
+      "community": 2,
+      "norm_label": "pointer-events layering fix (title editable)"
+    },
+    {
+      "label": "Language switcher (#langSwitch isolated)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "lang_switcher",
+      "community": 2,
+      "norm_label": "language switcher (#langswitch isolated)"
+    },
+    {
+      "label": "Language switcher isolated rebuild",
+      "file_type": "rationale",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "lang_switcher_rebuild",
+      "community": 2,
+      "norm_label": "language switcher isolated rebuild"
+    },
+    {
+      "label": "Official Discord SVG logo",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "discord_logo",
+      "community": 2,
+      "norm_label": "official discord svg logo"
+    },
+    {
+      "label": "Tindord chat-bubble + d-pad logo (no heart)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "tindord_brand_logo",
+      "community": 2,
+      "norm_label": "tindord chat-bubble + d-pad logo (no heart)"
+    },
+    {
+      "label": "No-scroll 100vh viewport lock",
+      "file_type": "rationale",
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "no_scroll",
+      "community": 2,
+      "norm_label": "no-scroll 100vh viewport lock"
+    },
+    {
+      "label": "Fixed corner controls (Discord left / lang right)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "corner_controls",
+      "community": 2,
+      "norm_label": "fixed corner controls (discord left / lang right)"
+    },
+    {
+      "label": "Discord CTA button (triple glow)",
+      "file_type": "document",
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "discord_cta",
+      "community": 2,
+      "norm_label": "discord cta button (triple glow)"
     }
   ],
   "links": [
@@ -1619,8 +2542,8 @@
       "source_file": "index.html",
       "source_location": "boostBanner click",
       "weight": 1.0,
-      "source": "index_boost_modal",
-      "target": "index_boost_fab_banner"
+      "source": "index_boost_fab_banner",
+      "target": "index_boost_modal"
     },
     {
       "relation": "conceptually_related_to",
@@ -1629,8 +2552,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_boost_modal",
-      "target": "index_boost_tab"
+      "source": "index_boost_tab",
+      "target": "index_boost_modal"
     },
     {
       "relation": "references",
@@ -2069,8 +2992,8 @@
       "source_file": "index.html",
       "source_location": "u.displayName u.avatarUrl",
       "weight": 1.0,
-      "source": "index_state_user",
-      "target": "index_match_overlay"
+      "source": "index_match_overlay",
+      "target": "index_state_user"
     },
     {
       "relation": "shares_data_with",
@@ -2079,8 +3002,8 @@
       "source_file": "index.html",
       "source_location": "merge user_metadata extras",
       "weight": 1.0,
-      "source": "index_state_user",
-      "target": "index_archive_restore"
+      "source": "index_archive_restore",
+      "target": "index_state_user"
     },
     {
       "relation": "shares_data_with",
@@ -2089,8 +3012,8 @@
       "source_file": "index.html",
       "source_location": "gender field",
       "weight": 1.0,
-      "source": "index_state_user",
-      "target": "index_onboarding_gender"
+      "source": "index_onboarding_gender",
+      "target": "index_state_user"
     },
     {
       "relation": "references",
@@ -2099,8 +3022,8 @@
       "source_file": "index.html",
       "source_location": "data-g gender",
       "weight": 1.0,
-      "source": "index_state_user",
-      "target": "index_card_age_badge"
+      "source": "index_card_age_badge",
+      "target": "index_state_user"
     },
     {
       "relation": "shares_data_with",
@@ -2159,8 +3082,8 @@
       "source_file": "index.html",
       "source_location": ".swipe-card .card-voice",
       "weight": 1.0,
-      "source": "index_card_voice_widget",
-      "target": "index_swipe_card"
+      "source": "index_swipe_card",
+      "target": "index_card_voice_widget"
     },
     {
       "relation": "shares_data_with",
@@ -2169,8 +3092,8 @@
       "source_file": "index.html",
       "source_location": "voice extra L3877",
       "weight": 1.0,
-      "source": "index_state_user_profile_voice",
-      "target": "index_archive_restore"
+      "source": "index_archive_restore",
+      "target": "index_state_user_profile_voice"
     },
     {
       "relation": "references",
@@ -2179,8 +3102,8 @@
       "source_file": "index.html",
       "source_location": "getElementById('msgFab')",
       "weight": 1.0,
-      "source": "index_msg_fab",
-      "target": "index_fly_to_fab"
+      "source": "index_fly_to_fab",
+      "target": "index_msg_fab"
     },
     {
       "relation": "references",
@@ -2189,8 +3112,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_msg_fab",
-      "target": "index_forbidden_zones"
+      "source": "index_forbidden_zones",
+      "target": "index_msg_fab"
     },
     {
       "relation": "calls",
@@ -2209,8 +3132,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_heart_fab",
-      "target": "index_forbidden_zones"
+      "source": "index_forbidden_zones",
+      "target": "index_heart_fab"
     },
     {
       "relation": "calls",
@@ -2239,8 +3162,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_badge_fab",
-      "target": "index_forbidden_zones"
+      "source": "index_forbidden_zones",
+      "target": "index_badge_fab"
     },
     {
       "relation": "implements",
@@ -2259,8 +3182,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_looking_for_selector",
-      "target": "index_my_status_btn"
+      "source": "index_my_status_btn",
+      "target": "index_looking_for_selector"
     },
     {
       "relation": "references",
@@ -2269,8 +3192,8 @@
       "source_file": "index.html",
       "source_location": ".lookfor[data-look]",
       "weight": 1.0,
-      "source": "index_looking_for_selector",
-      "target": "index_swipe_card"
+      "source": "index_swipe_card",
+      "target": "index_looking_for_selector"
     },
     {
       "relation": "calls",
@@ -2279,8 +3202,8 @@
       "source_file": "index.html",
       "source_location": "playMatchAnimation",
       "weight": 1.0,
-      "source": "index_match_overlay",
-      "target": "index_create_match_from_liker"
+      "source": "index_create_match_from_liker",
+      "target": "index_match_overlay"
     },
     {
       "relation": "implements",
@@ -2309,8 +3232,8 @@
       "source_file": "index.html",
       "source_location": "createMatchFromLiker(p)",
       "weight": 1.0,
-      "source": "index_create_match_from_liker",
-      "target": "index_liker_overlay"
+      "source": "index_liker_overlay",
+      "target": "index_create_match_from_liker"
     },
     {
       "relation": "shares_data_with",
@@ -2339,8 +3262,8 @@
       "source_file": "index.html",
       "source_location": "openLikerProfile L5898",
       "weight": 1.0,
-      "source": "index_liker_overlay",
-      "target": "index_liked_me_panel"
+      "source": "index_liked_me_panel",
+      "target": "index_liker_overlay"
     },
     {
       "relation": "references",
@@ -2459,8 +3382,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_spotify_token",
-      "target": "index_preview_fallback_chain"
+      "source": "index_preview_fallback_chain",
+      "target": "index_spotify_token"
     },
     {
       "relation": "calls",
@@ -2469,8 +3392,8 @@
       "source_file": "index.html",
       "source_location": "L4785",
       "weight": 1.0,
-      "source": "index_deezer_preview",
-      "target": "index_preview_fallback_chain"
+      "source": "index_preview_fallback_chain",
+      "target": "index_deezer_preview"
     },
     {
       "relation": "calls",
@@ -2479,8 +3402,8 @@
       "source_file": "index.html",
       "source_location": "L4786",
       "weight": 1.0,
-      "source": "index_itunes_preview",
-      "target": "index_preview_fallback_chain"
+      "source": "index_preview_fallback_chain",
+      "target": "index_itunes_preview"
     },
     {
       "relation": "implements",
@@ -2499,8 +3422,8 @@
       "source_file": "index.html",
       "source_location": null,
       "weight": 1.0,
-      "source": "index_onboarding_gender",
-      "target": "index_card_age_badge"
+      "source": "index_card_age_badge",
+      "target": "index_onboarding_gender"
     },
     {
       "relation": "references",
@@ -2509,8 +3432,8 @@
       "source_file": "index.html",
       "source_location": ".card-age-badge",
       "weight": 1.0,
-      "source": "index_card_age_badge",
-      "target": "index_swipe_card"
+      "source": "index_swipe_card",
+      "target": "index_card_age_badge"
     },
     {
       "relation": "references",
@@ -2519,10 +3442,876 @@
       "source_file": "index.html",
       "source_location": ".swipe-card.preview-mode",
       "weight": 1.0,
-      "source": "index_swipe_card",
-      "target": "index_acc_preview"
+      "source": "index_acc_preview",
+      "target": "index_swipe_card"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "functions_notify_index_ts",
+      "target": "notify_index_avatarfallback",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "functions_notify_index_ts",
+      "target": "notify_index_loadprefs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "functions/notify/index.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "functions_notify_index_ts",
+      "target": "notify_index_sendwebhook",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "532-540",
+      "weight": 1.0,
+      "source": "editorhtml_profile_editor",
+      "target": "editorhtml_state_object"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1063-1138",
+      "weight": 1.0,
+      "source": "editorhtml_profile_editor",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "257-315",
+      "weight": 1.0,
+      "source": "editorhtml_eye_toggles",
+      "target": "editorhtml_profile_editor"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1072-1134",
+      "weight": 1.0,
+      "source": "editorhtml_localstorage_bridge",
+      "target": "editorhtml_state_object"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1067-1068",
+      "weight": 1.0,
+      "source": "editorhtml_localstorage_bridge",
+      "target": "editorhtml_tindord_state_key"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1088-1089",
+      "weight": 1.0,
+      "source": "editorhtml_persist_debounce",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1081-1123",
+      "weight": 1.0,
+      "source": "editorhtml_interest_orbs",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1082-1129",
+      "weight": 1.0,
+      "source": "editorhtml_gif_stickers",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1078-1117",
+      "weight": 1.0,
+      "source": "editorhtml_profile_color",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1079-1119",
+      "weight": 1.0,
+      "source": "editorhtml_background_picker",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1083-1131",
+      "weight": 1.0,
+      "source": "editorhtml_entry_music",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1084-1132",
+      "weight": 1.0,
+      "source": "editorhtml_voice_memo",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1085-1133",
+      "weight": 1.0,
+      "source": "editorhtml_connections",
+      "target": "editorhtml_localstorage_bridge"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "editor.html",
+      "source_location": "1063-1066",
+      "weight": 1.0,
+      "source": "editorhtml_localstorage_bridge",
+      "target": "v2index_main_app"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1069-1070",
+      "weight": 1.0,
+      "source": "editorhtml_entry_snapshot",
+      "target": "editorhtml_tindord_state_key"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1050-1052",
+      "weight": 1.0,
+      "source": "editorhtml_discord_resync",
+      "target": "editorhtml_tindord_state_key"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "v2/index.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "v2index_main_app",
+      "target": "editorhtml_tindord_state_key"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1142-1146",
+      "weight": 1.0,
+      "source": "editorhtml_toolbar",
+      "target": "editorhtml_persist_debounce"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "editor.html",
+      "source_location": "178-597",
+      "weight": 1.0,
+      "source": "editorhtml_avatar_crop",
+      "target": "editorhtml_avatar_deco_layer"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "1049-1113",
+      "weight": 1.0,
+      "source": "editorhtml_avatar_deco_layer",
+      "target": "editorhtml_discord_resync"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "636-689",
+      "weight": 1.0,
+      "source": "editorhtml_interest_orbs",
+      "target": "editorhtml_orb_search"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "94-137",
+      "weight": 1.0,
+      "source": "editorhtml_interest_orbs",
+      "target": "editorhtml_placement_zone"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "editor.html",
+      "source_location": "636-640",
+      "weight": 1.0,
+      "source": "editorhtml_interest_orbs",
+      "target": "v2index_main_app"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "editor.html",
+      "source_location": "381-689",
+      "weight": 1.0,
+      "source": "editorhtml_entry_music",
+      "target": "editorhtml_orb_search"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "source_location": "94-150",
+      "weight": 1.0,
+      "source": "editorhtml_gif_stickers",
+      "target": "editorhtml_placement_zone"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "supabase_backend",
+      "target": "likes_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "supabase_backend",
+      "target": "matches_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "supabase_backend",
+      "target": "messages_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "supabase_backend",
+      "target": "user_notif_prefs_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "supabase_backend",
+      "target": "notify_edge_function"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "supabase_backend",
+      "target": "rls_policies"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "server_side_notifications",
+      "target": "supabase_backend"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 0.75,
+      "source": "landing_page",
+      "target": "supabase_backend"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "schema_sql",
+      "target": "likes_table"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "reciprocal_match_trigger",
+      "target": "likes_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_webhooks",
+      "target": "likes_table"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "reciprocal_match_trigger",
+      "target": "matches_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_webhooks",
+      "target": "matches_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_webhooks",
+      "target": "messages_table"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "notify_edge_function",
+      "target": "user_notif_prefs_table"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "sync_notif_prefs",
+      "target": "user_notif_prefs_table"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "schema_sql",
+      "target": "reciprocal_match_trigger"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "database_webhooks",
+      "target": "notify_edge_function"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "notify_edge_function",
+      "target": "discord_user_webhook"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "no_verify_jwt",
+      "target": "notify_edge_function"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "webhook_rate_limit",
+      "target": "notify_edge_function"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "rls_policies",
+      "target": "discord_user_webhook"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 0.65,
+      "source": "color_palette",
+      "target": "discord_user_webhook"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "supabase/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "schema_sql",
+      "target": "rls_policies"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "handoff_bundle",
+      "target": "read_chat_first"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "handoff_bundle",
+      "target": "pixel_perfect_recreate"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "handoff_bundle",
+      "target": "landing_page"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "tindord/README.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "read_chat_first",
+      "target": "landing_page"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "color_palette"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "typography"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "mesh_gradient_bg"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "glassmorphism"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "bubble_field"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "lang_switcher"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "discord_cta"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "corner_controls"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "tindord_brand_logo"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "discord_logo"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "landing_page",
+      "target": "no_scroll"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "bubble_field",
+      "target": "bubble_repulsion"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "bubble_field",
+      "target": "bubble_explosion"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "bubble_field",
+      "target": "bubble_collisions"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "bubble_field",
+      "target": "bubble_respawn"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "pointer_events_fix",
+      "target": "bubble_field"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/chats/chat1.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lang_switcher_rebuild",
+      "target": "lang_switcher"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "corner_controls",
+      "target": "lang_switcher"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "discord_cta",
+      "target": "discord_logo"
     }
   ],
-  "hyperedges": [],
-  "built_at_commit": "fbaa4cc3c0501e55d367bc0e6b650238f3ef0462"
+  "hyperedges": [
+    {
+      "nodes": [
+        "index_msg_fab",
+        "index_heart_fab",
+        "index_badge_fab"
+      ],
+      "label": "Bottom-row FAB stack (auth=in only)",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "body[data-auth=in] .bf-fab"
+    },
+    {
+      "nodes": [
+        "index_liked_me_panel",
+        "index_liker_overlay",
+        "index_create_match_from_liker",
+        "index_match_overlay"
+      ],
+      "label": "Liker-to-Match Flow Pipeline",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "L5160-5239 L5810-5905"
+    },
+    {
+      "nodes": [
+        "index_bulles_mouse_repulsion",
+        "index_bulles_pairwise_collision",
+        "index_forbidden_zones"
+      ],
+      "label": "Bulles Physics Forces (3 systems)",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "index.html",
+      "source_location": "L4500-4700"
+    },
+    {
+      "id": "editorhtml_he_sync",
+      "label": "Editor\u2194app profile sync over tindord_state",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "nodes": [
+        "editorhtml_localstorage_bridge",
+        "editorhtml_tindord_state_key",
+        "editorhtml_state_object",
+        "v2index_main_app"
+      ]
+    },
+    {
+      "id": "editorhtml_he_card_layers",
+      "label": "Profile card overlay layers (orbs + GIFs + placement zone)",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "nodes": [
+        "editorhtml_interest_orbs",
+        "editorhtml_gif_stickers",
+        "editorhtml_placement_zone"
+      ]
+    },
+    {
+      "id": "editorhtml_he_discord",
+      "label": "Discord-derived profile (avatar/deco/resync)",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "editor.html",
+      "nodes": [
+        "editorhtml_avatar_deco_layer",
+        "editorhtml_discord_resync",
+        "editorhtml_avatar_crop"
+      ]
+    },
+    {
+      "label": "Notification pipeline (insert \u2192 trigger \u2192 webhook \u2192 edge fn \u2192 Discord)",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "supabase/README.md",
+      "nodes": [
+        "likes_table",
+        "reciprocal_match_trigger",
+        "database_webhooks",
+        "notify_edge_function",
+        "discord_user_webhook"
+      ]
+    },
+    {
+      "label": "Bubble interaction system",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/project/Tindord Landing.html",
+      "nodes": [
+        "bubble_field",
+        "bubble_repulsion",
+        "bubble_explosion",
+        "bubble_collisions",
+        "bubble_respawn"
+      ]
+    },
+    {
+      "label": "Visual design language",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tindord/chats/chat1.md",
+      "nodes": [
+        "color_palette",
+        "typography",
+        "glassmorphism",
+        "mesh_gradient_bg"
+      ]
+    }
+  ],
+  "built_at_commit": "6b8e4094856cecf73a4adfc175130cf38bf0f025"
 }
