@@ -644,9 +644,9 @@ function cropPaint(){
   });})();
 function setCroppedMedia(slot,data,ph){slot.innerHTML='';if(!data){slot.innerHTML=ph;return;}const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';img.style.transform='scale('+data.scale+')';slot.appendChild(img);}
 $('avatarSlot').addEventListener('click',()=>$('fileAvatar').click());
-$('fileAvatar').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'circle','Recadrer la photo de profil',d=>{S.avatar=d;setCroppedMedia($('avatarSlot'),d,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Photo de profil mise à jour');});e.target.value='';});
+$('fileAvatar').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'circle','Recadrer la photo de profil',async d=>{S.avatar=d;setCroppedMedia($('avatarSlot'),d,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Envoi de la photo…');const url=await edUpload(f,'avatar');if(url){S.avatar={url,posX:50,posY:50,scale:1};setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Photo de profil mise à jour');}else{toast('⚠️ Envoi échoué — photo locale seulement');}});e.target.value='';});
 $('bannerSlot').addEventListener('click',()=>$('fileBanner').click());
-$('fileBanner').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'banner','Recadrer la bannière',d=>{S.banner=d;setCroppedMedia($('bannerSlot'),d,'<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>');persist();toast('Bannière mise à jour');});e.target.value='';});
+$('fileBanner').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'banner','Recadrer la bannière',async d=>{S.banner=d;setCroppedMedia($('bannerSlot'),d,'<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>');persist();toast('Envoi de la bannière…');const url=await edUpload(f,'banner');if(url){S.banner={url,posX:50,posY:50,scale:1};setCroppedMedia($('bannerSlot'),S.banner,'');persist();toast('Bannière mise à jour');}else{toast('⚠️ Envoi échoué — bannière locale seulement');}});e.target.value='';});
 
 /* ===== VOCAL ===== */
 const rec={media:null,recorder:null,chunks:[],url:null,dur:0,t0:0,raf:null,timerI:null,audio:null,actx:null};
@@ -986,7 +986,7 @@ function renderBgSheet(sh){
   sh.querySelectorAll('[data-bg]').forEach(b=>b.addEventListener('click',()=>{applyBg({type:'preset',value:b.dataset.bg});sh.querySelectorAll('.bgp-tile').forEach(x=>x.classList.toggle('sel',x===b));}));
   sh.querySelector('[data-bg-upload]').addEventListener('click',()=>$('fileBg').click());
 }
-$('fileBg').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;applyBg({type:'custom',value:URL.createObjectURL(f),video:f.type.startsWith('video/')});toast('Fond personnalisé appliqué');e.target.value='';});
+$('fileBg').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const isVid=f.type.startsWith('video/');applyBg({type:'custom',value:URL.createObjectURL(f),video:isVid});toast('Envoi du fond…');const url=await edUpload(f,'bg');if(url){applyBg({type:'custom',value:url,video:isVid});persist();toast('Fond personnalisé appliqué');}else{toast('⚠️ Envoi échoué — fond local seulement');}e.target.value='';});
 function applyBg(bg){S.bg=bg;const layer=$('bgLayer');layer.innerHTML='';if(bg.type==='preset'){layer.className='bg-layer bg-'+bg.value;if(bg.value==='default')layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';}else{layer.className='bg-layer';if(bg.video){const v=document.createElement('video');v.src=bg.value;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;layer.appendChild(v);}else{const im=document.createElement('img');im.src=bg.value;layer.appendChild(im);}}if(typeof persist==='function')persist();}
 
 /* ===== 4. COULEUR (dégradé de la carte : primaire + secondaire indépendantes) ===== */
@@ -1163,7 +1163,8 @@ function writeState(){
   if(S.avatar) st.user.avatarUrl=S.avatar.url;
   if(S.banner){ st.user.bannerUrl=S.banner.url; st.user.bannerCustom=true; }
   st.user.profileColor=S.c1; st.user.profileColor2=S.c2;
-  if(S.bg.type==='preset') st.user.boostBg=S.bg.value;
+  if(S.bg.type==='preset'){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=false; }
+  else if(S.bg.type==='custom' && /^https?:/.test(S.bg.value||'')){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=!!S.bg.video; } // URL Storage uniquement (jamais un blob:)
   // x/y = % de la carte (50=centre) pour l'éditeur ; customX/customY = fractions depuis le centre, lues par la carte de swipe.
   st.profile.userOrbs=S.orbs.map(o=>{const r={kind:o.kind,title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,clipUrl:o.clipUrl||null,x:o.x,y:o.y};if(typeof o.x==='number'&&typeof o.y==='number'){r.customX=(o.x-50)/100;r.customY=(o.y-50)/100;}return r;});
   st.user.gifs=S.gifs.map(g=>({preview:g.url,full:g.url,x:g.x,y:g.y,w:g.w,rot:g.rot}));
@@ -1186,6 +1187,23 @@ const ED_SUPABASE_URL='https://pdhffpxssagclexttfox.supabase.co';
 const ED_SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaGZmcHhzc2FnY2xleHR0Zm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzA4NjgsImV4cCI6MjA5NjI0Njg2OH0.wqnVvxAcjMGfl6QgeUfgEs4EEJAQDjVLMOwy676sccg';
 let _edSupa=null;
 function edSupa(){ if(_edSupa) return _edSupa; try{ if(window.supabase&&window.supabase.createClient) _edSupa=window.supabase.createClient(ED_SUPABASE_URL,ED_SUPABASE_ANON_KEY); }catch(_){} return _edSupa; }
+/* Upload d'un fichier importé vers Supabase Storage (bucket public 'media') → URL publique persistante,
+   visible par TOUS (et qui survit au rechargement, contrairement à un blob:). */
+async function edUpload(file, kind){
+  const sb=edSupa(); if(!sb||!file) return null;
+  try{
+    const { data:{ session } } = await sb.auth.getSession();
+    if(!session){ return null; }
+    const uid=session.user.id;
+    let ext=(file.name&&file.name.split('.').pop()||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(!ext) ext=(file.type||'').includes('video')?'mp4':'png';
+    const path=`${uid}/${kind}-${Date.now()}.${ext}`;
+    const { error }=await sb.storage.from('media').upload(path, file, { upsert:true, contentType:file.type||undefined, cacheControl:'3600' });
+    if(error){ console.warn('[editor] upload échoué', error.message||error); return null; }
+    const { data }=sb.storage.from('media').getPublicUrl(path);
+    return (data&&data.publicUrl)||null;
+  }catch(e){ console.warn('[editor] upload erreur', e); return null; }
+}
 function buildDbProfile(st){
   const u=st.user||{}, p=st.profile||{};
   if(!u.displayName && !u.discordTag && !u.avatarUrl) return null;
@@ -1253,7 +1271,7 @@ function hydrateFromSite(){
     S.c1=u.profileColor; S.c2=(u.profileColor2&&/^#[0-9a-f]{6}$/i.test(u.profileColor2))?u.profileColor2:darken(S.c1,.55);
     const r=document.documentElement.style; r.setProperty('--accent',S.c1); r.setProperty('--c1',S.c1); r.setProperty('--c2',S.c2);
   }
-  if(u.boostBg){ applyBg({type:'preset',value:u.boostBg}); }
+  if(u.boostBg){ if(/^https?:/.test(u.boostBg)) applyBg({type:'custom',value:u.boostBg,video:!!u.boostBgVideo}); else applyBg({type:'preset',value:u.boostBg}); }
   if(Array.isArray(p.userOrbs)&&p.userOrbs.length){
     S.orbs=p.userOrbs.map(o=>({kind:(o.kind==='anime'?'film':o.kind),title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,clipUrl:o.clipUrl||null,
         x:typeof o.x==='number'?o.x:(typeof o.customX==='number'?50+o.customX*100:undefined),

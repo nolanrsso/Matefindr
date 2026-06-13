@@ -30,6 +30,8 @@
 <link rel="preconnect" href="https://cdn.discordapp.com" crossorigin />
 <link rel="preconnect" href="https://i.scdn.co" crossorigin />
 <link rel="preconnect" href="https://api.spotify.com" crossorigin />
+<link rel="preconnect" href="https://cdn.simpleicons.org" crossorigin />
+<link rel="preconnect" href="https://pdhffpxssagclexttfox.supabase.co" crossorigin />
 <link rel="dns-prefetch" href="https://api.jikan.moe" />
 <link rel="dns-prefetch" href="https://en.wikipedia.org" />
 <link rel="dns-prefetch" href="https://www.wikidata.org" />
@@ -62,6 +64,10 @@
   ::-webkit-scrollbar-corner{background:transparent}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-family:"Inter",system-ui,sans-serif}
   html,body{height:100%;overflow:hidden}
+  /* Fond personnalisé importé (image/vidéo) — couche derrière la carte, swipe seulement */
+  #customBgLayer{position:fixed;inset:0;z-index:1;background-size:cover;background-position:center;background-repeat:no-repeat;display:none;pointer-events:none}
+  #customBgLayer video{width:100%;height:100%;object-fit:cover;display:block}
+  body[data-screen="swipe"] #customBgLayer.on{display:block}
 
   /* ------------- Background mesh ------------- */
   .scene{
@@ -8378,11 +8384,33 @@
     });
 
     /* ===== Boost: Fond d'écran personnalisé ===== */
+    function ensureCustomBgLayer(){
+      let l = document.getElementById('customBgLayer');
+      if (!l) { l = document.createElement('div'); l.id = 'customBgLayer'; document.body.insertBefore(l, document.body.firstChild); }
+      return l;
+    }
     function applyBgChoice(bg){
+      const picker = document.getElementById('bgPicker');
+      const layer = ensureCustomBgLayer();
+      // Fond personnalisé importé (URL Storage) → couche image/vidéo dédiée.
+      if (bg && /^https?:\/\//.test(bg)) {
+        document.body.removeAttribute('data-bg');
+        if (layer._src !== bg) {
+          layer._src = bg; layer.innerHTML = ''; layer.style.backgroundImage = '';
+          if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg)) {
+            const v = document.createElement('video'); v.src = bg; v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true;
+            layer.appendChild(v);
+          } else { layer.style.backgroundImage = `url("${bg}")`; }
+        }
+        layer.classList.add('on');
+        if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.remove('is-active'));
+        return;
+      }
+      // Sinon : preset (via data-bg) → on masque la couche custom.
+      layer.classList.remove('on'); layer.innerHTML = ''; layer.style.backgroundImage = ''; layer._src = '';
       const v = bg || 'default';
       if (v === 'default') document.body.removeAttribute('data-bg');
       else document.body.setAttribute('data-bg', v);
-      const picker = document.getElementById('bgPicker');
       if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.toggle('is-active', t.dataset.bg === v));
     }
     window.__applyBgChoice = applyBgChoice;
