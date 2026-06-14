@@ -141,9 +141,14 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .orb-clip{position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;border-radius:50%;z-index:6;
   background:linear-gradient(135deg,#FF4FA0,#9146FF);color:#fff;border:2px solid #0d0b1e;
   display:grid;place-items:center;font-size:11px;line-height:1;box-shadow:0 3px 9px rgba(145,70,255,.5)}
-.orb-rankbadge{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);z-index:6;
-  background:rgba(13,11,30,.92);color:#8DCBFF;border:1px solid rgba(141,203,255,.6);border-radius:999px;
-  padding:1px 7px;font-size:9.5px;font-weight:800;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+/* Rang = mini-bulle ronde qui orbite autour de la bulle JEU (comme sur la carte de swipe) */
+.orb-rank-orbit{position:absolute;inset:-20px;border-radius:50%;pointer-events:none;z-index:4;animation:orbRankOrbit 10s linear infinite}
+.orb-rank-orbit .orb-rank-ball{position:absolute;top:-11px;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;background:transparent;border:2.5px solid var(--rc1);display:grid;place-items:center;box-shadow:0 0 14px var(--rc1),0 6px 16px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.18) inset;animation:orbRankCounter 10s linear infinite;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.orb-rank-orbit .orb-rank-ico{font-size:17px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.85)) drop-shadow(0 0 6px var(--rc1,#fff))}
+.orb-rank-orbit .orb-rank-ball--img{background:transparent;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;width:42px;height:42px}
+.orb-rank-orbit .orb-rank-img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)) drop-shadow(0 0 8px var(--rc1,rgba(255,255,255,.4)))}
+@keyframes orbRankOrbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes orbRankCounter{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(-360deg)}}
 .gp-l{display:block;font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 5px}
 .gp-rank-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:8px}
 .gp-rank-grid[hidden]{display:none}
@@ -919,7 +924,7 @@ function renderOrbs(){
       ed.addEventListener('click',e=>{e.stopPropagation();openGamePop(o);});
       orb.appendChild(ed);
       if(o.clipUrl){ const cl=document.createElement('div'); cl.className='orb-clip'; cl.textContent='▶'; cl.title='Clip ajouté'; cl.style.width=Math.round(D*0.26)+'px'; cl.style.height=Math.round(D*0.26)+'px'; cl.style.fontSize=Math.round(D*0.13)+'px'; orb.appendChild(cl); }
-      if(o.rank){ const rk=document.createElement('div'); rk.className='orb-rankbadge'; rk.textContent=o.rank; orb.appendChild(rk); }
+      if(o.rank){ orb.appendChild(buildRankOrbit(o)); }
     }
     const lbl=document.createElement('div'); lbl.className='orb-label'; lbl.textContent=o.title;
     lbl.style.maxWidth=(D+24)+'px'; lbl.style.fontSize=Math.max(9,Math.round(D*0.13))+'px';
@@ -1149,6 +1154,47 @@ function rankGameKey(title){
   if(t.includes('overwatch'))return 'overwatch';
   if(t.includes('valorant'))return 'valorant';
   return null;
+}
+// Couleur d'anneau + emoji de secours par palier (repris de l'app de swipe)
+const RANK_VISUAL={
+  'Iron':{ico:'⚙',c1:'#7a7a7a',c2:'#3a3a3a'},'Bronze':{ico:'🥉',c1:'#cd7f32',c2:'#5c3a14'},
+  'Silver':{ico:'🥈',c1:'#d8d8d8',c2:'#6a6a6a'},'Gold':{ico:'🥇',c1:'#ffd700',c2:'#8c6e0a'},
+  'Platinum':{ico:'💠',c1:'#5ce0ff',c2:'#14495c'},'Diamond':{ico:'💎',c1:'#5ce0ff',c2:'#1a3a5c'},
+  'Ascendant':{ico:'🔱',c1:'#3bd17c',c2:'#0e3a1f'},'Immortal':{ico:'⚔',c1:'#9c27b0',c2:'#3a0e5c'},
+  'Radiant':{ico:'✨',c1:'#fffacd',c2:'#8c7014'},'Master':{ico:'👑',c1:'#C7A5FF',c2:'#4a1bc1'},
+  'Grandmaster':{ico:'👑',c1:'#FF4FA0',c2:'#5c0e2a'},'Top 500':{ico:'⭐',c1:'#FFD83D',c2:'#8c6e0a'},
+  'Top 250':{ico:'⭐',c1:'#FFD83D',c2:'#8c6e0a'},'Champion':{ico:'🏆',c1:'#FFD83D',c2:'#8c6e0a'},
+  'Grand Champion':{ico:'👑',c1:'#C7A5FF',c2:'#4a1bc1'},'Supersonic Legend':{ico:'🚀',c1:'#FF4FA0',c2:'#5c0e2a'},
+  'Elite':{ico:'⭐',c1:'#3bff8c',c2:'#0e3a1f'},'Crimson':{ico:'🔥',c1:'#ED4245',c2:'#5c1414'},
+  'Iridescent':{ico:'🌈',c1:'#FF7EB6',c2:'#5c0e3a'},'Unreal':{ico:'⚡',c1:'#9146FF',c2:'#2a0e5c'},
+};
+function rankVisual(rank){
+  if(!rank)return null;
+  if(RANK_VISUAL[rank])return RANK_VISUAL[rank];
+  const base=String(rank).replace(/\s+\d+\s*$/,'');
+  if(RANK_VISUAL[base])return RANK_VISUAL[base];
+  return {ico:'⭐',c1:'#FFD83D',c2:'#8c6e0a'};
+}
+function rankIconUrlEditor(title,rank){
+  const gk=rankGameKey(title); if(!gk)return null;
+  const set=RANK_SETS[gk]; if(!set)return null;
+  const r=(rank||'').trim().toLowerCase();
+  const hit=set.find(t=>t.label.toLowerCase()===r);
+  return hit?`assets/ranks/${gk}/${hit.icon}`:null;
+}
+// Construit la mini-bulle de rang qui orbite. Si l'icône PNG manque (ex: COD), on retombe sur l'emoji.
+function buildRankOrbit(o){
+  const v=rankVisual(o.rank), iconUrl=rankIconUrlEditor(o.title,o.rank);
+  const wrap=document.createElement('div'); wrap.className='orb-rank-orbit';
+  const ball=document.createElement('span'); ball.className='orb-rank-ball';
+  ball.style.setProperty('--rc1',v.c1); ball.style.setProperty('--rc2',v.c2); ball.title=o.rank;
+  const setEmoji=()=>{ball.classList.remove('orb-rank-ball--img');ball.innerHTML=`<span class="orb-rank-ico">${v.ico}</span>`;};
+  if(iconUrl){
+    ball.classList.add('orb-rank-ball--img');
+    const img=document.createElement('img'); img.className='orb-rank-img'; img.alt=o.rank; img.decoding='async';
+    img.addEventListener('error',setEmoji); img.src=iconUrl; ball.appendChild(img);
+  }else setEmoji();
+  wrap.appendChild(ball); return wrap;
 }
 function renderRankGrid(o){
   const grid=$('gamePopRankGrid'), label=$('gamePopRankLabel');
