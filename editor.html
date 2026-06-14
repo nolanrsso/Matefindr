@@ -956,10 +956,17 @@ function renderGifsSheet(sh){
   sh.querySelector('#gifSearch').addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();if(q.length<2)return;deb=setTimeout(async()=>{try{const r=await fetch('https://api.giphy.com/v1/gifs/search?api_key='+GIPHY_KEY+'&q='+encodeURIComponent(q)+'&limit=12&rating=pg-13');const d=await r.json();const grid=sh.querySelector('#gifResults');grid.innerHTML='';(d.data||[]).forEach(g=>{const url=g.images?.fixed_height?.url;if(!url)return;const b=document.createElement('button');b.innerHTML=`<img src="${url}" alt="" loading="lazy">`;b.addEventListener('click',()=>addGif(url));grid.appendChild(b);});}catch(_){toast('Recherche GIF indisponible');}},350);});
   setTimeout(()=>sh.querySelector('#gifSearch').focus(),250);
 }
+// Mémorise la dernière position/taille où un GIF a été posé → les suivants y apparaissent.
+let _lastGifPlace=null;
 function addGif(url){
   if(S.gifs.length>=GIF_MAX){toast('Limite : '+GIF_MAX+' GIFs');return;}
-  const n=S.gifs.length; // sur la GAUCHE de la carte (derrière), empilés vers le bas
-  S.gifs.push({url,x:-2,y:26+n*16,w:30,rot:0});
+  const last=S.gifs[S.gifs.length-1];
+  // Spawn là où l'utilisateur a posé le dernier GIF (sinon : à gauche de la carte par défaut)
+  const base=_lastGifPlace||(last?{x:last.x,y:last.y,w:last.w}:{x:-2,y:26,w:30});
+  const nudge=S.gifs.length?4:0; // léger décalage pour ne pas masquer complètement le précédent
+  const g={url,x:base.x+nudge,y:base.y+nudge,w:base.w,rot:0};
+  S.gifs.push(g);
+  _lastGifPlace={x:g.x,y:g.y,w:g.w};
   renderGifs();
   const h=document.getElementById('gifHint'); if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;
   toast('GIF ajouté');
@@ -981,11 +988,11 @@ function makeSticker(g,idx,layer){
   let drag=null;
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
   el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();g.x=(cx-lr.left)/lr.width*100;g.y=(cy-lr.top)/lr.height*100;apply();});
-  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}persist();};
+  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastGifPlace={x:g.x,y:g.y,w:g.w};persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   // taille
   const rz=el.querySelector('.sk-size');
-  rz.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{rz.setPointerCapture(e.pointerId);}catch(_){}const c=center();const d0=Math.max(8,Math.hypot(e.clientX-c.x,e.clientY-c.y));const w0=g.w;const mv=ev=>{g.w=clamp(w0*(Math.hypot(ev.clientX-c.x,ev.clientY-c.y)/d0),12,75);apply();};const up=ev=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up);try{rz.releasePointerCapture(ev.pointerId);}catch(_){}persist();};rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);});
+  rz.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{rz.setPointerCapture(e.pointerId);}catch(_){}const c=center();const d0=Math.max(8,Math.hypot(e.clientX-c.x,e.clientY-c.y));const w0=g.w;const mv=ev=>{g.w=clamp(w0*(Math.hypot(ev.clientX-c.x,ev.clientY-c.y)/d0),12,75);apply();};const up=ev=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up);try{rz.releasePointerCapture(ev.pointerId);}catch(_){}_lastGifPlace={x:g.x,y:g.y,w:g.w};persist();};rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);});
   // rotation
   const ro=el.querySelector('.sk-rot');
   ro.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{ro.setPointerCapture(e.pointerId);}catch(_){}const c=center();const a0=Math.atan2(e.clientY-c.y,e.clientX-c.x)*180/Math.PI;const r0=g.rot;const mv=ev=>{const a=Math.atan2(ev.clientY-c.y,ev.clientX-c.x)*180/Math.PI;g.rot=Math.round(r0+(a-a0));apply();};const up=ev=>{ro.removeEventListener('pointermove',mv);ro.removeEventListener('pointerup',up);try{ro.releasePointerCapture(ev.pointerId);}catch(_){}persist();};ro.addEventListener('pointermove',mv);ro.addEventListener('pointerup',up);});
