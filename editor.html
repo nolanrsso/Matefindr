@@ -145,6 +145,13 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
   background:rgba(13,11,30,.92);color:#8DCBFF;border:1px solid rgba(141,203,255,.6);border-radius:999px;
   padding:1px 7px;font-size:9.5px;font-weight:800;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis}
 .gp-l{display:block;font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 5px}
+.gp-rank-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:8px}
+.gp-rank-grid[hidden]{display:none}
+.gp-rank-tile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border-radius:10px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.04);cursor:pointer;transition:transform .12s ease, border-color .12s ease, background .12s ease;font-family:inherit}
+.gp-rank-tile:hover{transform:translateY(-1px);background:rgba(255,255,255,.08)}
+.gp-rank-tile.selected{border-color:rgba(91,233,255,.7);background:rgba(91,233,255,.12);box-shadow:0 0 0 3px rgba(91,233,255,.16)}
+.gp-rank-tile img{width:30px;height:30px;object-fit:contain}
+.gp-rank-tile span{font-size:9px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 #gamePop input{width:100%;padding:10px 12px;border-radius:10px;color:#fff;outline:none;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2);font-family:inherit;font-size:13px}
 #gamePop input:focus{border-color:rgba(91,233,255,.6);box-shadow:0 0 0 4px rgba(91,233,255,.16)}
 .orb-label{
@@ -154,7 +161,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 }
 
 /* ===================== GIFS (stickers sur la carte, comme le site) ===================== */
-.sticker-layer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:visible}
+.sticker-layer{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
 .sticker{position:absolute;transform-origin:center center;pointer-events:auto;touch-action:none;cursor:grab}
 .sticker.dragging{cursor:grabbing}
 .sticker-inner{width:100%;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 0 2px rgba(145,70,255,.35)}
@@ -525,8 +532,9 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 <!-- Popover bulle JEU : clip + rang -->
 <div class="conn-pop-backdrop" id="gameBackdrop" hidden></div>
 <div class="conn-pop" id="gamePop" hidden>
-  <div class="conn-pop-head"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#8DCBFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><path d="M8 11h4M10 9v4"/></svg><b id="gamePopName"></b></div>
+  <div class="conn-pop-head"><b id="gamePopName"></b></div>
   <label class="gp-l">Rang</label>
+  <div class="gp-rank-grid" id="gamePopRankGrid" hidden></div>
   <input id="gamePopRank" maxlength="40" placeholder="Ex : Immortal, Diamant 2, Radiant…" autocomplete="off">
   <label class="gp-l">Clip (lien YouTube / vidéo)</label>
   <input id="gamePopClip" maxlength="400" placeholder="https://youtube.com/… ou un .mp4" autocomplete="off">
@@ -943,7 +951,8 @@ function renderGifsSheet(sh){
 }
 function addGif(url){
   if(S.gifs.length>=GIF_MAX){toast('Limite : '+GIF_MAX+' GIFs');return;}
-  S.gifs.push({url,x:50,y:28,w:34,rot:0}); // posé sur la carte (visible, immédiatement déplaçable)
+  const n=S.gifs.length; // sur la GAUCHE de la carte (derrière), empilés vers le bas
+  S.gifs.push({url,x:-2,y:26+n*16,w:30,rot:0});
   renderGifs();
   const h=document.getElementById('gifHint'); if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;
   toast('GIF ajouté');
@@ -1103,8 +1112,62 @@ $('connBackdrop').addEventListener('click',closeConnPop);
 renderConnections();
 
 /* ===== Popover bulle JEU : clip + rang ===== */
+const RANK_SETS={
+  fortnite:[
+    {label:'Bronze',icon:'bronze.png'},{label:'Silver',icon:'silver.png'},{label:'Gold',icon:'gold.png'},
+    {label:'Platinum',icon:'platinum.png'},{label:'Diamond',icon:'diamond.png'},{label:'Elite',icon:'elite.png'},
+    {label:'Champion',icon:'champion.png'},{label:'Unreal',icon:'unreal.png'},
+  ],
+  valorant:[
+    {label:'Iron',icon:'iron.png'},{label:'Bronze',icon:'bronze.png'},{label:'Silver',icon:'silver.png'},
+    {label:'Gold',icon:'gold.png'},{label:'Platinum',icon:'platinum.png'},{label:'Diamond',icon:'diamond.png'},
+    {label:'Ascendant',icon:'ascendant.png'},{label:'Immortal',icon:'immortal.png'},{label:'Radiant',icon:'radiant.png'},
+  ],
+  'rocket-league':[
+    {label:'Bronze',icon:'bronze.png'},{label:'Silver',icon:'silver.png'},{label:'Gold',icon:'gold.png'},
+    {label:'Platinum',icon:'platinum.png'},{label:'Diamond',icon:'diamond.png'},{label:'Champion',icon:'champion.png'},
+    {label:'Grand Champion',icon:'grand_champion.png'},{label:'Supersonic Legend',icon:'supersonic_legend.png'},
+  ],
+  'league-of-legends':[
+    {label:'Iron',icon:'iron.png'},{label:'Bronze',icon:'bronze.png'},{label:'Silver',icon:'silver.png'},
+    {label:'Gold',icon:'gold.png'},{label:'Platinum',icon:'platinum.png'},{label:'Emerald',icon:'emerald.png'},
+    {label:'Diamond',icon:'diamond.png'},{label:'Master',icon:'master.png'},{label:'Grandmaster',icon:'grandmaster.png'},
+    {label:'Challenger',icon:'challenger.png'},
+  ],
+};
+function rankGameKey(title){
+  const t=(title||'').toLowerCase();
+  if(t.includes('fortnite'))return 'fortnite';
+  if(t.includes('valorant'))return 'valorant';
+  if(t.includes('rocket league')||t.includes('rocket-league'))return 'rocket-league';
+  if(t.includes('league of legends')||t.includes('league-of-legends')||/\blol\b/.test(t))return 'league-of-legends';
+  return null;
+}
+function renderRankGrid(o){
+  const grid=$('gamePopRankGrid');
+  const gk=rankGameKey(o.title);
+  const set=gk&&RANK_SETS[gk];
+  grid.innerHTML='';
+  if(!set){grid.hidden=true;return;}
+  grid.hidden=false;
+  const cur=(o.rank||'').trim().toLowerCase();
+  set.forEach(t=>{
+    const tile=document.createElement('button');
+    tile.type='button';
+    tile.className='gp-rank-tile'+((cur===t.label.toLowerCase()||cur.startsWith(t.label.toLowerCase()+' '))?' selected':'');
+    tile.title=t.label;
+    tile.innerHTML=`<img src="assets/ranks/${gk}/${t.icon}" alt="${t.label}"><span>${t.label}</span>`;
+    tile.addEventListener('click',()=>{
+      grid.querySelectorAll('.gp-rank-tile').forEach(x=>x.classList.remove('selected'));
+      tile.classList.add('selected');
+      $('gamePopRank').value=t.label;
+      $('gamePopRank').focus();
+    });
+    grid.appendChild(tile);
+  });
+}
 let _gameOrb=null;
-function openGamePop(o){_gameOrb=o;$('gamePopName').textContent=o.title;$('gamePopRank').value=o.rank||'';$('gamePopClip').value=o.clipUrl||'';$('gameBackdrop').hidden=false;$('gamePop').hidden=false;setTimeout(()=>$('gamePopRank').focus(),50);}
+function openGamePop(o){_gameOrb=o;$('gamePopName').textContent=o.title;$('gamePopRank').value=o.rank||'';$('gamePopClip').value=o.clipUrl||'';renderRankGrid(o);$('gameBackdrop').hidden=false;$('gamePop').hidden=false;setTimeout(()=>$('gamePopRank').focus(),50);}
 function closeGamePop(){$('gameBackdrop').hidden=true;$('gamePop').hidden=true;_gameOrb=null;}
 $('gamePopSave').addEventListener('click',()=>{
   if(!_gameOrb)return;
