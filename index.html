@@ -9037,12 +9037,8 @@
     document.querySelectorAll('.bm-plan').forEach(btn => {
       btn.addEventListener('click', () => {
         if (state.user && state.user.boost) return;
-        state.user = state.user || {};
-        state.user.boost = true;
-        state.user.boostPlan = btn.dataset.plan;
-        save();
-        refreshBoostUI();
-        showToast('✨', 'Bienvenue dans Boost !', btn.dataset.plan === 'lifetime' ? '14,99€ à vie' : '3,59€/mois');
+        // Direction la page de paiement (le Boost est activé après le checkout)
+        window.location.href = 'checkout.html?plan=' + (btn.dataset.plan || 'monthly');
       });
     });
     document.getElementById('bmCancel').addEventListener('click', () => {
