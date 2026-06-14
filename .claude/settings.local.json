@@ -163,7 +163,26 @@
       "Bash(git log *)",
       "Bash(git merge *)",
       "Bash(git stash *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(grep -iE \"\\\\.html$\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git ls-tree *)",
+      "Bash(git checkout *)",
+      "Bash(python -c \"import json; json.load\\(open\\('.claude/settings.local.json'\\)\\)\")",
+      "Bash(git --no-pager diff editor.html)",
+      "WebFetch(domain:overwatch.fandom.com)",
+      "WebFetch(domain:icons8.com)",
+      "WebFetch(domain:plg.bet)",
+      "Bash(gh auth *)",
+      "Bash(gh search *)",
+      "Bash(node -e \"console.log\\('node ok'\\)\")",
+      "Bash(py --version)",
+      "Bash(node -e ' *)",
+      "Bash(node --check .__editor_inline.js)",
+      "Bash(python -m http.server 8095)",
+      "Bash(curl -s -o /dev/null -w \"checkout.html -> %{http_code} \\(%{size_download} bytes\\)\\\\n\" http://localhost:8095/checkout.html)",
+      "Bash(curl -s http://localhost:8095/checkout.html)",
+      "Bash(kill %1)"
     ]
   }
 }
