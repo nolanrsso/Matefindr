@@ -5172,6 +5172,10 @@
     // Hand-off used by login/signup handlers
     window.__tindord = {
       onLogin(user){
+        // Déjà connecté et déjà dans l'app ? (ex : onAuthStateChange qui refire quand on
+        // revient sur l'onglet) → on met à jour les données SANS changer l'écran courant.
+        const alreadyInApp = document.body.getAttribute('data-auth') === 'in'
+          && !['landing','onboarding'].includes(document.body.getAttribute('data-screen'));
         // Préserve les assets custom (Boost) avant le merge Discord
         const prev = state.user || {};
         const keepBanner = prev.bannerCustom && prev.bannerUrl;
@@ -5207,7 +5211,9 @@
         // Sync + premier fetch (peuple immédiatement la liste des autres profils)
         try { if (typeof syncMyProfileToCloud === 'function') syncMyProfileToCloud(); } catch(_){}
         try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
-        setScreen(state.profile ? 'landing' : 'onboarding');
+        // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
+        // re-événement d'auth (focus d'onglet) → sinon ça renverrait à l'accueil sans cesse.
+        if (!alreadyInApp) setScreen(state.profile ? 'landing' : 'onboarding');
       },
       go(screen){ setScreen(screen); },
       hasProfile(){ return !!state.profile; },
