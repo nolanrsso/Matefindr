@@ -311,6 +311,11 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .tool--gif .tool-word{font-size:15px}
 .tool--back{color:#FF9DB6}
 .tool--back:hover{background:rgba(255,79,160,.16);color:#fff}
+/* Outils Tindord Boost : logo OR pour les utilisateurs non-Boost */
+.tool{position:relative}
+body.not-boost .tool--boost{color:#FFD15C}
+body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
+body.not-boost .tool--boost::after{content:"";position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,#FFE08A,#E0A82E);box-shadow:0 0 6px rgba(255,209,92,.8)}
 
 /* Bouton « Mettre à jour Discord » — bas-gauche */
 .disc-fab{position:fixed;left:22px;bottom:26px;z-index:41;display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:16px;border:none;cursor:pointer;
@@ -511,13 +516,13 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
     <button class="tool" data-tool="bubbles" title="Bulles" aria-label="Bulles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="9" r="4"/><circle cx="16" cy="7" r="3"/><circle cx="15" cy="16" r="4.5"/></svg></button>
     <button class="eye-dot" data-eye="orbs" title="Masquer les bulles (aperçu)" aria-label="Masquer les bulles"></button>
   </span>
+  <button class="tool" data-tool="color" title="Couleur" aria-label="Couleur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.7-.8 1.7-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11.5" cy="7.5" r="1"/><circle cx="16" cy="9.5" r="1"/></svg></button>
   <span class="tool-wrap">
-    <button class="tool tool--gif" data-tool="gifs" title="GIFs" aria-label="GIFs"><span class="tool-word">GIF</span></button>
+    <button class="tool tool--gif tool--boost" data-tool="gifs" title="GIFs (Tindord Boost)" aria-label="GIFs"><span class="tool-word">GIF</span></button>
     <button class="eye-dot" data-eye="gifs" title="Masquer les GIFs (aperçu)" aria-label="Masquer les GIFs"></button>
   </span>
-  <button class="tool" data-tool="bg" title="Fond" aria-label="Fond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 16l-5-5L5 21"/></svg></button>
-  <button class="tool" data-tool="color" title="Couleur" aria-label="Couleur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.7-.8 1.7-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a5 5 0 0 0 5-5c0-3.9-4-7-9-7z"/><circle cx="7.5" cy="11" r="1"/><circle cx="11.5" cy="7.5" r="1"/><circle cx="16" cy="9.5" r="1"/></svg></button>
-  <button class="tool" data-tool="music" title="Musique" aria-label="Musique"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+  <button class="tool tool--boost" data-tool="bg" title="Fond (Tindord Boost)" aria-label="Fond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 16l-5-5L5 21"/></svg></button>
+  <button class="tool tool--boost" data-tool="music" title="Musique d'entrée (Tindord Boost)" aria-label="Musique"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
   <span class="tool-sep"></span>
   <button class="tool tool--preview" id="btnPreview" title="Aperçu de ton profil" aria-label="Aperçu"><span class="tool-word">Aperçu</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
 </nav>
@@ -1387,6 +1392,7 @@ function hydrateFromSite(){
   if(note) note.textContent='Relié à ton profil Tindord — tes modifs sont sauvegardées';
   if(u.displayName){ S.username=u.displayName; $('usernameSlot').textContent=u.displayName; }
   if(u.discordTag){ document.querySelector('.tag').textContent='@'+u.discordTag+' · en ligne sur Tindord'; }
+  document.body.classList.toggle('not-boost', !u.boost); // outils Boost en or pour les non-Boost
   if(typeof p.bio==='string' && p.bio.trim()){ S.bio=p.bio.trim(); $('bioSlot').textContent=S.bio; }
   if(u.avatarUrl){ S.avatar={url:u.avatarUrl,posX:50,posY:50,scale:1}; setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+(u.displayName||'T').charAt(0).toUpperCase()+'</div>'); }
   // Décoration d'avatar + point de statut Discord → la carte éditeur colle au vrai profil.
@@ -1414,6 +1420,7 @@ function hydrateFromSite(){
   if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); if(typeof renderConnections==='function') renderConnections(); }
 }
 
+document.body.classList.add('not-boost'); // par défaut non-Boost (hydrate corrige si Boost)
 applyColor(S.c1);
 drawIdleWave();
 hydrateFromSite();
