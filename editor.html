@@ -209,7 +209,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 /* Couche séparée (NON clippée) pour la déco + le statut, alignée sur l'avatar → la déco peut dépasser. */
 .avatar-deco{position:absolute;left:20px;top:74px;width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:6}
 .avatar-deco .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain}
-.avatar-deco .status-dot{position:absolute;right:2px;bottom:2px;width:22px;height:22px;border-radius:50%;border:5px solid var(--card);box-sizing:content-box;background:#3ba55d}
+.avatar-deco .status-dot{display:none} /* rond de statut retiré */
 .body{position:relative;padding:96px 18px 18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
 .username{
   margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.05;
@@ -553,6 +553,12 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 </div>
 
 <div class="sheet" id="sheet"></div>
+
+<div class="modal" id="boostGate"><div class="box">
+  <h3>✨ Tindord Boost requis</h3>
+  <p style="color:var(--dim);font-size:14px;line-height:1.55;margin:0 0 18px">Les <b style="color:#FFD15C">GIFs</b>, le <b style="color:#FFD15C">fond personnalisé</b> et la <b style="color:#FFD15C">musique d'entrée</b> sont réservés aux membres <b>Tindord Boost</b>.<br>Sans Boost, ces éléments seront retirés de ton profil.</p>
+  <div class="row-end"><button class="btn ghost-danger" id="bgateClose">Plus tard (retirer)</button><button class="btn primary" id="bgateBuy">Passer en Tindord Boost</button></div>
+</div></div>
 
 <div class="modal" id="discModal"><div class="box">
   <h3>Recharger depuis Discord</h3>
@@ -1284,7 +1290,7 @@ $('btnResync').addEventListener('click',()=>{ $('discModal').classList.add('open
 $('discCancel').addEventListener('click',()=>$('discModal').classList.remove('open'));
 $('discOk').addEventListener('click',()=>{ $('discModal').classList.remove('open'); resyncDiscord(); });
 
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('discModal').classList.contains('open'))$('discModal').classList.remove('open');else if(!$('gamePop').hidden)closeGamePop();else if(!$('connPop').hidden)closeConnPop();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('boostGate').classList.contains('open'))$('bgateClose').click();else if($('discModal').classList.contains('open'))$('discModal').classList.remove('open');else if(!$('gamePop').hidden)closeGamePop();else if(!$('connPop').hidden)closeConnPop();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
 /* ===================================================================
    PONT avec le vrai profil Tindord (localStorage tindord_state, même
@@ -1433,15 +1439,37 @@ applyColor(S.c1);
 drawIdleWave();
 hydrateFromSite();
 
+/* ===== Gate Tindord Boost : GIFs / Fond perso / Musique d'entrée sont réservés au Boost. ===== */
+function userHasBoost(){ try{ const st=readSite(); return !!(st.user&&st.user.boost); }catch(_){ return false; } }
+function hasBoostElements(){
+  if(userHasBoost()) return false;
+  return (S.gifs&&S.gifs.length>0) || (S.bg&&S.bg.type==='custom') || !!S.music;
+}
+function stripBoostElements(){
+  if(S.gifs&&S.gifs.length){ S.gifs=[]; renderGifs(); }
+  if(S.bg&&S.bg.type==='custom'){ applyBg({type:'preset',value:'default'}); }
+  if(S.music){ S.music=null; renderMusicChip(); }
+  // purge aussi côté état sauvegardé (fond custom + musique)
+  try{ const st=readSite(); if(st.user){ if(typeof st.user.boostBg==='string'&&/^https?:/.test(st.user.boostBg)){ st.user.boostBg='default'; st.user.boostBgVideo=false; } st.user.swipeMusic=null; st.user.gifs=[]; localStorage.setItem(STATE_KEY,JSON.stringify(st)); } }catch(_){}
+  saveNow();
+}
+let _pendingLeave=null;
+function openBoostGate(proceed){ _pendingLeave=proceed; $('boostGate').classList.add('open'); }
+$('bgateBuy').addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
+$('bgateClose').addEventListener('click',()=>{ stripBoostElements(); $('boostGate').classList.remove('open'); _pendingLeave=null; toast('Éléments Boost retirés'); });
+// si on ferme par Échap → comme « Plus tard » : retire + reste sur l'éditeur
+// Quitter l'éditeur en passant par le gate si besoin.
+function leaveEditor(go){ if(hasBoostElements()){ openBoostGate(go); return; } go(); }
+
 /* ===== Bas de l'écran : Retour (gauche). Aperçu est collé à la barre d'outils. ===== */
 /* Retour (bas-gauche) : tes modifs sont déjà enregistrées en continu → on revient à l'app. */
-$('btnBack').addEventListener('click',()=>{ saveNow(); toast('✅ Profil enregistré'); setTimeout(()=>{location.href='index.html';},500); });
+$('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('✅ Profil enregistré'); setTimeout(()=>{location.href='index.html';},500); }));
 /* Logo Tindord → retour à l'accueil (en sauvegardant). */
-$('logoHome').addEventListener('click',()=>{ saveNow(); location.href='index.html'; });
+$('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html'; }));
 /* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
-$('btnPreview').addEventListener('click',()=>{ saveNow(); location.href='index.html#preview'; });
+$('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html#preview'; }));
 /* Paramètres (haut-droite) : sauvegarde puis ouvre l'écran compte/paramètres. */
-$('btnSettings').addEventListener('click',()=>{ saveNow(); location.href='index.html#account'; });
+$('btnSettings').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html#account'; }));
 </script>
 </body>
 </html>

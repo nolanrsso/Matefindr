@@ -1262,9 +1262,10 @@
     z-index:3;
   }
   .swipe-card .status-dot{
+    display:none !important; /* rond de statut retiré de la photo de profil */
     position:absolute;right:4px;bottom:4px;width:24px;height:24px;border-radius:50%;
     border:5px solid #1c1d22;box-sizing:content-box;
-    display:grid;place-items:center;
+    place-items:center;
   }
   .swipe-card .status-dot svg{display:block}
   .swipe-card .status-dot.online{background:#3ba55d}
@@ -1416,10 +1417,10 @@
     background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#dcddde;
   }
   .swipe-card .me-chip{
+    position:absolute;top:10px;left:12px;z-index:6;
     font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;
     background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
     letter-spacing:.06em;box-shadow:0 3px 10px rgba(145,70,255,.45);
-    vertical-align:middle;
   }
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
@@ -2302,6 +2303,10 @@
     flex:0 0 auto;min-height:auto;display:grid;
     grid-template-columns:280px 1fr;gap:18px;
   }
+  /* Écran compte = page PARAMÈTRES uniquement (la personnalisation de profil est dans l'éditeur) */
+  #accTabs{display:none !important}
+  body[data-screen="account"] .acc-identity{display:none !important}
+  .acc-main{grid-template-columns:1fr !important}
   .acc-identity{
     display:flex;flex-direction:column;gap:14px;
     padding:18px;border-radius:18px;
@@ -6073,6 +6078,7 @@
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
+        ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
         <div class="avatar-wrap${(p.nitro && !p.decorationUrl && !fakeDeco) ? ' nitro' : ''}${p.decorationUrl ? ' has-deco' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
@@ -6086,7 +6092,6 @@
           <div>
             <div class="name-row">
               <span class="name${(p.boost && p.showBoostName !== false) ? ' name--boost' : ''}">${p.name}${(p.boost && p.showBoostName !== false) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
-              ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
             </div>
             <div class="handle">@${p.tag} <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
             <div class="joined">
@@ -10372,21 +10377,11 @@
       // If the user edited Boost-only options without being premium, auto-impose Boost
       const fakeNitro = !!document.getElementById('boostFakeNitro').checked;
       const genderFilter = document.getElementById('boostGenderFilter').value || 'all';
-      const usingBoostFeatures = fakeNitro || (genderFilter && genderFilter !== 'all')
-        || !!(state.user && state.user.swipeMusic)
-        || !!(state.user && Array.isArray(state.user.gifs) && state.user.gifs.length);
-      if (usingBoostFeatures && !(state.user && state.user.boost)) {
-        state.user = state.user || {};
-        state.user.boost = true;
-        state.user.boostPlan = state.user.boostPlan || 'monthly';
-        if (!state.user.boostSince) {
-          state.user.boostSince = new Date().toISOString();
-          if (state.user.boostPlan === 'monthly') { const d = new Date(); d.setMonth(d.getMonth() + 1); state.user.boostNextPayment = d.toISOString(); }
-        }
+      // Le Boost ne s'auto-active PLUS : il s'obtient uniquement via le paiement (checkout.html).
+      // Les réglages Boost ne sont appliqués que si l'utilisateur est déjà abonné.
+      if (state.user && state.user.boost) {
         state.user.fakeNitro = fakeNitro;
         state.user.genderFilter = genderFilter;
-        if (typeof refreshBoostUI === 'function') refreshBoostUI();
-        showToast && showToast('✦', 'Tindord Boost activé', 'Tes options premium sont appliquées');
       }
 
       save();
