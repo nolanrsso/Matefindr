@@ -1236,7 +1236,7 @@
   }
   .swipe-card:active{cursor:grabbing}
   .swipe-card .banner{
-    height:120px;max-height:120px;background:linear-gradient(135deg, var(--c1,#5865F2) 0%, var(--c2,#9146FF) 100%);
+    height:120px;max-height:120px;background:linear-gradient(135deg, var(--c1,#36393F) 0%, var(--c2,#2F3136) 100%);
     position:relative;flex:0 0 auto;overflow:hidden;
   }
   .swipe-card .banner::after{
@@ -2059,12 +2059,14 @@
   .acc-color-wheel input[type="color"]::-webkit-color-swatch{border:none;border-radius:50%}
   .acc-color-wheel input[type="color"]::-moz-color-swatch{border:none;border-radius:50%}
   .acc-color-wheel-lbl{font-size:10.5px;font-weight:700;color:#b9bbbe;letter-spacing:.05em;text-transform:uppercase}
+  /* Bouton reset = aperçu de la couleur de base Discord (le gris vers lequel on remet) */
   .acc-color-reset{
-    width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.04);color:#b9bbbe;cursor:pointer;font-size:18px;line-height:1;
+    width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,.14);
+    background:#36393F;color:#fff;cursor:pointer;font-size:18px;line-height:1;
     transition:.15s;align-self:flex-end;margin-bottom:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.3);
   }
-  .acc-color-reset:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.20)}
+  .acc-color-reset:hover{background:#2F3136;color:#fff;border-color:rgba(255,255,255,.30);transform:scale(1.06)}
 
   /* "Mes bulles" CTA — gros bouton qui ouvre l'overlay edit */
   .acc-bulles-cta{
@@ -3674,8 +3676,8 @@
           <div class="onb-colors">
             <span class="onb-field-lbl">Couleur de profil</span>
             <div class="onb-color-wheels">
-              <input type="color" id="onbColor1" value="#5865F2" title="Couleur principale" />
-              <input type="color" id="onbColor2" value="#404EED" title="Couleur secondaire" />
+              <input type="color" id="onbColor1" value="#36393F" title="Couleur principale" />
+              <input type="color" id="onbColor2" value="#2F3136" title="Couleur secondaire" />
             </div>
           </div>
           <div class="onb-photo">
@@ -3820,11 +3822,11 @@
               <div class="acc-color-wheel-row">
                 <label class="acc-color-wheel" title="Couleur principale">
                   <span class="acc-color-wheel-lbl">Primaire</span>
-                  <input type="color" id="accProfileColor" value="#5865F2" />
+                  <input type="color" id="accProfileColor" value="#36393F" />
                 </label>
                 <label class="acc-color-wheel" title="Couleur secondaire (dégradé)">
                   <span class="acc-color-wheel-lbl">Secondaire</span>
-                  <input type="color" id="accProfileColor2" value="#404EED" />
+                  <input type="color" id="accProfileColor2" value="#2F3136" />
                 </label>
                 <button type="button" class="acc-color-reset" id="accColorReset" title="Réinitialiser">↺</button>
               </div>
@@ -5734,13 +5736,13 @@
         games: [p.game].filter(Boolean),
         bio: p.bio || '✏️ Complète ton profil dans Mon compte !',
         common: {friends:0, servers:0},
-        c1:'#5865F2', c2:'#404EED',
+        c1:'#36393F', c2:'#2F3136',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
-        profileColor: u.profileColor || null,
-        profileColor2: u.profileColor2 || null,
+        profileColor: u.profileColor || '#36393F',
+        profileColor2: u.profileColor2 || '#2F3136',
         accentColor: u.accentColor || null,
         profileVoice: u.profileVoice || null,
         orbs,
@@ -8418,8 +8420,8 @@
       // Hydrate color wheels from state
       const cw1 = document.getElementById('accProfileColor');
       const cw2 = document.getElementById('accProfileColor2');
-      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#5865F2';
-      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#404EED';
+      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#36393F';
+      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#2F3136';
       // Update "Mes bulles" CTA counter
       if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
       const s = u.socials || {};
@@ -9596,18 +9598,18 @@
       if (!btn) return;
       btn.addEventListener('click', () => {
         state.user = state.user || {};
-        // Reset = couleurs officielles Discord (blurple = la signature Discord)
-        const DISCORD_BLURPLE = '#5865F2';
-        const DISCORD_BLURPLE_DARK = '#404EED';
-        state.user.profileColor  = DISCORD_BLURPLE;
-        state.user.profileColor2 = DISCORD_BLURPLE_DARK;
+        // Reset = couleur de base Discord (le gris sombre de l'app)
+        const DISCORD_BASE = '#36393F';
+        const DISCORD_BASE_DARK = '#2F3136';
+        state.user.profileColor  = DISCORD_BASE;
+        state.user.profileColor2 = DISCORD_BASE_DARK;
         save();
         const cw1 = document.getElementById('accProfileColor');
         const cw2 = document.getElementById('accProfileColor2');
-        if (cw1) cw1.value = DISCORD_BLURPLE;
-        if (cw2) cw2.value = DISCORD_BLURPLE_DARK;
+        if (cw1) cw1.value = DISCORD_BASE;
+        if (cw2) cw2.value = DISCORD_BASE_DARK;
         if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
-        showToast('↺', 'Couleurs Discord appliquées', 'Blurple officiel');
+        showToast('↺', 'Couleur Discord appliquée', 'Gris de base');
       });
     })();
 
@@ -9894,7 +9896,7 @@
           notif_message:   !!t.message,
           display_name:    u.displayName || null,
           avatar_url:      u.avatarUrl || null,
-          c1:              u.profileColor || '#9146FF',
+          c1:              u.profileColor || '#36393F',
           updated_at:      new Date().toISOString(),
         }, { onConflict: 'user_id' });
       } catch (e) { console.warn('[Tindord] syncNotifPrefs failed (table user_notif_prefs missing?):', e?.message || e); }
