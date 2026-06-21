@@ -131,6 +131,23 @@
   .field.card-wrap .brand-dot{position:absolute;right:12px;top:33px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--dim)}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 
+  /* ===== Code promo ===== */
+  .promo-row{display:flex;gap:9px}
+  .promo-row input{flex:1;min-width:0}
+  .promo-apply{flex:0 0 auto;padding:0 16px;border-radius:12px;border:1.5px solid var(--stroke-2);cursor:pointer;
+    font:inherit;font-weight:700;font-size:13px;color:#fff;background:rgba(255,255,255,.06);transition:.15s}
+  .promo-apply:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28)}
+  .promo-apply:disabled{opacity:.6;cursor:default}
+  .promo-msg{margin-top:8px;font-size:12.5px;font-weight:600}
+  .promo-msg.ok{color:#5ee6a0}
+  .promo-msg.ko{color:#ff7a8a}
+  /* Quand le code offre le Boost : on estompe les champs carte (paiement inutile) */
+  .promo-free .field.card-wrap,
+  .promo-free .row2,
+  .promo-free .field.card-wrap + .row2{opacity:.4;pointer-events:none}
+  .summary.is-free .s-total b{color:#5ee6a0;text-decoration:none}
+  .summary.is-free .s-old{text-decoration:line-through;color:var(--mute);font-size:13px;margin-right:7px;font-family:inherit;font-weight:600}
+
   .pay-btn{width:100%;margin-top:6px;padding:15px;border:none;border-radius:14px;cursor:pointer;font:inherit;font-weight:800;font-size:16px;color:#3d1e00;
     background:linear-gradient(180deg,var(--gold-3),var(--gold-2));box-shadow:0 12px 30px rgba(255,179,71,.35);transition:.15s;display:flex;align-items:center;justify-content:center;gap:9px}
   .pay-btn:hover{transform:translateY(-1px);box-shadow:0 16px 40px rgba(255,179,71,.5)}
@@ -263,6 +280,15 @@
         <input id="name" autocomplete="cc-name" placeholder="Prénom Nom" />
       </div>
 
+      <div class="field promo-field">
+        <label for="promo">Code promo</label>
+        <div class="promo-row">
+          <input id="promo" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Entrer un code" />
+          <button type="button" class="promo-apply" id="promoApply">Appliquer</button>
+        </div>
+        <div class="promo-msg" id="promoMsg" hidden></div>
+      </div>
+
       <button type="submit" class="pay-btn" id="payBtn">
         <span class="spin"></span><span id="payLabel">Payer 3,59€</span>
       </button>
@@ -294,6 +320,11 @@
   };
   const $=id=>document.getElementById(id);
   let plan='monthly';
+  let freePromo=false;
+
+  /* Code promo qui offre le Boost (normalisé : minuscules, espaces réduits) */
+  const FREE_CODE='bt boby';
+  const normCode=s=>(s||'').trim().toLowerCase().replace(/\s+/g,' ');
 
   function selectPlan(p){
     if(!PLANS[p]) p='monthly';
@@ -304,7 +335,38 @@
     $('sumTotal').textContent=d.total;
     $('sumCycle').textContent=d.cycle;
     $('payLabel').textContent=d.pay;
+    if(freePromo) applyFreeUI();
   }
+
+  /* Applique l'affichage "offert" quand le code promo est valide */
+  function applyFreeUI(){
+    $('sumPlan').textContent='Code promo BT BOBY';
+    $('sumTotal').innerHTML='<span class="s-old">'+PLANS[plan].total+'</span>0€';
+    $('sumCycle').textContent='offert';
+    $('payLabel').textContent='Activer gratuitement';
+    document.querySelector('.summary').classList.add('is-free');
+    $('payForm').classList.add('promo-free');
+  }
+  function clearFreeUI(){
+    freePromo=false;
+    document.querySelector('.summary').classList.remove('is-free');
+    $('payForm').classList.remove('promo-free');
+    selectPlan(plan);
+  }
+
+  $('promoApply').addEventListener('click',()=>{
+    const msg=$('promoMsg');
+    if(normCode($('promo').value)===FREE_CODE){
+      freePromo=true;
+      applyFreeUI();
+      msg.hidden=false; msg.className='promo-msg ok'; msg.textContent='🎉 Code valide — Tindord Boost offert !';
+      $('promo').disabled=true; $('promoApply').disabled=true;
+    }else{
+      clearFreeUI();
+      msg.hidden=false; msg.className='promo-msg ko'; msg.textContent='Code promo invalide.';
+    }
+  });
+  $('promo').addEventListener('input',()=>{ $('promoMsg').hidden=true; });
   document.querySelectorAll('.price-opt').forEach(b=>b.addEventListener('click',()=>selectPlan(b.dataset.plan)));
 
   // Plan initial via ?plan= (depuis le modal de l'app)
@@ -328,6 +390,7 @@
 
   /* ---- Validation simple ---- */
   function validate(){
+    if(freePromo) return true; // code promo : aucun paiement requis
     let ok=true;
     const mark=(id,cond)=>{ if(!cond){ $(id).classList.add('err'); ok=false; } };
     mark('email', /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($('email').value.trim()));
@@ -344,14 +407,21 @@
     try{ st=JSON.parse(localStorage.getItem(KEY))||st; }catch(_){}
     st.user=st.user||{};
     st.user.boost=true;
-    st.user.boostPlan=plan;
     // Date de souscription : sert à calculer la prochaine échéance (mensuel = +1 mois).
     st.user.boostSince=new Date().toISOString();
-    if(plan==='monthly'){
-      const d=new Date(); d.setMonth(d.getMonth()+1);
-      st.user.boostNextPayment=d.toISOString(); // prochain prélèvement dans 1 mois
+    if(freePromo){
+      // Code promo BT BOBY : Boost offert, sans prélèvement (accès permanent).
+      st.user.boostPlan='lifetime';
+      st.user.boostNextPayment=null;
+      st.user.boostPromo=FREE_CODE;
     } else {
-      st.user.boostNextPayment=null; // À vie : pas de prélèvement
+      st.user.boostPlan=plan;
+      if(plan==='monthly'){
+        const d=new Date(); d.setMonth(d.getMonth()+1);
+        st.user.boostNextPayment=d.toISOString(); // prochain prélèvement dans 1 mois
+      } else {
+        st.user.boostNextPayment=null; // À vie : pas de prélèvement
+      }
     }
     try{ localStorage.setItem(KEY,JSON.stringify(st)); }catch(_){}
   }
@@ -360,12 +430,13 @@
     e.preventDefault();
     if(!validate()) return;
     const btn=$('payBtn');
-    btn.classList.add('loading'); btn.disabled=true; $('payLabel').textContent='Paiement…';
+    btn.classList.add('loading'); btn.disabled=true;
+    $('payLabel').textContent = freePromo ? 'Activation…' : 'Paiement…';
     setTimeout(()=>{
       activateBoost();
-      $('successPlan').textContent=PLANS[plan].success;
+      $('successPlan').textContent = freePromo ? 'offert avec le code BT BOBY' : PLANS[plan].success;
       $('success').classList.add('on');
-    },1400);
+    }, freePromo ? 700 : 1400);
   });
 
   $('goApp').addEventListener('click',()=>{ location.href='/'; });
