@@ -327,6 +327,16 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:560px){.disc-fab span{display:none}.disc-fab{padding:13px}}
 
+/* Bouton upsell "Passez à Tindord Boost" — bas-droite, doré (non-Boost uniquement) */
+.boost-fab{position:fixed;right:22px;bottom:26px;z-index:41;display:none;align-items:center;gap:9px;padding:13px 20px;border-radius:16px;border:none;cursor:pointer;
+  background:linear-gradient(180deg,#FFD15C,#F5A623);color:#3d1e00;font-family:inherit;font-weight:800;font-size:14px;
+  box-shadow:0 14px 38px rgba(245,166,35,.45),0 0 0 1px rgba(255,255,255,.18) inset;transition:transform .13s ease,filter .16s ease}
+body.not-boost .boost-fab{display:inline-flex}
+.boost-fab:hover{transform:translateY(-2px);filter:brightness(1.06)}
+.boost-fab:active{transform:translateY(0) scale(.97)}
+.boost-fab svg{width:18px;height:18px}
+@media(max-width:560px){.boost-fab{padding:12px 14px;font-size:13px}}
+
 /* Connexions (logos d'apps) */
 .connections{display:flex;flex-wrap:wrap;gap:9px}
 .conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease;padding:0}
@@ -559,6 +569,8 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 <div class="drop-guide" id="dropGuide" aria-hidden="true"></div>
 
 <button class="disc-fab" id="btnResync" title="Recharger ton profil depuis Discord"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Mettre à jour le profil Discord</span></button>
+
+<button class="boost-fab" id="btnBoostUpsell" title="Passer à Tindord Boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg><span>Passez à Tindord Boost</span></button>
 
 <div class="music-now" id="musicNow" title="Écouter / pause"></div>
 
@@ -1494,6 +1506,7 @@ function stripBoostElements(){
 let _pendingLeave=null;
 function openBoostGate(proceed){ _pendingLeave=proceed; $('boostGate').classList.add('open'); }
 $('bgateBuy').addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
+$('btnBoostUpsell')?.addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
 $('bgateClose').addEventListener('click',()=>{ stripBoostElements(); $('boostGate').classList.remove('open'); _pendingLeave=null; toast('Éléments Boost retirés'); });
 // si on ferme par Échap → comme « Plus tard » : retire + reste sur l'éditeur
 // Quitter l'éditeur en passant par le gate si besoin.
