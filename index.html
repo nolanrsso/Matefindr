@@ -1542,6 +1542,68 @@
   .swipe-card .badge-stamp.like {right:18px;color:#03d100;border-color:#03d100;transform:rotate(-12deg);text-shadow:0 0 14px rgba(3,209,0,.6)}
   .swipe-card .badge-stamp.nope {left:18px;color:#ff008c;border-color:#ff008c;transform:rotate(12deg);text-shadow:0 0 14px rgba(255,0,140,.6)}
 
+  /* ============================================================
+     MOBILE — dézoom de la carte de profil (≤600px)
+     Toutes les infos du site restent présentes, mais à une échelle
+     réduite pour tenir confortablement sur l'écran d'un téléphone.
+     ============================================================ */
+  @media (max-width:600px){
+    /* Carte un peu plus large & haute pour accueillir tout le contenu réduit */
+    .swipe-wrap{width:min(95vw,410px);height:min(calc(100vh - 160px),720px)}
+    .swipe-stage{height:82vh}
+
+    .swipe-card{border-radius:18px}
+    .swipe-card .banner{height:86px;max-height:86px}
+    .swipe-card .avatar-wrap{top:48px;left:14px;width:94px;height:94px;padding:5px}
+    .swipe-card .avatar-wrap .avi{font-size:34px}
+    .swipe-card .avi-deco{inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px)}
+    .swipe-card .nitro-badge{left:72px;top:90px;font-size:9px;padding:2px 6px}
+
+    /* Badge âge / genre / drapeau — sous la bannière, à l'échelle */
+    .card-age-badge{top:90px;right:12px;padding:5px 11px;gap:6px}
+    .card-age-badge .cab-age{font-size:17px}
+    .card-age-badge .cab-flag{font-size:15px}
+    .card-age-badge .cab-flag img{width:20px;height:14px}
+    .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
+
+    .swipe-card .body{padding:56px 14px 62px;gap:8px}
+    .swipe-card .name{font-size:23px}
+    .swipe-card .name-boost-star{width:14px;height:14px}
+    .swipe-card .handle{font-size:11.5px;margin-top:-3px}
+    .swipe-card .joined{font-size:10.5px}
+
+    .swipe-card .bio{font-size:11.5px;padding:8px 10px;line-height:1.45}
+    .swipe-card .bio b{font-size:10px}
+
+    .swipe-card .activity{padding:7px 10px;gap:8px}
+    .swipe-card .activity .icon{width:30px;height:30px}
+    .swipe-card .activity .lbl,
+    .swipe-card .activity .lbl b{font-size:12px}
+    .swipe-card .activity .lbl span{font-size:11.5px}
+
+    .swipe-card .card-voice{padding:7px 10px;gap:8px}
+    .swipe-card .card-voice-play{width:30px;height:30px}
+    .swipe-card .card-voice-info b{font-size:11px}
+
+    .swipe-card .chip{font-size:11px;padding:4px 9px}
+    .swipe-card .me-chip{font-size:9px;padding:2px 7px;top:8px;left:10px}
+
+    .card-conn{font-size:10.5px;padding:3px 8px;max-width:120px}
+    .card-conn img{width:13px;height:13px}
+    .card-social{font-size:11px}
+
+    .swipe-card .common{font-size:11px;gap:12px}
+    .swipe-card .card-guilds{gap:8px}
+    .swipe-card .cg-icon,
+    .swipe-card .cg-more{width:22px;height:22px;font-size:10px}
+    .swipe-card .cg-label{font-size:11px}
+
+    .swipe-card .lookfor{width:40px;height:40px;font-size:18px;right:10px;bottom:10px}
+    .swipe-card .lookfor svg{width:18px;height:18px}
+
+    .swipe-card .badge-stamp{font-size:18px;padding:5px 11px}
+  }
+
   /* Swipe toolbar — floating right side, stacked above msgFab, hover reveals details */
   .swipe-tools{
     position:fixed;right:18px;bottom:18px;z-index:22;
