@@ -3253,6 +3253,114 @@
     background:linear-gradient(180deg,#A65BFF 0%,#6B2BFF 100%);box-shadow:0 8px 24px rgba(107,43,255,.45);transition:transform .16s ease}
   #gate button:hover{transform:translateY(-1px)}
   #gate .gate-err{color:#FF7EB6;font-size:13px;min-height:16px;font-weight:600}
+
+  /* ============================================================
+     PARAMÈTRES — DA dédiée (refonte complète)
+     Thème "control panel" clair, volontairement différent du reste
+     de l'app (sombre / néon / glassmorphism). Scopé à l'écran compte.
+     ============================================================ */
+  body[data-screen="account"] #screen-account{
+    min-height:100vh;
+    background:
+      radial-gradient(900px 620px at 12% -12%, #ffffff 0%, rgba(255,255,255,0) 55%),
+      radial-gradient(760px 640px at 102% 112%, #e7e0ff 0%, rgba(231,224,255,0) 60%),
+      linear-gradient(162deg, #eef0f8 0%, #e6e9f5 100%) !important;
+  }
+  body[data-screen="account"] .acc-card{
+    background:#ffffff !important;
+    border:1px solid #e6e8f2 !important;
+    backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+    box-shadow:0 28px 70px rgba(38,28,80,.18), 0 2px 8px rgba(38,28,80,.06) !important;
+    color:#1b1830 !important;
+    border-radius:26px !important;
+    padding:28px 30px 22px !important;
+    overflow:hidden !important;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif !important;
+  }
+  /* Liseré accent en haut de la fiche (seul rappel de la marque) */
+  body[data-screen="account"] .acc-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:5px;z-index:6;
+    background:linear-gradient(90deg,#5865F2 0%, #9146FF 52%, #FF4FA0 100%);
+  }
+  /* Titre de page */
+  body[data-screen="account"] .acc-card .acc-tab[data-tab="infos"] > h3:first-child{
+    font-size:23px !important;font-weight:800 !important;color:#15122b !important;
+    text-transform:none !important;letter-spacing:-.015em !important;margin:0 0 18px !important;
+  }
+  /* Libellés de section (uppercase, discrets) */
+  body[data-screen="account"] .acc-card h3{
+    color:#7b77a0 !important;font-family:inherit !important;font-weight:800 !important;
+    font-size:11.5px !important;letter-spacing:.13em !important;text-transform:uppercase !important;
+    margin:0 0 12px !important;
+  }
+  body[data-screen="account"] .acc-card h3[style*="FF7EB6"]{ color:#d61f63 !important; }
+  /* Séparateurs */
+  body[data-screen="account"] .acc-card hr{
+    border:none !important;border-top:1px solid #ebecf4 !important;margin:22px 0 16px !important;
+  }
+  /* Champs */
+  body[data-screen="account"] .acc-card .acc-field{ margin-bottom:6px !important; }
+  body[data-screen="account"] .acc-card .acc-field label{
+    color:#4a4766 !important;font-weight:600 !important;font-size:12.5px !important;
+    text-transform:none !important;letter-spacing:0 !important;margin-bottom:6px !important;
+  }
+  body[data-screen="account"] .acc-card #musicVolVal,
+  body[data-screen="account"] .acc-card #musicStartVal{ color:#5865F2 !important;font-weight:700 !important; }
+  body[data-screen="account"] .acc-card input[type="range"]{ accent-color:#5865F2 !important; }
+  body[data-screen="account"] .acc-card .acc-input,
+  body[data-screen="account"] .acc-card .acc-select,
+  body[data-screen="account"] .acc-card textarea{
+    background:#f4f5fb !important;border:1.5px solid #e3e5ef !important;color:#1b1830 !important;
+  }
+  body[data-screen="account"] .acc-card .acc-input::placeholder,
+  body[data-screen="account"] .acc-card textarea::placeholder{ color:#9a97b8 !important; }
+  /* Sélecteur de langue — segmenté clair */
+  body[data-screen="account"] .acc-card .acc-langs button{
+    flex:1;padding:11px 12px !important;border-radius:13px !important;
+    background:#f1f2f8 !important;border:1.5px solid #e3e5ef !important;color:#2a2746 !important;
+    font-weight:600 !important;font-size:13px !important;transition:.15s ease;
+  }
+  body[data-screen="account"] .acc-card .acc-langs button:hover{ background:#e9eaf4 !important;color:#2a2746 !important; }
+  body[data-screen="account"] .acc-card .acc-langs button.active{
+    background:#5865F2 !important;border-color:#5865F2 !important;color:#fff !important;
+    box-shadow:0 6px 16px rgba(88,101,242,.32) !important;
+  }
+  /* Abonnement & facturation — "reçu" sombre encastré (contraste assumé) */
+  body[data-screen="account"] .acc-card .acc-billing{
+    background:linear-gradient(160deg,#211c40,#15112a) !important;
+    border:1px solid rgba(255,255,255,.07) !important;border-radius:16px !important;
+    padding:16px 18px !important;gap:9px !important;
+    box-shadow:0 12px 30px rgba(33,23,70,.22) !important;
+  }
+  /* Boutons */
+  body[data-screen="account"] .acc-card .acc-btn--ghost{
+    background:#f1f2f8 !important;color:#2a2746 !important;border:1.5px solid #e3e5ef !important;
+  }
+  body[data-screen="account"] .acc-card .acc-btn--ghost:hover{ background:#e7e8f3 !important; }
+  body[data-screen="account"] .acc-card .acc-btn--danger{
+    background:#fdeaf1 !important;color:#d61f63 !important;border:1.5px solid #f6c9da !important;
+  }
+  body[data-screen="account"] .acc-card .acc-btn--danger:hover{ background:#fbdbe7 !important; }
+  body[data-screen="account"] .acc-card .acc-btn--primary{
+    background:linear-gradient(180deg,#5865F2,#4149d6) !important;color:#fff !important;
+    box-shadow:0 8px 22px rgba(88,101,242,.4) !important;
+  }
+  body[data-screen="account"] .acc-card .acc-msg{
+    background:#e7f7ee !important;border:1px solid #b7e6cb !important;color:#1a7a45 !important;
+  }
+  /* FAB retour — clair pour coller à la nouvelle DA */
+  body[data-screen="account"] .acc-back-fab{
+    background:#ffffff !important;color:#2a2746 !important;border:1px solid #e3e5ef !important;
+    box-shadow:0 10px 28px rgba(33,23,70,.18) !important;
+  }
+  body[data-screen="account"] .acc-back-fab:hover{ background:#f3f4fb !important; }
+  /* Confort mobile */
+  @media (max-width:600px){
+    body[data-screen="account"] #screen-account{ padding-left:12px !important;padding-right:12px !important; }
+    body[data-screen="account"] .acc-card{ width:100% !important;max-width:100% !important;box-sizing:border-box !important;padding:22px 18px 18px !important;border-radius:20px !important; }
+    body[data-screen="account"] .acc-card .acc-tab[data-tab="infos"] > h3:first-child{ font-size:20px !important; }
+    body[data-screen="account"] .acc-card .acc-danger-zone .acc-btn{ width:100% !important; }
+  }
 </style>
 </head>
 <body data-screen="landing" data-auth="out">
