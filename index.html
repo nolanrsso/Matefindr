@@ -3845,7 +3845,7 @@
             <span class="acc-bulles-cta-ico">🫧</span>
             <span class="acc-bulles-cta-text">
               <b>Mes bulles</b>
-              <small id="accBullesCtaCount">0 / 5</small>
+              <small id="accBullesCtaCount">0 / 4</small>
             </span>
             <span class="acc-bulles-cta-arrow">›</span>
           </button>
@@ -3924,7 +3924,7 @@
 
       <!-- 🫧 Bulles : section cachée — DOM gardé pour le JS, l'édition se fait dans l'overlay -->
       <div class="acc-section acc-tab" data-tab="bulles" hidden style="display:none !important">
-        <span class="pill" id="orbCounterPill">0/5</span>
+        <span class="pill" id="orbCounterPill">0/4</span>
         <div class="acc-orb-cats" id="accOrbCats">
           <button type="button" class="acc-orb-cat active" data-kind="music">Musique</button>
           <button type="button" class="acc-orb-cat" data-kind="game">Jeu</button>
@@ -4098,7 +4098,7 @@
       <span class="bb-emoji">✨</span>
       <div class="bb-text">
         <b id="boostBannerTitle">Passer en Tindord Boost</b>
-        <small id="boostBannerSub">18 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
+        <small id="boostBannerSub">14 bulles, Fake Nitro, filtre H/F, likes secrets…</small>
       </div>
       <span class="bb-cta" id="boostBannerCta">Découvrir</span>
     </button>
@@ -4310,7 +4310,7 @@
           </div>
           <ul class="bm-col-feats">
             <li class="off"><span>✕</span>Fake Nitro</li>
-            <li class="on"><span>✓</span>6 bulles max</li>
+            <li class="on"><span>✓</span>4 bulles max</li>
             <li class="off"><span>✕</span>Musique d'ambiance</li>
             <li class="off"><span>✕</span>Filtre H/F</li>
             <li class="off"><span>✕</span>Likes secrets</li>
@@ -4326,7 +4326,7 @@
           </div>
           <ul class="bm-col-feats">
             <li class="on"><span>👑</span>Fake Nitro</li>
-            <li class="on"><span>🫧</span>18 bulles</li>
+            <li class="on"><span>🫧</span>14 bulles</li>
             <li class="on"><span>🎵</span>Musique d'ambiance</li>
             <li class="on"><span>🔍</span>Filtre H/F</li>
             <li class="on"><span>👀</span>Likes secrets</li>
@@ -6292,8 +6292,8 @@
     }
 
     /* Bubble budget — socials no longer count against the bubble limit.
-       Free: 6 bubbles. Boost: 18 bubbles. */
-    function orbBudget(){ return (state.user && state.user.boost) ? 18 : 6; }
+       Free: 4 bubbles. Boost: 14 bubbles. */
+    function orbBudget(){ return (state.user && state.user.boost) ? 14 : 4; }
     function socialsCount(){
       const s = (state.user && state.user.socials) || {};
       return ['instagram','tiktok','spotify'].filter(k => s[k]).length;
@@ -7757,7 +7757,7 @@
       if (!val) return;
       state.profile = state.profile || {};
       state.profile.userOrbs = state.profile.userOrbs || [];
-      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
+      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +10'); return; }
       const orb = orbOverride || _pendingSpotifyOrb || {kind: selectedOrbKind, title: val};
       // Empêche les doublons (même kind + même titre normalisé)
       const normTitle = (orb.title || '').toLowerCase().trim();
@@ -8499,7 +8499,7 @@
           btn.textContent = tx('connect');
           btn.classList.remove('connected');
         } else if (v) {
-          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
+          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +10'); return; }
           state.user.socials[key] = v;
           btn.textContent = tx('connected');
           btn.classList.add('connected');
@@ -9185,11 +9185,11 @@
       if (active) {
         const plan = state.user.boostPlan === 'lifetime' ? 'À vie' : 'Mensuel';
         title.textContent = 'Tindord Boost actif';
-        sub.textContent   = plan + ' · 18 bulles, Fake Nitro, filtre H/F…';
+        sub.textContent   = plan + ' · 14 bulles, Fake Nitro, filtre H/F…';
         cta.textContent   = 'Gérer';
       } else {
         title.textContent = 'Passer en Tindord Boost';
-        sub.textContent   = '18 bulles, Fake Nitro, filtre H/F, likes secrets…';
+        sub.textContent   = '14 bulles, Fake Nitro, filtre H/F, likes secrets…';
         cta.textContent   = 'Découvrir';
       }
       const bmActive = document.getElementById('bmActive');
@@ -9620,7 +9620,7 @@
       if (!btn) return;
       function refresh(){
         const used = (typeof orbsUsed === 'function') ? orbsUsed() : ((state.profile && state.profile.userOrbs) || []).length;
-        const max  = (typeof orbBudget === 'function') ? orbBudget() : 6;
+        const max  = (typeof orbBudget === 'function') ? orbBudget() : 4;
         const lbl  = document.getElementById('accBullesCtaCount');
         if (lbl) lbl.textContent = `${used} / ${max}`;
       }
@@ -10000,7 +10000,7 @@
       if (!stage || !wrap) return;
       stage.querySelectorAll('.oeo-orb, .oeo-add-fab').forEach(el => el.remove());
       const orbs = (state.profile && state.profile.userOrbs) || [];
-      const canAddMore = orbs.length < (typeof orbBudget === 'function' ? orbBudget() : 6);
+      const canAddMore = orbs.length < (typeof orbBudget === 'function' ? orbBudget() : 4);
 
       const sRect = stage.getBoundingClientRect();
       const cRect = wrap.getBoundingClientRect();
