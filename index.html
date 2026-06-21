@@ -1548,9 +1548,10 @@
      réduite pour tenir confortablement sur l'écran d'un téléphone.
      ============================================================ */
   @media (max-width:600px){
-    /* Carte un peu plus large & haute pour accueillir tout le contenu réduit */
-    .swipe-wrap{width:min(95vw,410px);height:min(calc(100vh - 160px),720px)}
-    .swipe-stage{height:82vh}
+    /* Carte volontairement BEAUCOUP plus petite : dégage l'espace autour pour
+       accéder aux bulles / GIFs qui flottent au-dessus et en dessous. */
+    .swipe-wrap{width:min(82vw,320px);height:min(56vh,430px)}
+    .swipe-stage{height:88vh}
 
     .swipe-card{border-radius:18px}
     .swipe-card .banner{height:86px;max-height:86px}
