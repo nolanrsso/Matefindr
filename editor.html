@@ -453,6 +453,18 @@ body.not-boost .boost-fab{display:inline-flex}
 .btn.primary{background:linear-gradient(180deg,#A65BFF 0%,#6B2BFF 100%);border:none;box-shadow:0 8px 24px rgba(107,43,255,.45);color:#fff}
 .btn.ghost-danger{color:#FF7EB6}
 
+/* ===== Sheet Paramètres ===== */
+.set-sheet{display:flex;flex-direction:column;gap:16px;padding:2px}
+.set-sheet .ss-group{display:flex;flex-direction:column;gap:9px}
+.set-sheet .ss-lbl{font-size:11.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between;align-items:center}
+.set-sheet .ss-lbl span{color:#C9B6FF;font-weight:700;text-transform:none;letter-spacing:0}
+.set-sheet #ssVol{width:100%;accent-color:#9146FF}
+.set-sheet .ss-bill{background:rgba(255,255,255,.04);border:1px solid var(--stroke-2);border-radius:12px;padding:12px 14px;font-size:13.5px;color:#fff;line-height:1.55}
+.set-sheet .ss-bill small{color:var(--dim);font-size:12.5px}
+.set-sheet .ss-danger{border-top:1px solid var(--stroke-2);padding-top:14px}
+.set-sheet .ss-danger .btn{width:100%}
+.set-sheet .ss-danger .btn+.btn{margin-top:8px}
+
 /* ===================== MODALES ===================== */
 .modal{position:fixed;inset:0;z-index:80;display:none;place-items:center;padding:18px;background:rgba(8,9,14,.82);backdrop-filter:blur(14px)}
 .modal.open{display:grid}
@@ -1519,8 +1531,66 @@ $('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('�
 $('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html'; }));
 /* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
 $('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html#preview'; }));
-/* Paramètres (haut-droite) : sauvegarde puis ouvre l'écran compte/paramètres. */
-$('btnSettings').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html#account'; }));
+/* Paramètres (haut-droite) : ouvre un panneau (sheet) DANS l'éditeur — ne prend
+   pas tout l'écran, contrairement à l'ancienne page compte d'index.html. */
+$('btnSettings').addEventListener('click',openSettingsSheet);
+
+function openSettingsSheet(){
+  activeTool=null;
+  document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));
+  renderSettingsSheet($('sheet'));
+  $('sheet').classList.add('open');
+}
+
+function fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(_){ return '—'; } }
+
+function renderSettingsSheet(sh){
+  const st=readSite(); const u=st.user||{};
+  const vol=(typeof u.musicVolume==='number')?u.musicVolume:50;
+  let bill;
+  if(u.boost){
+    const lifetime = u.boostPlan==='lifetime';
+    const promo = u.boostPromo;
+    bill = `<b>Tindord Boost</b> ${promo?'· <span style="color:#5ee6a0">offert (code)</span>':''}<br>`
+      + `<small>${lifetime?'Accès à vie — aucun prélèvement':('Mensuel · prochain paiement '+(u.boostNextPayment?fmtDate(u.boostNextPayment):'—'))}</small>`;
+  } else {
+    bill = `<b>Gratuit</b><br><small>Aucun abonnement actif</small>`;
+  }
+  sh.innerHTML=sheetHeader('Paramètres')+`
+    <div class="set-sheet">
+      <div class="ss-group">
+        <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${vol}%</span></div>
+        <input type="range" id="ssVol" min="0" max="100" value="${vol}">
+      </div>
+      <div class="ss-group">
+        <div class="ss-lbl">Abonnement &amp; facturation</div>
+        <div class="ss-bill">${bill}</div>
+        ${u.boost?'':'<button class="btn primary" id="ssBoost" style="width:100%;margin-top:9px">Passer à Tindord Boost</button>'}
+      </div>
+      <div class="ss-group ss-danger">
+        <div class="ss-lbl">Zone dangereuse</div>
+        <button class="btn" id="ssLogout">Se déconnecter</button>
+        <button class="btn ghost-danger" id="ssDelete">Supprimer mon compte</button>
+      </div>
+    </div>`;
+  const vEl=sh.querySelector('#ssVol');
+  vEl.addEventListener('input',()=>{
+    sh.querySelector('#ssVolVal').textContent=vEl.value+'%';
+    const s=readSite(); s.user=s.user||{}; s.user.musicVolume=parseInt(vEl.value,10);
+    try{ localStorage.setItem(STATE_KEY,JSON.stringify(s)); }catch(_){}
+  });
+  sh.querySelector('#ssBoost')?.addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
+  sh.querySelector('#ssLogout').addEventListener('click',()=>{
+    try{ const sb=edSupa(); if(sb) sb.auth.signOut().catch(()=>{}); }catch(_){}
+    location.href='index.html';
+  });
+  sh.querySelector('#ssDelete').addEventListener('click',()=>{
+    if(!confirm('Supprimer définitivement ton compte Tindord ? Toutes tes données locales seront effacées.')) return;
+    try{ localStorage.clear(); }catch(_){}
+    try{ const sb=edSupa(); if(sb) sb.auth.signOut().catch(()=>{}); }catch(_){}
+    location.href='index.html';
+  });
+}
 </script>
 </body>
 </html>
