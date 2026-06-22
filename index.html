@@ -990,6 +990,11 @@
   }
   .onb-btn--next:hover{transform:translateY(-1px)}
   .onb-btn--next:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .onb-actions--stack{flex-direction:column;gap:12px;margin-top:22px}
+  .onb-actions--stack .onb-btn{width:100%}
+  .onb-later{display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.25;padding:11px 18px}
+  .onb-later span{font-weight:700;font-size:14.5px}
+  .onb-later small{font-weight:400;font-size:11px;color:#b9bbbe;max-width:34ch}
 
   /* ===== Swipe deck ===== */
   #screen-swipe{
@@ -1123,6 +1128,29 @@
   @keyframes orbCommonStarSpin{to{transform:rotate(360deg)}}
   .swipe-stage .orbit .orb--common:hover{transform:scale(1.22)}
   .orb-wrap--common .orb-label{color:#FFD83D !important;font-weight:800;text-shadow:0 0 8px rgba(255,216,61,.55)}
+
+  /* Bulles verrouillées (compte sans Boost qui n'a pas assez de bulles) */
+  .swipe-stage .orbit .orb.orb--locked{
+    background:radial-gradient(circle at 35% 30%, #2b2b38, #131319 72%) !important;
+    border-color:rgba(255,255,255,.16) !important;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06), 0 8px 22px rgba(0,0,0,.5) !important;
+    color:#aeb2c6 !important;
+  }
+  .swipe-stage .orbit .orb.orb--locked:hover{transform:scale(1.08);border-color:rgba(255,255,255,.3) !important}
+  .orb-lock-glyph{font-family:"Clash Display",sans-serif;font-weight:800;font-size:46px;line-height:1;color:#c9ccda;text-shadow:0 2px 8px rgba(0,0,0,.55);position:relative;z-index:2}
+  .orb-wrap--locked .orb-label{color:#6f7286 !important}
+
+  /* Popup "profil incomplet" au clic sur une bulle verrouillée */
+  .orb-lock-pop{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:22px}
+  .orb-lock-pop.open{display:flex}
+  .orb-lock-pop .olp-backdrop{position:absolute;inset:0;background:rgba(8,7,18,.66);backdrop-filter:blur(6px)}
+  .orb-lock-pop .olp-box{position:relative;z-index:1;max-width:340px;width:100%;text-align:center;border-radius:20px;padding:26px 22px 20px;
+    background:linear-gradient(180deg, rgba(28,22,58,.96), rgba(20,16,46,.96));border:1px solid var(--stroke-2);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .orb-lock-pop .olp-ico{font-size:34px}
+  .orb-lock-pop .olp-msg{color:#dfe1ea;font-size:14.5px;line-height:1.5;margin:12px 0 18px}
+  .orb-lock-pop .olp-btn{width:100%;padding:12px;border:none;border-radius:13px;cursor:pointer;font-family:inherit;font-weight:800;font-size:14px;color:#fff;
+    background:linear-gradient(180deg,#A65BFF,#6B2BFF);box-shadow:0 8px 24px rgba(107,43,255,.45);transition:transform .15s ease}
+  .orb-lock-pop .olp-btn:hover{transform:translateY(-1px)}
 
   /* Same 115px even when crowded — user requested uniform size */
   .orbit.orbit--dynamic .orb{width:115px;height:115px}
@@ -3651,48 +3679,18 @@
         </div>
       </div>
 
-      <!-- Step 2: personnalisation (skippable) -->
+      <!-- Step 2: personnalisation — 2 choix : éditer maintenant, ou plus tard -->
       <div class="onb-step onb-perso" data-step="4" hidden>
+        <div class="onb-welcome-avatar">✨</div>
         <h2>Personnalise ton profil</h2>
-        <p class="sub">Optionnel — tout est modifiable à tout moment dans les paramètres.</p>
+        <p class="sub">Plus ton profil est complet, plus tu débloques les bulles des autres profils.</p>
 
-        <button type="button" class="onb-bulles-cta" id="onbBubblesBtn">
-          <span class="onb-bulles-ico">🫧</span>
-          <span class="onb-bulles-txt"><b>Personnaliser mes bulles</b><small>Choisis ce qui orbite autour de ton profil</small></span>
-          <span class="onb-bulles-arrow">›</span>
-        </button>
-
-        <div class="onb-perso-grid">
-          <label class="onb-field">
-            <span class="onb-field-lbl">Pseudo</span>
-            <input class="onb-input" id="onbPseudo" type="text" maxlength="32" placeholder="Ton pseudo" />
-          </label>
-          <label class="onb-field">
-            <span class="onb-field-lbl">Bio</span>
-            <textarea class="onb-input" id="onbBio" maxlength="280" rows="2" placeholder="Parle un peu de toi…"></textarea>
-          </label>
-        </div>
-
-        <div class="onb-perso-row">
-          <div class="onb-colors">
-            <span class="onb-field-lbl">Couleur de profil</span>
-            <div class="onb-color-wheels">
-              <input type="color" id="onbColor1" value="#36393F" title="Couleur principale" />
-              <input type="color" id="onbColor2" value="#2F3136" title="Couleur secondaire" />
-            </div>
-          </div>
-          <div class="onb-photo">
-            <span class="onb-field-lbl">Photo</span>
-            <label class="onb-avatar" id="onbAvatarLabel">
-              <span id="onbAvatarInner">📷</span>
-              <input type="file" id="onbAvatarFile" accept="image/*" hidden />
-            </label>
-          </div>
-        </div>
-
-        <div class="onb-actions">
-          <button type="button" class="onb-btn onb-btn--prev" id="onbSkip">Plus tard</button>
-          <button type="button" class="onb-btn onb-btn--next" id="onbFinish" data-i18n="onb_finish">Terminer</button>
+        <div class="onb-actions onb-actions--stack">
+          <button type="button" class="onb-btn onb-btn--next" id="onbPersoBtn">Personnaliser votre profil</button>
+          <button type="button" class="onb-btn onb-btn--prev onb-later" id="onbSkip">
+            <span>Plus tard</span>
+            <small>vous ne pourrez pas voir complètement les profils des autres</small>
+          </button>
         </div>
       </div>
     </div>
@@ -5162,12 +5160,12 @@
       if (select.value) { const c = countries.find(x => x.code === select.value); if (c) setTriggerLabel(c.code, c.name); }
       renderList('');
     })();
-    // Step 4 — personnalisation (tous optionnels)
-    $onb('onbPseudo').addEventListener('input', e => { draft.pseudo = e.target.value.trim(); });
-    $onb('onbBio').addEventListener('input', e => { draft.bio = e.target.value.trim(); });
-    $onb('onbColor1').addEventListener('input', e => { draft.color1 = e.target.value; });
-    $onb('onbColor2').addEventListener('input', e => { draft.color2 = e.target.value; });
-    $onb('onbAvatarFile').addEventListener('change', e => {
+    // Step 4 — personnalisation : champs déplacés dans l'éditeur (bindings gardés null-safe)
+    $onb('onbPseudo')?.addEventListener('input', e => { draft.pseudo = e.target.value.trim(); });
+    $onb('onbBio')?.addEventListener('input', e => { draft.bio = e.target.value.trim(); });
+    $onb('onbColor1')?.addEventListener('input', e => { draft.color1 = e.target.value; });
+    $onb('onbColor2')?.addEventListener('input', e => { draft.color2 = e.target.value; });
+    $onb('onbAvatarFile')?.addEventListener('change', e => {
       const f = e.target.files && e.target.files[0]; if (!f) return;
       const rd = new FileReader();
       rd.onload = () => { draft.avatar = rd.result; const inner = $onb('onbAvatarInner'); if (inner) inner.outerHTML = '<img id="onbAvatarInner" src="'+rd.result+'" alt="">'; };
@@ -5212,9 +5210,11 @@
         setScreen('swipe');
       }
     }
-    $onb('onbFinish').addEventListener('click', () => finishOnboarding(false));
-    $onb('onbSkip').addEventListener('click', () => finishOnboarding(false));
-    $onb('onbBubblesBtn').addEventListener('click', () => finishOnboarding(true));
+    // « Personnaliser votre profil » → ouvre l'éditeur ; « Plus tard » → va au swipe
+    $onb('onbPersoBtn')?.addEventListener('click', () => finishOnboarding(true));
+    $onb('onbSkip')?.addEventListener('click', () => finishOnboarding(false));
+    $onb('onbFinish')?.addEventListener('click', () => finishOnboarding(false));
+    $onb('onbBubblesBtn')?.addEventListener('click', () => finishOnboarding(true));
 
     // ---------- Swipe deck ----------
     // Mock profiles. Each has nitro flag, joinedOn date, and an `orbs` array
@@ -6013,6 +6013,27 @@
       return { rel, plus };
     }
 
+    /* Petit popup affiché au clic sur une bulle verrouillée (compte incomplet). */
+    function showLockPopup(ownCount){
+      const msg = (ownCount === 0)
+        ? "Pour voir tout le contenu du profil, finis de compléter ton propre profil."
+        : "Ajoute plus de bulles à ton profil pour débloquer celles des autres.";
+      let el = document.getElementById('orbLockPop');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'orbLockPop';
+        el.className = 'orb-lock-pop';
+        el.innerHTML = '<div class="olp-backdrop"></div><div class="olp-box">'
+          + '<span class="olp-ico">🔒</span><p class="olp-msg"></p>'
+          + '<button type="button" class="olp-btn">Compléter mon profil</button></div>';
+        document.body.appendChild(el);
+        el.querySelector('.olp-backdrop').addEventListener('click', () => el.classList.remove('open'));
+        el.querySelector('.olp-btn').addEventListener('click', () => { el.classList.remove('open'); location.href = 'editor.html'; });
+      }
+      el.querySelector('.olp-msg').textContent = msg;
+      el.classList.add('open');
+    }
+
     /* Render the orb constellation around the top card */
     /* Live physics state for the profile orbs (mouse repulsion + drift) */
     let _orbSim = { items: [], mouse: { x: -9999, y: -9999, has: false }, raf: null };
@@ -6023,16 +6044,36 @@
       _orbSim.items = [];
       if (_orbSim.raf) { cancelAnimationFrame(_orbSim.raf); _orbSim.raf = null; }
       if (!p || !p.orbs) return;
-      const maxOrbs = orbBudget();
-      const list = p.orbs.slice(0, maxOrbs);
-      const n = list.length;
-      orbit.classList.toggle('orbit--dynamic', n > 0);
-
       // Build a set of my own orbs (kind + normalized title) so we can highlight
       // bubbles shared with the displayed profile.
       const norm = (s) => (s || '').toLowerCase().trim();
       const myOrbs = (state.profile && state.profile.userOrbs) || [];
       const mineSet = new Set(myOrbs.map(o => `${o.kind}::${norm(o.title)}`));
+
+      // === Verrouillage des bulles (comptes SANS Boost) ===
+      // L'utilisateur voit, sur le profil des autres, autant de bulles qu'il en a
+      // sur le SIEN : 0→aucune (toutes « ? »), 1→1, 2→2, 3→3, 4+→toutes. Boost = tout.
+      const viewerBoost = !!(state.user && state.user.boost);
+      const ownCount = myOrbs.length;
+      const unlimited = p.isMe || viewerBoost || ownCount >= 4;
+      const unlockCount = unlimited ? Infinity : ownCount;
+
+      // Sur les autres profils on affiche TOUTES leurs bulles (max 14) ; certaines
+      // seront verrouillées. Sur sa propre carte, on garde son budget.
+      const maxOrbs = p.isMe ? orbBudget() : 14;
+      const list = p.orbs.slice(0, maxOrbs);
+      const n = list.length;
+      orbit.classList.toggle('orbit--dynamic', n > 0);
+
+      // Déverrouille en priorité les bulles EN COMMUN avec l'autre profil.
+      let unlockedSet = null;
+      if (!unlimited) {
+        const commonIdx = [], otherIdx = [];
+        list.forEach((o, i) => {
+          (mineSet.has(`${o.kind}::${norm(o.title)}`) ? commonIdx : otherIdx).push(i);
+        });
+        unlockedSet = new Set(commonIdx.concat(otherIdx).slice(0, unlockCount));
+      }
 
       // Fullscreen viewport bounds
       const sw = window.innerWidth;
@@ -6065,17 +6106,23 @@
       function pickPos(orbR, idx){ return relToPx(orbRel.get(list[idx]), orbR); }
 
       list.forEach((o, i) => {
-        const isCommon = !p.isMe && mineSet.has(`${o.kind}::${norm(o.title)}`);
+        const locked = unlockedSet ? !unlockedSet.has(i) : false;
+        const isCommon = !p.isMe && !locked && mineSet.has(`${o.kind}::${norm(o.title)}`);
         const wrap = document.createElement('div');
-        wrap.className = 'orb-wrap' + (isCommon ? ' orb-wrap--common' : '');
+        wrap.className = 'orb-wrap' + (isCommon ? ' orb-wrap--common' : '') + (locked ? ' orb-wrap--locked' : '');
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'orb' + (isCommon ? ' orb--common' : '');
+        btn.className = 'orb' + (isCommon ? ' orb--common' : '') + (locked ? ' orb--locked' : '');
         btn.dataset.kind = o.kind;
-        btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}`;
-        btn.innerHTML = orbInner(o);
+        if (locked) {
+          btn.title = 'Bulle verrouillée';
+          btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
+        } else {
+          btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}`;
+          btn.innerHTML = orbInner(o);
+        }
         // Rank as a round mini-bubble (with the tier icon) orbiting around the game orb
-        if (o.kind === 'game' && o.rank) {
+        if (!locked && o.kind === 'game' && o.rank) {
           const v = rankVisual(o.rank);
           const iconUrl = rankIconUrl(o.title, o.rank);
           const iconHtml = iconUrl
@@ -6091,6 +6138,7 @@
         // Empêche le clic accidentel "+" en bord de bulle pendant le swipe.)
         btn.addEventListener('click', (ev) => {
           ev.stopPropagation();
+          if (locked) { showLockPopup(ownCount); return; }
           // Sound-wave ripple on music orbs only
           if (o.kind === 'music') {
             for (let r = 0; r < 3; r++) {
@@ -6105,7 +6153,7 @@
         });
         const label = document.createElement('span');
         label.className = 'orb-label';
-        label.textContent = (o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || '');
+        label.textContent = locked ? '' : ((o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || ''));
         wrap.appendChild(btn);
         wrap.appendChild(label);
 
