@@ -386,6 +386,10 @@ body.not-boost .boost-fab{display:inline-flex}
 .sheet h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;justify-content:space-between;font-weight:700}
 .sheet h3 .close{width:26px;height:26px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:12px;font-family:inherit}
 .sheet h3 .close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.sheet h3 .sh-title{display:inline-flex;align-items:center;gap:9px;min-width:0}
+.sheet-count{display:inline-flex;align-items:baseline;gap:3px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap;
+  background:rgba(145,70,255,.18);border:1px solid rgba(145,70,255,.45);color:#D9C7FF}
+.sheet-count b{font-size:13.5px;font-weight:800;color:#fff}
 
 /* catégories de bulles (onglets, comme le site) */
 .cats{display:flex;gap:8px;margin-bottom:10px}
@@ -817,7 +821,7 @@ function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMI
 let activeTool=null;
 document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
-const sheetHeader=t=>`<h3>${t}<button class="close" data-close>✕</button></h3>`;
+const sheetHeader=(t,badge='')=>`<h3><span class="sh-title">${t}${badge}</span><button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
 function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);else if(tool==='color')renderColorSheet(sh);}
 
@@ -827,8 +831,17 @@ const ORB_ICON={
   game:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><circle cx="15.5" cy="12" r="1" fill="currentColor"/><circle cx="17.5" cy="14" r="1" fill="currentColor"/><path d="M8 11h4M10 9v4"/></svg>',
   film:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M17 7h5M2 17h5M17 17h5"/></svg>',
 };
-const ORB_MAX=6;
+const ORBCAP_FREE=4, ORBCAP_BOOST=14;
+function orbMax(){ return document.body.classList.contains('not-boost')?ORBCAP_FREE:ORBCAP_BOOST; }
 let orbKind='music';
+function updateOrbCount(){
+  const c=document.getElementById('orbCount'); if(c)c.innerHTML=`<b>${S.orbs.length}</b> / ${orbMax()}`;
+  const h=document.getElementById('orbHint'); if(h)h.textContent=`${S.orbs.length}/${orbMax()} bulles · glisse-les pour les placer · clique pour retirer`;
+}
+function updateGifCount(){
+  const c=document.getElementById('gifCount'); if(c)c.innerHTML=`<b>${S.gifs.length}</b> / ${GIF_MAX}`;
+  const h=document.getElementById('gifHint'); if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;
+}
 
 /* ===================================================================
    Recherche de bulles — MÊME système que le site (index.html) :
@@ -919,7 +932,7 @@ function curatedMatches(query,kind,limit){
 }
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
 function renderBubblesSheet(sh){
-  sh.innerHTML=sheetHeader('Mes bulles d\'intérêt')+`
+  sh.innerHTML=sheetHeader('Mes bulles d\'intérêt',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
       <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
@@ -927,7 +940,7 @@ function renderBubblesSheet(sh){
     </div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
     <div class="sugg-list" id="orbSugg"></div>
-    <div class="hint" id="orbHint">${S.orbs.length}/${ORB_MAX} bulles · glisse-les pour les placer · clique une bulle pour la retirer</div>`;
+    <div class="hint" id="orbHint">${S.orbs.length}/${orbMax()} bulles · glisse-les pour les placer · clique une bulle pour la retirer</div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.focus();runOrbSearch(input.value.trim());}));
@@ -982,10 +995,10 @@ async function runOrbSearch(q){
   hydrateCovers(sugg,results,orbKind,reqId);
 }
 function addOrb(o){
-  if(S.orbs.length>=ORB_MAX){toast('Limite : '+ORB_MAX+' bulles');return;}
+  if(S.orbs.length>=orbMax()){toast('Limite : '+orbMax()+' bulles'+(document.body.classList.contains('not-boost')?' (14 avec Boost)':''));return;}
   if(S.orbs.some(x=>x.kind===o.kind&&x.title===o.title)){toast('Déjà ajoutée');return;}
   S.orbs.push(o); renderOrbs();
-  const h=document.getElementById('orbHint'); if(h)h.textContent=`${S.orbs.length}/${ORB_MAX} bulles · glisse-les pour les placer · clique pour retirer`;
+  updateOrbCount();
   toast('Bulle ajoutée');
 }
 /* layout : colonnes symétriques gauche/droite, max 3 par colonne (comme orbRelLayout) */
@@ -1048,7 +1061,7 @@ function renderOrbs(){
     const del=document.createElement('div'); del.className='orb-del'; del.textContent='✕';
     del.style.width=Math.round(D*0.28)+'px'; del.style.height=Math.round(D*0.28)+'px'; del.style.fontSize=Math.round(D*0.15)+'px';
     del.addEventListener('pointerdown',e=>e.stopPropagation());
-    del.addEventListener('click',e=>{e.stopPropagation();S.orbs.splice(i,1);renderOrbs();toast('Bulle retirée');const h=document.getElementById('orbHint');if(h)h.textContent=`${S.orbs.length}/${ORB_MAX} bulles · glisse-les pour les placer · clique pour retirer`;});
+    del.addEventListener('click',e=>{e.stopPropagation();S.orbs.splice(i,1);renderOrbs();toast('Bulle retirée');updateOrbCount();});
     orb.appendChild(del);
     // Bulle JEU : badge d'édition (clip + rang) + indicateur clip
     if(o.kind==='game'){
@@ -1083,7 +1096,7 @@ window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=
 /* ===== 2. GIFS = stickers sur la carte (drag + resize + rotation), comme le site ===== */
 const GIF_MAX=10;
 function renderGifsSheet(sh){
-  sh.innerHTML=sheetHeader('GIFs sur ta carte')+`
+  sh.innerHTML=sheetHeader('GIFs sur ta carte',`<span class="sheet-count" id="gifCount"><b>${S.gifs.length}</b> / ${GIF_MAX}</span>`)+`
     <div class="search-row"><input id="gifSearch" placeholder="Rechercher un GIF (Giphy)…" autocomplete="off"></div>
     <div class="gif-grid" id="gifResults"></div>
     <div class="hint" id="gifHint">${S.gifs.length}/${GIF_MAX} GIFs · glisse pour déplacer · coin vert = taille · coin bleu = rotation</div>`;
@@ -1104,7 +1117,7 @@ function addGif(url){
   S.gifs.push(g);
   _lastGifPlace={x:g.x,y:g.y,w:g.w};
   renderGifs();
-  const h=document.getElementById('gifHint'); if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;
+  updateGifCount();
   toast('GIF ajouté');
 }
 function renderGifs(){const layer=$('stickerLayer');layer.innerHTML='';S.gifs.forEach((g,i)=>layer.appendChild(makeSticker(g,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
@@ -1119,7 +1132,7 @@ function makeSticker(g,idx,layer){
     <div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>`;
   const center=()=>{const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
   el.querySelector('.sk-del').addEventListener('pointerdown',e=>e.stopPropagation());
-  el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.gifs.splice(idx,1);renderGifs();toast('GIF retiré');const h=document.getElementById('gifHint');if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;});
+  el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.gifs.splice(idx,1);renderGifs();toast('GIF retiré');updateGifCount();});
   // déplacer
   let drag=null;
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
@@ -1551,7 +1564,7 @@ function hydrateFromSite(){
     S.orbs=p.userOrbs.map(o=>({kind:(o.kind==='anime'?'film':o.kind),title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,clipUrl:o.clipUrl||null,
         x:typeof o.x==='number'?o.x:(typeof o.customX==='number'?50+o.customX*100:undefined),
         y:typeof o.y==='number'?o.y:(typeof o.customY==='number'?50+o.customY*100:undefined)}))
-      .filter(o=>['music','game','film'].includes(o.kind)).slice(0,ORB_MAX);
+      .filter(o=>['music','game','film'].includes(o.kind)).slice(0,orbMax());
     renderOrbs();
   }
   if(Array.isArray(u.gifs)&&u.gifs.length){
