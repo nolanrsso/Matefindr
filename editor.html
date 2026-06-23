@@ -124,6 +124,14 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .orb[data-kind="music"]{border-color:rgba(80,255,150,.85);box-shadow:0 0 0 2px rgba(29,185,84,.4),0 0 22px 4px rgba(30,215,96,.7),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="game"]{border-color:rgba(141,203,255,.9);box-shadow:0 0 0 2px rgba(47,123,216,.5),0 0 22px 4px rgba(141,203,255,.7),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="film"]{border-color:rgba(199,165,255,.85);box-shadow:0 0 0 2px rgba(139,92,246,.5),0 0 22px 4px rgba(199,165,255,.7),0 12px 30px rgba(0,0,0,.5)}
+/* Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite) */
+.orb-wrap--add{cursor:pointer}
+.orb--add{cursor:pointer;background:rgba(145,70,255,.10);border:2.5px dashed rgba(145,70,255,.6);
+  box-shadow:0 0 0 2px rgba(145,70,255,.12),0 10px 26px rgba(0,0,0,.45);animation:orbAddPulse 2.2s ease-in-out infinite}
+.orb-wrap--add:hover .orb--add{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.95);transform:scale(1.07)}
+.orb-add-plus{font-weight:300;line-height:1;color:#C7A5FF;text-shadow:0 2px 10px rgba(145,70,255,.6)}
+.orb-wrap--add .orb-label{color:#C7A5FF}
+@keyframes orbAddPulse{0%,100%{box-shadow:0 0 0 2px rgba(145,70,255,.12),0 10px 26px rgba(0,0,0,.45)}50%{box-shadow:0 0 0 5px rgba(145,70,255,.30),0 10px 30px rgba(0,0,0,.5)}}
 .orb-del{
   /* Toujours visible (plus de clipping) → on peut retirer la bulle d'un clic. */
   position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;z-index:6;
@@ -821,6 +829,7 @@ function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMI
 let activeTool=null;
 document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
+function openBubblesSheet(){const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='')=>`<h3><span class="sh-title">${t}${badge}</span><button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
 function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);else if(tool==='color')renderColorSheet(sh);}
@@ -1086,12 +1095,30 @@ function renderOrbs(){
     wrap.addEventListener('pointerup',endDrag);wrap.addEventListener('pointercancel',endDrag);
     layer.appendChild(wrap);
   });
+  // Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite)
+  if(S.orbs.length<orbMax()){
+    const n=S.orbs.length;
+    const p2=orbLayout(n+1)[n]; // emplacement de la prochaine bulle
+    const ax=50+p2.rx*100, ay=50+p2.ry*vScale*100;
+    const aw=document.createElement('div'); aw.className='orb-wrap orb-wrap--add'; aw.title='Ajouter une bulle';
+    aw.style.left=ax+'%'; aw.style.top=ay+'%';
+    const ao=document.createElement('div'); ao.className='orb orb--add';
+    ao.style.width=D+'px'; ao.style.height=D+'px';
+    ao.innerHTML=`<span class="orb-add-plus" style="font-size:${Math.round(D*0.52)}px">+</span>`;
+    const albl=document.createElement('div'); albl.className='orb-label'; albl.textContent='Ajouter';
+    albl.style.maxWidth=(D+24)+'px'; albl.style.fontSize=Math.max(9,Math.round(D*0.13))+'px';
+    const acol=document.createElement('div'); acol.style.cssText='display:flex;flex-direction:column;align-items:center';
+    acol.appendChild(ao); acol.appendChild(albl);
+    aw.appendChild(acol);
+    aw.addEventListener('click',openBubblesSheet);
+    layer.appendChild(aw);
+  }
   if(typeof updateEyeVisibility==='function') updateEyeVisibility();
   if(typeof persist==='function') persist();
 }
 // Re-render des bulles au resize (garde l'échelle proportionnelle à la carte)
 let _orbRz=null;
-window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{if(S.orbs.length)renderOrbs();},150);});
+window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();},150);});
 
 /* ===== 2. GIFS = stickers sur la carte (drag + resize + rotation), comme le site ===== */
 const GIF_MAX=10;
@@ -1579,6 +1606,7 @@ document.body.classList.add('not-boost'); // par défaut non-Boost (hydrate corr
 applyColor(S.c1);
 drawIdleWave();
 hydrateFromSite();
+renderOrbs(); // affiche au moins la bulle "+" même sans bulle existante
 
 /* ===== Gate Tindord Boost : GIFs / Fond perso / Musique d'entrée sont réservés au Boost. ===== */
 function userHasBoost(){ try{ const st=readSite(); return !!(st.user&&st.user.boost); }catch(_){ return false; } }
