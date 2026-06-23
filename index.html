@@ -5405,15 +5405,19 @@
         games: [p.game].filter(Boolean),
         bio: p.bio || '✏️ Complète ton profil dans Mon compte !',
         common: {friends:0, servers:0},
-        c1:'#36393F', c2:'#2F3136',
+        c1:'#393a41', c2:'#393a41',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
+        avatarPos: u.avatarPos || null,
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
-        profileColor: u.profileColor || '#36393F',
-        profileColor2: u.profileColor2 || '#2F3136',
+        // Couleur Discord par défaut (#393a41) tant que l'utilisateur n'a pas choisi la sienne.
+        profileColor: u.profileColor || '#393a41',
+        profileColor2: u.profileColor2 || '#393a41',
         accentColor: u.accentColor || null,
         profileVoice: u.profileVoice || null,
+        // IDs des serveurs Discord → calcul des serveurs en commun chez les autres.
+        guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => g.id) : []),
         orbs,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
@@ -5499,6 +5503,7 @@
         games: [], bio: r.bio || '',
         common: {friends:0, servers:0},
         c1:'#5865F2', c2:'#404EED',
+        profileColor:'#393a41', profileColor2:'#393a41',
         initial: (r.display_name || 'T').charAt(0).toUpperCase(),
         avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
         accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
@@ -5622,12 +5627,22 @@
       const p = (myP && deckIdx === 0) ? myP : pool[deckIdx - offset];
       // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
       if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg);
-      wrap.appendChild(buildCard(p, true));
-      renderOrbs(p);
-      renderSwipeGifs(p);
-      // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
-      // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
-      playProfileEntryMusic(p);
+      // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
+      // au lieu de laisser le deck vide et bloqué (cause du « on ne peut plus swiper »).
+      try {
+        wrap.appendChild(buildCard(p, true));
+        renderOrbs(p);
+        renderSwipeGifs(p);
+        // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
+        // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
+        playProfileEntryMusic(p);
+      } catch (err) {
+        console.warn('[Tindord] profil illisible, on passe au suivant', err, p);
+        wrap.innerHTML = '';
+        if (deckIdx < total - 1) { deckIdx++; ensureDeckSync(); return; }
+        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        document.body.setAttribute('data-swipe-empty', 'true');
+      }
     }
 
     /* (legacy) Plays the profile owner's entry music when the card is displayed.
@@ -5797,8 +5812,13 @@
       // (default stays #1c1d22 from the .swipe-card class)
       // Avatar wrap background follows the card body so the circle blends in
       const aviBg = pc1 || '#1c1d22';
+      // Recadrage de la photo (depuis l'éditeur) : object-position + zoom appliqués à la carte.
+      const ap = (p.avatarPos && typeof p.avatarPos === 'object') ? p.avatarPos : null;
+      const apStyle = ap
+        ? `${(typeof ap.posX === 'number' && typeof ap.posY === 'number') ? `object-position:${ap.posX}% ${ap.posY}%;` : ''}${(typeof ap.scale === 'number' && ap.scale !== 1) ? `transform:scale(${ap.scale});` : ''}`
+        : '';
       const aviInner = p.avatarUrl
-        ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="${p.name}">`
+        ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;${apStyle}" alt="${p.name}">`
         : p.initial;
       const aviStyle = p.avatarUrl ? '' : `style="background:linear-gradient(135deg,${p.c1},${p.c2})"`;
       // Décorations Discord retirées du site → plus d'overlay de décoration sur l'avatar.
@@ -5809,17 +5829,17 @@
       // Discord common guilds (icons + count). For mock profiles, pick a random subset
       // of the user's real guilds the first time we build the card, then cache it on
       // the profile so re-renders stay stable for that session.
+      // Serveurs en commun RÉELS : intersection entre mes serveurs Discord et ceux de l'autre
+      // (p.guildIds = liste d'IDs stockée dans son profil). On affiche les serveurs via MES
+      // propres icônes/noms (je suis forcément dedans aussi). Si l'autre n'a pas encore d'IDs
+      // synchronisés → on n'affiche rien (plutôt qu'un faux nombre aléatoire).
       const myGuilds = (state.user && Array.isArray(state.user.guilds)) ? state.user.guilds : [];
       let commonGuilds = [];
       if (p.isMe) {
         commonGuilds = myGuilds;
-      } else if (Array.isArray(p.commonGuilds)) {
-        commonGuilds = p.commonGuilds;
-      } else if (myGuilds.length > 0) {
-        const max = Math.min(myGuilds.length, 5);
-        const n = Math.floor(Math.random() * (max + 1));
-        p.commonGuilds = [...myGuilds].sort(() => Math.random() - 0.5).slice(0, n);
-        commonGuilds = p.commonGuilds;
+      } else if (Array.isArray(p.guildIds) && myGuilds.length > 0) {
+        const theirs = new Set(p.guildIds.map(String));
+        commonGuilds = myGuilds.filter(g => theirs.has(String(g.id)));
       }
       const guildIconHtml = (g) => g.iconUrl
         ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
@@ -5922,12 +5942,17 @@
               </div>
               <span class="card-voice-time">0:00</span>
             </div>
-          ` : `
+          ` : (() => {
+            // Garde-fou : certains profils (anciennes sauvegardes) n'ont pas d'objet activity.
+            // Sans ce fallback, p.activity.type lève une exception qui fait planter buildCard
+            // → la carte ne se construit pas → le deck reste vide et on ne peut plus swiper.
+            const act = (p.activity && typeof p.activity === 'object') ? p.activity : { type:'game', title:'Tindord', sub:'Sur Tindord' };
+            return `
             <div class="activity">
-              <div class="icon">${activityIcon(p.activity.type)}</div>
-              <div class="lbl"><b>${p.activity.title}</b><span>${p.activity.sub}</span></div>
+              <div class="icon">${activityIcon(act.type)}</div>
+              <div class="lbl"><b>${act.title || ''}</b><span>${act.sub || ''}</span></div>
             </div>
-          `}
+          `; })()}
           <div class="bio"><b>Bio</b>${p.bio}</div>
           ${socialHtml}
           ${connectionsHtml}
@@ -6753,7 +6778,14 @@
         // Different orb: stop previous, start new
         if (_spotifyAudio) { _spotifyAudio._userStopped = true; fadeOutAndStop(_spotifyAudio); _spotifyAudio = null; }
         el.classList.add('playing');
-        const playUrl = (url, name, sub) => {
+        // Sépare "Titre · Artiste" pour pouvoir re-chercher une preview ailleurs.
+        const parseTitle = () => {
+          const t = (o.title || '').trim();
+          const parts = t.split('·');
+          return { name: (parts[0] || t).trim(), artist: (parts[1] || o.sub || '').trim() };
+        };
+        const playUrl = (url) => {
+          if (!url) { el.classList.remove('playing'); return; }
           pauseProfileMusicForOrb();
           const a = new Audio(url);
           a._orbEl = el;
@@ -6764,6 +6796,13 @@
           a.play().catch(() => {});
           fadeIn(a, orbMusicTarget(), 700);
           a.addEventListener('ended', () => { el.classList.remove('playing'); if (_spotifyAudio === a) { _spotifyAudio = null; resumeProfileMusicAfterOrb(); } });
+          // URL morte (preview Spotify expirée, 404…) → on retente une fois via Deezer/iTunes.
+          a.addEventListener('error', () => {
+            if (_spotifyAudio !== a) return;
+            _spotifyAudio = null;
+            if (!o._triedMusicFallback) { o._triedMusicFallback = true; resolveAndPlay(true); }
+            else el.classList.remove('playing');
+          });
           // Anti-cutoff : si l'audio est pausé sans intervention utilisateur (swipe, re-render,
           // perte de focus de l'onglet…), on le redémarre automatiquement.
           a.addEventListener('pause', () => {
@@ -6777,20 +6816,19 @@
           });
           _spotifyAudio = a;
         };
-        if (o.previewUrl) {
-          playUrl(o.previewUrl, o.title, '30s preview');
-        } else {
-          (async () => {
-            try {
-              const results = await searchSpotifyTracks(o.title, 1);
-              let r = results[0];
-              if (r?.previewUrl) { playUrl(r.previewUrl, r.name, r.artist); return; }
-              const itu = await itunesPreview(r?.artist || '', r?.name || o.title);
-              if (itu) { playUrl(itu, r?.name || o.title, r?.artist || ''); return; }
-              el.classList.remove('playing');
-            } catch { el.classList.remove('playing'); }
-          })();
+        // Résout une preview JOUABLE sans dépendre d'un token Spotify :
+        // 1) previewUrl sauvegardé  2) Deezer  3) iTunes  4) recherche Spotify (si dispo).
+        async function resolveAndPlay(skipSaved){
+          try {
+            const { name, artist } = parseTitle();
+            let url = (!skipSaved && o.previewUrl) ? o.previewUrl : null;
+            if (!url) url = await deezerPreview(artist, name);
+            if (!url) url = await itunesPreview(artist, name);
+            if (!url) { try { const r = (await searchSpotifyTracks(o.title, 1))[0]; if (r && r.previewUrl) url = r.previewUrl; } catch(_){} }
+            if (url) playUrl(url); else el.classList.remove('playing');
+          } catch { el.classList.remove('playing'); }
         }
+        resolveAndPlay(false);
       }
     }
     function attachDrag(card){
@@ -9274,9 +9312,9 @@
         state.user = state.user || {};
         const u = state.user;
         u.discordId    = d.id || u.discordId;
-        u.displayName  = d.global_name || d.username || u.displayName;
+        if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
         u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
-        u.avatarUrl    = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+        if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
         // Bannière : si l'utilisateur a importé sa propre bannière (bannerCustom), on la garde
         if (!u.bannerCustom) {
           u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
@@ -10469,9 +10507,11 @@
             if (!d) return;
             const u = state.user = state.user || {};
             u.discordId    = d.id || u.discordId;
-            u.displayName  = d.global_name || d.username || u.displayName;
+            // Pseudo / avatar personnalisés (renommé ou photo importée dans l'éditeur) :
+            // on NE les écrase PAS avec ceux de Discord (sinon « le pseudo/la photo ne se sauvegarde pas »).
+            if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
             u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
-            u.avatarUrl    = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+            if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
             if (!u.bannerCustom) u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
             if (!u.decoCustom) {
               u.decorationUrl = d.avatar_decoration_data?.asset
