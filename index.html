@@ -648,6 +648,27 @@
     background:#FFFFFF;color:#FF4FA0;font-size:12px;font-weight:800;
     display:grid;place-items:center;border:2px solid #0D0B1E;
   }
+  /* Volume musique — slider horizontal à gauche du FAB cœur (écran swipe) */
+  .swipe-vol{
+    position:fixed;right:90px;bottom:24px;z-index:24;display:none;align-items:center;gap:9px;
+    height:48px;padding:0 15px 0 11px;border-radius:18px;
+    background:rgba(20,18,38,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.12);box-shadow:0 14px 36px rgba(0,0,0,.4);
+  }
+  body[data-auth="in"] .swipe-vol{display:flex}
+  body[data-preview="true"] .swipe-vol,
+  body[data-screen="account"] .swipe-vol{display:none !important}
+  .swipe-vol .sv-ico{background:none;border:none;padding:0;width:22px;height:22px;color:#fff;cursor:pointer;flex:0 0 auto;display:grid;place-items:center}
+  .swipe-vol .sv-ico svg{width:21px;height:21px;display:block}
+  .swipe-vol .sv-slash{display:none}
+  .swipe-vol.muted .sv-wave{display:none}
+  .swipe-vol.muted .sv-ico{color:#FF7EB6}
+  .swipe-vol.muted .sv-slash{display:block}
+  .swipe-vol input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:5px;border-radius:999px;
+    background:linear-gradient(90deg,#FF7EB6,#9146FF);outline:none;cursor:pointer;flex:0 0 auto}
+  .swipe-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
+  .swipe-vol input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
+  @media(max-width:520px){ .swipe-vol{right:84px;bottom:24px;padding:0 12px 0 9px;gap:7px} .swipe-vol input[type=range]{width:66px} }
 
   /* Messages panel — slide-out drawer */
   .msg-panel{
@@ -3813,6 +3834,19 @@
     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg>
     <span class="fab-badge" id="heartFabBadge">0</span>
   </button>
+
+  <!-- Volume de la musique — slider horizontal à gauche du FAB cœur -->
+  <div class="swipe-vol" id="swipeVol" aria-label="Volume de la musique">
+    <button class="sv-ico" id="swipeVolIco" type="button" aria-label="Couper / rétablir le son">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 9v6h4l5 4V5L8 9H4z"/>
+        <path class="sv-wave" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
+        <path class="sv-wave" d="M19 6.5a7 7 0 0 1 0 11"/>
+        <path class="sv-slash" d="M3 3l18 18"/>
+      </svg>
+    </button>
+    <input type="range" id="swipeVolRange" min="0" max="100" value="50" aria-label="Volume de la musique" />
+  </div>
 
   <aside class="msg-panel" id="msgPanel" data-open="false" data-view="list" aria-label="Messages">
     <div class="msg-head">
@@ -8073,6 +8107,7 @@
       const vol = typeof u.musicVolume === 'number' ? u.musicVolume : DEFAULT_MUSIC_VOL;
       const volSlider = document.getElementById('musicVolume');
       if (volSlider) { volSlider.value = Math.round(vol * 100); document.getElementById('musicVolVal').textContent = Math.round(vol * 100) + '%'; }
+      if (typeof window.__swipeVolRefresh === 'function') window.__swipeVolRefresh();
       const startSec = typeof u.musicStartTime === 'number' ? u.musicStartTime : 0;
       const startSlider = document.getElementById('musicStartTime');
       if (startSlider) { startSlider.value = startSec; document.getElementById('musicStartVal').textContent = startSec + 's'; }
@@ -9051,6 +9086,40 @@
         state.user.musicVolume = v;
         save();
       });
+    })();
+
+    // Volume musique — slider rapide sur l'écran swipe (à gauche du FAB cœur)
+    (function bindSwipeVol(){
+      const wrap  = document.getElementById('swipeVol');
+      const range = document.getElementById('swipeVolRange');
+      const ico   = document.getElementById('swipeVolIco');
+      if (!wrap || !range) return;
+      let _preMute = null;
+      const curVol = () => (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
+      function apply(v, persistIt){
+        v = Math.max(0, Math.min(1, v));
+        const eff = v * ENTRY_MUSIC_GAIN;
+        if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
+        if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) _spotifyAudio.volume = eff;
+        state.user = state.user || {};
+        state.user.musicVolume = v;
+        range.value = Math.round(v * 100);
+        wrap.classList.toggle('muted', v === 0);
+        // garde le slider des réglages synchro s'il existe
+        const sl = document.getElementById('musicVolume');
+        if (sl) { sl.value = Math.round(v * 100); const vv = document.getElementById('musicVolVal'); if (vv) vv.textContent = Math.round(v * 100) + '%'; }
+        if (persistIt && typeof save === 'function') save();
+      }
+      range.addEventListener('input', () => apply(parseInt(range.value, 10) / 100, false));
+      range.addEventListener('change', () => { if (typeof save === 'function') save(); });
+      ico && ico.addEventListener('click', () => {
+        const v = curVol();
+        if (v > 0) { _preMute = v; apply(0, true); }
+        else { apply(_preMute || DEFAULT_MUSIC_VOL, true); _preMute = null; }
+      });
+      // Affichage seul (ne réécrit pas le state) — utilisé à l'init et après chargement du profil
+      window.__swipeVolRefresh = () => { const v = curVol(); range.value = Math.round(v * 100); wrap.classList.toggle('muted', v === 0); };
+      window.__swipeVolRefresh();
     })();
 
     // Discord resync button — fetches latest Discord profile and merges into state.user
