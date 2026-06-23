@@ -182,7 +182,18 @@
       "Bash(python -m http.server 8095)",
       "Bash(curl -s -o /dev/null -w \"checkout.html -> %{http_code} \\(%{size_download} bytes\\)\\\\n\" http://localhost:8095/checkout.html)",
       "Bash(curl -s http://localhost:8095/checkout.html)",
-      "Bash(kill %1)"
+      "Bash(kill %1)",
+      "Bash(git --no-pager log HEAD..origin/master --oneline)",
+      "Bash(git --no-pager diff --stat HEAD...origin/master)",
+      "Bash(git --no-pager grep -n \"GIF_MAX=\" origin/master -- editor.html)",
+      "Bash(git --no-pager grep -n \"MAX_GIFS = \" origin/master -- index.html)",
+      "Bash(git rebase *)",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git --no-pager grep -n \"GIF_MAX=\" -- editor.html)",
+      "Bash(git --no-pager grep -n \"MAX_GIFS = \" -- index.html)",
+      "Bash(git --no-pager log origin/master..HEAD --oneline)",
+      "Bash(python -c \"import json; json.load\\(open\\('.claude/settings.local.json'\\)\\); print\\('JSON OK'\\)\")"
     ]
   }
 }
