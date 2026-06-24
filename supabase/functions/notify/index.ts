@@ -18,6 +18,9 @@ type Payload = {
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// Bot Discord (même secret que l'edge function discord-join-dm) → MP direct au destinataire.
+const BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN") ?? "";
+const DISCORD_API = "https://discord.com/api/v10";
 
 const COLORS = { like: 0xff4fa0, match: 0x9146ff, message: 0x5be9ff };
 
@@ -53,6 +56,37 @@ async function sendWebhook(url: string, embed: Record<string, unknown>) {
   return r.ok;
 }
 
+// Récupère l'ID Discord (snowflake) d'un user à partir de son id Supabase.
+async function discordIdOf(sb: ReturnType<typeof createClient>, userId: string): Promise<string | null> {
+  const { data } = await sb.from("profiles").select("discord_id").eq("id", userId).maybeSingle();
+  const did = (data as { discord_id?: string | null } | null)?.discord_id;
+  return did ? String(did) : null;
+}
+
+// Envoie un MP au destinataire via le bot (best-effort : ne casse rien si MP fermés / pas de bot).
+async function dmUser(sb: ReturnType<typeof createClient>, userId: string, embed: Record<string, unknown>) {
+  if (!BOT_TOKEN) return false;
+  const discordId = await discordIdOf(sb, userId);
+  if (!discordId) return false;
+  try {
+    const chRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: discordId }),
+    });
+    if (!chRes.ok) return false;
+    const ch = await chRes.json();
+    const msgRes = await fetch(`${DISCORD_API}/channels/${ch.id}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+    return msgRes.ok;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
   const body = (await req.json()) as Payload;
@@ -63,16 +97,17 @@ Deno.serve(async (req) => {
       const toUser = body.record.to_user as string;
       const fromUser = body.record.from_user as string;
       const [recipient, sender] = await Promise.all([loadPrefs(sb, toUser), loadPrefs(sb, fromUser)]);
-      if (!recipient?.discord_webhook || !recipient.notif_like) return new Response("skip", { status: 200 });
       const thumb = sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null);
-      await sendWebhook(recipient.discord_webhook, {
+      const embed = {
         title: "❤️ Nouveau like sur Tindord",
         description: `**${sender?.display_name || "Quelqu'un"}** t'a liké !`,
         color: COLORS.like,
         thumbnail: { url: thumb },
         timestamp: new Date().toISOString(),
         footer: { text: "Tindord" },
-      });
+      };
+      if (recipient?.discord_webhook && recipient.notif_like) await sendWebhook(recipient.discord_webhook, embed);
+      await dmUser(sb, toUser, embed); // MP direct par le bot
     }
 
     if (body.table === "matches") {
@@ -80,20 +115,21 @@ Deno.serve(async (req) => {
       const userB = body.record.user_b as string;
       const [pa, pb] = await Promise.all([loadPrefs(sb, userA), loadPrefs(sb, userB)]);
       const pairs = [
-        { me: pa, other: pb },
-        { me: pb, other: pa },
+        { meId: userA, me: pa, other: pb },
+        { meId: userB, me: pb, other: pa },
       ];
-      for (const { me, other } of pairs) {
-        if (!me?.discord_webhook || !me.notif_match) continue;
+      for (const { meId, me, other } of pairs) {
         const thumb = other?.avatar_url || avatarFallback(other?.display_name || null, other?.c1 || null);
-        await sendWebhook(me.discord_webhook, {
+        const embed = {
           title: "💞 C'est un match !",
           description: `Tu as matché avec **${other?.display_name || "quelqu'un"}** sur Tindord.`,
           color: COLORS.match,
           thumbnail: { url: thumb },
           timestamp: new Date().toISOString(),
           footer: { text: "Tindord" },
-        });
+        };
+        if (me?.discord_webhook && me.notif_match) await sendWebhook(me.discord_webhook, embed);
+        await dmUser(sb, meId, embed); // MP direct par le bot
       }
     }
 
@@ -105,16 +141,17 @@ Deno.serve(async (req) => {
       if (!match) return new Response("no match", { status: 200 });
       const recipientId = match.user_a === sender ? match.user_b : match.user_a;
       const [recipient, senderPrefs] = await Promise.all([loadPrefs(sb, recipientId), loadPrefs(sb, sender)]);
-      if (!recipient?.discord_webhook || !recipient.notif_message) return new Response("skip", { status: 200 });
       const thumb = senderPrefs?.avatar_url || avatarFallback(senderPrefs?.display_name || null, senderPrefs?.c1 || null);
-      await sendWebhook(recipient.discord_webhook, {
+      const embed = {
         title: "💬 Nouveau message Tindord",
         description: `**${senderPrefs?.display_name || "Quelqu'un"}** t'a écrit :\n> ${content.slice(0, 200)}`,
         color: COLORS.message,
         thumbnail: { url: thumb },
         timestamp: new Date().toISOString(),
         footer: { text: "Tindord" },
-      });
+      };
+      if (recipient?.discord_webhook && recipient.notif_message) await sendWebhook(recipient.discord_webhook, embed);
+      await dmUser(sb, recipientId, embed); // MP direct par le bot
     }
 
     return new Response("ok", { status: 200 });

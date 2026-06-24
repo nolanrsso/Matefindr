@@ -81,6 +81,15 @@ Le client envoie le webhook lui-même. Si l'utilisateur n'a pas l'onglet ouvert 
 
 Avantage : ça marche même si tous les onglets sont fermés.
 
+### MP direct par le bot (recommandé — plus besoin de webhook)
+
+Depuis que le bot ajoute chaque utilisateur au serveur (auto-join), il peut lui envoyer un **MP** pour chaque notif (like / match / message). La fonction `notify` récupère le `discord_id` du destinataire dans `profiles` et envoie l'embed en DM via le bot.
+
+- **Aucune config utilisateur** : pas de webhook à créer, ça marche pour tout le monde dès qu'ils se sont connectés.
+- **Pré-requis** : le secret `DISCORD_BOT_TOKEN` doit être défini (même bot que `discord-join-dm`) → `supabase secrets set DISCORD_BOT_TOKEN="..."`, puis redéployer `notify`.
+- Le MP est *best-effort* : si l'utilisateur a fermé ses MP, il est simplement ignoré.
+- Le webhook perso (ci-dessus) reste géré en plus, pour qui en a configuré un.
+
 ## Setup (une fois)
 
 ### 1. Tables + trigger + RLS
