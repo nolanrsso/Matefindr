@@ -1132,6 +1132,37 @@ function orbLayout(n){
   });
   return pos;
 }
+/* Anti-superposition : écarte toute paire de bulles (et le "+") trop proches.
+   Relaxation itérative en pixels, bornée à la zone des bulles. Le "+" cède en
+   priorité, puis les bulles auto ; deux bulles ne peuvent jamais finir l'une sur
+   l'autre. mob = mobilité (plus c'est haut, plus l'élément bouge). */
+function spreadOrbs(nodes, D){
+  const layer=$('orbLayer'); if(!layer) return;
+  const lr=layer.getBoundingClientRect(); const W=lr.width||1, H=lr.height||1;
+  if(W<=1||H<=1||nodes.length<2) return;
+  const b=orbBounds(D/2+6);
+  const minXp=(b.minX-lr.left)/W*100, maxXp=(b.maxX-lr.left)/W*100;
+  const minYp=(b.minY-lr.top)/H*100,  maxYp=(b.maxY-lr.top)/H*100;
+  const minDist=D+16; // centre-à-centre (px) : laisse un vrai trou entre 2 bulles
+  for(let it=0; it<120; it++){
+    let moved=false;
+    for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+      const A=nodes[i],B=nodes[j];
+      let dx=(B.x-A.x)/100*W, dy=(B.y-A.y)/100*H, d=Math.hypot(dx,dy);
+      if(d<minDist){
+        if(d<0.01){const a=Math.random()*6.283;dx=Math.cos(a);dy=Math.sin(a);d=1;}
+        const ux=dx/d, uy=dy/d, push=(minDist-d), tot=(A.mob+B.mob)||1;
+        A.x=clamp(A.x-(ux*push*(A.mob/tot))/W*100,minXp,maxXp);
+        A.y=clamp(A.y-(uy*push*(A.mob/tot))/H*100,minYp,maxYp);
+        B.x=clamp(B.x+(ux*push*(B.mob/tot))/W*100,minXp,maxXp);
+        B.y=clamp(B.y+(uy*push*(B.mob/tot))/H*100,minYp,maxYp);
+        moved=true;
+      }
+    }
+    if(!moved) break;
+  }
+  nodes.forEach(n=>{ if(n.o){n.o.x=n.x;n.o.y=n.y;} if(n.wrap){n.wrap.style.left=n.x+'%';n.wrap.style.top=n.y+'%';} });
+}
 function renderOrbs(){
   const layer=$('orbLayer'); layer.innerHTML='';
   const card=document.getElementById('card');
@@ -1143,6 +1174,7 @@ function renderOrbs(){
   const refH=cardW*SWIPE_CARD_ASPECT;
   const vScale=refH/cardH; // garde l'écart vertical à l'échelle du swipe
   const pos=orbLayout(S.orbs.length);
+  const nodes=[]; // pour la passe anti-superposition (bulles + "+")
   S.orbs.forEach((o,i)=>{
     if(typeof o.x!=='number'||typeof o.y!=='number'){const p=pos[i];o.x=50+p.rx*100;o.y=50+p.ry*vScale*100;}
     const wrap=document.createElement('div'); wrap.className='orb-wrap';
@@ -1182,9 +1214,11 @@ function renderOrbs(){
     let drag=null;
     wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del,.orb-edit'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const or=orb.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};wrap.classList.add('dragging');showGuide('orb');});
     wrap.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.mx)+Math.abs(e.clientY-drag.my)>2)drag.moved=true;const bnd=orbBounds(D/2+6);const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();o.x=(cx-lr.left)/lr.width*100;o.y=(cy-lr.top)/lr.height*100;wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
-    const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');hideGuide();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved)persist();else if(o.kind==='music'&&o.previewUrl)toggleOrbMusic(o,orb);};
+    const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');hideGuide();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved){o.userPlaced=true;renderOrbs();persist();}else if(o.kind==='music'&&o.previewUrl)toggleOrbMusic(o,orb);};
     wrap.addEventListener('pointerup',endDrag);wrap.addEventListener('pointercancel',endDrag);
     layer.appendChild(wrap);
+    // bulle déplacée à la main = peu mobile (on préserve le placement), sinon mobile.
+    nodes.push({x:o.x,y:o.y,wrap,o,mob:o.userPlaced?0.28:0.7});
   });
   // Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite)
   if(S.orbs.length<orbMax()){
@@ -1203,7 +1237,10 @@ function renderOrbs(){
     aw.appendChild(acol);
     aw.addEventListener('click',openBubblesSheet);
     layer.appendChild(aw);
+    nodes.push({x:ax,y:ay,wrap:aw,o:null,mob:1.4}); // le "+" cède le plus → jamais sur une bulle
   }
+  // Passe finale : on écarte tout ce qui se chevauche (bulles + "+").
+  spreadOrbs(nodes, D);
   if(typeof updateEyeVisibility==='function') updateEyeVisibility();
   if(typeof persist==='function') persist();
 }

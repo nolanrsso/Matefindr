@@ -317,7 +317,10 @@
   h1{
     font-family:"Clash Display",sans-serif;
     font-weight:800;
-    font-size:clamp(96px, 18vw, 240px);
+    /* Taille bornée par la LARGEUR *et* la HAUTEUR du viewport (min(vw,vh)) : garde la même
+       proportion sur toute résolution (y compris écrans mis à l'échelle 125/150% = viewport
+       étroit) → le titre ne « zoome » plus sur les résolutions non standard. */
+    font-size:clamp(56px, min(12.5vw, 22vh), 240px);
     line-height:.9;letter-spacing:calc(-.045em + 3px);
     margin:24px auto 14px;
     background:linear-gradient(180deg,#fff 0%, #fff 35%, #FF7EB6 65%, #9146FF 100%);
