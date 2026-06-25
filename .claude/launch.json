@@ -4,7 +4,7 @@
     {
       "name": "tindord",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-p", "8090", "C:/Users/nolan/OneDrive/Documents/claude/Tindord"],
+      "runtimeArgs": ["serve", "-p", "8090", "."],
       "port": 8090
     }
   ]
