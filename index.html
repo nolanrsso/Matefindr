@@ -5640,7 +5640,9 @@
       // Ta propre carte n'est dans le deck QU'en mode APERÇU (endroit dédié, figé).
       // En mode normal (le hub), on ne se swipe pas soi-même → deck = uniquement les autres.
       const inPreview = !!(_previewMode && myP);
-      const pool = inPreview ? [] : genderFilteredProfiles();
+      // En mode APERÇU on ne montre QUE soi : jamais d'autres profils, même si ma
+      // carte manque (sinon on verrait un inconnu sans pouvoir interagir).
+      const pool = _previewMode ? [] : genderFilteredProfiles();
       const offset = inPreview ? 1 : 0;
       const total = pool.length + offset;
       if (deckIdx >= total) {
@@ -8286,14 +8288,17 @@
       el.addEventListener('input',  refreshAccountPreview);
       el.addEventListener('change', refreshAccountPreview);
     });
-    /* Aperçu complet : ouvre le swipe sur SA propre carte (bulles + GIFs + fond rendus en vrai),
-       en MODE APERÇU → pas de swipe, un bouton "Quitter l'aperçu" remplace like/nope. */
-    document.getElementById('accPreviewFull')?.addEventListener('click', () => {
+    /* Aperçu : ouvre le swipe sur SA PROPRE carte (bulles + GIFs + fond rendus en vrai),
+       en MODE APERÇU → uniquement MA carte, AUCUN swipe, un seul bouton "Quitter l'aperçu". */
+    function enterPreviewMode(){
       _previewMode = true;
       document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
       if (typeof setScreen === 'function') setScreen('swipe');
-    });
+    }
+    // Bouton legacy de l'ancien écran compte ; le vrai déclencheur est le retour de
+    // l'éditeur avec #preview (géré dans handleEditorReturn plus bas).
+    document.getElementById('accPreviewFull')?.addEventListener('click', enterPreviewMode);
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
       _previewMode = false;
       document.body.removeAttribute('data-preview');
@@ -10310,9 +10315,10 @@
         if (document.body.getAttribute('data-auth') === 'in' && typeof setScreen === 'function') {
           clearInterval(iv);
           if (h === '#preview') {
-            // Aperçu direct : on déclenche le mode aperçu (qui bascule sur le swipe avec la propre carte).
-            const b = document.getElementById('accPreviewFull');
-            if (b) b.click(); else setScreen('swipe');
+            // Aperçu direct depuis l'éditeur : on entre VRAIMENT en mode aperçu
+            // (ma carte uniquement, figée). Avant on cherchait #accPreviewFull qui
+            // n'existe plus → fallback sur le hub normal = aperçu cassé (carte absente).
+            enterPreviewMode();
           } else {
             // L'écran Paramètres a été retiré → les réglages sont dans l'éditeur.
             location.href = 'editor.html';
