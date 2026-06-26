@@ -567,6 +567,38 @@ body.not-boost .boost-fab{display:inline-flex}
 
 .toast{position:fixed;left:50%;bottom:104px;transform:translate(-50%,16px);z-index:90;padding:12px 18px;border-radius:14px;font-size:13.5px;font-weight:600;background:linear-gradient(180deg, rgba(28,22,58,.95), rgba(20,16,46,.95));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(140%);box-shadow:0 18px 50px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:.24s ease}
 .toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ===== Tutoriel guidé (1er passage) + warning « moins de 4 bulles » ===== */
+#tourSpot{position:fixed;z-index:9000;border-radius:16px;pointer-events:none;opacity:0;
+  box-shadow:0 0 0 4px rgba(145,70,255,.9), 0 0 0 9999px rgba(8,6,20,.74), 0 0 34px rgba(145,70,255,.7);
+  transition:left .35s cubic-bezier(.3,.8,.3,1),top .35s cubic-bezier(.3,.8,.3,1),width .35s,height .35s,opacity .25s}
+#tourSpot.show{opacity:1}
+#tourSpot.center{box-shadow:0 0 0 9999px rgba(8,6,20,.82)}
+#tourCard{position:fixed;z-index:9001;width:min(92vw,344px);box-sizing:border-box;
+  background:linear-gradient(180deg,rgba(32,24,64,.99),rgba(20,14,44,.99));
+  border:1px solid var(--stroke-2);border-radius:18px;padding:18px 18px 15px;color:#fff;
+  box-shadow:0 24px 70px rgba(0,0,0,.7);opacity:0;transform:translateY(8px);transition:.28s ease;pointer-events:auto}
+#tourCard.show{opacity:1;transform:none}
+#tourCard .tc-step{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:#b89cff;text-transform:uppercase;margin-bottom:6px}
+#tourCard h4{font-family:"Inter",sans-serif;font-weight:800;font-size:17px;margin:0 0 6px}
+#tourCard p{font-size:13.5px;line-height:1.5;color:#d7d4e6;margin:0 0 14px}
+#tourCard p b{color:#fff}
+#tourCard .tc-warn{display:block;margin-top:9px;padding:8px 10px;border-radius:10px;background:rgba(255,193,84,.12);
+  border:1px solid rgba(255,193,84,.42);color:#ffd98a;font-size:12px;font-weight:600;line-height:1.4}
+#tourCard .tc-btns{display:flex;gap:8px;align-items:center}
+#tourCard .tc-skip{background:none;border:none;color:#9b97ad;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:8px 2px}
+#tourCard .tc-skip:hover{color:#fff}
+#tourCard .tc-next{margin-left:auto;padding:10px 18px;border-radius:11px;border:none;cursor:pointer;
+  font-family:inherit;font-weight:800;font-size:13.5px;color:#fff;background:linear-gradient(135deg,#9146FF,#6B2BFF);box-shadow:0 8px 22px rgba(107,43,255,.45)}
+#tourCard .tc-next:hover{transform:translateY(-1px)}
+#tourCard .tc-quit{position:absolute;top:9px;right:12px;background:none;border:none;color:#8b88a0;font-size:18px;cursor:pointer;line-height:1}
+#tourCard .tc-quit:hover{color:#fff}
+#bubbleWarn{position:fixed;z-index:60;top:64px;left:50%;transform:translateX(-50%);max-width:min(94vw,540px);
+  display:none;align-items:center;gap:9px;padding:9px 14px;border-radius:12px;text-align:center;
+  background:linear-gradient(180deg,rgba(58,42,12,.96),rgba(40,28,8,.96));border:1px solid rgba(255,193,84,.45);
+  color:#ffd98a;font-size:12.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#bubbleWarn.show{display:flex}
+#bubbleWarn b{color:#fff}
 </style>
 </head>
 <body>
@@ -930,6 +962,7 @@ let orbKind='music';
 function updateOrbCount(){
   const c=document.getElementById('orbCount'); if(c)c.innerHTML=`<b>${S.orbs.length}</b> / ${orbMax()}`;
   const h=document.getElementById('orbHint'); if(h)h.textContent=`${S.orbs.length}/${orbMax()} bulles · glisse-les pour les placer · clique pour retirer`;
+  if(window.updateBubbleWarning)window.updateBubbleWarning();
 }
 function updateGifCount(){
   const c=document.getElementById('gifCount'); if(c)c.innerHTML=`<b>${S.gifs.length}</b> / ${GIF_MAX}`;
@@ -1847,6 +1880,110 @@ function renderSettingsSheet(sh){
     location.href='index.html';
   });
 }
+
+/* ===================================================================
+   TUTORIEL GUIDÉ (1er passage dans l'éditeur) + warning « < 4 bulles ».
+   Accompagne l'utilisateur : vocal → couleur → bulles (1 de chaque) →
+   GIF → fond. Chaque étape propose « Passer l'étape ». Un panneau ouvert
+   met le tuto en pause et le fait avancer une fois refermé.
+   =================================================================== */
+(function(){
+  const TOUR_KEY='tindord_editor_tour_v1';
+
+  /* --- Warning persistant : moins de 4 bulles ⇒ infos des autres verrouillées --- */
+  const warn=document.createElement('div'); warn.id='bubbleWarn'; document.body.appendChild(warn);
+  window.updateBubbleWarning=function(){
+    const n=(typeof S!=='undefined'&&S.orbs)?S.orbs.length:0;
+    const notBoost=document.body.classList.contains('not-boost');
+    if(notBoost&&n<4){
+      warn.innerHTML='⚠️ <span><b>'+n+'/4 bulles</b> — ajoute encore <b>'+(4-n)+'</b> bulle'+((4-n)>1?'s':'')+' pour débloquer toutes les infos des autres profils.</span>';
+      warn.classList.add('show');
+    } else warn.classList.remove('show');
+  };
+
+  /* --- Coach-marks --- */
+  const spot=document.createElement('div'); spot.id='tourSpot'; document.body.appendChild(spot);
+  const card=document.createElement('div'); card.id='tourCard'; document.body.appendChild(card);
+
+  const STEPS=[
+    {welcome:true,title:'Bienvenue dans l’éditeur 👋',body:'On personnalise ton profil en 1 minute. Tu peux passer chaque étape quand tu veux.'},
+    {sel:'#voiceSlot',title:'🎙️ Enregistre ton vocal',body:'Clique ici pour t’enregistrer (10 s max). Un petit vocal rend ton profil bien plus vivant.'},
+    {sel:'.tool[data-tool="color"]',title:'🎨 Choisis ta couleur',body:'Donne sa couleur à ta carte — clique pour ouvrir le sélecteur.'},
+    {sel:'.tool[data-tool="bubbles"]',title:'🫧 Ajoute tes bulles',body:'Ajoute une bulle <b>Musique</b>, une <b>Jeu</b> et une <b>Série / Film</b>.',warn:'⚠️ En dessous de 4 bulles, tu ne pourras pas voir certaines infos des autres profils.'},
+    {sel:'.tool[data-tool="gifs"]',title:'✨ Ajoute un GIF',body:'Mets un GIF qui te représente sur ta carte.'},
+    {sel:'.tool[data-tool="bg"]',title:'🖼️ Choisis ton fond',body:'Personnalise le fond d’écran de ta carte.'},
+    {last:true,title:'C’est tout bon ! 🚀',body:'Ton profil est prêt. Tu peux revenir le modifier quand tu veux.'},
+  ];
+
+  let i=0, poll=null;
+
+  function rectOf(sel){ if(!sel)return null; const el=document.querySelector(sel); if(!el)return null; const r=el.getBoundingClientRect(); return (r.width||r.height)?r:null; }
+
+  function place(retry){
+    const s=STEPS[i];
+    const r=(!s.welcome&&!s.last)?rectOf(s.sel):null;
+    if(r){ const p=8; spot.classList.remove('center'); spot.style.left=(r.left-p)+'px'; spot.style.top=(r.top-p)+'px'; spot.style.width=(r.width+p*2)+'px'; spot.style.height=(r.height+p*2)+'px'; }
+    else { spot.classList.add('center'); spot.style.left=(window.innerWidth/2)+'px'; spot.style.top=(window.innerHeight/2)+'px'; spot.style.width='0px'; spot.style.height='0px'; }
+    spot.classList.add('show');
+    if(!retry){
+      card.innerHTML='<button class="tc-quit" id="tQuit" title="Fermer le tuto">✕</button>'
+        +'<div class="tc-step">Étape '+(i+1)+' / '+STEPS.length+'</div>'
+        +'<h4>'+s.title+'</h4>'
+        +'<p>'+s.body+(s.warn?'<span class="tc-warn">'+s.warn+'</span>':'')+'</p>'
+        +'<div class="tc-btns">'
+          +((s.welcome||s.last)?'':'<button class="tc-skip" id="tSkip">Passer l’étape</button>')
+          +'<button class="tc-next" id="tNext">'+(s.welcome?'Commencer':(s.last?'Terminer':'Suivant'))+'</button>'
+        +'</div>';
+      card.classList.add('show');
+      card.querySelector('#tQuit').onclick=end;
+      const sk=card.querySelector('#tSkip'); if(sk)sk.onclick=next;
+      card.querySelector('#tNext').onclick=next;
+    }
+    posCard(r);
+    // Cible pas encore mesurable (layout/police en cours) → on re-tente la position.
+    if(!s.welcome && !s.last && !r && (retry||0)<14){ setTimeout(()=>{ if(STEPS[i]===s) place((retry||0)+1); }, 180); }
+  }
+  function posCard(r){
+    const cw=card.offsetWidth||344, ch=card.offsetHeight||190, m=14;
+    let left,top;
+    if(!r){ left=(innerWidth-cw)/2; top=(innerHeight-ch)/2; }
+    else { const below=r.top<innerHeight/2;
+      left=Math.min(Math.max(m,r.left+r.width/2-cw/2),innerWidth-cw-m);
+      top=below?(r.bottom+m):(r.top-ch-m); top=Math.min(Math.max(m,top),innerHeight-ch-m); }
+    card.style.left=left+'px'; card.style.top=top+'px';
+  }
+  function hide(){ spot.classList.remove('show'); card.classList.remove('show'); }
+  function panelOpen(){ return !!document.querySelector('.sheet.open, .modal.open, #boostGate.open'); }
+
+  /* Clic sur la cible ⇒ un panneau s'ouvre : on s'efface, et on avance dès qu'il se referme. */
+  function watchPanel(){
+    if(poll)return; let opened=false; hide();
+    poll=setInterval(()=>{ const o=panelOpen(); if(o)opened=true; else if(opened){ clearInterval(poll); poll=null; next(); } },300);
+    setTimeout(()=>{ if(poll&&!opened){ clearInterval(poll); poll=null; place(); } },1700); // rien ne s'est ouvert → ré-affiche
+  }
+  function next(){ if(poll){clearInterval(poll);poll=null;} i++; if(i>=STEPS.length){end();return;} place(); }
+  function end(){ if(poll){clearInterval(poll);poll=null;} hide(); spot.remove(); card.remove(); try{localStorage.setItem(TOUR_KEY,'1');}catch(_){}; removeEventListener('resize',onR); }
+  function onR(){ if(card.classList.contains('show'))place(); }
+  addEventListener('resize',onR);
+
+  document.addEventListener('click',(e)=>{
+    if(!card.classList.contains('show'))return;
+    const s=STEPS[i]; if(!s||!s.sel)return;
+    const t=document.querySelector(s.sel);
+    if(t&&(e.target===t||t.contains(e.target))) watchPanel();
+  },true);
+
+  /* Relance manuelle possible (ex. depuis la console / un bouton futur). */
+  window.startEditorTour=function(){ try{localStorage.removeItem(TOUR_KEY);}catch(_){}; i=0;
+    if(!document.body.contains(spot))document.body.appendChild(spot);
+    if(!document.body.contains(card))document.body.appendChild(card); place(); };
+
+  try{ window.updateBubbleWarning(); }catch(_){}
+  setTimeout(()=>{ try{ window.updateBubbleWarning(); }catch(_){} },800);
+  let done=false; try{ done=localStorage.getItem(TOUR_KEY)==='1'; }catch(_){}
+  if(done){ spot.remove(); card.remove(); }
+  else setTimeout(()=>{ i=0; place(); },700);
+})();
 </script>
 </body>
 </html>
