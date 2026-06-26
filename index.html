@@ -36,6 +36,9 @@
 <link rel="dns-prefetch" href="https://en.wikipedia.org" />
 <link rel="dns-prefetch" href="https://www.wikidata.org" />
 <link rel="dns-prefetch" href="https://upload.wikimedia.org" />
+<!-- Prefetch des pages internes (idle, basse priorité) → navigation quasi instantanée -->
+<link rel="prefetch" href="editor.html" as="document" />
+<link rel="prefetch" href="checkout.html" as="document" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700,800&display=swap" />
 <!-- Supabase JS SDK (UMD) — chargé synchronously car utilisé par le script inline -->
