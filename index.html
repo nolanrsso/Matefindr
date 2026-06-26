@@ -765,6 +765,10 @@
   .msg-bubble.them{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:4px}
   .msg-bubble.me  {background:linear-gradient(135deg,#5865F2,#404EED);color:#fff;border-bottom-right-radius:4px;box-shadow:0 6px 18px rgba(64,78,237,.35)}
   .msg-bubble.system{align-self:center;max-width:90%;text-align:center;background:rgba(255,255,255,.04);color:#b9bbbe;font-size:12.5px;border-radius:12px}
+  /* Séparateur de jour dans une conversation (chip centrée, ex: "Hier", "lundi 23 juin"). */
+  .msg-daysep{align-self:center;margin:14px auto 6px;padding:4px 13px;font-size:11px;font-weight:700;letter-spacing:.03em;
+    color:#9aa0a6;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.05);border-radius:999px;
+    text-transform:capitalize;font-variant-numeric:tabular-nums;flex:0 0 auto}
   .msg-input{
     flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid rgba(255,255,255,.06);
   }
@@ -3571,7 +3575,7 @@
     <div class="bubbles" id="bubbles" aria-hidden="true"></div>
 
     <span class="badge" role="status">
-      <span class="pulse"></span> <span data-i18n="badge">Bêta ouverte · <b>+10 000 membres</b> sur Discord</span>
+      <span class="pulse"></span> <span data-i18n="badge">Bêta ouverte</span>
     </span>
 
     <h1 style="padding: 21.2306px; margin: 0px">Tindord</h1>
@@ -3597,7 +3601,7 @@
         <span style="background:linear-gradient(135deg,#FFB66E,#FF4FA0)"></span>
         <span style="background:linear-gradient(135deg,#3BD17C,#5BE9FF)"></span>
       </div>
-      <span style="color: rgb(185, 187, 190)" data-i18n="online">2 428 en ligne</span>
+      <span style="color: rgb(185, 187, 190)"><span id="onlineCount">…</span> <span data-i18n="online">en ligne</span></span>
       <span class="sep" style="color: rgb(185, 187, 190)">•</span>
       <span style="color: rgb(185, 187, 190)" data-i18n="tags">Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres</span>
     </div>
@@ -4546,38 +4550,44 @@
   }
   blobTick();
 
-  // online count drifter
+  // Nombre RÉEL de membres en ligne sur le serveur Discord, via l'API d'invitation
+  // publique (with_counts) — CORS autorisé, aucun token requis. Rafraîchi toutes les 60 s.
   const el = document.getElementById('onlineCount');
   if (el) {
-  let n = 2100, target = 2348 + Math.floor(Math.random()*40);
-  const fmt = v => v.toLocaleString('fr-FR').replace(',', ' ');
-  const tickN = setInterval(() => {
-    n += Math.ceil((target - n) / 18);
-    el.textContent = fmt(n);
-    if (n >= target) { clearInterval(tickN); driftCount(); }
-  }, 30);
-  function driftCount(){
-    setInterval(() => {
-      target = 2300 + Math.floor(Math.random()*120);
-      const dir = target > n ? 1 : -1;
+    const INVITE = 'hxCBJGPDsP';
+    const fmt = v => v.toLocaleString('fr-FR').replace(/,/g, ' ');
+    let shown = null;
+    function animateTo(target){
+      let n = shown == null ? Math.max(0, target - Math.min(6, target)) : shown;
       const step = setInterval(() => {
-        n += dir;
+        n += Math.sign(target - n) || 0;
         el.textContent = fmt(n);
+        shown = n;
         if (n === target) clearInterval(step);
-      }, 200);
-    }, 6000);
-  }
+      }, 70);
+    }
+    async function fetchOnline(){
+      try {
+        const r = await fetch('https://discord.com/api/v10/invites/' + INVITE + '?with_counts=true');
+        if (!r.ok) return;
+        const j = await r.json();
+        const n = j.approximate_presence_count;
+        if (typeof n === 'number' && n !== shown) animateTo(n);
+      } catch(_){ /* hors-ligne / rate-limit : on garde la dernière valeur */ }
+    }
+    fetchOnline();
+    setInterval(fetchOnline, 60000);
   }
 
   // Shared i18n dictionary (used by language switcher AND auth modal)
   const I18N = {
       FR: {
         login:        'Se connecter',
-        badge:        'Bêta ouverte · <b>+10 000 membres</b> sur Discord',
+        badge:        'Bêta ouverte',
         tagline:      'Trouve un <span class="accent">Mate</span> pas un random',
         sub:          '<b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer',
         cta:          'Rejoindre avec Discord',
-        online:       '2 428 en ligne',
+        online:       'en ligne',
         tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres',
         footer:       'EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE',
         auth_title:   'Se connecter',
@@ -4658,11 +4668,11 @@
       },
       EN: {
         login:        'Sign in',
-        badge:        'Open beta · <b>+10,000 members</b> on Discord',
+        badge:        'Open beta',
         tagline:      'Find a <span class="accent">Mate</span>, not just a random',
         sub:          '<b>Swipe</b> Discord profiles, <b>Like</b> the gems you fancy<br><b>Match</b> and game on',
         cta:          'Join with Discord',
-        online:       '2,428 online',
+        online:       'online',
         tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Dating',
         footer:       'POP THE BUBBLES — WHO KNOWS WHAT THEY MIGHT BE HIDING',
         auth_title:   'Sign in',
@@ -5559,6 +5569,18 @@
       if (typeof startMatch === 'function') startMatch(p, { unread:false });
       else if (typeof playMatchAnimation === 'function') playMatchAnimation(p, 'm_'+Date.now());
     }
+    /* uids des likers auxquels j'ai DÉJÀ répondu (❤️ like en retour OU ✕ rejet).
+       Persisté en localStorage → un like traité ne revient JAMAIS dans le panneau,
+       même si l'écriture Supabase échoue ou sur un autre device après sync. */
+    const DISMISSED_LIKERS = (() => {
+      try { return new Set(JSON.parse(localStorage.getItem('tindord_dismissed_likers') || '[]')); }
+      catch(_){ return new Set(); }
+    })();
+    function dismissLiker(uid){
+      if (!uid) return;
+      DISMISSED_LIKERS.add(uid);
+      try { localStorage.setItem('tindord_dismissed_likers', JSON.stringify([...DISMISSED_LIKERS])); } catch(_){}
+    }
     /* Récupère les profils qui M'ONT liké (pour le panneau + badge cœur). */
     async function fetchLikesReceived(){
       try {
@@ -5572,7 +5594,7 @@
         let likedBack = new Set();
         try { const { data: mine } = await window.__supa.from('likes').select('liked_id').eq('liker_id', myId);
               likedBack = new Set((mine||[]).map(r => r.liked_id)); } catch(_){}
-        const fresh = rows.filter(r => !likedBack.has(r.liker_id));
+        const fresh = rows.filter(r => !likedBack.has(r.liker_id) && !DISMISSED_LIKERS.has(r.liker_id));
         if (!fresh.length) return [];
         const ids = fresh.map(r => r.liker_id);
         const { data: profs } = await window.__supa.from('profiles').select('*').in('id', ids);
@@ -5615,8 +5637,13 @@
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
       const myP = buildUserProfile();
-      const offset = myP ? 1 : 0;
-      const pool = genderFilteredProfiles();
+      // Ta propre carte n'est dans le deck QU'en mode APERÇU (endroit dédié, figé).
+      // En mode normal (le hub), on ne se swipe pas soi-même → deck = uniquement les autres.
+      const inPreview = !!(_previewMode && myP);
+      // En mode APERÇU on ne montre QUE soi : jamais d'autres profils, même si ma
+      // carte manque (sinon on verrait un inconnu sans pouvoir interagir).
+      const pool = _previewMode ? [] : genderFilteredProfiles();
+      const offset = inPreview ? 1 : 0;
       const total = pool.length + offset;
       if (deckIdx >= total) {
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
@@ -5627,7 +5654,7 @@
         return;
       }
       document.body.removeAttribute('data-swipe-empty');
-      const p = (myP && deckIdx === 0) ? myP : pool[deckIdx - offset];
+      const p = inPreview ? myP : pool[deckIdx];
       // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
       if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg);
       // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
@@ -5962,7 +5989,9 @@
           ${guildsHtml}
         </div>
       `;
-      if (isTop) attachDrag(c);
+      // En mode APERÇU, la carte est un endroit dédié et figé : pas de drag/swipe
+      // (sinon on peut traîner la carte et la détacher de ses GIFs de fond).
+      if (isTop && !_previewMode) attachDrag(c);
       // Voice-memo player on the card (if any)
       bindCardVoice(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
@@ -6897,10 +6926,8 @@
       // LIKE → enregistre un vrai like dans Supabase (match auto si l'autre m'a déjà liké)
       if (dir === 'yes') {
         state.user.stats.liked++;
-        const myP = (typeof buildUserProfile === 'function') ? buildUserProfile() : null;
-        const offset = myP ? 1 : 0;
         const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
-        const swiped = (myP && deckIdx === 0) ? myP : pool[deckIdx - offset];
+        const swiped = pool[deckIdx]; // mode normal : le deck ne contient que les autres
         if (swiped && !swiped.isMe && swiped.uid && typeof recordLike === 'function') {
           recordLike(swiped);
         }
@@ -7038,7 +7065,8 @@
       const nameWrap = document.getElementById('msgChatName').parentElement;
       if (nameWrap) nameWrap.onclick = openProf;
       chatBody.innerHTML = '';
-      c.msgs.forEach(m => chatBody.appendChild(msgBubbleEl(m, c)));
+      chatBody._lastTs = null;
+      c.msgs.forEach(m => renderMsgInto(m, c));
       chatBody.scrollTop = chatBody.scrollHeight;
       setTimeout(() => msgInputField.focus(), 200);
       renderMsgList();
@@ -7072,11 +7100,12 @@
       const v = msgInputField.value.trim();
       if (!v || !activeConvo) return;
       const t = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
-      activeConvo.msgs.push({ who:'me', text:v, t });
+      const msg = { who:'me', text:v, t, ts: Date.now() };
+      activeConvo.msgs.push(msg);
       activeConvo.last = v;
       activeConvo.t    = t;
       msgInputField.value = '';
-      chatBody.appendChild(msgBubbleEl({ who:'me', text:v, t }, activeConvo));
+      renderMsgInto(msg, activeConvo);
       chatBody.scrollTop = chatBody.scrollHeight;
       // Envoi réel vers Supabase (l'autre le reçoit via Realtime).
       if (activeConvo.matchId && window.__supa) {
@@ -7116,6 +7145,42 @@
           `<div class="msg-bubble ${m.who}">${escapeHtml(m.text)}</div>` +
         `</div>`;
       return row;
+    }
+    // Deux timestamps tombent-ils le même jour calendaire ?
+    function sameDay(a, b){
+      const da = new Date(a), db = new Date(b);
+      return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+    }
+    // Libellé d'un séparateur de date : "Aujourd'hui", "Hier", "lundi" (cette semaine),
+    // sinon "lundi 23 juin" (et l'année si différente).
+    function fmtDaySep(ts){
+      const d = new Date(ts), now = new Date();
+      const start = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+      const diff = Math.round((start(now) - start(d)) / 86400000);
+      if (diff === 0) return "Aujourd'hui";
+      if (diff === 1) return "Hier";
+      if (diff > 1 && diff < 7) return d.toLocaleDateString('fr-FR', { weekday:'long' });
+      const sameYear = d.getFullYear() === now.getFullYear();
+      return d.toLocaleDateString('fr-FR', sameYear
+        ? { weekday:'long', day:'numeric', month:'long' }
+        : { day:'numeric', month:'long', year:'numeric' });
+    }
+    // Crée la chip-séparateur de jour.
+    function daySepEl(ts){
+      const s = document.createElement('div');
+      s.className = 'msg-daysep';
+      s.textContent = fmtDaySep(ts);
+      return s;
+    }
+    // Ajoute un message au flux de chat, précédé d'un séparateur de jour si la date
+    // diffère du dernier message rendu (chatBody._lastTs sert de curseur).
+    function renderMsgInto(m, c){
+      const ts = m.ts || Date.now();
+      if (m.who !== 'system' && (chatBody._lastTs == null || !sameDay(chatBody._lastTs, ts))){
+        chatBody.appendChild(daySepEl(ts));
+      }
+      chatBody.appendChild(msgBubbleEl(m, c));
+      if (m.who !== 'system') chatBody._lastTs = ts;
     }
     async function rtMyId(){
       if (RT.myId) return RT.myId;
@@ -7204,10 +7269,11 @@
         if (!c) return; // pas un de mes matchs → ignoré
         if (c.msgs.some(m => m._id === row.id)) return;
         const tm = fmtMsgTime(row.created_at);
-        c.msgs.push({ who:'them', text:row.body, _id:row.id, t:tm });
+        const msg = { who:'them', text:row.body, _id:row.id, t:tm, ts: new Date(row.created_at).getTime() };
+        c.msgs.push(msg);
         c.last = row.body; c.t = "à l'instant";
         if (activeConvo && activeConvo.matchId === c.matchId) {
-          chatBody.appendChild(msgBubbleEl({ who:'them', text:row.body, t:tm }, c));
+          renderMsgInto(msg, c);
           chatBody.scrollTop = chatBody.scrollHeight;
           c.unread = false;
         } else { c.unread = true; }
@@ -7245,7 +7311,7 @@
           const { data: msgs } = await window.__supa.from('messages').select('*')
             .eq('match_id', m.id).order('created_at', { ascending:true }).limit(500);
           if (msgs && msgs.length) {
-            c.msgs = msgs.map(r => { RT.seenMsgIds.add(r.id); return { who: r.sender_id === me ? 'me' : 'them', text:r.body, _id:r.id, t:fmtMsgTime(r.created_at) }; });
+            c.msgs = msgs.map(r => { RT.seenMsgIds.add(r.id); return { who: r.sender_id === me ? 'me' : 'them', text:r.body, _id:r.id, t:fmtMsgTime(r.created_at), ts:new Date(r.created_at).getTime() }; });
             c.last = msgs[msgs.length-1].body;
           }
         } catch(_){}
@@ -7307,6 +7373,19 @@
     window.createMatchFromLiker = function(p){
       const idx = LIKED_ME.findIndex(x => x.tag === p.tag);
       if (idx >= 0) LIKED_ME.splice(idx, 1);
+      // Ce liker a reçu une réponse → il ne doit JAMAIS revenir dans le panneau.
+      dismissLiker(p.uid);
+      // Enregistre mon like en retour en DB (upsert direct, sans re-déclencher de match)
+      // → likedBack le filtrera aussi sur les autres appareils après sync.
+      (async () => {
+        try {
+          if (window.__supa && p.uid) {
+            const { data:{ session } } = await window.__supa.auth.getSession();
+            if (session) await window.__supa.from('likes')
+              .upsert({ liker_id: session.user.id, liked_id: p.uid }, { onConflict: 'liker_id,liked_id' });
+          }
+        } catch(_){}
+      })();
       // Discord notification (match)
       if (typeof sendDiscordNotif === 'function') sendDiscordNotif('match', p);
       // Crée le vrai match en DB (anti-doublon géré par startMatch/Realtime) + notifie l'autre.
@@ -8209,14 +8288,17 @@
       el.addEventListener('input',  refreshAccountPreview);
       el.addEventListener('change', refreshAccountPreview);
     });
-    /* Aperçu complet : ouvre le swipe sur SA propre carte (bulles + GIFs + fond rendus en vrai),
-       en MODE APERÇU → pas de swipe, un bouton "Quitter l'aperçu" remplace like/nope. */
-    document.getElementById('accPreviewFull')?.addEventListener('click', () => {
+    /* Aperçu : ouvre le swipe sur SA PROPRE carte (bulles + GIFs + fond rendus en vrai),
+       en MODE APERÇU → uniquement MA carte, AUCUN swipe, un seul bouton "Quitter l'aperçu". */
+    function enterPreviewMode(){
       _previewMode = true;
       document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
       if (typeof setScreen === 'function') setScreen('swipe');
-    });
+    }
+    // Bouton legacy de l'ancien écran compte ; le vrai déclencheur est le retour de
+    // l'éditeur avec #preview (géré dans handleEditorReturn plus bas).
+    document.getElementById('accPreviewFull')?.addEventListener('click', enterPreviewMode);
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
       _previewMode = false;
       document.body.removeAttribute('data-preview');
@@ -8461,6 +8543,8 @@
             e.stopPropagation();
             const i = LIKED_ME.findIndex(x => x.tag === p.tag);
             if (i >= 0) LIKED_ME.splice(i, 1);
+            // Réponse (rejet) → ce liker ne doit JAMAIS revenir, même si le delete DB échoue.
+            dismissLiker(p.uid);
             renderLikedMe();
             if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
             // Supprime le like en DB pour qu'il ne réapparaisse pas au prochain refresh.
@@ -10231,9 +10315,10 @@
         if (document.body.getAttribute('data-auth') === 'in' && typeof setScreen === 'function') {
           clearInterval(iv);
           if (h === '#preview') {
-            // Aperçu direct : on déclenche le mode aperçu (qui bascule sur le swipe avec la propre carte).
-            const b = document.getElementById('accPreviewFull');
-            if (b) b.click(); else setScreen('swipe');
+            // Aperçu direct depuis l'éditeur : on entre VRAIMENT en mode aperçu
+            // (ma carte uniquement, figée). Avant on cherchait #accPreviewFull qui
+            // n'existe plus → fallback sur le hub normal = aperçu cassé (carte absente).
+            enterPreviewMode();
           } else {
             // L'écran Paramètres a été retiré → les réglages sont dans l'éditeur.
             location.href = 'editor.html';
