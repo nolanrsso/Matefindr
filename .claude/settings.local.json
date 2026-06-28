@@ -240,7 +240,12 @@
       "Bash(git --no-pager log --oneline origin/master..HEAD)",
       "PowerShell(git -C \"C:/Users/nolan/OneDrive/Documents/claude/Tindord\" status --short)",
       "PowerShell(git -C \"C:/Users/nolan/OneDrive/Documents/claude/Tindord\" log --oneline -1)",
-      "Bash(git --no-pager log --oneline -3)"
+      "Bash(git --no-pager log --oneline -3)",
+      "Bash(curl -sS -m 20 \"https://discord.com/api/v10/invites/hxCBJGPDsP?with_counts=true&with_expiration=true\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d.get\\(k\\) for k in ['approximate_member_count','approximate_presence_count']}, indent=2\\)\\); g=d.get\\('guild',{}\\); print\\('guild_id', g.get\\('id'\\), '| name', g.get\\('name'\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(curl -sS -m 25 \"https://tindord.com/index.html\")",
+      "Bash(git --no-pager log --oneline -2)"
     ]
   }
 }
