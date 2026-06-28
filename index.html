@@ -4,14 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Matefindr - Swipe des profils discord</title>
-<meta name="description" content="Swipe des profils discord et like les profils qui te plaises. Match avec quelqu'un et parle avec lui" />
+<meta name="description" content="Swipe des profils Discord et like les profils qui te plaisent. Match avec quelqu'un et parle avec lui." />
 <meta name="theme-color" content="#0D0B1E" />
 <!-- Police du wordmark logo (comme le design) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 <!-- Favicon : logo Matefindr (PNG transparent, sans fond) -->
-<link rel="icon" type="image/png" href="assets/favicon.png" />
+<link rel="icon" type="image/png" href="assets/favicon.png?v=2" />
 <meta name="referrer" content="no-referrer-when-downgrade" />
 <!-- Security : restrict resource origins. Discord webhooks + Supabase + media CDNs are allowed.
      Inline styles/scripts allowed because this is a single-file SPA. -->
@@ -3517,9 +3517,9 @@
     </a>
     <nav class="nav" aria-label="Navigation">
       <a href="#" class="login" id="loginBtn"><span class="dot"></span><span data-i18n="login">Se connecter</span></a>
-      <a href="#" class="account-chip" id="accountChip" aria-label="Mon compte">
+      <a href="#" class="account-chip" id="accountChip" aria-label="Mon profil">
         <span class="avatar" id="accountChipAvatar">?</span>
-        <span data-i18n="my_account">Mon compte</span>
+        <span data-i18n="my_account">Mon profil</span>
       </a>
     </nav>
   </header>
@@ -3594,9 +3594,9 @@
 
     <h1 style="padding: 21.2306px; margin: 0px">Matefindr</h1>
 
-    <p class="tagline" data-i18n="tagline">Trouve un <span class="accent">Mate</span> pas un random</p>
+    <p class="tagline" data-i18n="tagline">Trouve un <span class="accent">Mate</span>, pas un random</p>
 
-    <p class="sub" data-i18n="sub"><b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer</p>
+    <p class="sub" data-i18n="sub"><b>Swipe</b> des profils Discord, <b>Like</b> les pépites à ton goût<br><b>Match</b> et à toi de jouer</p>
 
     <div class="cta-row">
       <!-- Discord OAuth2: href is rewritten by JS on load using the current origin,
@@ -3627,7 +3627,7 @@
       </svg>
     </a>
 
-    <div class="badge corner" style="font-size: 9px" data-i18n="footer">EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE</div>
+    <div class="badge corner" style="font-size: 9px" data-i18n="footer">EXPLOSE LES BULLES, ON SAIT JAMAIS, ELLES TE CACHENT PEUT-ÊTRE QUELQUE CHOSE</div>
   </section>
 
   <!-- ============================================================
@@ -4598,12 +4598,12 @@
       FR: {
         login:        'Se connecter',
         badge:        'Bêta ouverte',
-        tagline:      'Trouve un <span class="accent">Mate</span> pas un random',
-        sub:          '<b>Swipe</b> des profiles discord, <b>Like</b> les pépites à ton gout<br><b>Match</b> et à toi de jouer',
+        tagline:      'Trouve un <span class="accent">Mate</span>, pas un random',
+        sub:          '<b>Swipe</b> des profils Discord, <b>Like</b> les pépites à ton goût<br><b>Match</b> et à toi de jouer',
         cta:          'Rejoindre avec Discord',
         online:       'en ligne',
         tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres',
-        footer:       'EXPLOSE LES BULLE ON SAIT JAMAIS ELLE TE CACHE PEUT ETRE QUELQUE CHOSE',
+        footer:       'EXPLOSE LES BULLES, ON SAIT JAMAIS, ELLES TE CACHENT PEUT-ÊTRE QUELQUE CHOSE',
         auth_title:   'Se connecter',
         auth_sub:     'Choisis ta méthode préférée',
         auth_discord: 'Continuer avec Discord',
@@ -4626,7 +4626,7 @@
         msg_created:  'Compte créé. Bienvenue sur Matefindr !',
         msg_invalid:  'Email ou mot de passe invalide.',
         msg_short_pw: 'Le mot de passe doit faire au moins 6 caractères.',
-        my_account:   'Mon compte',
+        my_account:   'Mon profil',
         onb_q1:       'Ton genre ?',
         onb_q1_sub:   'Cette info aide à proposer les bonnes rencontres',
         pronoun_autre:'Non binaire',
@@ -4711,7 +4711,7 @@
         msg_created:  'Account created. Welcome to Matefindr!',
         msg_invalid:  'Invalid email or password.',
         msg_short_pw: 'Password must be at least 6 characters.',
-        my_account:   'My account',
+        my_account:   'My profile',
         onb_q1:       'Your gender?',
         onb_q1_sub:   'Helps us suggest better matches',
         pronoun_autre:'Non-binary',
@@ -5430,7 +5430,7 @@
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
         activity: {type:'game', title:'Matefindr', sub:'Swipe en cours…'},
         games: [p.game].filter(Boolean),
-        bio: p.bio || '✏️ Complète ton profil dans Mon compte !',
+        bio: p.bio || '✏️ Complète ta bio dans Mon profil !',
         common: {friends:0, servers:0},
         c1:'#393a41', c2:'#393a41',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
