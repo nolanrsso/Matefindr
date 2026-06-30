@@ -269,6 +269,11 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .voice .vmic{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(135deg,#9146FF,#6B2BFF);color:#fff;box-shadow:0 4px 14px rgba(107,43,255,.4)}
 .voice .vmic svg{width:18px;height:18px}
 .voice:hover .vmic{transform:scale(1.06)}
+/* Enregistrement inline (sans modal) */
+.voice.recording{border-color:rgba(232,25,75,.5)}
+.voice.recording .vmic{background:linear-gradient(135deg,#FF5C7A,#E8194B);animation:vRecPulse 1.1s ease-in-out infinite}
+@keyframes vRecPulse{0%,100%{box-shadow:0 0 0 0 rgba(232,25,75,.55)}50%{box-shadow:0 0 0 9px rgba(232,25,75,0)}}
+.voice .v-rec-timer{font-weight:700;font-size:14px;color:#fff;font-variant-numeric:tabular-nums;flex:0 0 auto}
 .voice .vdel{width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;background:linear-gradient(180deg,#FF6FA5,#E84393);color:#fff;border:none;box-shadow:0 6px 16px rgba(232,67,147,.4);cursor:pointer;transition:transform .15s ease,filter .15s ease}
 .voice .vdel svg{width:15px;height:15px}
 .voice .vdel:hover{transform:scale(1.08);filter:brightness(1.06)}
@@ -898,12 +903,39 @@ function setPlayUI(playing){const b=$('recPlay');if(!b)return;const ip=b.querySe
 function resetPlayIcon(){setPlayUI(false);}
 function showRecPreview(){$('recBtn').style.display='none';$('recPrev').hidden=false;$('recDur').textContent=fmt(rec.dur);$('recBar').style.width='0%';resetPlayIcon();$('recOk').disabled=false;}
 function showRecMic(){$('recBtn').style.display='';$('recPrev').hidden=true;$('recOk').disabled=true;}
+/* ===== Enregistrement INLINE (sans modal) : clic sur le micro = enregistre directement ===== */
+const inlineRec={recorder:null,media:null,chunks:[],t0:0,timerI:null,dur:0};
+function stopInlineRec(){try{inlineRec.recorder&&inlineRec.recorder.state==='recording'&&inlineRec.recorder.stop();}catch(_){}}
+async function startInlineRec(){
+  let media;
+  try{ media=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(_){ toast('Accès micro refusé'); return; }
+  inlineRec.media=media; inlineRec.chunks=[];
+  let r; try{ r=new MediaRecorder(media); }catch(_){ toast('Enregistrement non supporté'); media.getTracks().forEach(t=>t.stop()); return; }
+  inlineRec.recorder=r;
+  r.ondataavailable=e=>{ if(e.data.size) inlineRec.chunks.push(e.data); };
+  r.onstop=async()=>{
+    inlineRec.dur=Math.min(10,(performance.now()-inlineRec.t0)/1000);
+    try{ media.getTracks().forEach(t=>t.stop()); }catch(_){}
+    clearInterval(inlineRec.timerI);
+    const blob=new Blob(inlineRec.chunks,{type:r.mimeType||'audio/webm'});
+    const slot=$('voiceSlot'); slot.classList.remove('recording');
+    slot.innerHTML=VMIC_SVG+'<span class="empty">Envoi du vocal…</span>';
+    let url=null;
+    try{ const file=new File([blob],'voice-'+Date.now()+'.webm',{type:blob.type||'audio/webm'}); url=await edUpload(file,'voice'); }catch(_){}
+    if(!url){ url=URL.createObjectURL(blob); toast('⚠️ Envoi échoué — vocal local seulement'); }
+    S.voice={url,dur:inlineRec.dur}; renderVoice(); persist(); toast('Vocal enregistré sur ton profil');
+  };
+  r.start(); inlineRec.t0=performance.now();
+  const slot=$('voiceSlot'); slot.classList.add('recording');
+  slot.innerHTML=VMIC_SVG+'<span class="v-rec-timer">0:00</span><span class="empty">Appuie pour arrêter</span>';
+  inlineRec.timerI=setInterval(()=>{ const s=(performance.now()-inlineRec.t0)/1000; const el=slot.querySelector('.v-rec-timer'); if(el)el.textContent=fmt(s); if(s>=10)stopInlineRec(); },200);
+}
+// Slot vocal : vide → enregistre direct ; en cours → arrête. (Le player gère ses propres clics via stopPropagation.)
 $('voiceSlot').addEventListener('click',()=>{
-  $('voiceModal').classList.add('open');drawIdleWave();$('recTimer').textContent='0:00';
-  if(rec.audio){rec.audio.pause();rec.audio=null;}
-  // Réouverture avec un vocal déjà enregistré → on le propose directement à l'écoute.
-  if(S.voice&&S.voice.url){ rec.url=S.voice.url;rec.blob=null;rec.dur=S.voice.dur||0;showRecPreview();setHint('Écoute ton vocal ou réenregistre'); }
-  else { rec.url=null;rec.blob=null;showRecMic();setHint('Appuie sur le micro pour enregistrer — 10 s max'); }
+  if(S.voice) return;
+  if(inlineRec.recorder&&inlineRec.recorder.state==='recording') stopInlineRec();
+  else startInlineRec();
 });
 function drawIdleWave(){const c=$('recCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='rgba(255,255,255,.14)';for(let i=0;i<60;i++){const h=6+Math.abs(Math.sin(i*.55))*14;ctx.fillRect(i*(c.width/60)+2,c.height/2-h/2,4,h);}}
 async function startRec(){try{rec.media=await navigator.mediaDevices.getUserMedia({audio:true});}catch(_){toast('Accès micro refusé');return;}rec.chunks=[];rec.recorder=new MediaRecorder(rec.media);rec.recorder.ondataavailable=e=>{if(e.data.size)rec.chunks.push(e.data);};rec.recorder.onstop=()=>{if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.blob=new Blob(rec.chunks,{type:rec.recorder.mimeType||'audio/webm'});rec.url=URL.createObjectURL(rec.blob);rec.dur=Math.min(10,(performance.now()-rec.t0)/1000);rec.media.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rec.raf);clearInterval(rec.timerI);if(rec.actx){rec.actx.close().catch(()=>{});rec.actx=null;}$('recBtn').classList.remove('recording');showRecPreview();setHint('Écoute ton vocal ou réenregistre');drawIdleWave();};rec.recorder.start();rec.t0=performance.now();$('recBtn').classList.add('recording');$('recBtn').style.display='';$('recPrev').hidden=true;$('recOk').disabled=true;setHint('Enregistrement… appuie pour arrêter');rec.actx=new (window.AudioContext||window.webkitAudioContext)();const src=rec.actx.createMediaStreamSource(rec.media);const an=rec.actx.createAnalyser();an.fftSize=256;src.connect(an);const buf=new Uint8Array(an.frequencyBinCount);const c=$('recCanvas'),ctx=c.getContext('2d');const loop=()=>{an.getByteFrequencyData(buf);ctx.clearRect(0,0,c.width,c.height);const n=60,step=Math.floor(buf.length/n);const g=ctx.createLinearGradient(0,0,c.width,0);g.addColorStop(0,'#9146FF');g.addColorStop(1,'#FF7EB6');ctx.fillStyle=g;for(let i=0;i<n;i++){const v=buf[i*step]/255;const h=5+v*(c.height-14);ctx.fillRect(i*(c.width/n)+2,c.height/2-h/2,4,h);}rec.raf=requestAnimationFrame(loop);};loop();rec.timerI=setInterval(()=>{const s=(performance.now()-rec.t0)/1000;$('recTimer').textContent=fmt(s);if(s>=10)stopRec();},200);}
