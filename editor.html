@@ -928,8 +928,8 @@ async function startInlineRec(){
   };
   r.start(); inlineRec.t0=performance.now();
   const slot=$('voiceSlot'); slot.classList.add('recording');
-  slot.innerHTML=VMIC_SVG+'<span class="v-rec-timer">0:00</span><span class="empty">Appuie pour arrêter</span>';
-  inlineRec.timerI=setInterval(()=>{ const s=(performance.now()-inlineRec.t0)/1000; const el=slot.querySelector('.v-rec-timer'); if(el)el.textContent=fmt(s); if(s>=10)stopInlineRec(); },200);
+  slot.innerHTML=VMIC_SVG+'<span class="v-rec-timer">10</span><span class="empty">Appuie pour arrêter</span>';
+  inlineRec.timerI=setInterval(()=>{ const s=(performance.now()-inlineRec.t0)/1000; const left=Math.max(0,Math.ceil(10-s)); const el=slot.querySelector('.v-rec-timer'); if(el)el.textContent=left; if(s>=10)stopInlineRec(); },100);
 }
 // Slot vocal : vide → enregistre direct ; en cours → arrête. (Le player gère ses propres clics via stopPropagation.)
 $('voiceSlot').addEventListener('click',()=>{
