@@ -677,6 +677,10 @@
   .swipe-vol.muted .sv-wave{display:none}
   .swipe-vol.muted .sv-ico{color:#FF7EB6}
   .swipe-vol.muted .sv-slash{display:block}
+  /* Nb d'ondes selon le volume : 1 (<25%), 2 (25-70%), 3 (>70%) */
+  .swipe-vol .sv-w2,.swipe-vol .sv-w3{display:none}
+  .swipe-vol.lvl2 .sv-w2{display:block}
+  .swipe-vol.lvl3 .sv-w2,.swipe-vol.lvl3 .sv-w3{display:block}
   .swipe-vol input[type=range]{-webkit-appearance:none;appearance:none;width:90px;height:5px;border-radius:999px;
     background:linear-gradient(90deg,#FF7EB6,#9146FF);outline:none;cursor:pointer;flex:0 0 auto}
   .swipe-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
@@ -3861,8 +3865,9 @@
     <button class="sv-ico" id="swipeVolIco" type="button" aria-label="Couper / rétablir le son">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 9v6h4l5 4V5L8 9H4z"/>
-        <path class="sv-wave" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
-        <path class="sv-wave" d="M19 6.5a7 7 0 0 1 0 11"/>
+        <path class="sv-wave sv-w1" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
+        <path class="sv-wave sv-w2" d="M19 6.5a7 7 0 0 1 0 11"/>
+        <path class="sv-wave sv-w3" d="M20.5 4.5a10 10 0 0 1 0 15"/>
         <path class="sv-slash" d="M3 3l18 18"/>
       </svg>
     </button>
@@ -9235,6 +9240,8 @@
       if (!wrap || !range) return;
       let _preMute = null;
       const curVol = () => (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
+      // Nb d'ondes sonores selon le volume : <25% = 1, 25–70% = 2, >70% = 3 (0 = muet)
+      function setWaveLevel(v){ wrap.classList.remove('lvl1','lvl2','lvl3'); if (v > 0) wrap.classList.add(v > 0.70 ? 'lvl3' : (v < 0.25 ? 'lvl1' : 'lvl2')); }
       function apply(v, persistIt){
         v = Math.max(0, Math.min(1, v));
         const eff = v * ENTRY_MUSIC_GAIN;
@@ -9244,6 +9251,7 @@
         state.user.musicVolume = v;
         range.value = Math.round(v * 100);
         wrap.classList.toggle('muted', v === 0);
+        setWaveLevel(v);
         // garde le slider des réglages synchro s'il existe
         const sl = document.getElementById('musicVolume');
         if (sl) { sl.value = Math.round(v * 100); const vv = document.getElementById('musicVolVal'); if (vv) vv.textContent = Math.round(v * 100) + '%'; }
@@ -9257,7 +9265,7 @@
         else { apply(_preMute || DEFAULT_MUSIC_VOL, true); _preMute = null; }
       });
       // Affichage seul (ne réécrit pas le state) — utilisé à l'init et après chargement du profil
-      window.__swipeVolRefresh = () => { const v = curVol(); range.value = Math.round(v * 100); wrap.classList.toggle('muted', v === 0); };
+      window.__swipeVolRefresh = () => { const v = curVol(); range.value = Math.round(v * 100); wrap.classList.toggle('muted', v === 0); setWaveLevel(v); };
       window.__swipeVolRefresh();
     })();
 
