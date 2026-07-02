@@ -135,8 +135,16 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 
 /* Reframe de la zone d'édition selon l'écran ciblé : en mode Portrait, la carte
    prend des proportions téléphone → les bulles/GIFs se disposent à la bonne
-   échelle. (Positions stockées séparément par mode — voir setCanvasMode.) */
-body[data-canvas="portrait"] .card{width:min(240px,64vw)}
+   échelle. (Positions stockées séparément par mode — voir setCanvasMode.)
+   Paysage (écran d'ordi) garde la taille fixe d'origine (.card de base,
+   min(92vw,380px)) — la réduction d'échelle est spécifique au téléphone. */
+/* Portrait : largeur ET hauteur calées sur la vraie carte du swipe mobile
+   (index.html .swipe-wrap{width:min(62vw,240px);height:min(52dvh,400px)}) —
+   sinon la carte grandit librement dans l'éditeur (contenu qui déborde de son
+   vrai gabarit sur téléphone). .card garde déjà overflow:hidden (clip propre) ;
+   .body défile en interne pour rester accessible (comme sur le vrai swipe). */
+body[data-canvas="portrait"] .card{width:min(240px,64vw);height:min(400px,52dvh);max-height:min(400px,52dvh)}
+body[data-canvas="portrait"] .card .body{position:absolute;inset:96px 0 0 0;overflow-y:auto;padding-bottom:18px}
 /* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel).
    Sur .card-frame (pas .card-zone) → reste centré sur la carte, pas sur le sélecteur. */
 body[data-canvas="portrait"] .card-frame::before{
