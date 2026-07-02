@@ -6,6 +6,21 @@
 <title>Matefindr Boost — Paiement</title>
 <meta name="description" content="Passe en Matefindr Boost : 16 bulles, Fake Nitro, musique d'ambiance, filtre H/F, likes secrets et GIFs personnalisables." />
 <meta name="theme-color" content="#0D0B1E" />
+<!-- Perf : mode allégé auto pour machines faibles. Exécuté AVANT tout rendu. -->
+<script>
+(function(){
+  try{
+    var d = document.documentElement;
+    var saved = null;
+    try{ saved = localStorage.getItem('mf_perf'); }catch(e){}
+    if(saved === 'lite'){ d.classList.add('perf-lite'); return; }
+    if(saved === 'full'){ return; }
+    var cores = navigator.hardwareConcurrency || 8;
+    var mem = navigator.deviceMemory || 8;
+    if(cores <= 4 || mem <= 4) d.classList.add('perf-lite');
+  }catch(e){}
+})();
+</script>
 <link rel="icon" type="image/png" href="assets/favicon.png?v=3" />
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
@@ -186,6 +201,24 @@
   .success .sbtn{display:inline-block;text-decoration:none;padding:13px 26px;border-radius:13px;font-weight:800;color:#fff;background:linear-gradient(180deg,#A65BFF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.45);cursor:pointer}
 
   .demo-note{text-align:center;color:var(--mute);font-size:11.5px;margin-top:18px}
+
+  /* ===== Mode perf allégé (machines faibles / prefers-reduced-motion) =====
+     Coupe les effets les plus coûteux pour les GPU faibles : flou 80px des blobs
+     et backdrop-filter. Activé par .perf-lite sur <html>. */
+  html.perf-lite .blob{
+    animation:none !important;
+    transform:none !important;
+    filter:blur(46px) !important;
+    will-change:auto !important;
+    opacity:.4 !important;
+  }
+  html.perf-lite *{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .blob{ animation:none !important; transform:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -454,6 +487,45 @@
   });
 
   $('goApp').addEventListener('click',()=>{ location.href='/'; });
+</script>
+<!-- Perf : sonde FPS. Bascule en mode allégé si la machine rame malgré tout.
+     Mesure après stabilisation (load + 900ms), meilleur-de-3 anti faux positif. -->
+<script>
+(function(){
+  try{
+    var d = document.documentElement;
+    if(d.classList.contains('perf-lite')) return;
+    try{ if(localStorage.getItem('mf_perf')==='full') return; }catch(e){}
+    function sample(){
+      return new Promise(function(res){
+        if(document.hidden){ res(null); return; }
+        var frames=0, start=performance.now();
+        function tick(now){
+          if(document.hidden){ res(null); return; }
+          frames++;
+          if(now - start < 1000){ requestAnimationFrame(tick); return; }
+          res(frames / ((now - start)/1000));
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+    function probe(){
+      if(document.hidden) return;
+      var best = 0;
+      (function next(i){
+        sample().then(function(fps){
+          if(fps == null) return;
+          if(fps > best) best = fps;
+          if(i < 2){ next(i+1); return; }
+          if(best < 40) d.classList.add('perf-lite');
+        });
+      })(0);
+    }
+    function schedule(){ setTimeout(probe, 900); }
+    if(document.readyState === 'complete') schedule();
+    else window.addEventListener('load', schedule, {once:true});
+  }catch(e){}
+})();
 </script>
 </body>
 </html>

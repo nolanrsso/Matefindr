@@ -6,6 +6,26 @@
 <title>Matefindr - Swipe des profils discord</title>
 <meta name="description" content="Swipe des profils Discord et like les profils qui te plaisent. Match avec quelqu'un et parle avec lui." />
 <meta name="theme-color" content="#0D0B1E" />
+<!-- Perf : mode allégé auto pour machines faibles / prefers-reduced-motion.
+     Exécuté AVANT tout rendu pour éviter un flash des effets lourds. -->
+<script>
+(function(){
+  try{
+    var d = document.documentElement;
+    var saved = null;
+    try{ saved = localStorage.getItem('mf_perf'); }catch(e){}
+    if(saved === 'lite'){ d.classList.add('perf-lite'); return; }
+    if(saved === 'full'){ return; } // l'utilisateur a forcé le rendu complet
+    // Machines à faibles ressources (CPU / RAM) → mode allégé complet.
+    // (La réduction de mouvement système est gérée séparément en CSS, via
+    //  @media prefers-reduced-motion : elle fige les animations mais garde le
+    //  rendu — c'est une préférence de mouvement, pas un signal de lenteur.)
+    var cores = navigator.hardwareConcurrency || 8;
+    var mem = navigator.deviceMemory || 8;
+    if(cores <= 4 || mem <= 4) d.classList.add('perf-lite');
+  }catch(e){}
+})();
+</script>
 <!-- Police du wordmark logo (comme le design) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -186,7 +206,9 @@
 
   /* ------------- Layout ------------- */
   /* main z:6 → la carte (dans main) passe DEVANT les bulles fullscreen (.orbit z:5) */
-  main{position:relative;z-index:6;height:100vh;display:flex;flex-direction:column}
+  /* height:100dvh (viewport dynamique) → tient compte de la barre d'adresse mobile
+     qui apparaît/disparaît, sinon le contenu passe sous l'UI du navigateur. Fallback 100vh. */
+  main{position:relative;z-index:6;height:100vh;height:100dvh;display:flex;flex-direction:column}
 
   /* Header */
   header{
@@ -255,8 +277,11 @@
     padding:11px 14px;border-radius:13px;
     background:rgba(255,255,255,.05);
     border:1px solid var(--stroke-2);
-    backdrop-filter:blur(18px) saturate(140%);
-    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    /* Flou piloté par variable : perf-lite la bascule à 'none' depuis la propre
+       règle du bouton (contourne le combo all:unset + alias -webkit-). */
+    --ls-backdrop:blur(18px) saturate(140%);
+    backdrop-filter:var(--ls-backdrop);
+    -webkit-backdrop-filter:var(--ls-backdrop);
     color:#fff;font-family:inherit;font-size:13.5px;font-weight:600;
     letter-spacing:.01em;cursor:pointer;
     box-shadow:0 8px 22px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
@@ -471,7 +496,9 @@
   @media (max-width:600px){
     #bubbles{display:none}
     .badge.corner{display:none}
-    .hero{padding:14px 18px 28px;justify-content:flex-start;gap:2px}
+    /* Contenu de l'accueil centré verticalement (le titre « Matefindr » au milieu
+       de l'écran) plutôt que collé en haut. */
+    .hero{padding:14px 18px 28px;justify-content:center;gap:2px}
     h1{font-size:clamp(64px,26vw,110px);margin:14px auto 10px}
     .tagline{font-size:clamp(17px,5.2vw,22px);margin:0 0 10px}
     .sub{font-size:14.5px;max-width:34ch;margin:0 auto 22px}
@@ -1622,8 +1649,43 @@
   @media (max-width:600px){
     /* Carte volontairement BEAUCOUP plus petite : dégage l'espace autour pour
        accéder aux bulles / GIFs qui flottent au-dessus et en dessous. */
-    .swipe-wrap{width:min(82vw,320px);height:min(56vh,430px)}
-    .swipe-stage{height:88vh}
+    /* Carte plus étroite + centrée : laisse une colonne de bulles de chaque côté,
+       et une bande claire au-dessus / en-dessous (cf. maquette mobile).
+       height bornée à la fois par 52dvh ET par l'espace réellement disponible
+       (max-height:100% de la scène) → la carte RÉTRÉCIT sur les petits écrans
+       au lieu de déborder. dvh gère la barre d'adresse mobile. */
+    .swipe-wrap{width:min(62vw,240px);height:min(52dvh,400px);max-height:100%}
+    /* La scène remplit la bande entre la barre de son (haut) et les boutons (bas).
+       display:flex (au lieu de grid) → le max-height:100% de la carte se résout bien
+       contre la hauteur RÉELLE de la scène (une piste grid auto grandissait au contenu
+       et laissait la carte déborder sur petit écran). */
+    .swipe-stage{height:auto;flex:1 1 auto;min-height:0;overflow:visible;display:flex;align-items:center;justify-content:center}
+
+    /* Bulles à l'échelle de la carte : ~64px (vs 115 sur desktop). */
+    .swipe-stage .orbit .orb,
+    .orbit.orbit--dynamic .orb,
+    .orbit .orb-wrap--music .orb,
+    .orbit.orbit--dynamic .orb-wrap--music .orb{width:64px;height:64px}
+    .swipe-stage .orbit .orb svg,
+    .orbit.orbit--dynamic .orb svg,
+    .orbit .orb-wrap--music .orb svg,
+    .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:26px;height:26px}
+    .orbit .orb-label,
+    .orbit.orbit--dynamic .orb-label{font-size:9.5px;max-width:78px}
+    /* Mini-bulle de rang (jeu) proportionnelle à la petite bulle. */
+    .swipe-stage .orbit .orb .orb-rank-orbit{transform:scale(.72)}
+
+    /* Réserves haut/bas : la carte (dans la scène flex:1) se centre TOUJOURS entre
+       la barre de son (haut) et les boutons (bas), sans jamais les chevaucher —
+       quelle que soit la hauteur d'écran. Variables → faciles à ajuster + réutilisées
+       par les media queries « petit écran » plus bas. */
+    #screen-swipe{--swipe-top:62px;--swipe-bottom:94px;padding:var(--swipe-top) 8px var(--swipe-bottom);justify-content:flex-start}
+    .swipe-actions{position:fixed;left:0;right:0;bottom:18px;justify-content:center;z-index:23}
+    /* Le slider de volume quitte la pile de boutons du bas (il se retrouvait
+       empilé au-dessus du cœur « likes ») → barre horizontale centrée sous la
+       navbar, dans l'espace libre au-dessus de la carte. Écran swipe uniquement
+       (sur l'accueil il garde sa place discrète en bas à droite). */
+    body[data-screen="swipe"] .swipe-vol{top:94px;left:50%;transform:translateX(-50%);right:auto;bottom:auto;height:42px}
 
     .swipe-card{border-radius:18px}
     .swipe-card .banner{height:86px;max-height:86px}
@@ -1675,6 +1737,36 @@
     .swipe-card .lookfor svg{width:18px;height:18px}
 
     .swipe-card .badge-stamp{font-size:18px;padding:5px 11px}
+  }
+
+  /* ===== Téléphone en PAYSAGE (écran large et court) — mise en page dédiée =====
+     Les positions bulles/GIFs sont lues depuis le mode 'landscape' (voir
+     activeLayoutMode + orbRelLayout). Carte compacte centrée (scroll interne si
+     besoin), boutons like/skip centrés en bas, FAB messages/likes dans les coins,
+     bulles dans les larges marges latérales. */
+  @media (pointer:coarse) and (orientation:landscape) and (max-height:600px){
+    /* Mêmes principes de robustesse que le portrait : réserves haut/bas, scène flex,
+       carte bornée par l'espace dispo (max-height:100%) + dvh → tient sur tout écran. */
+    #screen-swipe{--swipe-top:54px;--swipe-bottom:70px;padding:var(--swipe-top) 8px var(--swipe-bottom);justify-content:flex-start}
+    .swipe-wrap{width:min(52vh,260px);height:min(96dvh,340px);max-height:100%}
+    .swipe-stage{height:auto;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
+    .swipe-card{max-height:100%}
+    .swipe-card .body{overflow-y:auto}
+    .swipe-actions{position:fixed;left:0;right:0;bottom:10px;justify-content:center;gap:18px;z-index:23}
+    #msgFab{left:12px;bottom:10px;width:52px;height:52px}
+    .bf-fab--heart{right:12px;bottom:10px;width:52px;height:52px}
+    body[data-screen="swipe"] .swipe-vol{top:8px;left:50%;transform:translateX(-50%);right:auto;bottom:auto;height:40px}
+    /* Bulles ≈76px (rayon 38 côté JS — voir renderOrbs orbRadius). */
+    .swipe-stage .orbit .orb,
+    .orbit.orbit--dynamic .orb,
+    .orbit .orb-wrap--music .orb,
+    .orbit.orbit--dynamic .orb-wrap--music .orb{width:76px;height:76px}
+    .swipe-stage .orbit .orb svg,
+    .orbit.orbit--dynamic .orb svg,
+    .orbit .orb-wrap--music .orb svg,
+    .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:30px;height:30px}
+    .orbit .orb-label,
+    .orbit.orbit--dynamic .orb-label{font-size:10px;max-width:84px}
   }
 
   /* Swipe toolbar — floating right side, stacked above msgFab, hover reveals details */
@@ -3459,6 +3551,37 @@
     body[data-screen="account"] .acc-card{ width:100% !important;max-width:100% !important;box-sizing:border-box !important;border-radius:20px !important; }
     .acc-settings .set-row{ flex-direction:column;align-items:stretch;gap:9px; }
     .acc-settings .acc-langs button{ flex:1; }
+  }
+
+  /* ===== Mode perf allégé (machines faibles / prefers-reduced-motion) =====
+     Coupe les effets de rendu les plus coûteux, qui font ramer les GPU faibles :
+     blobs de fond animés + flou 80px, scintillement des étoiles, et surtout les
+     backdrop-filter plein écran recalculés à chaque image. Le design reste
+     lisible : les cartes conservent leur couleur de fond semi-opaque.
+     Activé par la classe .perf-lite posée sur <html> (voir script du <head>). */
+  html.perf-lite .blob{
+    animation:none !important;      /* fige le mouvement (recalcul du flou en boucle) */
+    transform:none !important;
+    filter:blur(46px) !important;   /* flou réduit, composité une seule fois */
+    will-change:auto !important;    /* libère la couche GPU gardée en vie */
+    opacity:.5 !important;
+  }
+  html.perf-lite .bg-stars::before,
+  html.perf-lite .bg-stars::after{ animation:none !important; }
+  /* backdrop-filter = l'une des propriétés les plus coûteuses → on la coupe. */
+  html.perf-lite *{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  /* Bouton langue : son flou passe par une variable (all:unset bloque l'override
+     direct), donc on la neutralise ici pour couper aussi son backdrop-filter. */
+  html.perf-lite #langSwitch .ls-btn{ --ls-backdrop:none; }
+  /* Réduction de mouvement système : on fige uniquement les animations de fond
+     (mouvement), mais on garde le flou et le verre dépoli — c'est une préférence
+     de mouvement, pas un signal de machine lente. */
+  @media (prefers-reduced-motion: reduce){
+    .blob{ animation:none !important; transform:none !important; }
+    .bg-stars::before, .bg-stars::after{ animation:none !important; }
   }
 </style>
 </head>
@@ -5416,7 +5539,9 @@
         rank: o.rank || null, clipUrl: o.clipUrl || null,
         // Conserver la position custom (drag&drop) pour que la carte de swipe
         // place la bulle exactement là où l'utilisateur l'a posée dans l'éditeur.
+        // + positions séparées par orientation (portrait/paysage téléphone).
         customX: o.customX, customY: o.customY,
+        posPortrait: o.posPortrait || null, posLandscape: o.posLandscape || null,
       }));
       return {
         name: u.displayName || u.email?.split('@')[0] || 'Moi',
@@ -5523,6 +5648,7 @@
         emoji: emoByKind[o.kind] || '✨',
         cover: o.cover || null, previewUrl: o.previewUrl || null,
         rank: o.rank || null, customX: o.customX, customY: o.customY,
+        posPortrait: o.posPortrait || null, posLandscape: o.posLandscape || null,
       }));
       return {
         name: r.display_name || 'Matefindr',
@@ -5762,17 +5888,30 @@
         return { el, g };
       });
       document.body.appendChild(layer);
+      // Position d'un GIF selon l'orientation courante (portrait/paysage/bureau).
+      function gifPos(g){
+        const mode = activeLayoutMode();
+        const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
+                : (mode === 'landscape' && g.landscape) ? g.landscape
+                : g;
+        return {
+          x: (typeof m.x === 'number') ? m.x : 50,
+          y: (typeof m.y === 'number') ? m.y : 30,
+          w: (typeof m.w === 'number') ? m.w : 32,
+          rot: m.rot || 0,
+        };
+      }
       function reposition(){
         const wr = wrap.getBoundingClientRect();
         items.forEach(({ el, g }) => {
-          const w = (typeof g.w === 'number') ? g.w : 32;
-          const wpx = (w / 100) * wr.width;
-          const cx = wr.left + ((typeof g.x === 'number' ? g.x : 50) / 100) * wr.width;
-          const cy = wr.top  + ((typeof g.y === 'number' ? g.y : 30) / 100) * wr.height;
+          const p = gifPos(g);
+          const wpx = (p.w / 100) * wr.width;
+          const cx = wr.left + (p.x / 100) * wr.width;
+          const cy = wr.top  + (p.y / 100) * wr.height;
           el.style.left = (cx - wpx / 2) + 'px';
           el.style.top  = (cy - wpx / 2) + 'px';
           el.style.width = wpx + 'px';
-          el.style.transform = `rotate(${g.rot || 0}deg)`;
+          el.style.transform = `rotate(${p.rot}deg)`;
         });
       }
       reposition();
@@ -6059,16 +6198,49 @@
          max 4 par colonne, nouvelle colonne plus loin si pleine.
        Renvoie { rel: Map(orb -> {rx,ry}), plus: {rx,ry}|null } (plus = emplacement du "+"). */
     const ORB_LAYOUT = { COL0: 0.735, COL_GAP: 0.42, ROW_STEP: 0.215, MAX_PER_COL: 4 };
-    function orbRelLayout(orbs, withPlus){
+    /* Orientation d'affichage courante → détermine quelle disposition de profil
+       utiliser (le profil peut être arrangé séparément par orientation dans l'éditeur).
+       - portrait : téléphone étroit (≤600px)
+       - landscape : téléphone tenu à l'horizontale (pointeur grossier, court en hauteur)
+       - desktop : tout le reste (grand écran). */
+    function activeLayoutMode(){
+      try {
+        if (window.matchMedia('(max-width:600px)').matches) return 'portrait';
+        if (window.matchMedia('(pointer:coarse) and (orientation:landscape) and (max-height:600px)').matches) return 'landscape';
+      } catch(_){}
+      return 'desktop';
+    }
+    function orbRelLayout(orbs, withPlus, mode){
+      mode = mode || 'desktop';
       const { COL0, COL_GAP, ROW_STEP, MAX_PER_COL } = ORB_LAYOUT;
-      const isCustom = (o) => o && typeof o.customX === 'number' && typeof o.customY === 'number';
+      // Position sauvegardée POUR LE MODE courant (portrait/paysage), repli sur bureau.
+      const posFor = (o) => {
+        if (!o) return null;
+        if (mode === 'portrait'  && o.posPortrait  && typeof o.posPortrait.x  === 'number') return { rx: o.posPortrait.x,  ry: o.posPortrait.y  };
+        if (mode === 'landscape' && o.posLandscape && typeof o.posLandscape.x === 'number') return { rx: o.posLandscape.x, ry: o.posLandscape.y };
+        if (typeof o.customX === 'number' && typeof o.customY === 'number') return { rx: o.customX, ry: o.customY };
+        return null;
+      };
       const rel = new Map();
-      // 1) Bulles custom : position sauvegardée prioritaire
-      orbs.forEach(o => { if (isCustom(o)) rel.set(o, { rx: o.customX, ry: o.customY }); });
-      // 2) Bulles auto : colonnes symétriques (alternance gauche/droite, 4 max/colonne).
-      //    Le "+" ne participe PAS au placement → les bulles auto tombent au même
-      //    endroit dans l'éditeur ET sur la carte de swipe (where withPlus=false).
-      const auto = orbs.filter(o => !isCustom(o));
+      // 1) Bulles avec position sauvegardée pour ce mode : prioritaire
+      orbs.forEach(o => { const p = posFor(o); if (p) rel.set(o, p); });
+      const auto = orbs.filter(o => !rel.has(o));
+      // 2a) PORTRAIT (téléphone) : 1 colonne étroite par côté, alternée et centrée
+      //     verticalement — identique à l'éditeur portrait (orbLayout).
+      if (mode === 'portrait'){
+        const MCOL = 0.64;
+        const leftN = Math.ceil(auto.length / 2), rightN = Math.floor(auto.length / 2);
+        const MROW = Math.min(0.33, 1.6 / Math.max(leftN, 1));
+        let li = 0, ri = 0;
+        auto.forEach((o, i) => {
+          const side = (i % 2 === 0) ? -1 : 1;
+          const idxOnSide = (side < 0) ? li++ : ri++;
+          const cnt = (side < 0) ? leftN : rightN;
+          rel.set(o, { rx: side * MCOL, ry: (idxOnSide - (cnt - 1) / 2) * MROW });
+        });
+        return { rel, plus: null };
+      }
+      // 2b) BUREAU / PAYSAGE : colonnes symétriques larges (alternance gauche/droite, 4 max/colonne).
       const sides = [[], []]; // 0 = gauche, 1 = droite
       auto.forEach((o, i) => sides[i % 2].push(o));
       const cols = [[], []]; // par côté : [{rx, count, lastRy}]
@@ -6125,7 +6297,11 @@
     /* Live physics state for the profile orbs (mouse repulsion + drift) */
     let _orbSim = { items: [], mouse: { x: -9999, y: -9999, has: false }, raf: null };
 
+    let _swipeCurrentP = null;      // profil actuellement affiché (pour re-render à la rotation)
+    let _swipeRenderedMode = null;  // orientation utilisée au dernier rendu des bulles
     function renderOrbs(p){
+      _swipeCurrentP = p;
+      _swipeRenderedMode = activeLayoutMode();
       const orbit = document.getElementById('swipeOrbit');
       orbit.innerHTML = '';
       _orbSim.items = [];
@@ -6178,9 +6354,13 @@
         : { left: sw/2 - 190, top: sh/2 - 310, width: 380, height: 620 };
       const cardCx = cardRect.left + cardRect.width / 2;
       const cardCy = cardRect.top  + cardRect.height / 2;
-      const orbRadius = () => 58;
-      // Map orb -> {rx, ry} (custom drag positions + default columns), shared with editor
-      const { rel: orbRel } = orbRelLayout(list, false);
+      // Orientation active (portrait / paysage téléphone / bureau) → détermine
+      // quelles positions lire ET la taille des bulles. La disposition compacte
+      // portrait est centralisée dans orbRelLayout (source unique éditeur+swipe).
+      const layoutMode = activeLayoutMode();
+      const orbRadius = () => layoutMode === 'portrait' ? 32 : layoutMode === 'landscape' ? 38 : 58;
+      // Map orb -> {rx, ry} : positions du mode courant (posPortrait/posLandscape/customX).
+      const { rel: orbRel } = orbRelLayout(list, false, layoutMode);
       function relToPx(rel, orbR){
         const r = rel || { rx: ORB_LAYOUT.COL0, ry: 0 };
         const x = cardCx + r.rx * cardRect.width;
@@ -6279,6 +6459,12 @@
     // Recompute anchors on viewport resize from each orb's stored relative position
     // (rx, ry) — keeps bubbles locked to the same spot relative to the card.
     window.addEventListener('resize', () => {
+      // Changement d'orientation (portrait <-> paysage <-> bureau) → re-rendu complet
+      // des bulles pour lire la disposition ET la taille du nouveau mode.
+      if (activeLayoutMode() !== _swipeRenderedMode) {
+        if (_swipeCurrentP) renderOrbs(_swipeCurrentP);
+        return;
+      }
       if (!_orbSim.items.length) return;
       const wrapEl = document.getElementById('swipeWrap');
       if (!wrapEl) return;
@@ -6291,6 +6477,10 @@
         it.ax = Math.max(it.r + 6, Math.min(sw - it.r - 6, cardCx + r.rx * cardRect.width));
         it.ay = Math.max(it.r + 6, Math.min(sh - it.r - 6, cardCy + r.ry * cardRect.height));
       }
+    });
+    // La rotation du téléphone ne déclenche pas toujours 'resize' → on force le re-rendu.
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => { if (_swipeCurrentP && activeLayoutMode() !== _swipeRenderedMode) renderOrbs(_swipeCurrentP); }, 120);
     });
 
     /* Mouse tracking on the WHOLE viewport (orbit is fullscreen) */
@@ -6330,6 +6520,7 @@
       add('.my-status', false, 16);
       add('.acc-discord-fab', false, 16);
       add('.bf-fab', false, 18);
+      add('.swipe-vol', false, 14);
       return rects;
     }
 
@@ -10660,6 +10851,51 @@
       window.__supa.auth.signOut().catch(() => {});
     }
   });
+</script>
+<!-- Perf : sonde FPS. Si la machine a passé les heuristiques mais rame quand
+     même (GPU intégré médiocre, etc.), on bascule en mode allégé.
+     On mesure APRÈS stabilisation de la page (load + 900ms) — sinon le jank du
+     premier rendu ferait chuter le FPS et donnerait un faux positif partout. -->
+<script>
+(function(){
+  try{
+    var d = document.documentElement;
+    if(d.classList.contains('perf-lite')) return;
+    try{ if(localStorage.getItem('mf_perf')==='full') return; }catch(e){}
+    // Mesure le FPS sur une fenêtre de ~1s.
+    function sample(){
+      return new Promise(function(res){
+        if(document.hidden){ res(null); return; }
+        var frames=0, start=performance.now();
+        function tick(now){
+          if(document.hidden){ res(null); return; } // throttlé : échantillon invalide
+          frames++;
+          if(now - start < 1000){ requestAnimationFrame(tick); return; }
+          res(frames / ((now - start)/1000));
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+    // Meilleur-de-3 : on ne bascule que si la machine ne tient JAMAIS 40 fps.
+    // Un pic de jank passager (décodage d'image, fetch) ne suffit plus à déclencher.
+    function probe(){
+      if(document.hidden) return;
+      var best = 0;
+      (function next(i){
+        sample().then(function(fps){
+          if(fps == null) return; // onglet passé en arrière-plan → on abandonne
+          if(fps > best) best = fps;
+          if(i < 2){ next(i+1); return; }
+          if(best < 40) d.classList.add('perf-lite');
+        });
+      })(0);
+    }
+    // Attend la fin du chargement puis laisse la page se stabiliser avant de mesurer.
+    function schedule(){ setTimeout(probe, 900); }
+    if(document.readyState === 'complete') schedule();
+    else window.addEventListener('load', schedule, {once:true});
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
