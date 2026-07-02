@@ -2381,7 +2381,12 @@
     body[data-screen="onboarding"], body[data-screen="swipe"], body[data-screen="account"]{overflow:hidden !important}
   }
   @media (max-width:760px){
-    body[data-screen="onboarding"], body[data-screen="swipe"], body[data-screen="account"]{overflow:auto !important}
+    /* Filet de sécurité : si le contenu (hero centré, carte de swipe + bulles, etc.)
+       dépasse la hauteur réelle de l'écran (petit téléphone, barre d'adresse visible,
+       zoom système…), on peut scroller pour tout voir au lieu que ce soit invisible
+       et inatteignable (overflow:hidden couperait le haut ET le bas symétriquement
+       avec justify-content:center, sans aucun moyen d'y accéder). */
+    body[data-screen="landing"], body[data-screen="onboarding"], body[data-screen="swipe"], body[data-screen="account"]{overflow:auto !important}
   }
   .acc-card{
     position:relative;

@@ -118,8 +118,12 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .top-btn--settings{margin-left:auto}
 @media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{padding:9px 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}}
 
-/* Sélecteur d'orientation (Bureau / Portrait / Paysage) — centré dans la topbar */
-.canvas-modes{position:absolute;left:50%;top:9px;transform:translateX(-50%);z-index:31;display:flex;gap:3px;padding:4px;border-radius:14px;
+/* Sélecteur d'orientation (Bureau / Portrait / Paysage) — bloc normal centré
+   juste au-dessus de la carte (dans .card-zone, PAS dans .card-frame : les
+   positions % des bulles/GIFs sont relatives à .card-frame, qui doit rester
+   exactement à la taille de la carte). width:fit-content + margin:auto = centré
+   horizontalement même s'il est plus étroit/large que la carte. */
+.canvas-modes{position:relative;z-index:31;display:flex;width:fit-content;margin:0 auto 14px;gap:3px;padding:4px;border-radius:14px;
   border:1px solid var(--stroke-2);background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .canvas-mode-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;border:none;background:transparent;color:var(--dim);
   font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;transition:background .14s ease,color .14s ease}
@@ -127,23 +131,30 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .canvas-mode-btn:hover{color:#fff}
 .canvas-mode-btn.active{background:linear-gradient(180deg,#7a2bff,#5b1fd0);color:#fff;box-shadow:0 6px 16px rgba(122,43,255,.45)}
 @media(max-width:720px){.canvas-mode-btn .cm-word{display:none}.canvas-mode-btn{padding:8px 10px}}
+@media(max-width:600px){.canvas-modes{margin:0 auto 8px;padding:3px}.canvas-mode-btn{padding:6px 9px}.canvas-mode-btn svg{width:14px;height:14px}}
 
-/* Reframe de la zone d'édition selon l'écran ciblé : la carte prend des
-   proportions téléphone → les bulles/GIFs se disposent à la bonne échelle.
-   (Positions stockées séparément par mode — voir setCanvasMode.) */
+/* Reframe de la zone d'édition selon l'écran ciblé : en mode Portrait, la carte
+   prend des proportions téléphone → les bulles/GIFs se disposent à la bonne
+   échelle. (Positions stockées séparément par mode — voir setCanvasMode.) */
 body[data-canvas="portrait"] .card{width:min(240px,64vw)}
-body[data-canvas="landscape"] .card{width:min(300px,58vw)}
-/* Cadre-téléphone discret autour de la zone en mode portrait/paysage (repère visuel). */
-body[data-canvas="portrait"] .card-zone::before,
-body[data-canvas="landscape"] .card-zone::before{
+/* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel).
+   Sur .card-frame (pas .card-zone) → reste centré sur la carte, pas sur le sélecteur. */
+body[data-canvas="portrait"] .card-frame::before{
   content:"";position:absolute;z-index:0;border:2px dashed rgba(145,70,255,.35);border-radius:30px;pointer-events:none;
-  left:50%;top:50%;transform:translate(-50%,-50%)}
-body[data-canvas="portrait"] .card-zone::before{width:min(94vw,420px);height:min(84vh,760px)}
-body[data-canvas="landscape"] .card-zone::before{width:min(96vw,760px);height:min(72vh,380px)}
+  left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,420px);height:min(84vh,760px)}
 
 /* flex + margin auto = carte centrée quand elle tient, défilable quand elle est trop haute (pas de coupure) */
 .stage{position:fixed;inset:0;z-index:2;display:flex;overflow-y:auto;overflow-x:hidden;padding:70px 16px 110px;-webkit-overflow-scrolling:touch}
+/* Petits écrans : marges réservées resserrées (topbar/toolbar plus compacts en
+   mobile) → plus de place verticale pour la carte avant d'avoir besoin de scroller. */
+@media(max-width:600px){ .stage{padding:64px 12px 92px} }
 .card-zone{position:relative;margin:auto}
+/* Boîte EXACTE de la carte : les layers de bulles/GIFs (inset:0) doivent matcher
+   précisément la carte, sinon les positions % enregistrées se décalent.
+   width:fit-content + margin:auto → se resserre sur la carte (240/300/380px)
+   au lieu de s'étirer à la largeur du sélecteur quand celui-ci est plus large
+   (ex: portrait 240px de carte vs ~295px de sélecteur avec les libellés). */
+.card-frame{position:relative;width:fit-content;margin:0 auto}
 
 /* ===================== ZONE DE PLACEMENT (tout l'écran, sous la topbar et au-dessus de la toolbar) ===================== */
 .drop-guide{position:fixed;top:62px;left:14px;right:14px;bottom:96px;z-index:8;pointer-events:none;opacity:0;transition:opacity .16s ease;
@@ -402,6 +413,23 @@ body[data-canvas="landscape"] .card-zone::before{width:min(96vw,760px);height:mi
 .tool{position:relative}
 body.not-boost .tool--boost{color:#FFD15C}
 body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
+/* Barre d'outils mobile : à 52px/bouton + libellés, elle dépasse largement un
+   écran de téléphone (mesuré ~499px sur 375px de large, coupée des deux côtés,
+   boutons Retour/Aperçu inatteignables). On la resserre ET on ajoute un scroll
+   horizontal de secours (jamais un bouton totalement hors d'atteinte). */
+@media(max-width:600px){
+  .toolbar{max-width:calc(100vw - 20px);overflow-x:auto;-webkit-overflow-scrolling:touch;gap:3px;padding:6px 8px;scrollbar-width:none}
+  .toolbar::-webkit-scrollbar{display:none}
+  .tool{width:44px;height:44px;border-radius:13px;flex:0 0 auto}
+  .tool svg{width:20px;height:20px}
+  .tool-wrap{flex:0 0 auto}
+  /* width:auto explicite : sans ça, .tool{width:44px} ci-dessus (même spécificité,
+     déclaré après) écrase leur largeur auto et comprime/superpose leur libellé
+     ("Retour"/"Aperçu") au lieu de le laisser respirer. */
+  .tool--preview,.tool--back{width:auto;height:44px;padding:0 10px;gap:5px;flex:0 0 auto}
+  .tool-word{font-size:12px}
+  .tool-sep{margin:0 1px;flex:0 0 auto}
+}
 
 /* Bouton « Mettre à jour Discord » — bas-gauche */
 .disc-fab{position:fixed;left:22px;bottom:26px;z-index:41;display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:16px;border:none;cursor:pointer;
@@ -422,7 +450,11 @@ body.not-boost .boost-fab{display:inline-flex}
 .boost-fab:hover{transform:translateY(-2px);filter:brightness(1.06)}
 .boost-fab:active{transform:translateY(0) scale(.97)}
 .boost-fab svg{width:18px;height:18px}
-@media(max-width:560px){.boost-fab{padding:12px 14px;font-size:13px}}
+/* Masqué sur mobile : en bas-droite comme la toolbar (centrée, quasi pleine
+   largeur en mobile), il se retrouvait SUPERPOSÉ à la toolbar (z-index plus
+   haut), cachant les outils Aperçu/Fond. Les outils Boost restent signalés
+   en doré dans la toolbar elle-même (body.not-boost .tool--boost). */
+@media(max-width:600px){.boost-fab{display:none !important}}
 
 /* Connexions (logos d'apps) */
 .connections{display:flex;flex-wrap:wrap;gap:9px}
@@ -652,12 +684,18 @@ body.not-boost .boost-fab{display:inline-flex}
 #tourCard .tc-next:hover{transform:translateY(-1px)}
 #tourCard .tc-quit{position:absolute;top:9px;right:12px;background:none;border:none;color:#8b88a0;font-size:18px;cursor:pointer;line-height:1}
 #tourCard .tc-quit:hover{color:#fff}
-#bubbleWarn{position:fixed;z-index:60;top:64px;left:50%;transform:translateX(-50%);max-width:min(94vw,540px);
+/* Ancré en BAS, au-dessus de la toolbar (comme .music-now) — PAS en haut :
+   le haut (topbar + sélecteur d'orientation + début de carte) est un espace
+   trop étroit pour ce texte long, et top:64px l'y faisait ENTIÈREMENT
+   superposer au sélecteur d'orientation (z-index 60 > 31), invisible pour
+   tout nouveau compte (0 bulle = bandeau toujours affiché). */
+#bubbleWarn{position:fixed;z-index:35;bottom:100px;left:50%;transform:translateX(-50%);max-width:min(94vw,540px);
   display:none;align-items:center;gap:9px;padding:9px 14px;border-radius:12px;text-align:center;
   background:linear-gradient(180deg,rgba(58,42,12,.96),rgba(40,28,8,.96));border:1px solid rgba(255,193,84,.45);
   color:#ffd98a;font-size:12.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.4)}
 #bubbleWarn.show{display:flex}
 #bubbleWarn b{color:#fff}
+@media(max-width:600px){ #bubbleWarn{bottom:82px;padding:7px 11px;font-size:11.5px} }
 
 /* ===== Mode perf allégé (machines faibles / prefers-reduced-motion) =====
    Coupe les effets les plus coûteux pour les GPU faibles : blobs de fond animés
@@ -689,23 +727,29 @@ html.perf-lite *{
 <header class="topbar">
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
   <span class="crumb">/ éditeur de profil</span>
-  <!-- Sélecteur d'orientation : édite la disposition (bulles/GIFs) séparément selon l'écran. -->
-  <div class="canvas-modes" role="group" aria-label="Écran à éditer">
-    <button class="canvas-mode-btn active" data-mode="desktop" type="button" title="Bureau / grand écran">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="cm-word">Bureau</span>
-    </button>
-    <button class="canvas-mode-btn" data-mode="portrait" type="button" title="Téléphone portrait">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span class="cm-word">Portrait</span>
-    </button>
-    <button class="canvas-mode-btn" data-mode="landscape" type="button" title="Téléphone paysage">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2.5"/><path d="M18 11v2"/></svg><span class="cm-word">Paysage</span>
-    </button>
-  </div>
   <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
 </header>
 
 <main class="stage">
   <div class="card-zone">
+    <!-- Sélecteur d'orientation : édite la disposition (bulles/GIFs) séparément selon l'écran.
+         Bloc normal (pas absolu) juste au-dessus de .card-frame → centré avec la carte.
+         Isolé dans card-zone (pas dans card-frame) : les positions % des bulles/GIFs sont
+         calculées relativement à card-frame, qui doit rester EXACTEMENT à la taille de la
+         carte pour ne pas décaler les placements déjà enregistrés. -->
+    <!-- Seulement 2 modes : Paysage (écran d'ordi / large) et Portrait (téléphone
+         debout). Le mode "paysage téléphone" séparé a été retiré : sur le vrai
+         swipe, un téléphone tenu à l'horizontale retombe sur la disposition
+         Paysage (elle est déjà large, comme un écran d'ordi). -->
+    <div class="canvas-modes" role="group" aria-label="Écran à éditer">
+      <button class="canvas-mode-btn active" data-mode="desktop" type="button" title="Paysage (écran d'ordinateur)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="cm-word">Paysage</span>
+      </button>
+      <button class="canvas-mode-btn" data-mode="portrait" type="button" title="Portrait (téléphone)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span class="cm-word">Portrait</span>
+      </button>
+    </div>
+    <div class="card-frame">
     <div class="sticker-layer" id="stickerLayer"></div>
     <div class="orb-layer" id="orbLayer"></div>
     <button class="eye-dot eye-dot--card" data-eye="card" title="Masquer la carte (aperçu)" aria-label="Masquer la carte"></button>
@@ -724,6 +768,7 @@ html.perf-lite *{
         <div class="connections" id="connections"></div>
       </div>
     </section>
+    </div>
   </div>
 </main>
 
@@ -851,9 +896,9 @@ const S = {
   avatar:null, banner:null, voice:null, music:null,
   bg:{type:'preset', value:'default'},
   c1:'#393a41', c2:'#393a41', // couleur Discord par défaut
-  orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait,landscape}}
+  orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
-  canvasMode:'desktop', // 'desktop' | 'portrait' | 'landscape' — orientation en cours d'édition
+  canvasMode:'desktop', // 'desktop' ("Paysage" à l'écran) | 'portrait' — orientation en cours d'édition
   connections:{}, // {appId: pseudo}
   handleBlur:false,   // floute le pseudo Discord (@tag) pour éviter les ajouts
   boostShowName:true, // style doré Boost sur le pseudo Matefindr
@@ -1450,11 +1495,15 @@ function addGif(url){
 }
 function renderGifs(){const layer=$('stickerLayer');layer.innerHTML='';S.gifs.forEach((g,i)=>layer.appendChild(makeSticker(g,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
 
-/* ===== Modes d'orientation (Bureau / Portrait / Paysage) =====
+/* ===== Modes d'orientation (Paysage / Portrait) =====
    Chaque bulle/GIF garde une position PAR MODE (posByMode). En basculant, on
    sauvegarde la disposition courante puis on charge (ou auto-place) celle du
-   nouveau mode. La carte se reframe en proportions téléphone via [data-canvas]. */
-const CANVAS_MODES=['desktop','portrait','landscape'];
+   nouveau mode. La carte se reframe en proportions téléphone via [data-canvas].
+   Seulement 2 modes ('desktop' = "Paysage" à l'écran, 'portrait') : le mode
+   paysage-téléphone séparé a été retiré, un téléphone à l'horizontale reprend
+   la disposition Paysage (déjà large). Les anciennes données posLandscape
+   restent lues en repli côté swipe (compat), juste plus éditables ici. */
+const CANVAS_MODES=['desktop','portrait'];
 function snapshotCanvasMode(mode){
   S.orbs.forEach(o=>{ o.posByMode=o.posByMode||{}; if(typeof o.x==='number'&&typeof o.y==='number') o.posByMode[mode]={x:o.x,y:o.y,userPlaced:!!o.userPlaced}; });
   S.gifs.forEach(g=>{ g.posByMode=g.posByMode||{}; g.posByMode[mode]={x:g.x,y:g.y,w:g.w,rot:g.rot}; });
@@ -1474,7 +1523,7 @@ function setCanvasMode(mode){
   applyCanvasMode();
   renderOrbs(); renderGifs();
   persist();
-  const lbl={desktop:'Bureau',portrait:'Portrait',landscape:'Paysage'}[mode];
+  const lbl={desktop:'Paysage',portrait:'Portrait'}[mode];
   toast('Mode '+lbl+' — dispose ton profil pour cette taille');
 }
 // Applique la classe de reframe + l'état actif du sélecteur (sans re-render).
