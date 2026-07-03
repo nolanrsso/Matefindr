@@ -1131,6 +1131,11 @@
       0 0 60px 14px rgba(29,185,84,.45),
       0 14px 30px rgba(0,0,0,.55);
   }
+  /* Pochette qui tourne comme un vinyle → identifie une bulle de son au premier
+     coup d'œil, même sans cliquer dessus. */
+  .swipe-stage .orbit .orb[data-kind="music"] .orb-cover{animation:orbVinylSpin 6s linear infinite}
+  @keyframes orbVinylSpin{to{transform:rotate(360deg)}}
+  html.perf-lite .swipe-stage .orbit .orb[data-kind="music"] .orb-cover{animation:none}
   /* Anime, film & voice : violet/purple (Discord-like) */
   .swipe-stage .orbit .orb[data-kind="anime"],
   .swipe-stage .orbit .orb[data-kind="film"],
@@ -1860,6 +1865,20 @@
   .swipe-actions.dir-right .swipe-btn--yes::before{opacity:1}
   .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
   .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
+  /* Chrono anti-skip (comptes SANS Boost) : le bouton « Passer » est verrouillé
+     10 s par carte, avec un compte à rebours + anneau de progression. Boost = skip direct. */
+  .swipe-cd{display:none;position:absolute;inset:0;border-radius:inherit;place-items:center;z-index:3;
+    font-family:"Clash Display",sans-serif;font-weight:800;font-size:25px;color:#fff;
+    background:rgba(8,5,18,.52);-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px)}
+  .swipe-cd::after{content:"";position:absolute;inset:-4px;border-radius:26px;z-index:-1;
+    background:conic-gradient(#ff5fae calc(var(--cd,0)*1%), rgba(255,255,255,.14) 0);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
+            mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))}
+  .swipe-btn--no.locked{filter:grayscale(.5) brightness(.82);cursor:not-allowed}
+  .swipe-btn--no.locked svg{opacity:0}
+  .swipe-btn--no.locked .swipe-cd{display:grid}
+  .swipe-btn--no.locked:hover{transform:none}
+  .swipe-actions.dir-left .swipe-btn--no.locked{transform:none;box-shadow:0 14px 32px rgba(0,0,0,.45)}
 
   /* My-status floating control — bottom-LEFT, neutral aesthetic */
   .my-status{
@@ -3028,6 +3047,10 @@
   .oeo-orb[data-kind="film"] img{object-position:center 20%}
   .oeo-orb .oeo-orb-ico{font-size:30px}
   .oeo-orb[data-kind="music"]{border-color:rgba(80,255,150,.85);box-shadow:0 12px 30px rgba(29,185,84,.45)}
+  .oeo-orb[data-kind="music"] img{animation:orbVinylSpin 6s linear infinite}
+  html.perf-lite .oeo-orb[data-kind="music"] img{animation:none}
+  /* Pas de spin pendant le drag : suit le geste, ne tourne pas dans le vide. */
+  .oeo-orb--dragging[data-kind="music"] img{animation-play-state:paused}
   .oeo-orb[data-kind="game"]{border-color:rgba(141,203,255,.85);box-shadow:0 12px 30px rgba(47,123,216,.45)}
   .oeo-orb[data-kind="film"]{border-color:rgba(199,165,255,.85);box-shadow:0 12px 30px rgba(139,92,246,.45)}
   .oeo-orb:hover{transform:scale(1.08);box-shadow:0 16px 40px rgba(0,0,0,.7)}
@@ -3355,6 +3378,8 @@
   .acc-orb-circle[data-kind="anime"] .orb-cover,
   .acc-orb-circle[data-kind="film"] .orb-cover{object-position:center 20%}
   .acc-orb-circle[data-kind="music"]{background:linear-gradient(145deg,#1ed760,#1DB954,#0e7a38);box-shadow:0 8px 24px rgba(29,185,84,.5)}
+  .acc-orb-circle[data-kind="music"] .orb-cover{animation:orbVinylSpin 6s linear infinite}
+  html.perf-lite .acc-orb-circle[data-kind="music"] .orb-cover{animation:none}
   .acc-orb-circle[data-kind="game"] {background:linear-gradient(145deg,#FFD080,#FFB66E,#FF4FA0);box-shadow:0 8px 24px rgba(255,79,160,.5)}
   .acc-orb-circle[data-kind="anime"]{background:linear-gradient(145deg,#FF9CC0,#FF7EB6,#b020b8);box-shadow:0 8px 24px rgba(192,38,211,.5)}
   .acc-orb-circle[data-kind="film"] {background:linear-gradient(145deg,#a78bfa,#7c3aed,#4c1d95);box-shadow:0 8px 24px rgba(124,58,237,.5)}
@@ -3587,6 +3612,7 @@
   @media (prefers-reduced-motion: reduce){
     .blob{ animation:none !important; transform:none !important; }
     .bg-stars::before, .bg-stars::after{ animation:none !important; }
+    .orb[data-kind="music"] .orb-cover, .oeo-orb[data-kind="music"] img, .acc-orb-circle[data-kind="music"] .orb-cover{ animation:none !important; }
   }
 </style>
 </head>
@@ -3912,6 +3938,7 @@
     <div class="swipe-actions">
       <button class="swipe-btn swipe-btn--no" id="swipeNo" type="button" aria-label="Passer">
         <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#fff" stroke-width="3.5"><path d="M17 17 L33 33 M33 17 L17 33"/></svg>
+        <span class="swipe-cd" id="swipeCd" aria-hidden="true"></span>
       </button>
       <button class="swipe-btn swipe-btn--yes" id="swipeYes" type="button" aria-label="Liker">
         <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#0d3a00" stroke-width="3.5"><path d="M14 26 L22 33 L35 16"/></svg>
@@ -5561,6 +5588,7 @@
         fakeDeco: (u.boost && u.fakeNitro) ? (u.fakeDeco || null) : null,
         boost: !!u.boost,
         showBoostName: u.boostShowName !== false,
+        nameColor: u.nameColor || null,
         handleBlur: !!u.handleBlur,
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
         activity: {type:'game', title:'Matefindr', sub:'Swipe en cours…'},
@@ -5813,6 +5841,8 @@
         wrap.appendChild(buildCard(p, true));
         renderOrbs(p);
         renderSwipeGifs(p);
+        // Chrono anti-skip : (re)démarre le verrou 10s de la carte (non-Boost).
+        if (typeof startSkipCountdown === 'function') startSkipCountdown();
         // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
         // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
         playProfileEntryMusic(p);
@@ -6114,7 +6144,7 @@
         <div class="body">
           <div>
             <div class="name-row">
-              <span class="name${(p.boost && p.showBoostName !== false) ? ' name--boost' : ''}">${p.name}${(p.boost && p.showBoostName !== false) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
+              <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
             <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span> <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
             <div class="joined">
@@ -7127,8 +7157,46 @@
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });
     }
+    /* ===== Chrono anti-skip (comptes SANS Boost) =====
+       Le skip (bouton « Passer » + glisser à gauche) est verrouillé 10 s par carte
+       pour les non-Boost → le temps de vraiment regarder le profil, et incitation
+       à passer Boost pour skipper directement. Le LIKE n'est jamais bloqué. */
+    const SKIP_LOCK_MS = 10000;
+    let _skipReadyAt = 0, _skipTimer = null;
+    function isBoostUser(){ return !!(state.user && state.user.boost); }
+    function stopSkipCountdown(){ if (_skipTimer){ clearInterval(_skipTimer); _skipTimer = null; } }
+    function unlockSkip(){
+      stopSkipCountdown(); _skipReadyAt = 0;
+      const btn = document.getElementById('swipeNo'); if (!btn) return;
+      btn.classList.remove('locked');
+      const cd = document.getElementById('swipeCd'); if (cd){ cd.textContent = ''; cd.style.setProperty('--cd', 0); }
+    }
+    function startSkipCountdown(){
+      const btn = document.getElementById('swipeNo'), cd = document.getElementById('swipeCd');
+      stopSkipCountdown();
+      if (isBoostUser() || _previewMode){ unlockSkip(); return; } // Boost / aperçu → skip direct
+      _skipReadyAt = Date.now() + SKIP_LOCK_MS;
+      if (btn) btn.classList.add('locked');
+      const tick = () => {
+        const rem = Math.max(0, _skipReadyAt - Date.now());
+        const s = Math.ceil(rem / 1000);
+        if (cd){ cd.textContent = s > 0 ? s : ''; cd.style.setProperty('--cd', 100 - (rem / SKIP_LOCK_MS) * 100); }
+        if (rem <= 0) unlockSkip();
+      };
+      tick(); _skipTimer = setInterval(tick, 150);
+    }
     function commitSwipe(dir, cardEl){
       if (_previewMode) return; // pas de swipe en mode aperçu
+      // Non-Boost : skip verrouillé tant que le chrono tourne → rebond + rappel Boost.
+      if (dir === 'no' && !isBoostUser() && Date.now() < _skipReadyAt){
+        cardEl.style.transition = 'transform .3s cubic-bezier(.2,.8,.3,1)';
+        cardEl.style.transform = '';
+        const nope = cardEl.querySelector('.badge-stamp.nope'); if (nope) nope.style.opacity = 0;
+        const acts = document.querySelector('#screen-swipe .swipe-actions'); if (acts) acts.classList.remove('dir-left','dir-right');
+        const s = Math.ceil((_skipReadyAt - Date.now()) / 1000);
+        if (typeof showToast === 'function') showToast('⏳', 'Encore ' + s + ' s', 'Passe Boost pour skip direct');
+        return;
+      }
       const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;

@@ -144,7 +144,29 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
    vrai gabarit sur téléphone). .card garde déjà overflow:hidden (clip propre) ;
    .body défile en interne pour rester accessible (comme sur le vrai swipe). */
 body[data-canvas="portrait"] .card{width:min(240px,64vw);height:min(400px,52dvh);max-height:min(400px,52dvh)}
-body[data-canvas="portrait"] .card .body{position:absolute;inset:96px 0 0 0;overflow-y:auto;padding-bottom:18px}
+/* inset-top = 152px : sous le bas RÉEL de l'avatar (top:48 + height:94 = 142px),
+   +10px de marge. Le "56px" du vrai site (index.html mobile) chevauche en fait
+   l'avatar de ~86px — bug préexistant côté site, pas reproduit ici volontairement
+   pour ne pas répéter le chevauchement signalé. */
+body[data-canvas="portrait"] .card .body{position:absolute;inset:152px 0 0 0;overflow-y:auto;padding:0 14px 18px;gap:9px}
+/* Contenu de la carte à l'échelle réelle du swipe mobile (index.html, bloc
+   @media max-width:600px .swipe-card ...) — sans ça avatar/texte gardent leur
+   taille "bureau" (140px d'avatar etc.) dans une carte 3x plus étroite = ça
+   déborde et se chevauche. */
+body[data-canvas="portrait"] .card .banner{height:86px}
+body[data-canvas="portrait"] .card .avatar{top:48px;left:14px;width:94px;height:94px;border-width:5px}
+body[data-canvas="portrait"] .card .avatar .ph{font-size:26px}
+body[data-canvas="portrait"] .card .avatar-deco{top:48px;left:14px;width:94px;height:94px}
+body[data-canvas="portrait"] .card .username{font-size:20px}
+body[data-canvas="portrait"] .card .tag{font-size:11px}
+body[data-canvas="portrait"] .card .bio{font-size:11.5px;padding:8px 10px}
+body[data-canvas="portrait"] .card .label-mini{font-size:9px}
+body[data-canvas="portrait"] .card .voice{padding:7px 10px;gap:8px}
+body[data-canvas="portrait"] .card .voice .vmic{width:26px;height:26px}
+body[data-canvas="portrait"] .card .voice .vmic svg{width:14px;height:14px}
+body[data-canvas="portrait"] .card .voice .empty{font-size:11px}
+body[data-canvas="portrait"] .card .conn{width:32px;height:32px}
+body[data-canvas="portrait"] .card .conn img{width:18px;height:18px}
 /* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel).
    Sur .card-frame (pas .card-zone) → reste centré sur la carte, pas sur le sélecteur. */
 body[data-canvas="portrait"] .card-frame::before{
@@ -193,6 +215,12 @@ body[data-canvas="portrait"] .card-frame::before{
 .orb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .orb svg{width:32px;height:32px;position:relative;z-index:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
 .orb[data-kind="music"]{border-color:rgba(80,255,150,.85);box-shadow:0 0 0 2px rgba(29,185,84,.4),0 0 22px 4px rgba(30,215,96,.7),0 12px 30px rgba(0,0,0,.5)}
+/* Pochette qui tourne comme un vinyle → identifie une bulle de son au premier
+   coup d'œil. Suspendue pendant le drag (suit le geste, ne tourne pas dans le vide). */
+.orb[data-kind="music"] img{animation:orbVinylSpin 6s linear infinite}
+@keyframes orbVinylSpin{to{transform:rotate(360deg)}}
+.orb-wrap.dragging .orb[data-kind="music"] img{animation-play-state:paused}
+html.perf-lite .orb[data-kind="music"] img{animation:none}
 .orb[data-kind="game"]{border-color:rgba(141,203,255,.9);box-shadow:0 0 0 2px rgba(47,123,216,.5),0 0 22px 4px rgba(141,203,255,.7),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="film"]{border-color:rgba(199,165,255,.85);box-shadow:0 0 0 2px rgba(139,92,246,.5),0 0 22px 4px rgba(199,165,255,.7),0 12px 30px rgba(0,0,0,.5)}
 /* Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite) */
@@ -464,6 +492,56 @@ body.not-boost .boost-fab{display:inline-flex}
    en doré dans la toolbar elle-même (body.not-boost .tool--boost). */
 @media(max-width:600px){.boost-fab{display:none !important}}
 
+/* ===== Volume des previews audio de l'éditeur (bulles son, musique, vocal) ===== */
+.ed-vol{position:fixed;right:16px;top:70px;z-index:39;display:flex;align-items:center;gap:9px;height:44px;padding:0 14px 0 11px;border-radius:16px;
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.4)}
+.ed-vol .ev-ico{background:none;border:none;padding:0;width:22px;height:22px;color:#fff;cursor:pointer;flex:0 0 auto;display:grid;place-items:center}
+.ed-vol .ev-ico svg{width:20px;height:20px;display:block}
+.ed-vol.muted .ev-w{display:none}
+.ed-vol.muted .ev-slash{display:block !important}
+.ed-vol.muted .ev-ico{color:#FF7EB6}
+.ed-vol input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:5px;border-radius:999px;background:linear-gradient(90deg,#FF7EB6,#9146FF);outline:none;cursor:pointer;flex:0 0 auto}
+.ed-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
+.ed-vol input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
+@media(max-width:600px){.ed-vol{top:62px;right:12px;height:38px;padding:0 11px 0 9px;gap:6px}.ed-vol input[type=range]{width:64px}}
+
+/* ===== Presets de profil (Boost uniquement) — colonne en haut à gauche ===== */
+.pset-panel{position:fixed;left:14px;top:70px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.45)}
+body.not-boost .pset-panel{display:none} /* Presets réservés Boost */
+.pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;padding:0 2px 1px}
+.pset-boost{font-size:8px;color:#3d1e00;background:linear-gradient(180deg,#FFD15C,#F5A623);padding:1px 5px;border-radius:6px;font-weight:900;letter-spacing:.04em}
+.pset-slots{display:flex;flex-direction:column;gap:6px}
+.pset-slot{position:relative;width:42px;height:42px;border-radius:12px;cursor:pointer;display:grid;place-items:center;
+  border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.03);color:var(--dim);font-weight:800;font-size:15px;transition:transform .12s ease,border-color .14s ease,background .14s ease}
+.pset-slot--empty{border-style:dashed}
+.pset-slot--empty:hover{border-color:rgba(179,128,255,.85);color:#fff;background:rgba(145,70,255,.14)}
+.pset-slot--filled{border-color:rgba(255,255,255,.2);color:#fff;overflow:visible}
+.pset-slot--filled:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.9)}
+.pset-slot .pset-swatch{position:absolute;inset:3px;border-radius:9px;opacity:.9;pointer-events:none}
+.pset-slot .pset-num{position:relative;z-index:1;font-size:13px;text-shadow:0 1px 5px rgba(0,0,0,.8)}
+.pset-slot .pset-del{position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:#E8194B;color:#fff;border:2px solid #14092e;
+  display:none;place-items:center;font-size:12px;line-height:1;cursor:pointer;z-index:3;padding:0}
+.pset-slot--filled:hover .pset-del{display:grid}
+/* Bouton toggle — visible seulement sur mobile (desktop = panneau toujours ouvert). */
+.pset-toggle{display:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;place-items:center}
+.pset-toggle svg{width:20px;height:20px}
+.pset-toggle:hover{background:rgba(145,70,255,.16)}
+@media(max-width:600px){
+  /* Mobile : la carte occupe ~92vw → un panneau permanent recouvrirait l'avatar.
+     On replie : bouton toggle (dans la bande AU-DESSUS de la carte, pas de chevauchement),
+     et les slots s'ouvrent en pop-over à la demande par-dessus la carte. */
+  .pset-panel{left:10px;top:58px;padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .pset-toggle{display:grid;background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(18,12,42,.92));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 28px rgba(0,0,0,.45)}
+  .pset-panel.open .pset-toggle{border-color:rgba(179,128,255,.9);background:rgba(145,70,255,.22)}
+  .pset-body{display:none;position:absolute;top:46px;left:0;padding:8px;border-radius:14px;
+    background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(18,12,42,.94));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 14px 40px rgba(0,0,0,.5)}
+  .pset-panel.open .pset-body{display:block}
+  .pset-head{display:none}
+  .pset-slots{flex-direction:row}
+  .pset-slot{width:38px;height:38px;border-radius:10px}
+}
+
 /* Connexions (logos d'apps) */
 .connections{display:flex;flex-wrap:wrap;gap:9px}
 .conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease;padding:0}
@@ -568,6 +646,31 @@ body.not-boost .boost-fab{display:inline-flex}
 .c2-info .wl{font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
 .c2-hex{padding:8px 11px;border-radius:10px;color:#fff;outline:none;text-transform:uppercase;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2);font-family:inherit;font-size:13px}
 .c2-hex:focus{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
+/* ===== Sélecteur de couleurs simplifié (carte + pseudo) ===== */
+.csec-lbl{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.07em}
+.csec-lbl.sub{margin-top:4px;font-size:10px;opacity:.85}
+.csec-div{height:1px;background:var(--stroke-2);margin:6px 0 2px}
+.grad-prev{height:56px;border-radius:14px;border:1px solid var(--stroke-2);box-shadow:0 6px 20px rgba(0,0,0,.35) inset,0 4px 14px rgba(0,0,0,.3)}
+/* Deux gros pastilles cliquables (ouvrent le sélecteur natif) */
+.col2-row2{display:flex;gap:10px}
+.c2-dot.big{width:auto;flex:1;height:56px;border-radius:14px;display:grid;place-items:end center;padding-bottom:6px}
+.c2-dot.big .cdot-lbl{position:relative;z-index:2;font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);pointer-events:none}
+.swatches.big{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.swatches.big button{width:100%;height:40px;border-radius:11px;border:2px solid rgba(255,255,255,.14)}
+.swatches.big button:hover{transform:scale(1.06);border-color:rgba(255,255,255,.35)}
+/* Pseudo : aperçu + palette rapide */
+.name-prev{font-family:"Clash Display",sans-serif;font-weight:800;font-size:26px;line-height:1.1;padding:10px 12px;border-radius:12px;
+  background:rgba(0,0,0,.28);border:1px solid var(--stroke-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.name-colors{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.name-colors .nc-dot{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.18);cursor:pointer;transition:transform .12s ease,border-color .12s ease;padding:0}
+.name-colors .nc-dot:hover{transform:scale(1.12)}
+.name-colors .nc-dot.sel{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.28)}
+.name-colors .nc-def{height:34px;padding:0 12px;border-radius:17px;border:1.5px dashed var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer}
+.name-colors .nc-def.sel{border-style:solid;border-color:#fff;background:rgba(255,255,255,.12)}
+.name-colors .nc-custom{position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;cursor:pointer;flex:0 0 auto;
+  border:2px solid rgba(255,255,255,.18);background:conic-gradient(from 0deg,#ff5555,#ffd83d,#3bd17c,#5be9ff,#9146ff,#ff5fae,#ff5555);display:grid;place-items:center}
+.name-colors .nc-custom input[type=color]{position:absolute;inset:-6px;width:calc(100% + 12px);height:calc(100% + 12px);border:none;padding:0;background:none;cursor:pointer;opacity:0}
+.name-colors .nc-custom span{color:#fff;font-weight:900;font-size:18px;text-shadow:0 1px 4px rgba(0,0,0,.7);pointer-events:none}
 
 /* musique */
 .scrub-zone{margin-top:12px}
@@ -722,6 +825,7 @@ html.perf-lite *{
 /* Réduction de mouvement système : fige seulement le fond, garde le rendu. */
 @media (prefers-reduced-motion: reduce){
   .blob{ animation:none !important; transform:none !important; }
+  .orb[data-kind="music"] img{ animation:none !important; }
 }
 </style>
 </head>
@@ -737,6 +841,26 @@ html.perf-lite *{
   <span class="crumb">/ éditeur de profil</span>
   <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
 </header>
+
+<!-- Presets de profil (Boost) : slot vide = enregistrer l'état actuel ; slot rempli = charger ; × = supprimer.
+     Mobile : replié derrière un bouton toggle (la carte y occupe presque toute la largeur). -->
+<aside class="pset-panel" id="psetPanel" aria-label="Presets de profil">
+  <button class="pset-toggle" id="psetToggle" type="button" aria-label="Presets" title="Presets">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+  </button>
+  <div class="pset-body">
+    <div class="pset-head">Presets <span class="pset-boost">Boost</span></div>
+    <div class="pset-slots" id="psetSlots"></div>
+  </div>
+</aside>
+
+<!-- Volume des previews audio de l'éditeur -->
+<div class="ed-vol" id="edVol" aria-label="Volume des previews audio">
+  <button class="ev-ico" id="edVolIco" type="button" aria-label="Couper / rétablir le son">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="ev-w" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="ev-slash" d="M3 3l18 18" style="display:none"/></svg>
+  </button>
+  <input id="edVolRange" type="range" min="0" max="100" value="50" aria-label="Volume des previews">
+</div>
 
 <main class="stage">
   <div class="card-zone">
@@ -904,6 +1028,7 @@ const S = {
   avatar:null, banner:null, voice:null, music:null,
   bg:{type:'preset', value:'default'},
   c1:'#393a41', c2:'#393a41', // couleur Discord par défaut
+  nameColor:null,             // couleur du pseudo (null = blanc par défaut)
   orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
   canvasMode:'desktop', // 'desktop' ("Paysage" à l'écran) | 'portrait' — orientation en cours d'édition
@@ -934,9 +1059,13 @@ function hslToHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12;const a=s*Math.min
 /* ===== Style doré Boost + flou du pseudo Discord ===== */
 function applyUsernameBoostStyle(){
   const slot=$('usernameSlot'); if(!slot) return;
+  const hasCustom = !!(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor));
   const isBoost=!document.body.classList.contains('not-boost');
-  const on = isBoost && (S.boostShowName!==false);
-  slot.classList.toggle('username--boost', on);
+  // Couleur perso du pseudo > style doré Boost (les deux sont exclusifs).
+  const gold = isBoost && (S.boostShowName!==false) && !hasCustom;
+  slot.classList.toggle('username--boost', gold);
+  slot.style.color = hasCustom ? S.nameColor : '';
+  slot.style.webkitTextFillColor = hasCustom ? S.nameColor : '';
 }
 function applyTagBlur(){
   const tag=document.querySelector('.tag'); if(!tag) return;
@@ -1114,7 +1243,7 @@ let voiceAudio=null;
 const VMIC_SVG='<span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span>';
 const VPLAY_SVG='<svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>';
 const VPAUSE_SVG='<svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
-function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.innerHTML=VPLAY_SVG;const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.innerHTML=VPLAY_SVG;return;}voiceAudio=new Audio(S.voice.url);voiceAudio.play();play.innerHTML=VPAUSE_SVG;voiceAudio.addEventListener('ended',()=>play.innerHTML=VPLAY_SVG);});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
+function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.innerHTML=VPLAY_SVG;const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.innerHTML=VPLAY_SVG;return;}voiceAudio=new Audio(S.voice.url);voiceAudio.volume=editorVol;voiceAudio.play();play.innerHTML=VPAUSE_SVG;voiceAudio.addEventListener('ended',()=>play.innerHTML=VPLAY_SVG);});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
 
 /* ===== SHEET ===== */
 let activeTool=null;
@@ -1317,8 +1446,21 @@ function stageBounds(margin){
 function orbBounds(margin){
   const s=stageBounds(margin);
   const card=document.getElementById('card');
-  if(card){ const c=card.getBoundingClientRect(); const top=Math.max(s.minY,c.top+margin), bottom=Math.min(s.maxY,c.bottom-margin); return {minX:s.minX, maxX:s.maxX, minY:Math.min(top,bottom), maxY:Math.max(top,bottom)}; }
-  return s;
+  if(!card) return s;
+  const c=card.getBoundingClientRect();
+  if(document.body.getAttribute('data-canvas')==='portrait'){
+    // Portrait : la zone utilisable = le cadre-téléphone (repère pointillé,
+    // même formule que .card-frame::before : min(94vw,420px) x min(84vh,760px))
+    // centré sur la carte → les bulles peuvent se poser AU-DESSUS/EN-DESSOUS
+    // de la carte, pas seulement sur ses côtés.
+    const cx=c.left+c.width/2, cy=c.top+c.height/2;
+    const fw=Math.min(window.innerWidth*0.94,420), fh=Math.min(window.innerHeight*0.84,760);
+    const left=Math.max(s.minX,cx-fw/2+margin), right=Math.min(s.maxX,cx+fw/2-margin);
+    const top=Math.max(s.minY,cy-fh/2+margin), bottom=Math.min(s.maxY,cy+fh/2-margin);
+    return {minX:Math.min(left,right), maxX:Math.max(left,right), minY:Math.min(top,bottom), maxY:Math.max(top,bottom)};
+  }
+  const top=Math.max(s.minY,c.top+margin), bottom=Math.min(s.maxY,c.bottom-margin);
+  return {minX:s.minX, maxX:s.maxX, minY:Math.min(top,bottom), maxY:Math.max(top,bottom)};
 }
 /* Guide visuel des zones de placement (affiché pendant un drag). */
 function showGuide(mode){const g=$('dropGuide');if(!g)return;g.setAttribute('data-mode',mode);g.classList.add('show');}
@@ -1579,30 +1721,49 @@ function renderBgSheet(sh){
 $('fileBg').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const isVid=f.type.startsWith('video/');applyBg({type:'custom',value:URL.createObjectURL(f),video:isVid});toast('Envoi du fond…');const url=await edUpload(f,'bg');if(url){applyBg({type:'custom',value:url,video:isVid});persist();toast('Fond personnalisé appliqué');}else{toast('⚠️ Envoi échoué — fond local seulement');}e.target.value='';});
 function applyBg(bg){S.bg=bg;const layer=$('bgLayer');layer.innerHTML='';if(bg.type==='preset'){layer.className='bg-layer bg-'+bg.value;if(bg.value==='default')layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';}else{layer.className='bg-layer';if(bg.video){const v=document.createElement('video');v.src=bg.value;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;layer.appendChild(v);}else{const im=document.createElement('img');im.src=bg.value;layer.appendChild(im);}}if(typeof persist==='function')persist();}
 
-/* ===== 4. COULEUR (dégradé de la carte : primaire + secondaire indépendantes) ===== */
+/* ===== 4. COULEURS (carte + pseudo) — sélecteur simplifié ===== */
 const SWATCH_PAIRS=[['#9146FF','#4A1BC1'],['#FF7EB6','#C92866'],['#5BE9FF','#1B6FC1'],['#5865F2','#404EED'],['#3BD17C','#1EA362'],['#FFB66E','#E8590C'],['#FF4FA0','#9146FF'],['#FFD83D','#FF7EB6']];
+const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','#3BD17C','#FFB66E','#FF5555','#5865F2'];
 function renderColorSheet(sh){
-  sh.innerHTML=sheetHeader('Couleur du profil (dégradé de la carte)')+`
+  const nc = (S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor : null;
+  sh.innerHTML=sheetHeader('Couleurs du profil')+`
     <div class="color2">
-      <div class="grad-prev" id="gradPrev"></div>
-      <div class="col2-row">
-        <span class="c2-dot"><input type="color" id="colP" value="${S.c1.toLowerCase()}"></span>
-        <div class="c2-info"><span class="wl">Couleur primaire</span><input id="hexP" value="${S.c1.toUpperCase()}" maxlength="7" spellcheck="false" class="c2-hex"></div>
+      <div class="csec-lbl">Couleur de la carte</div>
+      <div class="grad-prev" id="gradPrev" style="background:linear-gradient(180deg,${S.c1},${S.c2})"></div>
+      <div class="col2-row2">
+        <label class="c2-dot big" style="background:${S.c1}"><input type="color" id="colP" value="${S.c1.toLowerCase()}"><span class="cdot-lbl">Haut</span></label>
+        <label class="c2-dot big" style="background:${S.c2}"><input type="color" id="colS" value="${S.c2.toLowerCase()}"><span class="cdot-lbl">Bas</span></label>
       </div>
-      <div class="col2-row">
-        <span class="c2-dot"><input type="color" id="colS" value="${S.c2.toLowerCase()}"></span>
-        <div class="c2-info"><span class="wl">Couleur secondaire</span><input id="hexS" value="${S.c2.toUpperCase()}" maxlength="7" spellcheck="false" class="c2-hex"></div>
-      </div>
-      <div class="swatches">${SWATCH_PAIRS.map(p=>`<button data-c1="${p[0]}" data-c2="${p[1]}" title="${p[0]} → ${p[1]}" style="background:linear-gradient(180deg,${p[0]},${p[1]})"></button>`).join('')}</div>
+      <div class="csec-lbl sub">Dégradés en 1 clic</div>
+      <div class="swatches big">${SWATCH_PAIRS.map(p=>`<button data-c1="${p[0]}" data-c2="${p[1]}" title="${p[0]} → ${p[1]}" style="background:linear-gradient(180deg,${p[0]},${p[1]})"></button>`).join('')}</div>
       <button class="btn color-reset" id="colReset">↺ Couleur Discord</button>
+
+      <div class="csec-div"></div>
+      <div class="csec-lbl">Couleur du pseudo</div>
+      <div class="name-prev" id="namePrev" style="color:${nc||'#fff'}">${esc(S.username||'Pseudo')}</div>
+      <div class="name-colors">
+        <button class="nc-def${nc?'':' sel'}" data-nc="">Défaut</button>
+        ${NAME_COLORS.map(c=>`<button class="nc-dot${nc&&nc.toLowerCase()===c.toLowerCase()?' sel':''}" data-nc="${c}" title="${c}" style="background:${c}"></button>`).join('')}
+        <label class="nc-custom" title="Couleur personnalisée"><input type="color" id="colName" value="${nc||'#ffffff'}"><span>+</span></label>
+      </div>
     </div>`;
-  const norm=v=>{v=v.trim();if(/^[0-9a-f]{6}$/i.test(v))v='#'+v;return v;};
-  sh.querySelector('#colP').addEventListener('input',e=>applyColors(e.target.value, S.c2));
-  sh.querySelector('#colS').addEventListener('input',e=>applyColors(S.c1, e.target.value));
-  sh.querySelector('#hexP').addEventListener('input',e=>{const v=norm(e.target.value);if(/^#[0-9a-f]{6}$/i.test(v))applyColors(v, S.c2);});
-  sh.querySelector('#hexS').addEventListener('input',e=>{const v=norm(e.target.value);if(/^#[0-9a-f]{6}$/i.test(v))applyColors(S.c1, v);});
-  sh.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>applyColors(b.dataset.c1,b.dataset.c2)));
-  sh.querySelector('#colReset').addEventListener('click',()=>{applyColors('#5865F2','#404EED');toast('Dégradé Discord appliqué');});
+  const gp=()=>{ const g=sh.querySelector('#gradPrev'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
+    const dp=sh.querySelector('#colP').closest('.c2-dot'); if(dp) dp.style.background=S.c1;
+    const ds=sh.querySelector('#colS').closest('.c2-dot'); if(ds) ds.style.background=S.c2; };
+  sh.querySelector('#colP').addEventListener('input',e=>{ applyColors(e.target.value, S.c2); gp(); });
+  sh.querySelector('#colS').addEventListener('input',e=>{ applyColors(S.c1, e.target.value); gp(); });
+  sh.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); sh.querySelector('#colP').value=S.c1.toLowerCase(); sh.querySelector('#colS').value=S.c2.toLowerCase(); gp(); }));
+  sh.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#5865F2','#404EED'); sh.querySelector('#colP').value='#5865f2'; sh.querySelector('#colS').value='#404eed'; gp(); toast('Dégradé Discord appliqué'); });
+  // ---- Couleur du pseudo ----
+  function setNameColor(v){
+    S.nameColor = (v && /^#[0-9a-f]{6}$/i.test(v)) ? v : null;
+    applyUsernameBoostStyle(); if(typeof persist==='function') persist();
+    const np=sh.querySelector('#namePrev'); if(np) np.style.color = S.nameColor || '#fff';
+    sh.querySelectorAll('.nc-dot,.nc-def').forEach(b=>{ const bv=b.dataset.nc||''; b.classList.toggle('sel', bv ? (!!S.nameColor && bv.toLowerCase()===S.nameColor.toLowerCase()) : !S.nameColor); });
+    toast(S.nameColor ? 'Couleur du pseudo appliquée' : 'Pseudo remis en blanc');
+  }
+  sh.querySelectorAll('[data-nc]').forEach(b=>b.addEventListener('click',()=>setNameColor(b.dataset.nc)));
+  sh.querySelector('#colName').addEventListener('input',e=>setNameColor(e.target.value));
 }
 
 /* ===== 5. MUSIQUE D'ENTRÉE ===== */
@@ -1610,13 +1771,14 @@ const music={sel:null,startSec:0,audio:null};
 function stopAudition(){if(music.audio){music.audio.pause();music.audio=null;}if(_previewAudio){_previewAudio.pause();_previewAudio=null;}if(typeof _playingOrbEl!=='undefined'&&_playingOrbEl){setOrbPlaying(_playingOrbEl,false);_playingOrbEl=null;}const b=document.getElementById('audBtn');if(b)b.textContent='▶ Écouter l\'extrait';}
 // Lecture d'un extrait au clic (recherche musique : bulles + entrée). Re-clic = stop.
 let _previewAudio=null;
-function playPreview(url){ if(!url)return; try{ if(_previewAudio&&_previewAudio._u===url&&!_previewAudio.paused){_previewAudio.pause();_previewAudio=null;return;} if(_previewAudio)_previewAudio.pause(); _previewAudio=new Audio(url); _previewAudio._u=url; _previewAudio.volume=.5; _previewAudio.play().catch(()=>{}); }catch(_){} }
+function playPreview(url){ if(!url)return; try{ if(_previewAudio&&_previewAudio._u===url&&!_previewAudio.paused){_previewAudio.pause();_previewAudio=null;return;} if(_previewAudio)_previewAudio.pause(); _previewAudio=new Audio(url); _previewAudio._u=url; _previewAudio.volume=editorVol; _previewAudio.play().catch(()=>{}); }catch(_){} }
 /* Clic sur une bulle MUSIQUE placée → joue/arrête son extrait (rien ne joue sans ce clic). */
 let _playingOrbEl=null;
 function setOrbPlaying(orbEl,on){ if(!orbEl)return; orbEl.classList.toggle('playing',on); const pb=orbEl.querySelector('.orb-play'); if(pb)pb.textContent=on?'⏸':'▶'; }
 function toggleOrbMusic(o,orbEl){
   if(!o||!o.previewUrl)return;
   const same=_previewAudio&&_previewAudio._u===o.previewUrl&&!_previewAudio.paused;
+  if(!same) stopAmbiencePreview(); // une bulle son démarre → coupe la musique d'ambiance (pas de superposition)
   if(_playingOrbEl&&_playingOrbEl!==orbEl) setOrbPlaying(_playingOrbEl,false);
   playPreview(o.previewUrl); // joue, ou met en pause si déjà en train de jouer ce titre
   if(same){ setOrbPlaying(orbEl,false); _playingOrbEl=null; }
@@ -1638,10 +1800,19 @@ function renderMusicSheet(sh){
 }
 function selectTrack(t){stopAudition();music.sel=t;music.startSec=0;const sh=$('sheet');sh.querySelector('#trackList').innerHTML=`<div class="sugg" style="border-color:rgba(145,70,255,.6)"><img src="${t.cover}"><span class="ti"><b>${esc(t.title)}</b><small>${esc(t.artist)}</small></span></div>`;sh.querySelector('#selZone').hidden=false;const audBtn=sh.querySelector('#audBtn');audBtn.onclick=()=>playPreview(t.previewUrl);sh.querySelector('#musicOk').onclick=()=>{S.music=Object.assign({},t,{startSec:0});renderMusicChip();persist();closeSheet();toast('Musique d\'entrée enregistrée');};if(t.previewUrl)playPreview(t.previewUrl);}
 let chipAudio=null;
-function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}chipAudio=new Audio(m.previewUrl);chipAudio.volume=.5;chipAudio.play().catch(()=>{});};}
+function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}stopBubblePreview();chipAudio=new Audio(m.previewUrl);chipAudio.volume=editorVol;chipAudio.play().catch(()=>{});};}
 /* étiquette « musique d'entrée » au-dessus du bouton Annuler */
 let nowAudio=null;
-function renderMusicNow(){const el=$('musicNow');if(!el)return;if(!S.music){el.classList.remove('show');el.innerHTML='';if(nowAudio){nowAudio.pause();nowAudio=null;}return;}const m=S.music;el.innerHTML=`<span class="cov" style="background-image:url('${m.cover||''}')"></span><span class="mi"><span class="note">Musique d'entrée</span><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><button class="mn-del" title="Supprimer la musique d'entrée"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;el.classList.add('show');el.onclick=e=>{if(e.target.closest('.mn-del')){e.stopPropagation();if(nowAudio){nowAudio.pause();nowAudio=null;}S.music=null;renderMusicNow();renderMusicChip();persist();toast('Musique d\'entrée supprimée');return;}if(nowAudio&&!nowAudio.paused){nowAudio.pause();nowAudio=null;return;}nowAudio=new Audio(m.previewUrl);nowAudio.volume=.5;nowAudio.play().catch(()=>{});};}
+/* ===== Volume audio de l'éditeur (previews : bulles, musique d'ambiance, vocal) =====
+   Un seul réglage local (localStorage) appliqué à toutes les lectures de l'éditeur. */
+let editorVol=(function(){try{const v=parseFloat(localStorage.getItem('matefindr_editor_vol'));return (isFinite(v)&&v>=0&&v<=1)?v:.5;}catch(_){return .5;}})();
+function setEditorVol(v){ editorVol=Math.max(0,Math.min(1,+v||0)); try{localStorage.setItem('matefindr_editor_vol',String(editorVol));}catch(_){}
+  [_previewAudio,chipAudio,nowAudio,voiceAudio].forEach(a=>{ if(a){ try{a.volume=editorVol;}catch(_){} } }); }
+// Coupe les previews de musique d'AMBIANCE (musique d'entrée) — quand une bulle son démarre.
+function stopAmbiencePreview(){ if(nowAudio){nowAudio.pause();nowAudio=null;} if(chipAudio){chipAudio.pause();chipAudio=null;} }
+// Coupe la preview d'une BULLE son — quand la musique d'ambiance démarre.
+function stopBubblePreview(){ if(_previewAudio){_previewAudio.pause();_previewAudio=null;} if(_playingOrbEl){setOrbPlaying(_playingOrbEl,false);_playingOrbEl=null;} }
+function renderMusicNow(){const el=$('musicNow');if(!el)return;if(!S.music){el.classList.remove('show');el.innerHTML='';if(nowAudio){nowAudio.pause();nowAudio=null;}return;}const m=S.music;el.innerHTML=`<span class="cov" style="background-image:url('${m.cover||''}')"></span><span class="mi"><span class="note">Musique d'entrée</span><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><button class="mn-del" title="Supprimer la musique d'entrée"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;el.classList.add('show');el.onclick=e=>{if(e.target.closest('.mn-del')){e.stopPropagation();if(nowAudio){nowAudio.pause();nowAudio=null;}S.music=null;renderMusicNow();renderMusicChip();persist();toast('Musique d\'entrée supprimée');return;}if(nowAudio&&!nowAudio.paused){nowAudio.pause();nowAudio=null;return;}stopBubblePreview();nowAudio=new Audio(m.previewUrl);nowAudio.volume=editorVol;nowAudio.play().catch(()=>{});};}
 /* yeux : masquer visuellement carte / bulles / GIFs (éditeur uniquement, pas sauvegardé) */
 const EYE_OPEN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
 const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.6 10.6 0 0 1 12 19.5C5 19.5 1.5 12 1.5 12a18.5 18.5 0 0 1 5.2-6M9.9 4.7A10.9 10.9 0 0 1 12 4.5c7 0 10.5 7.5 10.5 7.5a18.6 18.6 0 0 1-2.2 3.2M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
@@ -1883,6 +2054,7 @@ function writeState(){
   }
   if(S.banner){ st.user.bannerUrl=S.banner.url; st.user.bannerCustom=true; st.user.bannerPos={posX:S.banner.posX,posY:S.banner.posY,scale:S.banner.scale}; }
   st.user.profileColor=S.c1; st.user.profileColor2=S.c2;
+  st.user.nameColor=(S.nameColor&&/^#[0-9a-f]{6}$/i.test(S.nameColor))?S.nameColor:null; // couleur du pseudo (null = blanc)
   if(S.bg.type==='preset'){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=false; }
   else if(S.bg.type==='custom' && /^https?:/.test(S.bg.value||'')){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=!!S.bg.video; } // URL Storage uniquement (jamais un blob:)
   // Capture les positions live du mode en cours d'édition dans posByMode.
@@ -1960,6 +2132,7 @@ function buildDbProfile(st){
     initial:(u.displayName||'T').charAt(0).toUpperCase(),
     avatarUrl:u.avatarUrl||null, avatarPos:u.avatarPos||null, bannerUrl:u.bannerUrl||null, bannerPos:u.bannerPos||null, decorationUrl:u.decorationUrl||null,
     profileColor:u.profileColor||'#393a41', profileColor2:u.profileColor2||'#393a41',
+    nameColor:u.nameColor||null,
     accentColor:u.accentColor||null, profileVoice:u.profileVoice||null,
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
@@ -2018,6 +2191,7 @@ function hydrateFromSite(){
     S.c1=u.profileColor; S.c2=(u.profileColor2&&/^#[0-9a-f]{6}$/i.test(u.profileColor2))?u.profileColor2:darken(S.c1,.55);
     const r=document.documentElement.style; r.setProperty('--accent',S.c1); r.setProperty('--c1',S.c1); r.setProperty('--c2',S.c2);
   }
+  S.nameColor=(u.nameColor&&/^#[0-9a-f]{6}$/i.test(u.nameColor))?u.nameColor:null; applyUsernameBoostStyle();
   if(u.boostBg){ if(/^https?:/.test(u.boostBg)) applyBg({type:'custom',value:u.boostBg,video:!!u.boostBgVideo}); else applyBg({type:'preset',value:u.boostBg}); }
   if(Array.isArray(p.userOrbs)&&p.userOrbs.length){
     S.orbs=p.userOrbs.map(o=>{
@@ -2059,6 +2233,92 @@ drawIdleWave();
 hydrateFromSite();
 applyCanvasMode(); // pose data-canvas + état actif du sélecteur (défaut : bureau)
 renderOrbs(); // affiche au moins la bulle "+" même sans bulle existante
+
+/* ===== Volume des previews audio : câblage du slider ===== */
+(function initEdVol(){
+  const wrap=$('edVol'), range=$('edVolRange'), ico=$('edVolIco');
+  if(!wrap||!range) return;
+  let lastNonZero = editorVol>0 ? editorVol : .5;
+  const paint=()=>{ range.value=Math.round(editorVol*100); wrap.classList.toggle('muted', editorVol<=0); };
+  range.addEventListener('input',()=>{ const v=(+range.value)/100; if(v>0) lastNonZero=v; setEditorVol(v); wrap.classList.toggle('muted', v<=0); });
+  ico.addEventListener('click',()=>{ if(editorVol>0){ lastNonZero=editorVol; setEditorVol(0);} else setEditorVol(lastNonZero||.5); paint(); });
+  paint();
+})();
+
+/* ===== Presets de profil (Boost, 5 max) =====
+   Snapshot complet des champs personnalisables de S → chargeable en 1 clic.
+   Slot vide = enregistre l'état courant ; slot rempli = charge ; × = supprime. */
+const PSET_KEY='matefindr_presets', PSET_MAX=5;
+function loadPresets(){ try{ const a=JSON.parse(localStorage.getItem(PSET_KEY)||'[]'); return (Array.isArray(a)?a:[]).slice(0,PSET_MAX); }catch(_){ return []; } }
+function savePresetsLS(){ try{ localStorage.setItem(PSET_KEY, JSON.stringify(PRESETS.slice(0,PSET_MAX))); }catch(_){} }
+let PRESETS=loadPresets(); while(PRESETS.length<PSET_MAX) PRESETS.push(null);
+// Capture les champs de profil personnalisables (positions live figées via posByMode).
+function snapshotProfile(){
+  if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
+  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','connections','handleBlur','boostShowName','nameCustom','avatarCustom'];
+  const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
+}
+// Applique un snapshot en réinitialisant TOUT (hydrateFromSite n'écrase pas l'absent → inutilisable ici).
+function applyPreset(snap){
+  if(!snap) return;
+  try{
+    const c=JSON.parse(JSON.stringify(snap));
+    S.username=c.username||S.username; S.bio=c.bio||'';
+    S.avatar=c.avatar||null; S.banner=c.banner||null;
+    S.voice=c.voice||null; S.music=c.music||null;
+    S.c1=c.c1||S.c1; S.c2=c.c2||S.c2;
+    S.nameColor=(c.nameColor&&/^#[0-9a-f]{6}$/i.test(c.nameColor))?c.nameColor:null;
+    S.orbs=Array.isArray(c.orbs)?c.orbs:[]; S.gifs=Array.isArray(c.gifs)?c.gifs:[];
+    S.connections=c.connections||{};
+    S.handleBlur=!!c.handleBlur; S.boostShowName=(c.boostShowName!==false);
+    S.nameCustom=!!c.nameCustom; S.avatarCustom=!!c.avatarCustom;
+    $('usernameSlot').textContent=S.username; applyUsernameBoostStyle(); applyTagBlur();
+    $('bioSlot').textContent=S.bio||'Clique ici pour écrire ta bio ✨';
+    applyColors(S.c1,S.c2);
+    applyBg(c.bg||{type:'preset',value:'default'});
+    setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+((S.username||'T').charAt(0).toUpperCase())+'</div>');
+    setCroppedMedia($('bannerSlot'),S.banner,'<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>');
+    if(typeof restoreCanvasMode==='function') restoreCanvasMode(S.canvasMode);
+    renderOrbs(); renderGifs(); renderVoice(); renderMusicChip();
+    if(typeof renderConnections==='function') renderConnections();
+    if(typeof updateOrbCount==='function') updateOrbCount();
+    if(typeof updateGifCount==='function') updateGifCount();
+    persist();
+  }catch(e){ console.warn('[editor] applyPreset', e); }
+}
+function renderPresets(){
+  const box=$('psetSlots'); if(!box) return; box.innerHTML='';
+  for(let i=0;i<PSET_MAX;i++){
+    const p=PRESETS[i];
+    const slot=document.createElement('div');
+    slot.className='pset-slot '+(p?'pset-slot--filled':'pset-slot--empty');
+    slot.title=p?('Charger le preset '+(i+1)):('Enregistrer le profil actuel dans le preset '+(i+1));
+    if(p){
+      const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
+      slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span><button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
+      slot.querySelector('.pset-del').addEventListener('click',e=>{ e.stopPropagation(); PRESETS[i]=null; savePresetsLS(); renderPresets(); toast('Preset '+(i+1)+' supprimé'); });
+    } else {
+      slot.innerHTML='<span class="pset-num">+</span>';
+    }
+    slot.addEventListener('click',()=>{
+      if(document.body.classList.contains('not-boost')) return; // filet (panel déjà caché en CSS)
+      if(PRESETS[i]){ applyPreset(PRESETS[i]); toast('Preset '+(i+1)+' chargé'); }
+      else { PRESETS[i]=snapshotProfile(); savePresetsLS(); renderPresets(); toast('Preset '+(i+1)+' enregistré ✅'); }
+    });
+    box.appendChild(slot);
+  }
+}
+renderPresets();
+/* Toggle mobile : ouvre/ferme le pop-over des slots (desktop = toujours ouvert via CSS). */
+(function initPsetToggle(){
+  const panel=$('psetPanel'), toggle=$('psetToggle');
+  if(!panel||!toggle) return;
+  toggle.addEventListener('click',e=>{ e.stopPropagation(); panel.classList.toggle('open'); });
+  // Ferme au clic en dehors du panneau.
+  document.addEventListener('click',e=>{ if(panel.classList.contains('open') && !panel.contains(e.target)) panel.classList.remove('open'); });
+  // Après une action sur un slot (charger/enregistrer), on referme le pop-over sur mobile.
+  $('psetSlots').addEventListener('click',()=>{ if(window.matchMedia('(max-width:600px)').matches) setTimeout(()=>panel.classList.remove('open'),150); });
+})();
 
 /* ===== Gate Matefindr Boost : GIFs / Fond perso / Musique d'entrée sont réservés au Boost. ===== */
 function userHasBoost(){ try{ const st=readSite(); return !!(st.user&&st.user.boost); }catch(_){ return false; } }
