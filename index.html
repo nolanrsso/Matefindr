@@ -489,7 +489,10 @@
 
   @media (max-width:780px){
     header{margin:10px 14px 0}
-    h1{font-size:clamp(72px,22vw,140px)}
+    /* Le titre « Matefindr » (un seul mot, ratio largeur/police ≈ 5.3) DOIT tenir :
+       plafonné à ~15vw (+ garde-fou hauteur pour paysage) → jamais coupé sur les
+       côtés dans la zone tablette / téléphone paysage (601–780px). */
+    h1{font-size:min(15vw, 24vh, 128px)}
   }
 
   /* Mobile : interface épurée — pas de bulles, hero plus confortable */
@@ -499,8 +502,9 @@
     /* Contenu de l'accueil centré verticalement (le titre « Matefindr » au milieu
        de l'écran) plutôt que collé en haut. */
     .hero{padding:14px 18px 28px;justify-content:center;gap:2px}
-    h1{font-size:clamp(64px,26vw,110px);margin:14px auto 10px}
-    .tagline{font-size:clamp(17px,5.2vw,22px);margin:0 0 10px}
+    /* Idem : le titre tient toujours (≈15.5vw max) au lieu d'être coupé sur les bords. */
+    h1{font-size:min(15.5vw, 96px);letter-spacing:calc(-.045em + 1px);margin:12px auto 10px}
+    .tagline{font-size:clamp(16px,5vw,21px);margin:0 0 10px}
     .sub{font-size:14.5px;max-width:34ch;margin:0 auto 22px}
     .cta-row{width:100%}
     .cta-row .btn-primary{width:100%;justify-content:center;padding:16px 22px}
