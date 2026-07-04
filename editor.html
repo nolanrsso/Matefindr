@@ -494,7 +494,7 @@ body.not-boost .boost-fab{display:inline-flex}
 
 /* ===== Volume des previews audio de l'éditeur (bulles son, musique, vocal) ===== */
 .ed-vol{position:fixed;right:16px;top:70px;z-index:39;display:flex;align-items:center;gap:9px;height:44px;padding:0 14px 0 11px;border-radius:16px;
-  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.4)}
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:none;backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.4)}
 .ed-vol .ev-ico{background:none;border:none;padding:0;width:22px;height:22px;color:#fff;cursor:pointer;flex:0 0 auto;display:grid;place-items:center}
 .ed-vol .ev-ico svg{width:20px;height:20px;display:block}
 .ed-vol.muted .ev-w{display:none}
@@ -511,10 +511,10 @@ body.not-boost .boost-fab{display:inline-flex}
 body.not-boost .pset-panel{display:none} /* Presets réservés Boost */
 .pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;padding:0 2px 1px}
 .pset-boost{font-size:8px;color:#3d1e00;background:linear-gradient(180deg,#FFD15C,#F5A623);padding:1px 5px;border-radius:6px;font-weight:900;letter-spacing:.04em}
-.pset-slots{display:flex;flex-direction:column;gap:6px}
+.pset-slots{display:flex;flex-direction:row;gap:6px}
 .pset-slot{position:relative;width:42px;height:42px;border-radius:12px;cursor:pointer;display:grid;place-items:center;
   border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.03);color:var(--dim);font-weight:800;font-size:15px;transition:transform .12s ease,border-color .14s ease,background .14s ease}
-.pset-slot--empty{border-style:dashed}
+.pset-slot--empty{border-style:dashed;background:transparent;color:rgba(255,255,255,.5)}
 .pset-slot--empty:hover{border-color:rgba(179,128,255,.85);color:#fff;background:rgba(145,70,255,.14)}
 .pset-slot--filled{border-color:rgba(255,255,255,.2);color:#fff;overflow:visible}
 .pset-slot--filled:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.9)}
@@ -849,7 +849,7 @@ html.perf-lite *{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
   </button>
   <div class="pset-body">
-    <div class="pset-head">Presets <span class="pset-boost">Boost</span></div>
+    <div class="pset-head">Presets</div>
     <div class="pset-slots" id="psetSlots"></div>
   </div>
 </aside>
@@ -2249,9 +2249,10 @@ renderOrbs(); // affiche au moins la bulle "+" même sans bulle existante
    Snapshot complet des champs personnalisables de S → chargeable en 1 clic.
    Slot vide = enregistre l'état courant ; slot rempli = charge ; × = supprime. */
 const PSET_KEY='matefindr_presets', PSET_MAX=5;
-function loadPresets(){ try{ const a=JSON.parse(localStorage.getItem(PSET_KEY)||'[]'); return (Array.isArray(a)?a:[]).slice(0,PSET_MAX); }catch(_){ return []; } }
+// Liste COMPACTE (sans trous) : 0 à 5 presets enregistrés, dans l'ordre.
+function loadPresets(){ try{ const a=JSON.parse(localStorage.getItem(PSET_KEY)||'[]'); return (Array.isArray(a)?a:[]).filter(Boolean).slice(0,PSET_MAX); }catch(_){ return []; } }
 function savePresetsLS(){ try{ localStorage.setItem(PSET_KEY, JSON.stringify(PRESETS.slice(0,PSET_MAX))); }catch(_){} }
-let PRESETS=loadPresets(); while(PRESETS.length<PSET_MAX) PRESETS.push(null);
+let PRESETS=loadPresets();
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
@@ -2286,26 +2287,28 @@ function applyPreset(snap){
     persist();
   }catch(e){ console.warn('[editor] applyPreset', e); }
 }
+/* Affichage progressif : au départ un seul slot « + » (transparent). À chaque
+   enregistrement, il devient numéroté (1, 2, …) et un nouveau « + » apparaît à sa
+   droite, jusqu'à 5 presets max (plus de « + » au-delà). */
 function renderPresets(){
   const box=$('psetSlots'); if(!box) return; box.innerHTML='';
-  for(let i=0;i<PSET_MAX;i++){
-    const p=PRESETS[i];
+  PRESETS.forEach((p,i)=>{
     const slot=document.createElement('div');
-    slot.className='pset-slot '+(p?'pset-slot--filled':'pset-slot--empty');
-    slot.title=p?('Charger le preset '+(i+1)):('Enregistrer le profil actuel dans le preset '+(i+1));
-    if(p){
-      const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
-      slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span><button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
-      slot.querySelector('.pset-del').addEventListener('click',e=>{ e.stopPropagation(); PRESETS[i]=null; savePresetsLS(); renderPresets(); toast('Preset '+(i+1)+' supprimé'); });
-    } else {
-      slot.innerHTML='<span class="pset-num">+</span>';
-    }
-    slot.addEventListener('click',()=>{
-      if(document.body.classList.contains('not-boost')) return; // filet (panel déjà caché en CSS)
-      if(PRESETS[i]){ applyPreset(PRESETS[i]); toast('Preset '+(i+1)+' chargé'); }
-      else { PRESETS[i]=snapshotProfile(); savePresetsLS(); renderPresets(); toast('Preset '+(i+1)+' enregistré ✅'); }
-    });
+    slot.className='pset-slot pset-slot--filled';
+    slot.title='Charger le preset '+(i+1);
+    const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
+    slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span><button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
+    slot.querySelector('.pset-del').addEventListener('click',e=>{ e.stopPropagation(); PRESETS.splice(i,1); savePresetsLS(); renderPresets(); toast('Preset supprimé'); });
+    slot.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost'))return; applyPreset(PRESETS[i]); toast('Preset '+(i+1)+' chargé'); });
     box.appendChild(slot);
+  });
+  if(PRESETS.length<PSET_MAX){
+    const add=document.createElement('div');
+    add.className='pset-slot pset-slot--empty';
+    add.title='Enregistrer le profil actuel comme preset '+(PRESETS.length+1);
+    add.innerHTML='<span class="pset-num">+</span>';
+    add.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost'))return; PRESETS.push(snapshotProfile()); savePresetsLS(); renderPresets(); toast('Preset '+PRESETS.length+' enregistré ✅'); });
+    box.appendChild(add);
   }
 }
 renderPresets();
