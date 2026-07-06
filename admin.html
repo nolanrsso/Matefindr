@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Matefindr — Admin</title>
+<meta name="robots" content="noindex,nofollow" />
+<!-- OUTIL ADMIN LOCAL — NE JAMAIS DÉPLOYER. Exclu du déploiement via .vercelignore.
+     La clé service_role est saisie par l'admin et stockée UNIQUEMENT dans ce navigateur
+     (localStorage). Elle ne quitte jamais ta machine et n'est pas dans ce fichier. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#0D0B1E; --panel:#151228; --panel2:#1c1836; --stroke:rgba(255,255,255,.10); --stroke2:rgba(255,255,255,.16);
+    --ink:#fff; --dim:#b9bbbe; --mute:#7c7e8c; --violet:#9146FF; --violet2:#6B2BFF; --pink:#FF4FA0; --green:#3BD17C; --red:#E8194B; --gold:#FFD15C;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Inter",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:radial-gradient(1100px 700px at 15% -10%,#201642 0%,transparent 55%),radial-gradient(900px 700px at 95% 0%,#2a1636 0%,transparent 50%),var(--bg);min-height:100vh}
+  a{color:var(--violet)}
+  button{font-family:inherit;cursor:pointer}
+  .wrap{max-width:1280px;margin:0 auto;padding:20px}
+
+  /* ===== Login gate ===== */
+  .gate{min-height:100vh;display:grid;place-items:center;padding:24px}
+  .gate .box{width:min(480px,100%);background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));border:1px solid var(--stroke2);border-radius:22px;padding:28px 26px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px)}
+  .gate h1{margin:0 0 4px;font-size:22px}
+  .gate .sub{color:var(--dim);font-size:13.5px;margin-bottom:18px;line-height:1.5}
+  .gate label{display:block;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin:14px 0 6px}
+  .gate input{width:100%;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke2);color:#fff;font-size:14px;outline:none}
+  .gate input:focus{border-color:rgba(145,70,255,.7);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
+  .gate .warn{margin-top:14px;font-size:12px;color:#ffcf6b;background:rgba(255,193,84,.08);border:1px solid rgba(255,193,84,.3);border-radius:11px;padding:10px 12px;line-height:1.45}
+  .gate .role-pick{display:flex;gap:8px;margin-top:6px}
+  .gate .role-pick button{flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--stroke2);background:rgba(255,255,255,.04);color:var(--dim);font-weight:700;font-size:12.5px}
+  .gate .role-pick button.on{border-color:var(--violet);background:rgba(145,70,255,.16);color:#fff}
+  .btn{padding:13px;border-radius:13px;border:none;font-weight:800;font-size:15px;color:#fff;background:linear-gradient(180deg,var(--violet),var(--violet2));box-shadow:0 12px 30px rgba(107,43,255,.4);width:100%;margin-top:20px}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:rgba(255,255,255,.06);box-shadow:none;color:#fff}
+  .err{color:#ff7a8a;font-size:13px;margin-top:10px;min-height:16px}
+
+  /* ===== Dashboard ===== */
+  .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .topbar h1{font-size:19px;margin:0}
+  .topbar .count{background:rgba(145,70,255,.16);border:1px solid rgba(145,70,255,.35);color:#d7bbff;font-weight:800;font-size:13px;padding:4px 11px;border-radius:999px}
+  .topbar .rolebadge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .rolebadge.full{background:rgba(59,209,124,.16);border:1px solid rgba(59,209,124,.4);color:#77e6a8}
+  .rolebadge.ro{background:rgba(255,193,84,.14);border:1px solid rgba(255,193,84,.4);color:#ffcf6b}
+  .topbar .spacer{flex:1}
+  .topbar input[type=search]{padding:9px 13px;border-radius:11px;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke2);color:#fff;font-size:13.5px;outline:none;width:min(280px,60vw)}
+  .topbar input[type=search]:focus{border-color:rgba(145,70,255,.6)}
+  .tbtn{padding:9px 14px;border-radius:11px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:13px}
+  .tbtn:hover{background:rgba(255,255,255,.1)}
+  .chk{display:inline-flex;align-items:center;gap:7px;color:var(--dim);font-size:13px}
+
+  table{width:100%;border-collapse:separate;border-spacing:0 6px}
+  th{text-align:left;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);padding:0 12px 6px}
+  td{padding:10px 12px;background:var(--panel);border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+  td:first-child{border-left:1px solid var(--stroke);border-radius:12px 0 0 12px}
+  td:last-child{border-right:1px solid var(--stroke);border-radius:0 12px 12px 0}
+  tr.banned td{background:rgba(232,25,75,.08);border-color:rgba(232,25,75,.28)}
+  .u-cell{display:flex;align-items:center;gap:11px;min-width:0}
+  .u-av{width:40px;height:40px;border-radius:50%;flex:none;background:#2a2740 center/cover;display:grid;place-items:center;font-weight:800;color:#fff;overflow:hidden}
+  .u-av img{width:100%;height:100%;object-fit:cover}
+  .u-name{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .u-tag{color:var(--mute);font-size:12px}
+  .email{font-size:13px;color:#dcdde3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--dim)}
+  .pill.boost{background:linear-gradient(90deg,#FFD15C,#F5A623);color:#3d1e00}
+  .pill.g-il{background:rgba(34,135,247,.2);color:#7db8ff}
+  .pill.g-elle{background:rgba(255,79,160,.2);color:#ff9ecb}
+  .pill.ban{background:rgba(232,25,75,.2);color:#ff8098}
+  .row-actions{display:flex;gap:7px;justify-content:flex-end}
+  .a-btn{padding:7px 12px;border-radius:9px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:12.5px}
+  .a-btn:hover{background:rgba(255,255,255,.12)}
+  .a-btn.ban{border-color:rgba(232,25,75,.5);color:#ff8098;background:rgba(232,25,75,.1)}
+  .a-btn.ban:hover{background:rgba(232,25,75,.22)}
+  .a-btn.unban{border-color:rgba(59,209,124,.5);color:#77e6a8;background:rgba(59,209,124,.1)}
+  .a-btn:disabled{opacity:.5;cursor:default}
+  .muted{color:var(--mute)}
+  .empty{text-align:center;color:var(--dim);padding:40px}
+
+  /* ===== Modal profil ===== */
+  .modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(6,5,14,.72);backdrop-filter:blur(8px)}
+  .modal.on{display:flex}
+  .modal .m-box{width:min(920px,100%);max-height:92vh;overflow:auto;background:var(--panel2);border:1px solid var(--stroke2);border-radius:22px;box-shadow:0 40px 100px rgba(0,0,0,.7)}
+  .m-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--stroke);position:sticky;top:0;background:var(--panel2);z-index:2}
+  .m-head h2{margin:0;font-size:18px}
+  .m-head .spacer{flex:1}
+  .m-close{width:34px;height:34px;border-radius:10px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-size:18px;line-height:1}
+  .m-grid{display:grid;grid-template-columns:340px 1fr;gap:22px;padding:20px}
+  @media(max-width:760px){.m-grid{grid-template-columns:1fr}}
+
+  /* Carte profil (aperçu façon swipe) */
+  .card{border-radius:20px;overflow:hidden;border:1px solid var(--stroke);background:linear-gradient(180deg,var(--pc1,#393a41),var(--pc2,#1a1a1d));box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  .card .banner{height:96px;background:#2a2740 center/cover}
+  .card .cbody{position:relative;padding:52px 16px 16px}
+  .card .avatar{position:absolute;top:-40px;left:16px;width:84px;height:84px;border-radius:50%;border:5px solid var(--pc1,#1c1d22);background:#2a2740 center/cover;display:grid;place-items:center;font-size:30px;font-weight:800;overflow:hidden}
+  .card .avatar img{width:100%;height:100%;object-fit:cover}
+  .card .cname{font-family:"Inter";font-weight:800;font-size:22px;line-height:1.1}
+  .card .ctag{color:rgba(255,255,255,.7);font-size:12.5px;margin-top:2px}
+  .card .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .card .cbio{margin-top:12px;background:rgba(0,0,0,.28);border-radius:12px;padding:9px 11px;font-size:13px;line-height:1.45;color:#eceef4;white-space:pre-wrap;word-break:break-word}
+  .card .corbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .card .corb{width:40px;height:40px;border-radius:50%;background:#2a2740 center/cover;display:grid;place-items:center;font-size:18px;border:1.5px solid rgba(255,255,255,.25);overflow:hidden}
+  .card .corb img{width:100%;height:100%;object-fit:cover}
+  .card .cconn{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .card .cconn .c{font-size:11px;background:rgba(255,255,255,.08);border-radius:8px;padding:3px 8px;color:#dcdde3}
+
+  .info dl{margin:0;display:grid;grid-template-columns:130px 1fr;gap:8px 12px;font-size:13.5px;align-items:baseline}
+  .info dt{color:var(--mute);font-weight:700}
+  .info dd{margin:0;word-break:break-word}
+  .info .sec{margin:6px 0 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);grid-column:1/-1;border-top:1px solid var(--stroke);padding-top:12px}
+  .info .m-actions{grid-column:1/-1;display:flex;gap:10px;margin-top:16px}
+  .info .m-actions .a-btn{padding:11px 18px;font-size:14px}
+  details.raw{grid-column:1/-1;margin-top:12px}
+  details.raw summary{cursor:pointer;color:var(--dim);font-size:12.5px}
+  details.raw pre{background:#0f0d1e;border:1px solid var(--stroke);border-radius:10px;padding:12px;font-size:11.5px;overflow:auto;max-height:280px;color:#c9ccda}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;background:#20203a;border:1px solid var(--stroke2);padding:12px 18px;border-radius:12px;font-weight:600;font-size:14px;z-index:80;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .spinner{width:44px;height:44px;border:4px solid rgba(255,255,255,.15);border-top-color:var(--violet);border-radius:50%;animation:spin .8s linear infinite;margin:60px auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ===== Écran de connexion ===== -->
+<div class="gate" id="gate">
+  <div class="box">
+    <h1>🛡️ Matefindr — Admin</h1>
+    <p class="sub">Tableau de bord de modération. Tous les comptes de <b>matefindr.com</b>, emails et profils, avec bannissement.</p>
+    <label>URL Supabase</label>
+    <input id="supaUrl" value="https://pdhffpxssagclexttfox.supabase.co" spellcheck="false" />
+    <label>Type de clé</label>
+    <div class="role-pick" id="rolePick">
+      <button data-role="service" class="on">service_role (complet : email + ban)</button>
+      <button data-role="anon">anon (lecture seule)</button>
+    </div>
+    <label id="keyLabel">Clé service_role</label>
+    <input id="supaKey" type="password" placeholder="eyJhbGci… (Supabase → Settings → API)" spellcheck="false" autocomplete="off" />
+    <button class="btn" id="connectBtn">Se connecter</button>
+    <div class="err" id="gateErr"></div>
+    <div class="warn">⚠️ La clé <b>service_role</b> donne un accès total à ta base. Elle reste <b>uniquement dans ce navigateur</b> (jamais envoyée ailleurs, pas dans le code). N'ouvre cette page qu'en local et ne la déploie jamais.</div>
+  </div>
+</div>
+
+<!-- ===== Tableau de bord ===== -->
+<div class="wrap" id="dash" style="display:none">
+  <div class="topbar">
+    <h1>🛡️ Comptes Matefindr</h1>
+    <span class="count" id="count">…</span>
+    <span class="rolebadge" id="roleBadge"></span>
+    <span class="spacer"></span>
+    <input type="search" id="search" placeholder="Rechercher pseudo, email, discord…" />
+    <label class="chk"><input type="checkbox" id="onlyBanned" /> Bannis seulement</label>
+    <button class="tbtn" id="refreshBtn">↻ Actualiser</button>
+    <button class="tbtn" id="logoutBtn">Déconnexion</button>
+  </div>
+  <div id="tableWrap"></div>
+</div>
+
+<!-- ===== Modal profil ===== -->
+<div class="modal" id="modal">
+  <div class="m-box" id="modalBox"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const LS_URL='mf_admin_url', LS_KEY='mf_admin_key', LS_ROLE='mf_admin_role';
+  let sb=null, ROLE='service', ACCOUNTS=[];
+
+  let toastT;
+  function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+  const esc=s=>(s==null?'':String(s)).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+  const initial=n=>((n||'?').trim().charAt(0)||'?').toUpperCase();
+  function fmtDate(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return '—'; } }
+
+  /* ---- Login gate ---- */
+  $('rolePick').addEventListener('click',e=>{ const b=e.target.closest('[data-role]'); if(!b)return;
+    ROLE=b.dataset.role; document.querySelectorAll('#rolePick button').forEach(x=>x.classList.toggle('on',x===b));
+    $('keyLabel').textContent = ROLE==='service' ? 'Clé service_role' : 'Clé anon (publique)';
+  });
+  $('connectBtn').addEventListener('click',connect);
+  $('supaKey').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
+
+  function connect(){
+    const url=$('supaUrl').value.trim(), key=$('supaKey').value.trim();
+    if(!/^https:\/\/.+\.supabase\.co$/.test(url)){ $('gateErr').textContent='URL Supabase invalide.'; return; }
+    if(key.length<40){ $('gateErr').textContent='Clé invalide.'; return; }
+    try{ sb=window.supabase.createClient(url,key,{auth:{autoRefreshToken:false,persistSession:false}}); }
+    catch(e){ $('gateErr').textContent='Erreur client : '+e.message; return; }
+    try{ localStorage.setItem(LS_URL,url); localStorage.setItem(LS_KEY,key); localStorage.setItem(LS_ROLE,ROLE); }catch(_){}
+    startDash();
+  }
+  function startDash(){ $('gate').style.display='none'; $('dash').style.display='block'; loadAll(); }
+
+  $('logoutBtn').addEventListener('click',()=>{
+    try{ localStorage.removeItem(LS_KEY); }catch(_){}
+    location.reload();
+  });
+  $('refreshBtn').addEventListener('click',loadAll);
+  $('search').addEventListener('input',renderTable);
+  $('onlyBanned').addEventListener('change',renderTable);
+
+  /* ---- Chargement des comptes ---- */
+  async function loadAll(){
+    $('tableWrap').innerHTML='<div class="spinner"></div>';
+    // 1) Profils (lisibles avec anon aussi)
+    let profiles=[];
+    try{ const { data, error }=await sb.from('profiles').select('*'); if(error) throw error; profiles=data||[]; }
+    catch(e){ $('tableWrap').innerHTML='<div class="empty">Erreur lecture profils : '+esc(e.message)+'</div>'; return; }
+    const profById={}; profiles.forEach(p=>{ profById[p.id]=p; });
+
+    // 2) Comptes auth (email + ban) — service_role uniquement
+    let users=null;
+    if(ROLE==='service'){
+      try{
+        users=[]; let page=1;
+        for(;;){ const { data, error }=await sb.auth.admin.listUsers({ page, perPage:1000 });
+          if(error) throw error;
+          const list=(data&&data.users)||[]; users=users.concat(list);
+          if(list.length<1000) break; page++;
+        }
+      }catch(e){ toast('Auth admin indisponible ('+e.message+') → mode lecture seule'); users=null; }
+    }
+
+    if(users){
+      // Un compte = un utilisateur auth, enrichi de son profil.
+      ACCOUNTS=users.map(u=>({ id:u.id, email:u.email||'—', created_at:u.created_at, last_sign_in:u.last_sign_in_at,
+        banned_until:u.banned_until||(u.user_metadata&&u.user_metadata.banned_until)||null, prof:profById[u.id]||null }));
+      // Profils orphelins (sans user auth correspondant) — on les montre aussi.
+      const seen=new Set(users.map(u=>u.id));
+      profiles.forEach(p=>{ if(!seen.has(p.id)) ACCOUNTS.push({ id:p.id, email:'(profil seul)', created_at:p.created_at, banned_until:null, prof:p }); });
+      $('roleBadge').className='rolebadge full'; $('roleBadge').textContent='Accès complet';
+    }else{
+      ACCOUNTS=profiles.map(p=>({ id:p.id, email:'—', created_at:p.created_at, banned_until:null, prof:p }));
+      $('roleBadge').className='rolebadge ro'; $('roleBadge').textContent='Lecture seule (pas d’email/ban)';
+    }
+    ACCOUNTS.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
+    renderTable();
+  }
+
+  function isBanned(a){ return a.banned_until && new Date(a.banned_until) > new Date(); }
+  function d(a){ return (a.prof&&a.prof.data)||{}; } // raccourci JSONB data
+
+  function renderTable(){
+    const q=($('search').value||'').toLowerCase().trim();
+    const onlyBan=$('onlyBanned').checked;
+    let rows=ACCOUNTS.filter(a=>{
+      if(onlyBan && !isBanned(a)) return false;
+      if(!q) return true;
+      const dd=d(a); const hay=[a.prof&&a.prof.display_name, dd.name, a.email, a.prof&&a.prof.discord_id, dd.country].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+    $('count').textContent = rows.length+' / '+ACCOUNTS.length+' comptes';
+    if(!rows.length){ $('tableWrap').innerHTML='<div class="empty">Aucun compte.</div>'; return; }
+
+    const genderPill=g=>{ g=(g||'').toLowerCase(); if(g==='il'||g==='male'||g==='homme')return '<span class="pill g-il">Il</span>'; if(g==='elle'||g==='female'||g==='femme')return '<span class="pill g-elle">Elle</span>'; return g?('<span class="pill">'+esc(g)+'</span>'):'<span class="muted">—</span>'; };
+
+    const html=['<table><thead><tr>',
+      '<th>Compte</th><th>Âge</th><th>Sexe</th><th>Email</th><th>Pays</th><th>Recherche</th><th>Inscrit</th><th></th>',
+      '</tr></thead><tbody>'];
+    rows.forEach((a,idx)=>{
+      const dd=d(a); const p=a.prof||{};
+      const name=p.display_name||dd.name||'—';
+      const av=p.avatar_url||dd.avatarUrl;
+      const banned=isBanned(a);
+      html.push('<tr class="'+(banned?'banned':'')+'" data-i="'+ACCOUNTS.indexOf(a)+'">');
+      html.push('<td><div class="u-cell"><div class="u-av">'+(av?'<img src="'+esc(av)+'" alt="">':esc(initial(name)))+'</div>'
+        +'<div style="min-width:0"><div class="u-name">'+esc(name)+(dd.boost?' <span class="pill boost">Boost</span>':'')+(banned?' <span class="pill ban">Banni</span>':'')+'</div>'
+        +'<div class="u-tag">'+(p.discord_id?('id '+esc(p.discord_id)):'')+'</div></div></div></td>');
+      html.push('<td>'+(dd.age?esc(dd.age):'<span class="muted">—</span>')+'</td>');
+      html.push('<td>'+genderPill(dd.gender)+'</td>');
+      html.push('<td><span class="email" title="'+esc(a.email)+'">'+esc(a.email)+'</span></td>');
+      html.push('<td>'+((dd.countryFlag||'')+' '+esc(dd.country||''))+(dd.country?'':'<span class="muted">—</span>')+'</td>');
+      html.push('<td><span class="pill">'+esc(dd.looking||p.look_for||'—')+'</span></td>');
+      html.push('<td class="muted">'+fmtDate(a.created_at)+'</td>');
+      html.push('<td><div class="row-actions"><button class="a-btn" data-view="'+ACCOUNTS.indexOf(a)+'">Voir</button>'
+        + (ROLE==='service' ? ('<button class="a-btn '+(banned?'unban':'ban')+'" data-ban="'+ACCOUNTS.indexOf(a)+'">'+(banned?'Débannir':'Bannir')+'</button>') : '')
+        +'</div></td>');
+      html.push('</tr>');
+    });
+    html.push('</tbody></table>');
+    $('tableWrap').innerHTML=html.join('');
+
+    $('tableWrap').querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>openProfile(ACCOUNTS[+b.dataset.view])));
+    $('tableWrap').querySelectorAll('[data-ban]').forEach(b=>b.addEventListener('click',()=>toggleBan(ACCOUNTS[+b.dataset.ban],b)));
+    $('tableWrap').querySelectorAll('tr[data-i]').forEach(tr=>tr.addEventListener('click',e=>{ if(e.target.closest('button'))return; openProfile(ACCOUNTS[+tr.dataset.i]); }));
+  }
+
+  /* ---- Bannir / débannir (service_role) ---- */
+  async function toggleBan(a, btn){
+    if(ROLE!=='service'){ toast('Nécessite la clé service_role'); return; }
+    const banned=isBanned(a);
+    const name=(a.prof&&a.prof.display_name)||d(a).name||a.email;
+    if(!banned && !confirm('Bannir « '+name+' » ?\nIl ne pourra plus se reconnecter.')) return;
+    if(btn) btn.disabled=true;
+    try{
+      const { data, error }=await sb.auth.admin.updateUserById(a.id, { ban_duration: banned ? 'none' : '876000h' });
+      if(error) throw error;
+      a.banned_until = banned ? null : (data&&data.user&&data.user.banned_until) || new Date(Date.now()+1e11).toISOString();
+      toast(banned ? '✅ Débanni' : '🚫 Banni : '+name);
+      renderTable();
+      if($('modal').classList.contains('on')) openProfile(a); // refresh modal si ouvert
+    }catch(e){ toast('Échec : '+e.message); if(btn) btn.disabled=false; }
+  }
+
+  /* ---- Modal : profil complet ---- */
+  function openProfile(a){
+    const dd=d(a); const p=a.prof||{}; const banned=isBanned(a);
+    const c1=dd.profileColor||dd.c1||'#393a41', c2=dd.profileColor2||dd.c2||'#1a1a1d';
+    const name=p.display_name||dd.name||'—';
+    const av=p.avatar_url||dd.avatarUrl, banner=p.banner_url||dd.bannerUrl;
+    const nameStyle = (dd.nameColor&&/^#[0-9a-f]{6}$/i.test(dd.nameColor)) ? ('color:'+dd.nameColor) : (dd.boost&&dd.showBoostName!==false?'color:#FFD15C':'color:#fff');
+    const orbs=(dd.orbs||[]).slice(0,16).map(o=>{
+      const emo={music:'🎵',game:'🎮',film:'🎬',anime:'📺',voice:'🎤'}[o.kind]||'✨';
+      return '<div class="corb" title="'+esc((o.title||'')+(o.rank?' · '+o.rank:''))+'">'+(o.cover?'<img src="'+esc(o.cover)+'">':emo)+'</div>';
+    }).join('');
+    const conns=Object.entries(dd.connections||{}).map(([k,v])=>'<span class="c">'+esc(k)+' : '+esc(v)+'</span>').join('');
+    const gifs=(dd.gifs||[]).length;
+
+    const card='<div class="card" style="--pc1:'+esc(c1)+';--pc2:'+esc(c2)+'">'
+      +'<div class="banner" style="'+(banner?'background-image:url(\''+esc(banner)+'\')':'')+'"></div>'
+      +'<div class="cbody"><div class="avatar" style="--pc1:'+esc(c1)+';'+(av?'background-image:url(\''+esc(av)+'\')':'')+'">'+(av?'':esc(initial(name)))+'</div>'
+      +'<div class="cname" style="'+nameStyle+'">'+esc(name)+'</div>'
+      +'<div class="ctag">@'+esc(dd.tag||p.discord_tag||'—')+' · '+esc(dd.looking||p.look_for||'')+'</div>'
+      +'<div class="badges">'+(dd.age?'<span class="pill">'+esc(dd.age)+' ans</span>':'')+(dd.gender?'<span class="pill">'+esc(dd.gender)+'</span>':'')+((dd.country)?'<span class="pill">'+(esc(dd.countryFlag||'')+' '+esc(dd.country))+'</span>':'')+(dd.boost?'<span class="pill boost">Boost</span>':'')+'</div>'
+      +(dd.bio?('<div class="cbio">'+esc(dd.bio)+'</div>'):'')
+      +(orbs?('<div class="corbs">'+orbs+'</div>'):'')
+      +(conns?('<div class="cconn">'+conns+'</div>'):'')
+      +'</div></div>';
+
+    const info='<div class="info"><dl>'
+      +'<dt>Pseudo</dt><dd>'+esc(name)+'</dd>'
+      +'<dt>Email</dt><dd>'+esc(a.email)+'</dd>'
+      +'<dt>Âge</dt><dd>'+esc(dd.age||'—')+'</dd>'
+      +'<dt>Sexe</dt><dd>'+esc(dd.gender||'—')+'</dd>'
+      +'<dt>Pays</dt><dd>'+((dd.countryFlag||'')+' '+esc(dd.country||'—'))+'</dd>'
+      +'<dt>Recherche</dt><dd>'+esc(dd.looking||p.look_for||'—')+'</dd>'
+      +'<dt>Discord ID</dt><dd>'+esc(p.discord_id||'—')+'</dd>'
+      +'<dt>Boost</dt><dd>'+(dd.boost?'Oui ✦':'Non')+'</dd>'
+      +'<dt>Bulles / GIFs</dt><dd>'+((dd.orbs||[]).length)+' bulles · '+gifs+' GIFs</dd>'
+      +'<dt>Vocal</dt><dd>'+(dd.profileVoice?'Oui':'Non')+'</dd>'
+      +'<div class="sec">Compte</div>'
+      +'<dt>User ID</dt><dd style="font-size:12px">'+esc(a.id)+'</dd>'
+      +'<dt>Inscrit le</dt><dd>'+fmtDate(a.created_at)+'</dd>'
+      +'<dt>Dernière connexion</dt><dd>'+(a.last_sign_in?fmtDate(a.last_sign_in):'—')+'</dd>'
+      +'<dt>Statut</dt><dd>'+(banned?'<span class="pill ban">Banni jusqu’au '+fmtDate(a.banned_until)+'</span>':'<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Actif</span>')+'</dd>'
+      + (ROLE==='service' ? ('<div class="m-actions"><button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button></div>') : '')
+      +'<details class="raw"><summary>Données brutes (JSON)</summary><pre>'+esc(JSON.stringify(a.prof||{},null,2))+'</pre></details>'
+      +'</dl></div>';
+
+    $('modalBox').innerHTML='<div class="m-head"><h2>'+esc(name)+'</h2><span class="spacer"></span><button class="m-close" id="mClose">×</button></div>'
+      +'<div class="m-grid">'+card+info+'</div>';
+    $('modal').classList.add('on');
+    $('mClose').addEventListener('click',closeModal);
+    const mb=$('modalBan'); if(mb) mb.addEventListener('click',()=>toggleBan(a,mb));
+  }
+  function closeModal(){ $('modal').classList.remove('on'); }
+  $('modal').addEventListener('click',e=>{ if(e.target===$('modal')) closeModal(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+  /* ---- Auto-reconnexion si clé déjà en mémoire ---- */
+  (function boot(){
+    try{
+      const url=localStorage.getItem(LS_URL), key=localStorage.getItem(LS_KEY), role=localStorage.getItem(LS_ROLE);
+      if(url) $('supaUrl').value=url;
+      if(role){ ROLE=role; document.querySelectorAll('#rolePick button').forEach(x=>x.classList.toggle('on',x.dataset.role===role)); $('keyLabel').textContent = role==='service'?'Clé service_role':'Clé anon (publique)'; }
+      if(url&&key){ sb=window.supabase.createClient(url,key,{auth:{autoRefreshToken:false,persistSession:false}}); startDash(); }
+    }catch(_){}
+  })();
+})();
+</script>
+</body>
+</html>
