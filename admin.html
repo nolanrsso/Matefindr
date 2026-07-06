@@ -52,25 +52,27 @@
   .tbtn:hover{background:rgba(255,255,255,.1)}
   .chk{display:inline-flex;align-items:center;gap:7px;color:var(--dim);font-size:13px}
 
-  table{width:100%;border-collapse:separate;border-spacing:0 6px}
-  th{text-align:left;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);padding:0 12px 6px}
-  td{padding:10px 12px;background:var(--panel);border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
-  td:first-child{border-left:1px solid var(--stroke);border-radius:12px 0 0 12px}
-  td:last-child{border-right:1px solid var(--stroke);border-radius:0 12px 12px 0}
+  table{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:13px}
+  th{text-align:left;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);padding:0 10px 4px}
+  td{padding:5px 10px;background:var(--panel);border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+  td:first-child{border-left:1px solid var(--stroke);border-radius:9px 0 0 9px}
+  td:last-child{border-right:1px solid var(--stroke);border-radius:0 9px 9px 0}
   tr.banned td{background:rgba(232,25,75,.08);border-color:rgba(232,25,75,.28)}
-  .u-cell{display:flex;align-items:center;gap:11px;min-width:0}
-  .u-av{width:40px;height:40px;border-radius:50%;flex:none;background:#2a2740 center/cover;display:grid;place-items:center;font-weight:800;color:#fff;overflow:hidden}
+  tr[data-i]{cursor:pointer}
+  tr[data-i]:hover td{background:var(--panel2)}
+  .u-cell{display:flex;align-items:center;gap:9px;min-width:0}
+  .u-av{width:30px;height:30px;border-radius:50%;flex:none;background:#2a2740 center/cover;display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;overflow:hidden}
   .u-av img{width:100%;height:100%;object-fit:cover}
-  .u-name{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
-  .u-tag{color:var(--mute);font-size:12px}
-  .email{font-size:13px;color:#dcdde3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}
-  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--dim)}
+  .u-name{font-weight:700;font-size:13.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+  .u-tag{color:var(--mute);font-size:11px}
+  .email{font-size:12.5px;color:#dcdde3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .pill{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.07);color:var(--dim)}
   .pill.boost{background:linear-gradient(90deg,#FFD15C,#F5A623);color:#3d1e00}
   .pill.g-il{background:rgba(34,135,247,.2);color:#7db8ff}
   .pill.g-elle{background:rgba(255,79,160,.2);color:#ff9ecb}
   .pill.ban{background:rgba(232,25,75,.2);color:#ff8098}
-  .row-actions{display:flex;gap:7px;justify-content:flex-end}
-  .a-btn{padding:7px 12px;border-radius:9px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:12.5px}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end}
+  .a-btn{padding:5px 10px;border-radius:8px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:12px}
   .a-btn:hover{background:rgba(255,255,255,.12)}
   .a-btn.ban{border-color:rgba(232,25,75,.5);color:#ff8098;background:rgba(232,25,75,.1)}
   .a-btn.ban:hover{background:rgba(232,25,75,.22)}
