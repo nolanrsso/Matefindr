@@ -1246,6 +1246,20 @@
   .orbit.orbit--dynamic .orb-wrap--music .orb{width:115px;height:115px}
   .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:44px;height:44px}
 
+  /* ===== Taille des bulles RESPONSIVE : rétrécit avec la résolution =====
+     De 115px (grand écran) à ~70px (petit desktop / tablette). En dessous de 600px
+     (portrait) et en paysage téléphone, les media queries dédiées prennent le relais
+     (64px / 76px). La physique de collision suit automatiquement (offsetWidth). */
+  .swipe-stage .orbit .orb,
+  .orbit.orbit--dynamic .orb,
+  .orbit .orb-wrap--music .orb,
+  .orbit.orbit--dynamic .orb-wrap--music .orb{width:clamp(70px,8vw,115px);height:clamp(70px,8vw,115px)}
+  .swipe-stage .orbit .orb svg,
+  .orbit.orbit--dynamic .orb svg,
+  .orbit .orb-wrap--music .orb svg,
+  .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:clamp(28px,3vw,44px);height:clamp(28px,3vw,44px)}
+  .orbit .orb-label,.orbit.orbit--dynamic .orb-label{font-size:clamp(9.5px,1vw,11px)}
+
   /* Sound-wave ripple when clicking a music orb */
   .orb-sound-ripple{
     position:absolute;left:50%;top:50%;width:100%;height:100%;
