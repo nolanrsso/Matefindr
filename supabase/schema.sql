@@ -25,6 +25,14 @@ create policy "Users upsert their own prefs"
 create policy "Users update their own prefs"
   on public.user_notif_prefs for update using (auth.uid() = user_id);
 
+-- ⚠️ Sections 2-4 ci-dessous sont OBSOLÈTES / jamais exécutées : les vraies
+-- tables likes/matches/messages en prod ont été créées avec un autre schéma
+-- (likes: liker_id/liked_id ; messages: sender_id/body ; matches: user_a/user_b
+-- comme ici). Le matching se fait côté client (ensureMatchRow dans index.html),
+-- pas via le trigger handle_like_insert plus bas. Ne PAS ré-exécuter ces
+-- create table/policy tel quel (from_user/to_user/sender/content n'existent
+-- pas sur les vraies tables) — cf. notify/index.ts qui lit les vrais noms.
+
 -- 2. Likes (uni-directionnels)
 create table if not exists public.likes (
   id          bigserial primary key,

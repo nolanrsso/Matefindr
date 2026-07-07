@@ -94,8 +94,8 @@ Deno.serve(async (req) => {
 
   try {
     if (body.table === "likes") {
-      const toUser = body.record.to_user as string;
-      const fromUser = body.record.from_user as string;
+      const toUser = body.record.liked_id as string;
+      const fromUser = body.record.liker_id as string;
       const [recipient, sender] = await Promise.all([loadPrefs(sb, toUser), loadPrefs(sb, fromUser)]);
       const thumb = sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null);
       const embed = {
@@ -134,9 +134,9 @@ Deno.serve(async (req) => {
     }
 
     if (body.table === "messages") {
-      const sender = body.record.sender as string;
+      const sender = body.record.sender_id as string;
       const matchId = body.record.match_id as number;
-      const content = (body.record.content as string) || "";
+      const content = (body.record.body as string) || "";
       const { data: match } = await sb.from("matches").select("user_a,user_b").eq("id", matchId).maybeSingle();
       if (!match) return new Response("no match", { status: 200 });
       const recipientId = match.user_a === sender ? match.user_b : match.user_a;
