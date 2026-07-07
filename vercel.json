@@ -1,3 +1,17 @@
 {
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "tindord.com" }],
+      "destination": "https://matefindr.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.tindord.com" }],
+      "destination": "https://matefindr.com/:path*",
+      "permanent": true
+    }
+  ]
 }
