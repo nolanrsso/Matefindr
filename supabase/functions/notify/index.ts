@@ -53,6 +53,7 @@ async function loadProfileDisplay(sb: ReturnType<typeof createClient>, userId: s
     display_name: row.display_name || (d.name as string) || null,
     avatar_url: row.avatar_url || (d.avatarUrl as string) || null,
     c1: (d.profileColor as string) || (d.c1 as string) || null,
+    boost: !!d.boost,
   };
 }
 
@@ -109,11 +110,21 @@ Deno.serve(async (req) => {
     if (body.table === "likes") {
       const toUser = body.record.liked_id as string;
       const fromUser = body.record.liker_id as string;
-      const [recipientPrefs, sender] = await Promise.all([loadPrefs(sb, toUser), loadProfileDisplay(sb, fromUser)]);
-      const thumb = sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null);
+      const [recipientPrefs, sender, recipient] = await Promise.all([
+        loadPrefs(sb, toUser), loadProfileDisplay(sb, fromUser), loadProfileDisplay(sb, toUser),
+      ]);
+      // "Qui t'a liké" est réservé aux comptes Boost du destinataire — sinon
+      // identité + photo restent mystère (sinon la photo seule suffit souvent
+      // à reconnaître la personne, ça viderait l'avantage Boost de son sens).
+      const revealIdentity = !!recipient?.boost;
+      const thumb = revealIdentity
+        ? (sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null))
+        : avatarFallback(null, null);
       const embed = {
         title: "❤️ Nouveau like sur Matefindr",
-        description: `**${sender?.display_name || "Quelqu'un"}** t'a liké !`,
+        description: revealIdentity
+          ? `**${sender?.display_name || "Quelqu'un"}** t'a liké !`
+          : `Quelqu'un t'a liké ! 🔒 Passe **Boost** pour découvrir qui.`,
         color: COLORS.like,
         thumbnail: { url: thumb },
         timestamp: new Date().toISOString(),

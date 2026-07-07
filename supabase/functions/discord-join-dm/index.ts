@@ -10,16 +10,25 @@
 // Appelée depuis le client après login (window.__discordJoinDM), avec le body :
 //   { access_token: <provider_token Discord de l'utilisateur>, user_id: <son id Discord> }
 //
+// Synchronise aussi le rôle Discord "Boost" : ajouté/retiré automatiquement
+// selon le statut Boost actuel de l'utilisateur (profiles.data.boost), à
+// chaque login. Nécessite que le bot ait la permission "Gérer les rôles" ET
+// que son propre rôle soit positionné AU-DESSUS du rôle Boost dans la liste
+// des rôles du serveur (sinon Discord refuse l'assignation).
+//
 // Setup (une fois) :
 //   1. Exécuter supabase/discord-welcome-dm.sql dans le SQL Editor (crée la table de suivi).
-//   2. supabase secrets set DISCORD_BOT_TOKEN="ton_bot_token" DISCORD_GUILD_ID="id_du_serveur"
+//   2. Créer le rôle "Boost" sur le serveur Discord, copier son ID (clic droit → Copier l'identifiant).
+//   3. Donner au bot la permission "Gérer les rôles" et remonter son rôle au-dessus du rôle Boost.
+//   4. supabase secrets set DISCORD_BOT_TOKEN="ton_bot_token" DISCORD_GUILD_ID="id_du_serveur" DISCORD_BOOST_ROLE_ID="id_du_role"
 //      (optionnel) DISCORD_WELCOME_MESSAGE="..."
-//   3. Déploiement : supabase functions deploy discord-join-dm --no-verify-jwt
+//   5. Déploiement : supabase functions deploy discord-join-dm --no-verify-jwt
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN") ?? "";
 const GUILD_ID = Deno.env.get("DISCORD_GUILD_ID") ?? "";
+const BOOST_ROLE_ID = Deno.env.get("DISCORD_BOOST_ROLE_ID") ?? "";
 const WELCOME = Deno.env.get("DISCORD_WELCOME_MESSAGE") ??
   "Bienvenue sur Matefindr ! 🎉 Tu fais maintenant partie du serveur.\n\n" +
   "🔔 Je suis le bot qui t'enverra ici, en message privé, tes notifications Matefindr " +
@@ -61,6 +70,7 @@ Deno.serve(async (req) => {
     return json({ error: "bad_json" }, 400);
   }
   if (!access_token) return json({ error: "access_token_manquant" }, 400);
+  const sb = createClient(SB_URL, SB_KEY);
 
   // 1) Anti-abus : le token doit appartenir à l'utilisateur annoncé.
   const meRes = await fetch(`${API}/users/@me`, {
@@ -88,10 +98,25 @@ Deno.serve(async (req) => {
     return json({ error: "join_echoue", status: joinRes.status, detail: detail.slice(0, 300) }, 502);
   }
 
-  // 3) DM de bienvenue — une seule fois dans la vie de l'utilisateur, vérifié
+  // 3) Rôle Boost — best-effort, n'échoue jamais le join/DM (permissions
+  //    manquantes, rôle mal positionné, etc. → on ignore silencieusement).
+  if (BOOST_ROLE_ID) {
+    try {
+      const { data: prof } = await sb.from("profiles").select("data").eq("discord_id", uid).maybeSingle();
+      const d = (prof && prof.data && typeof prof.data === "object") ? prof.data as Record<string, unknown> : {};
+      const hasBoost = !!d.boost;
+      await fetch(`${API}/guilds/${GUILD_ID}/members/${uid}/roles/${BOOST_ROLE_ID}`, {
+        method: hasBoost ? "PUT" : "DELETE",
+        headers: { Authorization: `Bot ${BOT_TOKEN}` },
+      });
+    } catch (_) {
+      // Best-effort : ne bloque jamais le login pour un souci de rôle Discord.
+    }
+  }
+
+  // 4) DM de bienvenue — une seule fois dans la vie de l'utilisateur, vérifié
   //    côté serveur (table discord_welcome_dm), pas juste côté navigateur.
   let dm = false;
-  const sb = createClient(SB_URL, SB_KEY);
   const { data: already_welcomed } = await sb
     .from("discord_welcome_dm")
     .select("discord_id")

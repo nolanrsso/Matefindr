@@ -5271,7 +5271,7 @@
 
     // Hand-off used by login/signup handlers
     window.__matefindr = {
-      onLogin(user){
+      async onLogin(user){
         // Déjà connecté et déjà dans l'app ? (ex : onAuthStateChange qui refire quand on
         // revient sur l'onglet) → on met à jour les données SANS changer l'écran courant.
         const alreadyInApp = document.body.getAttribute('data-auth') === 'in'
@@ -5307,9 +5307,11 @@
           }
         } catch (e) { console.warn('restore archive failed', e); }
         save(); setAuth(true);
-        try { window.__discordJoinDM && window.__discordJoinDM(); } catch(_){}
-        // Sync + premier fetch (peuple immédiatement la liste des autres profils)
-        try { if (typeof syncMyProfileToCloud === 'function') syncMyProfileToCloud(); } catch(_){}
+        // Sync AVANT l'appel Discord (awaited) : discord-join-dm lit profiles.data.boost
+        // pour synchroniser le rôle Discord "Boost" → il faut que la base soit à jour
+        // (ex: juste après un achat Boost) avant que la fonction ne la lise.
+        try { if (typeof syncMyProfileToCloud === 'function') await syncMyProfileToCloud(); } catch(_){}
+        try { window.__discordJoinDM && await window.__discordJoinDM(); } catch(_){}
         try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
         // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
         // re-événement d'auth (focus d'onglet) → sinon ça renverrait à l'accueil sans cesse.

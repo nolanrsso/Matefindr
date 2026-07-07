@@ -72,6 +72,16 @@ curl -X POST https://<project>.supabase.co/functions/v1/discord-join-dm \
 
 Erreur `join_echoue` status 403 = le bot n'a pas la permission *Créer une invitation*, ou le token n'a pas le scope `guilds.join` (l'utilisateur doit se reconnecter).
 
+## Rôle Discord "Boost" automatique
+
+À chaque login, le rôle est ajouté/retiré selon `profiles.data.boost` (best-effort, n'échoue jamais le join/DM).
+
+1. Discord → créer un rôle **Boost** sur le serveur, copier son ID (clic droit → Copier l'identifiant).
+2. **Permission du bot** : Server Settings → Roles → le rôle du bot → activer **Gérer les rôles**.
+3. **Hiérarchie** : dans la liste des rôles, faire glisser le rôle du bot **au-dessus** du rôle Boost (sinon Discord refuse l'assignation, même avec la permission).
+4. `supabase secrets set DISCORD_BOOST_ROLE_ID="id_du_role"`
+5. Redéployer `discord-join-dm`.
+
 ---
 
 # Matefindr — Notifications Discord en prod
