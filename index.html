@@ -3674,6 +3674,48 @@
 })();
 </script>
 
+<script>
+(function(){
+  /* Écran "compte banni" — Supabase redirige vers ?error_code=user_banned
+     (ou dans le hash #error_code=...) quand l'utilisateur tente de se
+     reconnecter avec un compte banni. On l'intercepte avant que le reste
+     de l'app ne s'initialise et on affiche un plein écran par-dessus,
+     sans toucher au DOM sous-jacent (le reste du script continue de
+     tourner normalement, juste caché derrière l'overlay). */
+  function getParam(name){
+    try{
+      var qs = new URLSearchParams(location.search);
+      if (qs.has(name)) return qs.get(name);
+      var hash = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+      return hash.get(name);
+    }catch(_){ return null; }
+  }
+  if (getParam('error_code') !== 'user_banned') return;
+  try{ history.replaceState(null, '', location.pathname); }catch(_){}
+  document.documentElement.style.overflow = 'hidden';
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;'
+    + 'background:radial-gradient(1100px 700px at 15% -10%,#201642 0%,transparent 55%),radial-gradient(900px 700px at 95% 0%,#2a1636 0%,transparent 50%),#0D0B1E;';
+  ov.innerHTML = ''
+    + '<div style="width:min(440px,100%);text-align:center;background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));'
+    +   'border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px);'
+    +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
+    +   '<div style="font-size:44px;margin-bottom:10px">🚫</div>'
+    +   '<h1 style="margin:0 0 10px;font-size:22px">Compte banni</h1>'
+    +   '<p style="color:#b9bbbe;font-size:14.5px;line-height:1.55;margin:0 0 22px">'
+    +     'Ce compte a été banni de Matefindr et ne peut plus se connecter. '
+    +     'Si tu penses que c\'est une erreur, tu peux ouvrir un ticket sur notre Discord pour demander un débannissement.'
+    +   '</p>'
+    +   '<a href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" '
+    +     'style="display:inline-block;width:100%;padding:13px;border-radius:13px;font-weight:800;font-size:15px;color:#fff;'
+    +     'background:linear-gradient(180deg,#9146FF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.4);text-decoration:none;box-sizing:border-box">'
+    +     'Ouvrir un ticket sur le Discord'
+    +   '</a>'
+    + '</div>';
+  document.body.appendChild(ov);
+})();
+</script>
+
 <div class="scene" aria-hidden="true">
   <div class="blob b1"></div>
   <div class="blob b2"></div>
