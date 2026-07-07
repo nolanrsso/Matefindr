@@ -499,6 +499,14 @@
   @media (max-width:600px){
     #bubbles{display:none}
     .badge.corner{display:none}
+    /* Halos de fond dimensionnés pour desktop : sur un petit écran, la même
+       taille en px couvre proportionnellement bien plus d'espace → ça sature
+       tout l'écran de couleur. On réduit taille + flou + opacité. */
+    .blob{filter:blur(45px);opacity:.5}
+    .blob.b1{width:340px;height:340px;left:-70px;top:-90px}
+    .blob.b2{width:300px;height:300px;right:-60px;top:30px}
+    .blob.b3{width:240px;height:240px;bottom:-90px;opacity:.3}
+    .blob.b4{width:200px;height:200px;bottom:-110px}
     /* Nav bar ~30% plus compacte + logo/texte réduits pour que le bouton
        "Se connecter" tienne sur une seule ligne (au lieu de wrapper). */
     header{margin:10px 15px 0;padding:7px 10px}
