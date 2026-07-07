@@ -10830,6 +10830,9 @@
           localStorage.setItem('matefindr_archived_profiles', JSON.stringify(archives));
         }
       } catch (e) { console.warn('archive failed', e); }
+      // Invalide la session Supabase (pas juste l'état local) — sinon un reload
+      // reconnecte automatiquement via la session persistée en localStorage.
+      try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch {}
       state = { user:null, profile:null };
       save();
       setAuth(false);
