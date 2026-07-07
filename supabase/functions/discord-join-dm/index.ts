@@ -1,22 +1,33 @@
 // Matefindr — Edge Function "discord-join-dm".
 // Ajoute l'utilisateur fraîchement connecté au serveur Discord (grâce au scope
 // OAuth `guilds.join`), puis lui envoie un DM de bienvenue — le tout via le BOT.
+// Le DM de bienvenue n'est envoyé QU'UNE SEULE FOIS PAR UTILISATEUR, pour
+// toujours (vérifié côté serveur dans public.discord_welcome_dm — pas juste
+// un flag localStorage, donc ça tient même si l'utilisateur change de
+// navigateur/appareil ou vide son cache). Le join, lui, est retenté à chaque
+// login (utile s'il a quitté le serveur entre-temps).
 //
 // Appelée depuis le client après login (window.__discordJoinDM), avec le body :
 //   { access_token: <provider_token Discord de l'utilisateur>, user_id: <son id Discord> }
 //
-// Déploiement :
-//   supabase functions deploy discord-join-dm --no-verify-jwt
-//
-// Secrets requis (à définir une seule fois) :
-//   supabase secrets set DISCORD_BOT_TOKEN="ton_bot_token" DISCORD_GUILD_ID="id_du_serveur"
-// Optionnel :
-//   supabase secrets set DISCORD_WELCOME_MESSAGE="Bienvenue sur Matefindr ! 🎉"
+// Setup (une fois) :
+//   1. Exécuter supabase/discord-welcome-dm.sql dans le SQL Editor (crée la table de suivi).
+//   2. supabase secrets set DISCORD_BOT_TOKEN="ton_bot_token" DISCORD_GUILD_ID="id_du_serveur"
+//      (optionnel) DISCORD_WELCOME_MESSAGE="..."
+//   3. Déploiement : supabase functions deploy discord-join-dm --no-verify-jwt
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN") ?? "";
 const GUILD_ID = Deno.env.get("DISCORD_GUILD_ID") ?? "";
 const WELCOME = Deno.env.get("DISCORD_WELCOME_MESSAGE") ??
-  "Bienvenue sur Matefindr ! 🎉 Tu fais maintenant partie du serveur. Swipe, like, match → https://matefindr.com";
+  "Bienvenue sur Matefindr ! 🎉 Tu fais maintenant partie du serveur.\n\n" +
+  "🔔 Je suis le bot qui t'enverra ici, en message privé, tes notifications Matefindr " +
+  "(likes, matchs, nouveaux messages) — rien à configurer, ça marche automatiquement dès maintenant.\n\n" +
+  "Swipe, like, match → https://matefindr.com";
+
+const SB_URL = Deno.env.get("SUPABASE_URL")!;
+const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const API = "https://discord.com/api/v10";
 
@@ -61,6 +72,8 @@ Deno.serve(async (req) => {
   if (user_id && user_id !== uid) return json({ error: "user_id_mismatch" }, 403);
 
   // 2) Ajoute au serveur (idempotent : 201 = ajouté, 204 = déjà membre).
+  //    Refait à chaque login (pas juste la 1re fois) pour re-ajouter automatiquement
+  //    quelqu'un qui aurait quitté le serveur entre-temps.
   const joinRes = await fetch(`${API}/guilds/${GUILD_ID}/members/${uid}`, {
     method: "PUT",
     headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
@@ -75,26 +88,39 @@ Deno.serve(async (req) => {
     return json({ error: "join_echoue", status: joinRes.status, detail: detail.slice(0, 300) }, 502);
   }
 
-  // 3) DM de bienvenue — best-effort, n'échoue jamais le join.
+  // 3) DM de bienvenue — une seule fois dans la vie de l'utilisateur, vérifié
+  //    côté serveur (table discord_welcome_dm), pas juste côté navigateur.
   let dm = false;
-  try {
-    const chRes = await fetch(`${API}/users/@me/channels`, {
-      method: "POST",
-      headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ recipient_id: uid }),
-    });
-    if (chRes.ok) {
-      const ch = await chRes.json();
-      const msgRes = await fetch(`${API}/channels/${ch.id}/messages`, {
+  const sb = createClient(SB_URL, SB_KEY);
+  const { data: already_welcomed } = await sb
+    .from("discord_welcome_dm")
+    .select("discord_id")
+    .eq("discord_id", uid)
+    .maybeSingle();
+
+  if (!already_welcomed) {
+    try {
+      const chRes = await fetch(`${API}/users/@me/channels`, {
         method: "POST",
         headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ content: WELCOME }),
+        body: JSON.stringify({ recipient_id: uid }),
       });
-      dm = msgRes.ok;
+      if (chRes.ok) {
+        const ch = await chRes.json();
+        const msgRes = await fetch(`${API}/channels/${ch.id}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ content: WELCOME }),
+        });
+        dm = msgRes.ok;
+      }
+    } catch (_) {
+      // DM facultatif (l'utilisateur a peut-être bloqué les MP) → on ignore.
     }
-  } catch (_) {
-    // DM facultatif (l'utilisateur a peut-être bloqué les MP) → on ignore.
+    // Marqué comme envoyé même si le DM a échoué (MP bloqués) : on ne veut pas
+    // spammer une relance à chaque login pour quelqu'un qui a fermé ses MP.
+    await sb.from("discord_welcome_dm").insert({ discord_id: uid }).select().maybeSingle();
   }
 
-  return json({ ok: true, joined, already, dm, user: uid });
+  return json({ ok: true, joined, already, dm, welcomed_before: !!already_welcomed, user: uid });
 });

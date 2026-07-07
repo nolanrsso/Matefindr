@@ -30,10 +30,12 @@ Quand un utilisateur se connecte avec Discord, le **bot l'ajoute automatiquement
             │  PUT /guilds/{GUILD_ID}/members/{user_id}  (Authorization: Bot)
             │       body: { access_token }   ← c'est le scope guilds.join qui autorise ça
             ▼
-[utilisateur ajouté au serveur]  +  DM de bienvenue (best-effort)
+[utilisateur ajouté au serveur]  +  DM de bienvenue (best-effort, 1 seule fois dans sa vie)
 ```
 
 Le bot token reste **uniquement côté serveur** (secret Supabase) — jamais dans le client.
+
+Le **join** est retenté à chaque login (idempotent, ré-ajoute automatiquement quelqu'un qui aurait quitté le serveur). Le **DM de bienvenue** n'est envoyé qu'**une seule fois par utilisateur, pour toujours** — vérifié côté serveur via la table `discord_welcome_dm` (pas un flag `localStorage`, donc ça tient même si l'utilisateur change de navigateur/appareil ou vide son cache).
 
 ## Setup (une fois)
 
@@ -45,14 +47,16 @@ Le bot token reste **uniquement côté serveur** (secret Supabase) — jamais da
 3. **Inviter le bot sur le serveur** avec au minimum la permission **Créer une invitation** (CREATE_INSTANT_INVITE — c'est elle qui autorise l'ajout de membres via OAuth) :
    `https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&scope=bot&permissions=1`
 
-4. **Secrets Supabase** :
+4. **Table de suivi du DM** : exécuter `discord-welcome-dm.sql` dans le SQL Editor (une fois).
+
+5. **Secrets Supabase** :
    ```bash
    supabase secrets set DISCORD_BOT_TOKEN="ton_bot_token" DISCORD_GUILD_ID="id_du_serveur"
    # optionnel : DISCORD_WELCOME_MESSAGE="Bienvenue sur Matefindr ! 🎉"
    ```
    (ID du serveur : Discord → Paramètres avancés → Mode développeur, puis clic droit sur le serveur → Copier l'identifiant.)
 
-5. **Déployer** :
+6. **Déployer** (dashboard : Edge Functions → coller le contenu du fichier → redéployer à chaque changement du code, git push ne suffit pas) :
    ```bash
    supabase functions deploy discord-join-dm --no-verify-jwt
    ```
