@@ -133,12 +133,7 @@
     <p class="sub">Tableau de bord de modération. Tous les comptes de <b>matefindr.com</b>, emails et profils, avec bannissement.</p>
     <label>URL Supabase</label>
     <input id="supaUrl" value="https://pdhffpxssagclexttfox.supabase.co" spellcheck="false" />
-    <label>Type de clé</label>
-    <div class="role-pick" id="rolePick">
-      <button data-role="service" class="on">service_role (complet : email + ban)</button>
-      <button data-role="anon">anon (lecture seule)</button>
-    </div>
-    <label id="keyLabel">Clé service_role</label>
+    <label>Clé service_role</label>
     <input id="supaKey" type="password" placeholder="eyJhbGci… (Supabase → Settings → API)" spellcheck="false" autocomplete="off" />
     <button class="btn" id="connectBtn">Se connecter</button>
     <div class="err" id="gateErr"></div>
@@ -171,8 +166,9 @@
 <script>
 (function(){
   const $=id=>document.getElementById(id);
-  const LS_URL='mf_admin_url', LS_KEY='mf_admin_key', LS_ROLE='mf_admin_role';
-  let sb=null, ROLE='service', ACCOUNTS=[];
+  const LS_URL='mf_admin_url', LS_KEY='mf_admin_key';
+  const ROLE='service'; // outil local perso : toujours accès complet (email + ban)
+  let sb=null, ACCOUNTS=[];
 
   let toastT;
   function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
@@ -181,10 +177,6 @@
   function fmtDate(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return '—'; } }
 
   /* ---- Login gate ---- */
-  $('rolePick').addEventListener('click',e=>{ const b=e.target.closest('[data-role]'); if(!b)return;
-    ROLE=b.dataset.role; document.querySelectorAll('#rolePick button').forEach(x=>x.classList.toggle('on',x===b));
-    $('keyLabel').textContent = ROLE==='service' ? 'Clé service_role' : 'Clé anon (publique)';
-  });
   $('connectBtn').addEventListener('click',connect);
   $('supaKey').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
 
@@ -194,7 +186,7 @@
     if(key.length<40){ $('gateErr').textContent='Clé invalide.'; return; }
     try{ sb=window.supabase.createClient(url,key,{auth:{autoRefreshToken:false,persistSession:false}}); }
     catch(e){ $('gateErr').textContent='Erreur client : '+e.message; return; }
-    try{ localStorage.setItem(LS_URL,url); localStorage.setItem(LS_KEY,key); localStorage.setItem(LS_ROLE,ROLE); }catch(_){}
+    try{ localStorage.setItem(LS_URL,url); localStorage.setItem(LS_KEY,key); }catch(_){}
     startDash();
   }
   function startDash(){ $('gate').style.display='none'; $('dash').style.display='block'; loadAll(); }
@@ -368,9 +360,8 @@
   /* ---- Auto-reconnexion si clé déjà en mémoire ---- */
   (function boot(){
     try{
-      const url=localStorage.getItem(LS_URL), key=localStorage.getItem(LS_KEY), role=localStorage.getItem(LS_ROLE);
+      const url=localStorage.getItem(LS_URL), key=localStorage.getItem(LS_KEY);
       if(url) $('supaUrl').value=url;
-      if(role){ ROLE=role; document.querySelectorAll('#rolePick button').forEach(x=>x.classList.toggle('on',x.dataset.role===role)); $('keyLabel').textContent = role==='service'?'Clé service_role':'Clé anon (publique)'; }
       if(url&&key){ sb=window.supabase.createClient(url,key,{auth:{autoRefreshToken:false,persistSession:false}}); startDash(); }
     }catch(_){}
   })();
