@@ -5338,13 +5338,19 @@
        un DM de bienvenue via le bot — appel à l'edge function Supabase.
        Ne s'exécute qu'une fois par utilisateur Discord. */
     window.__discordJoinDM = async function(){
+      const u = state.user || {};
+      const token  = localStorage.getItem('matefindr_discord_token');
+      const userId = u.discordId;
+      if (!token || !userId) return;
+      const doneKey = 'matefindr_joindm_' + userId;
+      // Verrou posé de façon SYNCHRONE, avant tout await : getSession() et
+      // onAuthStateChange('SIGNED_IN') appellent tous deux onLogin() en quasi-simultané
+      // juste après une connexion fraîche. Sans ce verrou immédiat, les deux appels
+      // passaient le check avant que l'un ait fini sa requête réseau (race condition),
+      // ce qui envoyait le DM de bienvenue en double.
+      if (localStorage.getItem(doneKey)) return;
+      localStorage.setItem(doneKey, 'pending');
       try {
-        const u = state.user || {};
-        const token  = localStorage.getItem('matefindr_discord_token');
-        const userId = u.discordId;
-        if (!token || !userId) return;
-        const doneKey = 'matefindr_joindm_' + userId;
-        if (localStorage.getItem(doneKey) === '1') return;
         const res = await fetch(SUPABASE_URL + '/functions/v1/discord-join-dm', {
           method: 'POST',
           headers: {
@@ -5357,7 +5363,11 @@
         const data = await res.json().catch(() => ({}));
         console.log('[Matefindr] discord join+DM:', data);
         if (data && (data.joined || data.dm)) localStorage.setItem(doneKey, '1');
-      } catch (e) { console.warn('[Matefindr] discord join+DM failed', e); }
+        else localStorage.removeItem(doneKey); // échec → on retentera au prochain login
+      } catch (e) {
+        console.warn('[Matefindr] discord join+DM failed', e);
+        localStorage.removeItem(doneKey);
+      }
     };
 
     // ---------- Onboarding (welcome → age → genre → pays → perso) ----------
