@@ -4227,6 +4227,45 @@
     : null;
   window.__supa = supa;
 
+  /* Redimensionne/compresse une image côté client avant upload (évite les
+     photos de plusieurs Mo qui gonflaient la base en base64). */
+  function resizeImageFile(file, maxDim, quality){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale); height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+      img.src = url;
+    });
+  }
+
+  /* Upload un blob vers Supabase Storage (bucket profile-media, un dossier par
+     user id) et retourne l'URL publique. Remplace le stockage base64 en base
+     (qui faisait exploser la taille de la DB à quelques dizaines d'utilisateurs). */
+  async function uploadProfileMedia(blob, kind /* 'avatar' | 'banner' */){
+    if (!window.__supa) return null;
+    const { data: { session } } = await window.__supa.auth.getSession();
+    if (!session) return null;
+    const path = session.user.id + '/' + kind + '-' + Date.now() + '.jpg';
+    const { error } = await window.__supa.storage.from('profile-media').upload(path, blob, {
+      upsert: true, contentType: 'image/jpeg',
+    });
+    if (error) { console.warn('uploadProfileMedia failed', error); return null; }
+    const { data } = window.__supa.storage.from('profile-media').getPublicUrl(path);
+    return data && data.publicUrl;
+  }
+
   /* Fetch full Discord profile (banner, badges, decoration) via provider token.
      Supabase only mirrors a subset of fields into user_metadata, so we hit
      Discord directly with the OAuth access token to get the rest. */
@@ -9465,21 +9504,25 @@
       // Nouveau hero avatar
       const fih = document.getElementById('accAvatarFileHero');
       if (fih) fih.addEventListener('change', handleFile.bind(null, fih));
-      function handleFile(input, e){
+      async function handleFile(input, e){
         const f = e.target.files && e.target.files[0];
+        input.value = '';
         if (!f) return;
-        const r = new FileReader();
-        r.onload = () => {
+        try {
+          const blob = await resizeImageFile(f, 512, 0.86);
+          const url = await uploadProfileMedia(blob, 'avatar');
+          if (!url) { showToast('⚠️', 'Échec de l’envoi', 'Connecte-toi et réessaie'); return; }
           state.user = state.user || {};
-          state.user.avatarUrl = r.result;
+          state.user.avatarUrl = url;
           save();
           renderAccount();
           refreshAccountPreview();
           refreshHeroAvatar();
           showToast('📷', 'Photo de profil', 'Mise à jour');
-        };
-        r.readAsDataURL(f);
-        input.value = '';
+        } catch(err){
+          console.warn('avatar upload error', err);
+          showToast('⚠️', 'Erreur', 'Image invalide, réessaie');
+        }
       }
     })();
 
@@ -9826,26 +9869,29 @@
       importBtn.addEventListener('click', () => {
         fileEl.click();
       });
-      fileEl.addEventListener('change', e => {
+      fileEl.addEventListener('change', async e => {
         const file = e.target.files && e.target.files[0];
+        fileEl.value = '';
         if (!file) return;
-        if (file.size > 2 * 1024 * 1024) {
-          showToast('⚠️', 'Image trop lourde', 'Maximum 2 Mo');
-          fileEl.value = '';
+        if (file.size > 20 * 1024 * 1024) {
+          showToast('⚠️', 'Image trop lourde', 'Maximum 20 Mo');
           return;
         }
-        const reader = new FileReader();
-        reader.onload = () => {
+        try {
+          const blob = await resizeImageFile(file, 1600, 0.82);
+          const url = await uploadProfileMedia(blob, 'banner');
+          if (!url) { showToast('⚠️', 'Échec de l’envoi', 'Connecte-toi et réessaie'); return; }
           state.user = state.user || {};
-          state.user.bannerUrl = reader.result;
+          state.user.bannerUrl = url;
           state.user.bannerCustom = true;
           save();
           refreshPrev();
           if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
           showToast('🖼️', 'Bannière mise à jour', 'Visible sur ton profil');
-        };
-        reader.readAsDataURL(file);
-        fileEl.value = '';
+        } catch(err){
+          console.warn('banner upload error', err);
+          showToast('⚠️', 'Erreur', 'Image invalide, réessaie');
+        }
       });
       resetBtn.addEventListener('click', async () => {
         state.user = state.user || {};

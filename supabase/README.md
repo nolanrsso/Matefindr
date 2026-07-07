@@ -1,3 +1,21 @@
+# Matefindr — Stockage des avatars/bannières (Supabase Storage)
+
+Avant : avatar/bannière uploadés étaient encodés en **base64 et stockés directement dans la table `profiles`** (colonnes `avatar_url`/`banner_url` + dupliqués dans la colonne `data`). Avec très peu d'utilisateurs, ça a fait exploser la taille de la base (193% du quota gratuit à ~20 comptes).
+
+Depuis, `index.html` compresse l'image côté client puis l'envoie dans le bucket Storage `profile-media` (`{user_id}/avatar-*.jpg`, `{user_id}/banner-*.jpg`) et ne stocke plus qu'une **URL** en base.
+
+## Setup (une fois)
+
+Exécuter `storage-profile-media.sql` dans **Supabase Dashboard → SQL Editor** — crée le bucket `profile-media` (public en lecture) + policies (chaque user ne peut écrire que dans son propre dossier).
+
+⚠️ Tant que ce SQL n'est pas exécuté, les nouveaux uploads d'avatar/bannière échouent proprement (toast d'erreur, l'ancienne image reste affichée) — rien de cassé, juste la fonctionnalité indisponible.
+
+## Nettoyer les données déjà stockées en base64
+
+`admin.html` (outil local) a un bouton **🧹 Migrer images → Storage** (visible en mode `service_role`) qui repère les profils avec des images encore en base64, les recompresse, les upload dans Storage, et met à jour les lignes `profiles`. Utile pour faire redescendre la taille de la base sous le quota.
+
+---
+
 # Matefindr — Auto-join du serveur Discord à la création de compte
 
 Quand un utilisateur se connecte avec Discord, le **bot l'ajoute automatiquement au serveur** (puis lui envoie un DM de bienvenue). C'est l'Edge Function `discord-join-dm`.
