@@ -113,13 +113,10 @@ Deno.serve(async (req) => {
       const [recipientPrefs, sender, recipient] = await Promise.all([
         loadPrefs(sb, toUser), loadProfileDisplay(sb, fromUser), loadProfileDisplay(sb, toUser),
       ]);
-      // "Qui t'a liké" est réservé aux comptes Boost du destinataire — sinon
-      // identité + photo restent mystère (sinon la photo seule suffit souvent
-      // à reconnaître la personne, ça viderait l'avantage Boost de son sens).
+      // Le pseudo de "qui t'a liké" est réservé aux comptes Boost du destinataire —
+      // la photo, elle, reste toujours visible.
       const revealIdentity = !!recipient?.boost;
-      const thumb = revealIdentity
-        ? (sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null))
-        : avatarFallback(null, null);
+      const thumb = sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null);
       const embed = {
         title: "❤️ Nouveau like sur Matefindr",
         description: revealIdentity
