@@ -136,8 +136,9 @@
     <label>Clé service_role</label>
     <input id="supaKey" type="password" placeholder="eyJhbGci… (Supabase → Settings → API)" spellcheck="false" autocomplete="off" />
     <button class="btn" id="connectBtn">Se connecter</button>
+    <button class="btn ghost" id="roBtn" style="margin-top:10px">👁️ Voir en lecture seule (sans clé)</button>
     <div class="err" id="gateErr"></div>
-    <div class="warn">⚠️ La clé <b>service_role</b> donne un accès total à ta base. Elle reste <b>uniquement dans ce navigateur</b> (jamais envoyée ailleurs, pas dans le code). N'ouvre cette page qu'en local et ne la déploie jamais.</div>
+    <div class="warn">⚠️ La clé <b>service_role</b> donne un accès total à ta base. Elle reste <b>uniquement dans ce navigateur</b> (jamais envoyée ailleurs, pas dans le code). N'ouvre cette page qu'en local et ne la déploie jamais.<br><br>👁️ <b>Lecture seule</b> = tous les profils (pseudos, âges, pays, bios…) via la clé publique du site, <b>sans</b> les emails ni le bannissement.</div>
   </div>
 </div>
 
@@ -167,8 +168,10 @@
 (function(){
   const $=id=>document.getElementById(id);
   const LS_URL='mf_admin_url', LS_KEY='mf_admin_key';
-  const ROLE='service'; // outil local perso : toujours accès complet (email + ban)
-  let sb=null, ACCOUNTS=[];
+  // Clé anon (publique — déjà en clair dans index.html du site) : permet la lecture seule
+  // de tous les profils sans le dashboard. NE donne PAS les emails ni le ban (service_role only).
+  const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaGZmcHhzc2FnY2xleHR0Zm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzA4NjgsImV4cCI6MjA5NjI0Njg2OH0.wqnVvxAcjMGfl6QgeUfgEs4EEJAQDjVLMOwy676sccg';
+  let sb=null, ACCOUNTS=[], FULL=false; // FULL=true seulement si l'accès auth (service_role) fonctionne
 
   let toastT;
   function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
@@ -179,6 +182,7 @@
   /* ---- Login gate ---- */
   $('connectBtn').addEventListener('click',connect);
   $('supaKey').addEventListener('keydown',e=>{ if(e.key==='Enter') connect(); });
+  $('roBtn').addEventListener('click',()=>{ $('supaKey').value=ANON_KEY; connect(); }); // lecture seule via clé publique
 
   function connect(){
     const url=$('supaUrl').value.trim(), key=$('supaKey').value.trim();
@@ -208,20 +212,20 @@
     catch(e){ $('tableWrap').innerHTML='<div class="empty">Erreur lecture profils : '+esc(e.message)+'</div>'; return; }
     const profById={}; profiles.forEach(p=>{ profById[p.id]=p; });
 
-    // 2) Comptes auth (email + ban) — service_role uniquement
+    // 2) Comptes auth (email + ban) — nécessite la clé service_role.
+    //    Avec la clé anon (lecture seule) ça échoue → on retombe en mode profils only.
     let users=null;
-    if(ROLE==='service'){
-      try{
-        users=[]; let page=1;
-        for(;;){ const { data, error }=await sb.auth.admin.listUsers({ page, perPage:1000 });
-          if(error) throw error;
-          const list=(data&&data.users)||[]; users=users.concat(list);
-          if(list.length<1000) break; page++;
-        }
-      }catch(e){ toast('Auth admin indisponible ('+e.message+') → mode lecture seule'); users=null; }
-    }
+    try{
+      users=[]; let page=1;
+      for(;;){ const { data, error }=await sb.auth.admin.listUsers({ page, perPage:1000 });
+        if(error) throw error;
+        const list=(data&&data.users)||[]; users=users.concat(list);
+        if(list.length<1000) break; page++;
+      }
+    }catch(e){ users=null; }
 
     if(users){
+      FULL=true;
       // Un compte = un utilisateur auth, enrichi de son profil.
       ACCOUNTS=users.map(u=>({ id:u.id, email:u.email||'—', created_at:u.created_at, last_sign_in:u.last_sign_in_at,
         banned_until:u.banned_until||(u.user_metadata&&u.user_metadata.banned_until)||null, prof:profById[u.id]||null }));
@@ -230,6 +234,7 @@
       profiles.forEach(p=>{ if(!seen.has(p.id)) ACCOUNTS.push({ id:p.id, email:'(profil seul)', created_at:p.created_at, banned_until:null, prof:p }); });
       $('roleBadge').className='rolebadge full'; $('roleBadge').textContent='Accès complet';
     }else{
+      FULL=false;
       ACCOUNTS=profiles.map(p=>({ id:p.id, email:'—', created_at:p.created_at, banned_until:null, prof:p }));
       $('roleBadge').className='rolebadge ro'; $('roleBadge').textContent='Lecture seule (pas d’email/ban)';
     }
@@ -273,7 +278,7 @@
       html.push('<td><span class="pill">'+esc(dd.looking||p.look_for||'—')+'</span></td>');
       html.push('<td class="muted">'+fmtDate(a.created_at)+'</td>');
       html.push('<td><div class="row-actions"><button class="a-btn" data-view="'+ACCOUNTS.indexOf(a)+'">Voir</button>'
-        + (ROLE==='service' ? ('<button class="a-btn '+(banned?'unban':'ban')+'" data-ban="'+ACCOUNTS.indexOf(a)+'">'+(banned?'Débannir':'Bannir')+'</button>') : '')
+        + (FULL ? ('<button class="a-btn '+(banned?'unban':'ban')+'" data-ban="'+ACCOUNTS.indexOf(a)+'">'+(banned?'Débannir':'Bannir')+'</button>') : '')
         +'</div></td>');
       html.push('</tr>');
     });
@@ -287,7 +292,7 @@
 
   /* ---- Bannir / débannir (service_role) ---- */
   async function toggleBan(a, btn){
-    if(ROLE!=='service'){ toast('Nécessite la clé service_role'); return; }
+    if(!FULL){ toast('Nécessite la clé service_role (mode lecture seule)'); return; }
     const banned=isBanned(a);
     const name=(a.prof&&a.prof.display_name)||d(a).name||a.email;
     if(!banned && !confirm('Bannir « '+name+' » ?\nIl ne pourra plus se reconnecter.')) return;
@@ -343,7 +348,7 @@
       +'<dt>Inscrit le</dt><dd>'+fmtDate(a.created_at)+'</dd>'
       +'<dt>Dernière connexion</dt><dd>'+(a.last_sign_in?fmtDate(a.last_sign_in):'—')+'</dd>'
       +'<dt>Statut</dt><dd>'+(banned?'<span class="pill ban">Banni jusqu’au '+fmtDate(a.banned_until)+'</span>':'<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Actif</span>')+'</dd>'
-      + (ROLE==='service' ? ('<div class="m-actions"><button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button></div>') : '')
+      + (FULL ? ('<div class="m-actions"><button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button></div>') : '')
       +'<details class="raw"><summary>Données brutes (JSON)</summary><pre>'+esc(JSON.stringify(a.prof||{},null,2))+'</pre></details>'
       +'</dl></div>';
 
