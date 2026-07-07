@@ -333,6 +333,8 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .tag--clickable{cursor:pointer;border-radius:7px;transition:background .15s ease,filter .2s ease;padding:1px 4px;margin-left:-4px;display:inline-block}
 .tag--clickable:hover{background:rgba(255,255,255,.08)}
 .tag.tag--blur{filter:blur(5px);user-select:none}
+.profile-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.profile-badges .pbadge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.14)}
 /* Style doré Boost sur le pseudo Matefindr (carte éditeur) */
 .username--boost{
   background:linear-gradient(110deg,#FFE17A 0%,#F5C040 20%,#FFFAE6 35%,#F5C040 50%,#B27B14 65%,#F5C040 80%,#FFE17A 100%);
@@ -892,6 +894,7 @@ html.perf-lite *{
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
         <div class="tag">@matefindr · en ligne sur Matefindr</div>
+        <div class="profile-badges" id="profileBadges"></div>
         <div class="divider"></div>
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
@@ -2178,6 +2181,16 @@ function hydrateFromSite(){
   if(u.displayName){ S.username=u.displayName; $('usernameSlot').textContent=u.displayName; }
   S.nameCustom=!!u.nameCustom;
   if(u.discordTag){ document.querySelector('.tag').textContent='@'+u.discordTag+' · en ligne sur Matefindr'; }
+  // Âge / genre / pays — posés à l'onboarding (site), affichés en lecture seule ici.
+  (function(){
+    const box=$('profileBadges'); if(!box) return;
+    const genderLbl={il:'Il',male:'Il',homme:'Il',elle:'Elle',female:'Elle',femme:'Elle'}[(p.gender||'').toLowerCase()]||p.gender||'';
+    const chips=[];
+    if(p.age) chips.push('<span class="pbadge">'+esc(String(p.age))+' ans</span>');
+    if(genderLbl) chips.push('<span class="pbadge">'+esc(genderLbl)+'</span>');
+    if(p.country) chips.push('<span class="pbadge">'+(p.countryFlag?esc(p.countryFlag)+' ':'')+esc(p.country)+'</span>');
+    box.innerHTML=chips.join('');
+  })();
   document.body.classList.toggle('not-boost', !u.boost); // outils Boost en or pour les non-Boost
   S.handleBlur=!!u.handleBlur; S.boostShowName=(u.boostShowName!==false);
   applyTagBlur(); applyUsernameBoostStyle();
