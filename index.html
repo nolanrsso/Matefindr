@@ -9024,7 +9024,7 @@
     async function searchGiphy(query){
       try {
         const url = 'https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_KEY +
-          '&q=' + encodeURIComponent(query) + '&limit=12&rating=pg-13&bundle=messaging_non_clips';
+          '&q=' + encodeURIComponent(query) + '&limit=50&rating=pg-13&bundle=messaging_non_clips';
         const resp = await fetch(url);
         const d = await resp.json();
         if (d.meta?.status && d.meta.status !== 200) {
