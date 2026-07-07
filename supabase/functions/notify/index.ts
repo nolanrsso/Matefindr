@@ -110,6 +110,14 @@ Deno.serve(async (req) => {
     if (body.table === "likes") {
       const toUser = body.record.liked_id as string;
       const fromUser = body.record.liker_id as string;
+
+      // Si toUser avait déjà liké fromUser avant, ce like est le 2e d'une paire
+      // réciproque → ça crée un match. La notif "match" suffit, pas de notif
+      // "like" en plus (évite d'envoyer les deux d'un coup pour le même événement).
+      const { data: reciprocal } = await sb
+        .from("likes").select("liker_id").eq("liker_id", toUser).eq("liked_id", fromUser).maybeSingle();
+      if (reciprocal) return new Response("ok", { status: 200 });
+
       const [recipientPrefs, sender, recipient] = await Promise.all([
         loadPrefs(sb, toUser), loadProfileDisplay(sb, fromUser), loadProfileDisplay(sb, toUser),
       ]);
