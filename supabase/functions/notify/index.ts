@@ -30,6 +30,7 @@ function avatarFallback(name: string | null, c1: string | null) {
   return `https://ui-avatars.com/api/?name=${n}&size=128&background=${c}&color=fff&bold=true&format=png`;
 }
 
+// Préférences (webhook perso + toggles) — table user_notif_prefs.
 async function loadPrefs(sb: ReturnType<typeof createClient>, userId: string) {
   const { data } = await sb.from("user_notif_prefs").select("*").eq("user_id", userId).maybeSingle();
   return data as null | {
@@ -37,9 +38,21 @@ async function loadPrefs(sb: ReturnType<typeof createClient>, userId: string) {
     notif_like: boolean;
     notif_match: boolean;
     notif_message: boolean;
-    display_name: string | null;
-    avatar_url: string | null;
-    c1: string | null;
+  };
+}
+
+// Affichage (photo, pseudo, couleur) — lu directement depuis `profiles`, qui est
+// TOUJOURS à jour (contrairement à user_notif_prefs, jamais synchronisée côté
+// client actuellement), donc c'est la source fiable pour la miniature Discord.
+async function loadProfileDisplay(sb: ReturnType<typeof createClient>, userId: string) {
+  const { data } = await sb.from("profiles").select("display_name, avatar_url, data").eq("id", userId).maybeSingle();
+  if (!data) return null;
+  const row = data as { display_name: string | null; avatar_url: string | null; data: Record<string, unknown> | null };
+  const d = (row.data && typeof row.data === "object") ? row.data : {};
+  return {
+    display_name: row.display_name || (d.name as string) || null,
+    avatar_url: row.avatar_url || (d.avatarUrl as string) || null,
+    c1: (d.profileColor as string) || (d.c1 as string) || null,
   };
 }
 
@@ -96,7 +109,7 @@ Deno.serve(async (req) => {
     if (body.table === "likes") {
       const toUser = body.record.liked_id as string;
       const fromUser = body.record.liker_id as string;
-      const [recipient, sender] = await Promise.all([loadPrefs(sb, toUser), loadPrefs(sb, fromUser)]);
+      const [recipientPrefs, sender] = await Promise.all([loadPrefs(sb, toUser), loadProfileDisplay(sb, fromUser)]);
       const thumb = sender?.avatar_url || avatarFallback(sender?.display_name || null, sender?.c1 || null);
       const embed = {
         title: "❤️ Nouveau like sur Matefindr",
@@ -106,19 +119,22 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
         footer: { text: "Matefindr" },
       };
-      if (recipient?.discord_webhook && recipient.notif_like) await sendWebhook(recipient.discord_webhook, embed);
+      if (recipientPrefs?.discord_webhook && recipientPrefs.notif_like) await sendWebhook(recipientPrefs.discord_webhook, embed);
       await dmUser(sb, toUser, embed); // MP direct par le bot
     }
 
     if (body.table === "matches") {
       const userA = body.record.user_a as string;
       const userB = body.record.user_b as string;
-      const [pa, pb] = await Promise.all([loadPrefs(sb, userA), loadPrefs(sb, userB)]);
+      const [prefsA, prefsB, profA, profB] = await Promise.all([
+        loadPrefs(sb, userA), loadPrefs(sb, userB),
+        loadProfileDisplay(sb, userA), loadProfileDisplay(sb, userB),
+      ]);
       const pairs = [
-        { meId: userA, me: pa, other: pb },
-        { meId: userB, me: pb, other: pa },
+        { meId: userA, mePrefs: prefsA, other: profB },
+        { meId: userB, mePrefs: prefsB, other: profA },
       ];
-      for (const { meId, me, other } of pairs) {
+      for (const { meId, mePrefs, other } of pairs) {
         const thumb = other?.avatar_url || avatarFallback(other?.display_name || null, other?.c1 || null);
         const embed = {
           title: "💞 C'est un match !",
@@ -128,7 +144,7 @@ Deno.serve(async (req) => {
           timestamp: new Date().toISOString(),
           footer: { text: "Matefindr" },
         };
-        if (me?.discord_webhook && me.notif_match) await sendWebhook(me.discord_webhook, embed);
+        if (mePrefs?.discord_webhook && mePrefs.notif_match) await sendWebhook(mePrefs.discord_webhook, embed);
         await dmUser(sb, meId, embed); // MP direct par le bot
       }
     }
@@ -140,17 +156,17 @@ Deno.serve(async (req) => {
       const { data: match } = await sb.from("matches").select("user_a,user_b").eq("id", matchId).maybeSingle();
       if (!match) return new Response("no match", { status: 200 });
       const recipientId = match.user_a === sender ? match.user_b : match.user_a;
-      const [recipient, senderPrefs] = await Promise.all([loadPrefs(sb, recipientId), loadPrefs(sb, sender)]);
-      const thumb = senderPrefs?.avatar_url || avatarFallback(senderPrefs?.display_name || null, senderPrefs?.c1 || null);
+      const [recipientPrefs, senderProfile] = await Promise.all([loadPrefs(sb, recipientId), loadProfileDisplay(sb, sender)]);
+      const thumb = senderProfile?.avatar_url || avatarFallback(senderProfile?.display_name || null, senderProfile?.c1 || null);
       const embed = {
         title: "💬 Nouveau message Matefindr",
-        description: `**${senderPrefs?.display_name || "Quelqu'un"}** t'a écrit :\n> ${content.slice(0, 200)}`,
+        description: `**${senderProfile?.display_name || "Quelqu'un"}** t'a écrit :\n> ${content.slice(0, 200)}`,
         color: COLORS.message,
         thumbnail: { url: thumb },
         timestamp: new Date().toISOString(),
         footer: { text: "Matefindr" },
       };
-      if (recipient?.discord_webhook && recipient.notif_message) await sendWebhook(recipient.discord_webhook, embed);
+      if (recipientPrefs?.discord_webhook && recipientPrefs.notif_message) await sendWebhook(recipientPrefs.discord_webhook, embed);
       await dmUser(sb, recipientId, embed); // MP direct par le bot
     }
 
