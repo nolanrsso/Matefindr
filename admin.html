@@ -309,6 +309,71 @@
     }catch(e){ toast('Échec : '+e.message); if(btn) btn.disabled=false; }
   }
 
+  /* ---- Modifier un profil (service_role) ---- */
+  function fieldRow(label, id, val, textarea){
+    const inputHtml = textarea
+      ? '<textarea id="'+id+'" rows="3" style="width:100%;padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke2);color:#fff;font-family:inherit;font-size:13.5px;resize:vertical">'+esc(val)+'</textarea>'
+      : '<input id="'+id+'" value="'+esc(val)+'" style="width:100%;padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke2);color:#fff;font-family:inherit;font-size:13.5px;box-sizing:border-box">';
+    return '<label style="display:block"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--dim);margin-bottom:5px">'+label+'</div>'+inputHtml+'</label>';
+  }
+  function startEditProfile(a){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const dd=d(a); const p=a.prof||{};
+    const infoEl=document.querySelector('#modalBox .info');
+    if(!infoEl) return;
+    infoEl.innerHTML='<div style="display:grid;gap:12px">'
+      +fieldRow('Pseudo','eName', p.display_name||dd.name||'')
+      +fieldRow('Bio','eBio', dd.bio||'', true)
+      +fieldRow('Âge','eAge', dd.age||'')
+      +fieldRow('Sexe','eGender', dd.gender||'')
+      +fieldRow('Pays','eCountry', dd.country||'')
+      +fieldRow('Recherche','eLooking', dd.looking||p.look_for||'')
+      +'<div style="display:flex;gap:10px;margin-top:4px">'
+      +  '<button class="a-btn unban" id="eSave" style="flex:1">💾 Enregistrer</button>'
+      +  '<button class="a-btn" id="eCancel" style="flex:1">Annuler</button>'
+      +'</div></div>';
+    $('eCancel').addEventListener('click', ()=>openProfile(a));
+    $('eSave').addEventListener('click', ()=>saveProfileEdit(a));
+  }
+  async function saveProfileEdit(a){
+    const btn=$('eSave'); if(btn) btn.disabled=true;
+    try{
+      const name=$('eName').value.trim();
+      const bio=$('eBio').value.trim();
+      const age=$('eAge').value.trim();
+      const gender=$('eGender').value.trim();
+      const country=$('eCountry').value.trim();
+      const looking=$('eLooking').value.trim();
+      const dataPatch=Object.assign({}, (a.prof&&a.prof.data)||{}, { name, bio, age, gender, country, looking });
+      const patch={ display_name:name||null, bio:bio||null, look_for:looking||null, data:dataPatch };
+      const { error }=await sb.from('profiles').update(patch).eq('id', a.id);
+      if(error) throw error;
+      a.prof=Object.assign({}, a.prof, patch);
+      toast('✅ Profil mis à jour');
+      renderTable();
+      openProfile(a);
+    }catch(e){ toast('Échec : '+e.message); if(btn) btn.disabled=false; }
+  }
+
+  /* ---- Supprimer un compte (service_role) — IRRÉVERSIBLE ---- */
+  async function deleteAccount(a, btn){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const name=(a.prof&&a.prof.display_name)||d(a).name||a.email;
+    if(!confirm('⚠️ SUPPRIMER DÉFINITIVEMENT « '+name+' » ?\nCompte + profil + toutes ses données seront effacés.\nCette action est IRRÉVERSIBLE.')) return;
+    if(btn) btn.disabled=true;
+    try{
+      if(a.email && a.email!=='(profil seul)'){
+        const { error }=await sb.auth.admin.deleteUser(a.id);
+        if(error) throw error;
+      }
+      await sb.from('profiles').delete().eq('id', a.id);
+      ACCOUNTS=ACCOUNTS.filter(x=>x!==a);
+      toast('🗑️ Compte supprimé : '+name);
+      closeModal();
+      renderTable();
+    }catch(e){ toast('Échec : '+e.message); if(btn) btn.disabled=false; }
+  }
+
   /* ---- Migration images base64 -> Supabase Storage (libère de l'espace DB) ---- */
   const MEDIA_BUCKET='profile-media';
   function resizeDataUrl(dataUrl, maxDim, quality){
@@ -410,7 +475,9 @@
       +'<dt>Inscrit le</dt><dd>'+fmtDate(a.created_at)+'</dd>'
       +'<dt>Dernière connexion</dt><dd>'+(a.last_sign_in?fmtDate(a.last_sign_in):'—')+'</dd>'
       +'<dt>Statut</dt><dd>'+(banned?'<span class="pill ban">Banni jusqu’au '+fmtDate(a.banned_until)+'</span>':'<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Actif</span>')+'</dd>'
-      + (FULL ? ('<div class="m-actions"><button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button></div>') : '')
+      + (FULL ? ('<div class="m-actions"><button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button>'
+          +'<button class="a-btn" id="modalEdit">✏️ Modifier</button>'
+          +'<button class="a-btn ban" id="modalDelete">🗑️ Supprimer</button></div>') : '')
       +'<details class="raw"><summary>Données brutes (JSON)</summary><pre>'+esc(JSON.stringify(a.prof||{},null,2))+'</pre></details>'
       +'</dl></div>';
 
@@ -419,6 +486,8 @@
     $('modal').classList.add('on');
     $('mClose').addEventListener('click',closeModal);
     const mb=$('modalBan'); if(mb) mb.addEventListener('click',()=>toggleBan(a,mb));
+    const me=$('modalEdit'); if(me) me.addEventListener('click',()=>startEditProfile(a));
+    const md=$('modalDelete'); if(md) md.addEventListener('click',()=>deleteAccount(a,md));
   }
   function closeModal(){ $('modal').classList.remove('on'); }
   $('modal').addEventListener('click',e=>{ if(e.target===$('modal')) closeModal(); });
