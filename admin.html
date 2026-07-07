@@ -366,7 +366,8 @@
         const { error }=await sb.auth.admin.deleteUser(a.id);
         if(error) throw error;
       }
-      await sb.from('profiles').delete().eq('id', a.id);
+      const { error: profErr }=await sb.from('profiles').delete().eq('id', a.id);
+      if(profErr) throw profErr;
       ACCOUNTS=ACCOUNTS.filter(x=>x!==a);
       toast('🗑️ Compte supprimé : '+name);
       closeModal();
