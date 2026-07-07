@@ -1883,22 +1883,6 @@
   .swipe-actions.dir-right .swipe-btn--yes::before{opacity:1}
   .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
   .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
-  /* Chrono anti-spam (comptes SANS Boost) : les boutons « Passer » ET « Liker »
-     sont verrouillés 10 s par carte, avec un compte à rebours + anneau de
-     progression. Boost = actions directes, sans attente. */
-  .swipe-cd{display:none;position:absolute;inset:0;border-radius:inherit;place-items:center;z-index:3;
-    font-family:"Clash Display",sans-serif;font-weight:800;font-size:25px;color:#fff;
-    background:rgba(8,5,18,.52);-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px)}
-  .swipe-cd::after{content:"";position:absolute;inset:-4px;border-radius:26px;z-index:-1;
-    background:conic-gradient(#ff5fae calc(var(--cd,0)*1%), rgba(255,255,255,.14) 0);
-    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
-            mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px))}
-  .swipe-btn.locked{filter:grayscale(.5) brightness(.82);cursor:not-allowed}
-  .swipe-btn.locked svg{opacity:0}
-  .swipe-btn.locked .swipe-cd{display:grid}
-  .swipe-btn.locked:hover{transform:none}
-  .swipe-actions.dir-left  .swipe-btn--no.locked {transform:none;box-shadow:0 14px 32px rgba(0,0,0,.45)}
-  .swipe-actions.dir-right .swipe-btn--yes.locked{transform:none;box-shadow:0 14px 32px rgba(0,0,0,.45)}
 
   /* My-status floating control — bottom-LEFT, neutral aesthetic */
   .my-status{
@@ -4000,11 +3984,9 @@
     <div class="swipe-actions">
       <button class="swipe-btn swipe-btn--no" id="swipeNo" type="button" aria-label="Passer">
         <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#fff" stroke-width="3.5"><path d="M17 17 L33 33 M33 17 L17 33"/></svg>
-        <span class="swipe-cd" id="swipeCd" aria-hidden="true"></span>
       </button>
       <button class="swipe-btn swipe-btn--yes" id="swipeYes" type="button" aria-label="Liker">
         <svg width="32" height="32" viewBox="0 0 50 50" fill="none" stroke="#0d3a00" stroke-width="3.5"><path d="M14 26 L22 33 L35 16"/></svg>
-        <span class="swipe-cd" id="swipeCdYes" aria-hidden="true"></span>
       </button>
       <button class="preview-exit-btn" id="previewExitBtn" type="button">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -5949,8 +5931,6 @@
         wrap.appendChild(buildCard(p, true));
         renderOrbs(p);
         renderSwipeGifs(p);
-        // Chrono anti-spam : (re)démarre le verrou 10s de la carte (non-Boost).
-        if (typeof startCardLockCountdown === 'function') startCardLockCountdown();
         // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
         // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
         playProfileEntryMusic(p);
@@ -7265,52 +7245,8 @@
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });
     }
-    /* ===== Chrono anti-spam (comptes SANS Boost) =====
-       Les deux actions (bouton « Passer » / « Liker » + glisser dans les deux
-       sens) sont verrouillées 10 s par carte pour les non-Boost → le temps de
-       vraiment regarder le profil avant d'agir, et incitation à passer Boost
-       pour agir directement. */
-    const CARD_LOCK_MS = 10000;
-    let _cardReadyAt = 0, _cardLockTimer = null;
-    function isBoostUser(){ return !!(state.user && state.user.boost); }
-    function stopCardLockCountdown(){ if (_cardLockTimer){ clearInterval(_cardLockTimer); _cardLockTimer = null; } }
-    function unlockCard(){
-      stopCardLockCountdown(); _cardReadyAt = 0;
-      [['swipeNo','swipeCd'], ['swipeYes','swipeCdYes']].forEach(([btnId, cdId]) => {
-        const btn = document.getElementById(btnId); if (btn) btn.classList.remove('locked');
-        const cd = document.getElementById(cdId); if (cd){ cd.textContent = ''; cd.style.setProperty('--cd', 0); }
-      });
-    }
-    function startCardLockCountdown(){
-      stopCardLockCountdown();
-      if (isBoostUser() || _previewMode){ unlockCard(); return; } // Boost / aperçu → actions directes
-      _cardReadyAt = Date.now() + CARD_LOCK_MS;
-      const noBtn = document.getElementById('swipeNo'), yesBtn = document.getElementById('swipeYes');
-      if (noBtn) noBtn.classList.add('locked');
-      if (yesBtn) yesBtn.classList.add('locked');
-      const cdNo = document.getElementById('swipeCd'), cdYes = document.getElementById('swipeCdYes');
-      const tick = () => {
-        const rem = Math.max(0, _cardReadyAt - Date.now());
-        const s = Math.ceil(rem / 1000);
-        const pct = 100 - (rem / CARD_LOCK_MS) * 100;
-        [cdNo, cdYes].forEach(cd => { if (cd){ cd.textContent = s > 0 ? s : ''; cd.style.setProperty('--cd', pct); } });
-        if (rem <= 0) unlockCard();
-      };
-      tick(); _cardLockTimer = setInterval(tick, 150);
-    }
     function commitSwipe(dir, cardEl){
       if (_previewMode) return; // pas de swipe en mode aperçu
-      // Non-Boost : carte verrouillée tant que le chrono tourne (skip ET like) → rebond + rappel Boost.
-      if (!isBoostUser() && Date.now() < _cardReadyAt){
-        cardEl.style.transition = 'transform .3s cubic-bezier(.2,.8,.3,1)';
-        cardEl.style.transform = '';
-        const like = cardEl.querySelector('.badge-stamp.like'); if (like) like.style.opacity = 0;
-        const nope = cardEl.querySelector('.badge-stamp.nope'); if (nope) nope.style.opacity = 0;
-        const acts = document.querySelector('#screen-swipe .swipe-actions'); if (acts) acts.classList.remove('dir-left','dir-right');
-        const s = Math.ceil((_cardReadyAt - Date.now()) / 1000);
-        if (typeof showToast === 'function') showToast('⏳', 'Encore ' + s + ' s', 'Passe Boost pour swiper direct');
-        return;
-      }
       const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
