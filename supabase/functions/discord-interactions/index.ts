@@ -1,6 +1,7 @@
 // Matefindr — Edge Function "discord-interactions".
-// Point d'entrée des interactions Discord (menu déroulant "Rendre muet" posé
-// sous chaque MP par l'Edge Function "notify"). Appelée DIRECTEMENT PAR
+// Point d'entrée des interactions Discord (bouton "Ajuster les notifications"
+// posé sous le DM de bienvenue par discord-join-dm, + menu déroulant "Rendre
+// muet" posé sous chaque MP de notif par "notify"). Appelée DIRECTEMENT PAR
 // DISCORD (jamais par le client) — doit répondre en moins de 3 secondes et
 // vérifier la signature ed25519 de chaque requête.
 //
@@ -32,6 +33,32 @@ const MUTE_LABELS: Record<string, string> = {
   match: "Les matchs",
 };
 
+// Menu déroulant granulaire — identique à celui posé par notify/index.ts.
+const PICK_COMPONENTS = [{
+  type: 1,
+  components: [{
+    type: 3,
+    custom_id: "notif_mute",
+    placeholder: "🔕 Rendre muet…",
+    options: [
+      { label: "Tout", value: "all", emoji: { name: "🔕" } },
+      { label: "Like", value: "like", emoji: { name: "❤️" } },
+      { label: "Message", value: "message", emoji: { name: "💬" } },
+      { label: "Match", value: "match", emoji: { name: "💞" } },
+    ],
+  }],
+}];
+
+// Les 3 boutons de choix rapide, affichés après clic sur "Ajuster les notifications".
+const ADJUST_COMPONENTS = [{
+  type: 1,
+  components: [
+    { type: 2, style: 3, label: "Tout recevoir", custom_id: "notif_all_on", emoji: { name: "✅" } },
+    { type: 2, style: 2, label: "Choisir précisément", custom_id: "notif_pick_open", emoji: { name: "🎯" } },
+    { type: 2, style: 4, label: "Ne rien recevoir", custom_id: "notif_all_off", emoji: { name: "🔕" } },
+  ],
+}];
+
 function hexToBytes(hex: string): Uint8Array {
   const arr = new Uint8Array(hex.length / 2);
   for (let i = 0; i < arr.length; i++) arr[i] = parseInt(hex.substr(i * 2, 2), 16);
@@ -55,6 +82,17 @@ function json(body: unknown) {
   return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
 }
 
+// Retrouve l'id Supabase (profiles.id) d'un utilisateur à partir de son id Discord.
+async function resolveUserId(sb: ReturnType<typeof createClient>, discordId: string | undefined): Promise<string | null> {
+  if (!discordId) return null;
+  const { data } = await sb.from("profiles").select("id").eq("discord_id", discordId).maybeSingle();
+  return (data as { id?: string } | null)?.id ?? null;
+}
+
+async function setPrefs(sb: ReturnType<typeof createClient>, userId: string, patch: Record<string, boolean>) {
+  await sb.from("user_notif_prefs").upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
+}
+
 Deno.serve(async (req) => {
   const signature = req.headers.get("x-signature-ed25519") ?? "";
   const timestamp = req.headers.get("x-signature-timestamp") ?? "";
@@ -69,34 +107,79 @@ Deno.serve(async (req) => {
   // 1) Handshake Discord — obligatoire pour pouvoir enregistrer l'URL dans le portail.
   if (interaction.type === 1) return json({ type: 1 });
 
-  // 2) Sélection dans le menu "Rendre muet" (custom_id posé par notify/index.ts).
-  if (interaction.type === 3 && interaction.data?.custom_id === "notif_mute") {
-    const discordId: string | undefined = interaction.user?.id ?? interaction.member?.user?.id;
+  if (interaction.type !== 3) return json({ type: 6 }); // type non géré → accuse réception
+
+  const customId: string | undefined = interaction.data?.custom_id;
+  const discordId: string | undefined = interaction.user?.id ?? interaction.member?.user?.id;
+  const sb = createClient(SB_URL, SB_KEY);
+
+  // 2) Bouton "Ajuster les notifications" (posé sous le DM de bienvenue) →
+  //    ouvre les 3 choix rapides dans un NOUVEAU message (celui de bienvenue
+  //    reste intact, réutilisable à tout moment).
+  if (customId === "notif_adjust_open") {
+    return json({
+      type: 4,
+      data: {
+        content: "🔔 Comment veux-tu recevoir tes notifications Matefindr ?",
+        components: ADJUST_COMPONENTS,
+      },
+    });
+  }
+
+  // 3) "Tout recevoir" / "Ne rien recevoir" — état absolu, pas un toggle.
+  if (customId === "notif_all_on" || customId === "notif_all_off") {
+    const enable = customId === "notif_all_on";
+    const userId = await resolveUserId(sb, discordId);
+    if (userId) await setPrefs(sb, userId, { notif_like: enable, notif_match: enable, notif_message: enable });
+    return json({
+      type: 7,
+      data: {
+        content: enable
+          ? "✅ Tu recevras à nouveau toutes tes notifications (like, match, message)."
+          : "🔕 Notifications désactivées. Rouvre ce menu depuis le message de bienvenue pour les réactiver.",
+        embeds: [],
+        components: [],
+      },
+    });
+  }
+
+  // 4) "Choisir précisément" → affiche le menu déroulant granulaire dans ce même message.
+  if (customId === "notif_pick_open") {
+    return json({
+      type: 7,
+      data: {
+        content: "🎯 Choisis ce que tu veux rendre muet :",
+        embeds: [],
+        components: PICK_COMPONENTS,
+      },
+    });
+  }
+
+  // 5) Sélection dans le menu granulaire "Rendre muet" (posé ici ou par notify/index.ts).
+  if (customId === "notif_mute") {
     const choice: string | undefined = interaction.data.values?.[0];
     let confirmText = "Une erreur est survenue, réessaie plus tard.";
 
     if (discordId && choice) {
-      const sb = createClient(SB_URL, SB_KEY);
-      const { data: prof } = await sb.from("profiles").select("id").eq("discord_id", discordId).maybeSingle();
-      const userId = (prof as { id?: string } | null)?.id;
+      const userId = await resolveUserId(sb, discordId);
       if (userId) {
         const patch: Record<string, boolean> = choice === "all"
           ? { notif_like: false, notif_match: false, notif_message: false }
           : { [`notif_${choice}`]: false };
-        await sb.from("user_notif_prefs").upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
+        await setPrefs(sb, userId, patch);
         confirmText = `🔕 ${MUTE_LABELS[choice] ?? choice} désormais muet(tes). Choisis à nouveau dans le menu pour ajuster.`;
       }
     }
 
-    const original = interaction.message?.embeds?.[0] ?? {};
-    const embed = { ...original, footer: { text: confirmText } };
-
-    return json({
-      type: 7, // UPDATE_MESSAGE : édite le message d'origine (pas de nouveau MP)
-      data: { embeds: [embed], components: interaction.message?.components ?? [] },
-    });
+    // Deux origines possibles pour ce menu : sous un embed de notif (notify),
+    // ou sous le message "Choisir précisément" (juste du texte, pas d'embed).
+    const embeds = interaction.message?.embeds;
+    if (Array.isArray(embeds) && embeds.length) {
+      const embed = { ...embeds[0], footer: { text: confirmText } };
+      return json({ type: 7, data: { embeds: [embed], components: interaction.message?.components ?? [] } });
+    }
+    return json({ type: 7, data: { content: confirmText, embeds: [], components: interaction.message?.components ?? [] } });
   }
 
-  // Type d'interaction non géré — accuse simplement réception.
-  return json({ type: 6 }); // DEFERRED_UPDATE_MESSAGE
+  return json({ type: 6 }); // custom_id inconnu → accuse simplement réception
 });

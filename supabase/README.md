@@ -17,6 +17,16 @@ Sous chaque MP de notif (like/match/message), un menu déroulant **« 🔕 Rendr
 
 Aucune nouvelle table SQL : `user_notif_prefs` (déjà créée) a déjà les colonnes `notif_like`/`notif_match`/`notif_message`. Par défaut (pas de ligne), tout est activé — le mute ne prend effet qu'après un choix explicite dans le menu.
 
+## Bouton "Ajuster les notifications" (DM de bienvenue)
+
+Le DM de bienvenue (`discord-join-dm`) a maintenant un bouton **« 🔔 Ajuster les notifications »**. Flux (tout géré par `smooth-endpoint`) :
+
+1. Clic sur le bouton → nouveau message avec 3 choix : **✅ Tout recevoir**, **🎯 Choisir précisément**, **🔕 Ne rien recevoir**.
+2. « Tout recevoir » / « Ne rien recevoir » → applique l'état à `notif_like`/`notif_match`/`notif_message` d'un coup (pas un simple toggle, un état absolu).
+3. « Choisir précisément » → affiche le même menu déroulant granulaire (Tout/Like/Message/Match) que sous les notifs.
+
+Le message de bienvenue original reste inchangé (son bouton reste cliquable indéfiniment) — c'est le point d'entrée permanent pour rouvrir ce réglage.
+
 ---
 
 # Matefindr — Stockage des avatars/bannières (Supabase Storage)
