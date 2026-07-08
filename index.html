@@ -3967,6 +3967,9 @@
           <option value="OTHER" data-flag="🏳️">🏳️ Autre</option>
         </select>
 
+        <p style="margin:0 0 14px;font-size:12.5px;color:#b9bbbe;text-align:center">
+          🔔 On t'enverra toutes les notifications de Matefindr (likes, matchs, messages) en message privé sur Discord.
+        </p>
         <div class="onb-actions onb-actions--single">
           <button type="button" class="onb-btn onb-btn--next" id="onbNext1" disabled data-i18n="continue">Continuer</button>
         </div>
@@ -5694,6 +5697,7 @@
     ];
     let deckIdx = 0;
     let _previewMode = false; // true = aperçu complet de SA carte (pas de swipe, bouton "Quitter")
+    let _previewFromEditor = false; // true = aperçu ouvert depuis editor.html (#preview) → "Quitter" doit y retourner
     // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
     const ENTRY_MUSIC_GAIN = 0.55;
     const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
@@ -8686,6 +8690,12 @@
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
       _previewMode = false;
       document.body.removeAttribute('data-preview');
+      if (_previewFromEditor) {
+        // Aperçu ouvert depuis l'éditeur → "Quitter" doit y retourner, pas au hub.
+        _previewFromEditor = false;
+        location.href = 'editor.html';
+        return;
+      }
       // Quitter l'aperçu → retour au swipe (le hub), pas aux Paramètres.
       if (typeof setScreen === 'function') setScreen('swipe');
     });
@@ -10712,6 +10722,7 @@
             // Aperçu direct depuis l'éditeur : on entre VRAIMENT en mode aperçu
             // (ma carte uniquement, figée). Avant on cherchait #accPreviewFull qui
             // n'existe plus → fallback sur le hub normal = aperçu cassé (carte absente).
+            _previewFromEditor = true; // "Quitter l'aperçu" devra revenir sur editor.html
             enterPreviewMode();
           } else {
             // L'écran Paramètres a été retiré → les réglages sont dans l'éditeur.
