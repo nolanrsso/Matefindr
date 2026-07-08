@@ -512,10 +512,13 @@
     h1{font-size:min(15vw, 24vh, 128px)}
   }
 
-  /* Bulles décoratives : au-delà de la taille fluide (clamp ci-dessus), on
-     les masque complètement seulement sur tout petit écran (clutter). Seuil
-     séparé de 600px pour ne pas les faire disparaître trop tôt. */
-  @media (max-width:460px){
+  /* Bulles décoratives : visibles uniquement si largeur ET hauteur ≥1000px
+     (grand écran confortable) — masquées dès que l'une des deux dimensions
+     passe en dessous, y compris en fenêtre "carrée" redimensionnée. */
+  @media (max-width:999px){
+    #bubbles{display:none}
+  }
+  @media (max-height:999px){
     #bubbles{display:none}
   }
 
@@ -4832,10 +4835,8 @@
     requestAnimationFrame(step);
   }
 
-  // Sur tout petit écran seulement : pas de champ de bulles (clutter + perf).
-  // Seuil aligné sur le CSS (elles rétrécissent fluidement au-delà de 460px,
-  // cf. .bubble clamp() plus haut) au lieu de disparaître dès 600px.
-  const _noBubbles = window.matchMedia('(max-width: 460px)').matches;
+  // Bulles créées seulement si largeur ET hauteur ≥1000px (aligné sur le CSS).
+  const _noBubbles = !window.matchMedia('(min-width:1000px) and (min-height:1000px)').matches;
   if (_noBubbles) { layer.style.display = 'none'; }
   else { init(); requestAnimationFrame(step); }
 
