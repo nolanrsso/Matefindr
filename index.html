@@ -104,11 +104,20 @@
       radial-gradient(900px 700px at 100% 100%, #1a0d2c 0%, transparent 55%),
       var(--bg);
   }
-  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.78;mix-blend-mode:screen;will-change:transform}
-  .blob.b1{width:780px;height:780px;left:-140px;top:-180px;background:radial-gradient(circle,#7a2bff 0%,#2a0f55 55%,transparent 70%);animation:drift1 22s ease-in-out infinite alternate}
-  .blob.b2{width:680px;height:680px;right:-120px;top:60px;background:radial-gradient(circle,#ff5fae 0%,#5b1245 55%,transparent 70%);animation:drift2 26s ease-in-out infinite alternate}
-  .blob.b3{width:520px;height:520px;left:18%;bottom:-180px;background:radial-gradient(circle,#5be9ff 0%,#0d3a55 50%,transparent 70%);opacity:.45;animation:drift3 30s ease-in-out infinite alternate}
-  .blob.b4{width:420px;height:420px;right:22%;bottom:-220px;background:radial-gradient(circle,#9146ff 0%,#1d0d3a 55%,transparent 70%);animation:drift4 24s ease-in-out infinite alternate}
+  /* Tailles/flou en clamp() : redimensionnement fluide et continu avec la
+     largeur de viewport (pas de palier brutal desktop <-> mobile). L'opacité
+     reste sur 2 paliers (pas d'unité compatible avec vw pour l'interpoler),
+     mais au-delà de ~900px seulement — donc plus de saut perceptible en
+     dessous, notamment quand la fenêtre passe par des ratios "carrés". */
+  .blob{position:absolute;border-radius:50%;filter:blur(clamp(45px,5.6vw,80px));opacity:.5;mix-blend-mode:screen;will-change:transform}
+  .blob.b1{width:clamp(340px,54vw,780px);height:clamp(340px,54vw,780px);left:-70px;top:-90px;background:radial-gradient(circle,#7a2bff 0%,#2a0f55 55%,transparent 70%);animation:drift1 22s ease-in-out infinite alternate}
+  .blob.b2{width:clamp(300px,47vw,680px);height:clamp(300px,47vw,680px);right:-60px;top:30px;background:radial-gradient(circle,#ff5fae 0%,#5b1245 55%,transparent 70%);animation:drift2 26s ease-in-out infinite alternate}
+  .blob.b3{width:clamp(240px,36vw,520px);height:clamp(240px,36vw,520px);left:18%;bottom:-90px;background:radial-gradient(circle,#5be9ff 0%,#0d3a55 50%,transparent 70%);opacity:.3;animation:drift3 30s ease-in-out infinite alternate}
+  .blob.b4{width:clamp(200px,29vw,420px);height:clamp(200px,29vw,420px);right:22%;bottom:-110px;background:radial-gradient(circle,#9146ff 0%,#1d0d3a 55%,transparent 70%);animation:drift4 24s ease-in-out infinite alternate}
+  @media (min-width:900px){
+    .blob{opacity:.78}
+    .blob.b3{opacity:.45}
+  }
   @keyframes drift1{0%{transform:translate(0,0) scale(1)}100%{transform:translate(120px,80px) scale(1.08)}}
   @keyframes drift2{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-140px,60px) scale(1.05)}}
   @keyframes drift3{0%{transform:translate(0,0) scale(1)}100%{transform:translate(80px,-60px) scale(1.1)}}
@@ -456,6 +465,14 @@
     transition:box-shadow .2s ease;
     user-select:none;
   }
+  /* Redimensionnement fluide (pas de palier brutal) : chaque bulle garde sa
+     taille de base (--bsize, posée en JS au spawn) sur grand écran, et
+     rétrécit progressivement avec la largeur de viewport en dessous
+     d'environ 1380px, jusqu'à ~40% de sa taille d'origine. */
+  .bubble{
+    width:clamp(calc(var(--bsize,64px) * .4), calc(var(--bsize,64px) * .4 + 4.2vw), var(--bsize,64px)) !important;
+    height:clamp(calc(var(--bsize,64px) * .4), calc(var(--bsize,64px) * .4 + 4.2vw), var(--bsize,64px)) !important;
+  }
   .bubble:hover{box-shadow:0 12px 40px rgba(13,11,30,.5), 0 0 0 1px rgba(255,255,255,.18) inset, 0 0 24px rgba(255,126,182,.35)}
   .bubble.dying{animation:die .4s cubic-bezier(.2,.7,.3,1) forwards;pointer-events:none}
   @keyframes die{
@@ -495,18 +512,16 @@
     h1{font-size:min(15vw, 24vh, 128px)}
   }
 
-  /* Mobile : interface épurée — pas de bulles, hero plus confortable */
-  @media (max-width:600px){
+  /* Bulles décoratives : au-delà de la taille fluide (clamp ci-dessus), on
+     les masque complètement seulement sur tout petit écran (clutter). Seuil
+     séparé de 600px pour ne pas les faire disparaître trop tôt. */
+  @media (max-width:460px){
     #bubbles{display:none}
+  }
+
+  /* Mobile : interface épurée, hero plus confortable */
+  @media (max-width:600px){
     .badge.corner{display:none}
-    /* Halos de fond dimensionnés pour desktop : sur un petit écran, la même
-       taille en px couvre proportionnellement bien plus d'espace → ça sature
-       tout l'écran de couleur. On réduit taille + flou + opacité. */
-    .blob{filter:blur(45px);opacity:.5}
-    .blob.b1{width:340px;height:340px;left:-70px;top:-90px}
-    .blob.b2{width:300px;height:300px;right:-60px;top:30px}
-    .blob.b3{width:240px;height:240px;bottom:-90px;opacity:.3}
-    .blob.b4{width:200px;height:200px;bottom:-110px}
     /* Nav bar ~30% plus compacte + logo/texte réduits pour que le bouton
        "Se connecter" tienne sur une seule ligne (au lieu de wrapper). */
     header{margin:10px 15px 0;padding:7px 10px}
@@ -4509,6 +4524,10 @@
     el.className = 'bubble';
     el.style.width = cfg.size + 'px';
     el.style.height = cfg.size + 'px';
+    // Taille de base exposée en variable CSS : permet à la media query de
+    // recalculer une taille responsive (fluide) tout en gardant les
+    // proportions relatives entre bulles (grosse pochette vs petit glyphe).
+    el.style.setProperty('--bsize', cfg.size + 'px');
 
     if (cfg.kind === 'icon'){
       el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div>${ICONS[cfg.icon]}`;
@@ -4813,8 +4832,10 @@
     requestAnimationFrame(step);
   }
 
-  // Sur mobile : pas de champ de bulles (interface épurée + perf). On n'initialise rien.
-  const _noBubbles = window.matchMedia('(max-width: 600px)').matches;
+  // Sur tout petit écran seulement : pas de champ de bulles (clutter + perf).
+  // Seuil aligné sur le CSS (elles rétrécissent fluidement au-delà de 460px,
+  // cf. .bubble clamp() plus haut) au lieu de disparaître dès 600px.
+  const _noBubbles = window.matchMedia('(max-width: 460px)').matches;
   if (_noBubbles) { layer.style.display = 'none'; }
   else { init(); requestAnimationFrame(step); }
 
