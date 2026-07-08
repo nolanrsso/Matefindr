@@ -1,6 +1,6 @@
 // Matefindr — Edge Function "notify".
 // Déclenchée par les Supabase Database Webhooks sur INSERT dans likes/matches/messages.
-// Lit la préférence du destinataire et POST au webhook Discord configuré.
+// Lit la préférence du destinataire et POST au webhook Discord configuré + MP direct.
 //
 // Déploiement :
 //   supabase functions deploy notify --no-verify-jwt
@@ -24,13 +24,32 @@ const DISCORD_API = "https://discord.com/api/v10";
 
 const COLORS = { like: 0xff4fa0, match: 0x9146ff, message: 0x5be9ff };
 
+// Menu déroulant "Rendre muet" attaché sous chaque MP — géré par l'Edge
+// Function discord-interactions (custom_id partagé : "notif_mute").
+const MUTE_COMPONENTS = [{
+  type: 1,
+  components: [{
+    type: 3,
+    custom_id: "notif_mute",
+    placeholder: "🔕 Rendre muet…",
+    options: [
+      { label: "Tout", value: "all", emoji: { name: "🔕" } },
+      { label: "Like", value: "like", emoji: { name: "❤️" } },
+      { label: "Message", value: "message", emoji: { name: "💬" } },
+      { label: "Match", value: "match", emoji: { name: "💞" } },
+    ],
+  }],
+}];
+
 function avatarFallback(name: string | null, c1: string | null) {
   const n = encodeURIComponent(name || "?");
   const c = (c1 || "#9146FF").replace("#", "");
   return `https://ui-avatars.com/api/?name=${n}&size=128&background=${c}&color=fff&bold=true&format=png`;
 }
 
-// Préférences (webhook perso + toggles) — table user_notif_prefs.
+// Préférences (webhook perso + toggles de mute) — table user_notif_prefs.
+// Pas de ligne = tout est activé par défaut (le mute ne s'applique qu'une
+// fois explicitement choisi via le menu déroulant).
 async function loadPrefs(sb: ReturnType<typeof createClient>, userId: string) {
   const { data } = await sb.from("user_notif_prefs").select("*").eq("user_id", userId).maybeSingle();
   return data as null | {
@@ -39,6 +58,9 @@ async function loadPrefs(sb: ReturnType<typeof createClient>, userId: string) {
     notif_match: boolean;
     notif_message: boolean;
   };
+}
+function isMuted(prefs: { notif_like?: boolean; notif_match?: boolean; notif_message?: boolean } | null, kind: "notif_like" | "notif_match" | "notif_message") {
+  return prefs != null && prefs[kind] === false;
 }
 
 // Affichage (photo, pseudo, couleur) — lu directement depuis `profiles`, qui est
@@ -77,7 +99,8 @@ async function discordIdOf(sb: ReturnType<typeof createClient>, userId: string):
   return did ? String(did) : null;
 }
 
-// Envoie un MP au destinataire via le bot (best-effort : ne casse rien si MP fermés / pas de bot).
+// Envoie un MP au destinataire via le bot, avec le menu "Rendre muet" en dessous
+// (best-effort : ne casse rien si MP fermés / pas de bot).
 async function dmUser(sb: ReturnType<typeof createClient>, userId: string, embed: Record<string, unknown>) {
   if (!BOT_TOKEN) return false;
   const discordId = await discordIdOf(sb, userId);
@@ -93,7 +116,7 @@ async function dmUser(sb: ReturnType<typeof createClient>, userId: string, embed
     const msgRes = await fetch(`${DISCORD_API}/channels/${ch.id}/messages`, {
       method: "POST",
       headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ embeds: [embed] }),
+      body: JSON.stringify({ embeds: [embed], components: MUTE_COMPONENTS }),
     });
     return msgRes.ok;
   } catch {
@@ -121,6 +144,8 @@ Deno.serve(async (req) => {
       const [recipientPrefs, sender, recipient] = await Promise.all([
         loadPrefs(sb, toUser), loadProfileDisplay(sb, fromUser), loadProfileDisplay(sb, toUser),
       ]);
+      if (isMuted(recipientPrefs, "notif_like")) return new Response("muted", { status: 200 });
+
       // Le pseudo de "qui t'a liké" est réservé aux comptes Boost du destinataire —
       // la photo, elle, reste toujours visible.
       const revealIdentity = !!recipient?.boost;
@@ -135,7 +160,7 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
         footer: { text: "Matefindr" },
       };
-      if (recipientPrefs?.discord_webhook && recipientPrefs.notif_like) await sendWebhook(recipientPrefs.discord_webhook, embed);
+      if (recipientPrefs?.discord_webhook) await sendWebhook(recipientPrefs.discord_webhook, embed);
       await dmUser(sb, toUser, embed); // MP direct par le bot
     }
 
@@ -151,6 +176,7 @@ Deno.serve(async (req) => {
         { meId: userB, mePrefs: prefsB, other: profA },
       ];
       for (const { meId, mePrefs, other } of pairs) {
+        if (isMuted(mePrefs, "notif_match")) continue;
         const thumb = other?.avatar_url || avatarFallback(other?.display_name || null, other?.c1 || null);
         const embed = {
           title: "💞 C'est un match !",
@@ -160,7 +186,7 @@ Deno.serve(async (req) => {
           timestamp: new Date().toISOString(),
           footer: { text: "Matefindr" },
         };
-        if (mePrefs?.discord_webhook && mePrefs.notif_match) await sendWebhook(mePrefs.discord_webhook, embed);
+        if (mePrefs?.discord_webhook) await sendWebhook(mePrefs.discord_webhook, embed);
         await dmUser(sb, meId, embed); // MP direct par le bot
       }
     }
@@ -173,6 +199,8 @@ Deno.serve(async (req) => {
       if (!match) return new Response("no match", { status: 200 });
       const recipientId = match.user_a === sender ? match.user_b : match.user_a;
       const [recipientPrefs, senderProfile] = await Promise.all([loadPrefs(sb, recipientId), loadProfileDisplay(sb, sender)]);
+      if (isMuted(recipientPrefs, "notif_message")) return new Response("muted", { status: 200 });
+
       const thumb = senderProfile?.avatar_url || avatarFallback(senderProfile?.display_name || null, senderProfile?.c1 || null);
       const embed = {
         title: "💬 Nouveau message Matefindr",
@@ -182,7 +210,7 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
         footer: { text: "Matefindr" },
       };
-      if (recipientPrefs?.discord_webhook && recipientPrefs.notif_message) await sendWebhook(recipientPrefs.discord_webhook, embed);
+      if (recipientPrefs?.discord_webhook) await sendWebhook(recipientPrefs.discord_webhook, embed);
       await dmUser(sb, recipientId, embed); // MP direct par le bot
     }
 

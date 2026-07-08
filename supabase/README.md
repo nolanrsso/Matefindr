@@ -1,3 +1,24 @@
+# Matefindr — Rendre les notifications muettes (menu Discord)
+
+Sous chaque MP de notif (like/match/message), un menu déroulant **« 🔕 Rendre muet… »** propose : Tout, Like, Message, Match. Deux Edge Functions collaborent :
+
+- `notify` : ajoute le menu à chaque MP envoyé (composant Discord, pas du texte).
+- `discord-interactions` : **nouveau point d'entrée appelé directement par Discord** (jamais par le site) quand quelqu'un choisit une option — vérifie la signature de la requête, met à jour `user_notif_prefs`, édite le message pour confirmer.
+
+## Setup (une fois)
+
+1. Discord Developer Portal → **Informations générales** → copier la **Public Key**.
+2. `supabase secrets set DISCORD_PUBLIC_KEY="la_cle_copiee"`
+3. Déployer `discord-interactions` (Verify JWT **désactivé**, comme les autres fonctions) — **avant** l'étape 4, sinon Discord refuse l'URL.
+4. Developer Portal → **Informations générales** → champ **Interactions Endpoint URL** :
+   `https://pdhffpxssagclexttfox.supabase.co/functions/v1/discord-interactions`
+   Discord envoie un PING de test immédiatement — si la fonction répond correctement, le champ se sauvegarde (sinon message d'erreur, revérifier que la fonction est bien déployée avec le bon secret).
+5. Redéployer `notify` (contient maintenant le menu déroulant).
+
+Aucune nouvelle table SQL : `user_notif_prefs` (déjà créée) a déjà les colonnes `notif_like`/`notif_match`/`notif_message`. Par défaut (pas de ligne), tout est activé — le mute ne prend effet qu'après un choix explicite dans le menu.
+
+---
+
 # Matefindr — Stockage des avatars/bannières (Supabase Storage)
 
 Avant : avatar/bannière uploadés étaient encodés en **base64 et stockés directement dans la table `profiles`** (colonnes `avatar_url`/`banner_url` + dupliqués dans la colonne `data`). Avec très peu d'utilisateurs, ça a fait exploser la taille de la base (193% du quota gratuit à ~20 comptes).
