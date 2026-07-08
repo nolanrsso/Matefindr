@@ -3,15 +3,15 @@
 Sous chaque MP de notif (like/match/message), un menu déroulant **« 🔕 Rendre muet… »** propose : Tout, Like, Message, Match. Deux Edge Functions collaborent :
 
 - `notify` : ajoute le menu à chaque MP envoyé (composant Discord, pas du texte).
-- `discord-interactions` : **nouveau point d'entrée appelé directement par Discord** (jamais par le site) quand quelqu'un choisit une option — vérifie la signature de la requête, met à jour `user_notif_prefs`, édite le message pour confirmer.
+- Code source dans `supabase/functions/discord-interactions/index.ts`, mais **déployée sous le nom `smooth-endpoint`** (choix fait à la création dans le dashboard — le nom de la fonction déployée n'a aucune importance fonctionnelle, seule l'URL compte, mais à retenir pour une future modification). **Nouveau point d'entrée appelé directement par Discord** (jamais par le site) quand quelqu'un choisit une option — vérifie la signature de la requête, met à jour `user_notif_prefs`, édite le message pour confirmer.
 
-## Setup (une fois)
+## Setup (une fois) — déjà fait le 2026-07-08
 
 1. Discord Developer Portal → **Informations générales** → copier la **Public Key**.
 2. `supabase secrets set DISCORD_PUBLIC_KEY="la_cle_copiee"`
-3. Déployer `discord-interactions` (Verify JWT **désactivé**, comme les autres fonctions) — **avant** l'étape 4, sinon Discord refuse l'URL.
+3. Déployer le code de `discord-interactions/index.ts` sous le nom **`smooth-endpoint`** (Verify JWT **désactivé**, comme les autres fonctions) — **avant** l'étape 4, sinon Discord refuse l'URL.
 4. Developer Portal → **Informations générales** → champ **Interactions Endpoint URL** :
-   `https://pdhffpxssagclexttfox.supabase.co/functions/v1/discord-interactions`
+   `https://pdhffpxssagclexttfox.supabase.co/functions/v1/smooth-endpoint`
    Discord envoie un PING de test immédiatement — si la fonction répond correctement, le champ se sauvegarde (sinon message d'erreur, revérifier que la fonction est bien déployée avec le bon secret).
 5. Redéployer `notify` (contient maintenant le menu déroulant).
 

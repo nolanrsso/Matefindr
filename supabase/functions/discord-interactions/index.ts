@@ -4,12 +4,16 @@
 // DISCORD (jamais par le client) — doit répondre en moins de 3 secondes et
 // vérifier la signature ed25519 de chaque requête.
 //
+// Déployée sous le nom "smooth-endpoint" (choix fait au moment du déploiement
+// dans le dashboard — le nom n'a aucune incidence fonctionnelle, seule l'URL
+// compte, mais à retenir pour une future modification de ce fichier).
+//
 // Setup (une fois) :
 //   1. Developer Portal → Informations générales → copier "Public Key".
 //   2. supabase secrets set DISCORD_PUBLIC_KEY="..."
-//   3. Déployer cette fonction (Verify JWT désactivé, comme les autres).
+//   3. Déployer cette fonction sous le nom "smooth-endpoint" (Verify JWT désactivé).
 //   4. Developer Portal → Informations générales → "Interactions Endpoint URL"
-//      = https://pdhffpxssagclexttfox.supabase.co/functions/v1/discord-interactions
+//      = https://pdhffpxssagclexttfox.supabase.co/functions/v1/smooth-endpoint
 //      Discord valide l'URL en envoyant un PING dès l'enregistrement — la
 //      fonction doit donc être déployée AVANT de coller cette URL, sinon
 //      Discord refuse de sauvegarder le champ.
