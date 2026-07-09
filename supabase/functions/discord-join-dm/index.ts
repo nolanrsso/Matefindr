@@ -29,11 +29,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 const BOT_TOKEN = Deno.env.get("DISCORD_BOT_TOKEN") ?? "";
 const GUILD_ID = Deno.env.get("DISCORD_GUILD_ID") ?? "";
 const BOOST_ROLE_ID = Deno.env.get("DISCORD_BOOST_ROLE_ID") ?? "";
-const WELCOME = Deno.env.get("DISCORD_WELCOME_MESSAGE") ??
-  "Bienvenue sur Matefindr ! 🎉 Tu fais maintenant partie du serveur.\n\n" +
-  "🔔 Je suis le bot qui t'enverra ici, en message privé, tes notifications Matefindr " +
-  "(likes, matchs, nouveaux messages).\n\n" +
-  "Tu peux ajuster ce que tu reçois à tout moment avec le bouton ci-dessous.";
+// Message de bienvenue — commence par une mention de l'utilisateur (<@id>).
+// Si DISCORD_WELCOME_MESSAGE est défini, on l'utilise tel quel (sans mention).
+const WELCOME_OVERRIDE = Deno.env.get("DISCORD_WELCOME_MESSAGE") ?? "";
+function welcomeText(uid: string): string {
+  if (WELCOME_OVERRIDE) return WELCOME_OVERRIDE;
+  return `Bienvenue sur Matefindr <@${uid}> ! 🎉 Tu fais maintenant partie du serveur.\n\n` +
+    "🔔 Je suis le bot qui t'enverra ici, en message privé, tes notifications Matefindr " +
+    "(likes, matchs, nouveaux messages).\n\n" +
+    "Tu peux ajuster ce que tu reçois à tout moment avec le bouton ci-dessous.";
+}
 // Bouton posé sous le DM de bienvenue → ouvre le choix Tout/Choisir/Rien
 // (géré par l'Edge Function d'interactions, custom_id "notif_adjust_open").
 const WELCOME_COMPONENTS = [{
@@ -141,7 +146,7 @@ Deno.serve(async (req) => {
         const msgRes = await fetch(`${API}/channels/${ch.id}/messages`, {
           method: "POST",
           headers: { Authorization: `Bot ${BOT_TOKEN}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ content: WELCOME, components: WELCOME_COMPONENTS }),
+          body: JSON.stringify({ content: welcomeText(uid), allowed_mentions: { users: [uid] }, components: WELCOME_COMPONENTS }),
         });
         dm = msgRes.ok;
       }

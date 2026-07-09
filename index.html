@@ -8846,30 +8846,44 @@
       const overlay = document.getElementById('likerOverlay');
       const wrap = document.getElementById('likerCardWrap');
       if (!overlay || !wrap) return;
-      // Build a mini "profile" object with sensible defaults so buildCard works
+      // Profil COMPLET : les entrées de la liste des likes ne portent qu'un
+      // sous-ensemble + le vrai profil dans _full. On part du profil complet
+      // (bio, orbes, bannière, connexions, GIFs…) si dispo, sinon des champs
+      // de surface + des valeurs par défaut.
+      const f = (p && p._full) ? p._full : p;
       const profileObj = {
-        name: p.name,
-        tag: p.tag,
-        age: p.age || '',
-        gender: p.gender || '',
-        looking: p.looking || 'game',
-        status: p.status || 'online',
-        nitro: !!p.nitro,
-        boost: !!p.boost,
-        joinedOn: p.joinedOn || 'récemment',
-        activity: p.activity || { type:'game', title:'Matefindr', sub:'Vient de te liker' },
-        games: p.games || [],
-        bio: p.bio || 'Vient de liker ton profil. Réponds vite ?',
-        common: p.common || { friends:0, servers:0 },
-        c1: p.c1, c2: p.c2,
-        initial: p.initial,
-        avatarUrl: p.avatarUrl || null,
-        bannerUrl: p.bannerUrl || null,
-        decorationUrl: p.decorationUrl || null,
-        orbs: p.orbs || [],
-        publicFlags: p.publicFlags || 0,
-        premiumType: p.premiumType || 0,
-        socials: p.socials || {},
+        name: f.name || p.name,
+        tag: f.tag || p.tag,
+        age: f.age || p.age || '',
+        gender: f.gender || p.gender || '',
+        country: f.country || p.country || '',
+        countryFlag: f.countryFlag || p.countryFlag || '',
+        looking: f.looking || p.looking || 'game',
+        status: f.status || p.status || 'online',
+        nitro: !!f.nitro,
+        boost: !!f.boost,
+        nameColor: f.nameColor || null,
+        showBoostName: f.showBoostName,
+        joinedOn: f.joinedOn || 'récemment',
+        activity: f.activity || { type:'game', title:'Matefindr', sub:'Vient de te liker' },
+        games: f.games || [],
+        bio: f.bio || 'Vient de liker ton profil. Réponds vite ?',
+        common: f.common || { friends:0, servers:0 },
+        c1: f.c1 || p.c1, c2: f.c2 || p.c2,
+        profileColor: f.profileColor, profileColor2: f.profileColor2,
+        initial: f.initial || p.initial,
+        avatarUrl: f.avatarUrl || p.avatarUrl || null,
+        avatarPos: f.avatarPos || null,
+        bannerUrl: f.bannerUrl || p.bannerUrl || null,
+        decorationUrl: f.decorationUrl || p.decorationUrl || null,
+        orbs: f.orbs || p.orbs || [],
+        gifs: f.gifs || [],
+        bg: f.bg || null,
+        connections: f.connections || {},
+        publicFlags: f.publicFlags || 0,
+        premiumType: f.premiumType || 0,
+        socials: f.socials || {},
+        profileVoice: f.profileVoice || null,
         isMe: false,
       };
       wrap.innerHTML = '';
