@@ -2501,7 +2501,7 @@ $('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('�
 /* Logo Matefindr → retour à l'accueil (en sauvegardant). */
 $('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html'; }));
 /* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
-$('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html#preview'; }));
+$('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); try{sessionStorage.setItem('mf_from_editor','1');}catch(_){}; location.href='index.html#preview'; }));
 /* Paramètres (haut-droite) : ouvre un panneau (sheet) DANS l'éditeur — ne prend
    pas tout l'écran, contrairement à l'ancienne page compte d'index.html. */
 $('btnSettings').addEventListener('click',openSettingsSheet);

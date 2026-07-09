@@ -94,6 +94,47 @@
             }
           }
         } catch (e) { console.warn('restore archive failed', e); }
+        // Reconnexion sur un AUTRE appareil / cache vidé : aucun profil local, mais il
+        // existe peut-être en base (profiles.data). On le restaure, sinon l'utilisateur
+        // repasse par l'onboarding et "doit tout recommencer" alors que son profil existe.
+        if (!state.profile && window.__supa) {
+          try {
+            const { data: { session } } = await window.__supa.auth.getSession();
+            if (session) {
+              const { data: row } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
+              const d = (row && row.data && typeof row.data === 'object' && row.data.name) ? row.data : null;
+              if (d) {
+                const su = state.user;
+                state.profile = {
+                  age: d.age || null, gender: d.gender || '', country: d.country || '', countryFlag: d.countryFlag || '',
+                  looking: d.looking || 'game',
+                  bio: (d.bio && d.bio.indexOf('Complète ta bio') === -1) ? d.bio : '',
+                  game: (Array.isArray(d.games) ? d.games[0] : null) || null,
+                  connections: (d.connections && typeof d.connections === 'object') ? d.connections : {},
+                  userOrbs: Array.isArray(d.orbs) ? d.orbs : [],
+                  pseudo: d.name || '',
+                };
+                // Identité/déco : on restaure les CUSTOMS (le Discord frais reste le défaut).
+                if (d.name && d.name !== su.displayName) { su.displayName = d.name; su.nameCustom = true; }
+                if (d.avatarUrl && !/cdn\.discordapp\.com/i.test(d.avatarUrl)) { su.avatarUrl = d.avatarUrl; su.avatarCustom = true; su.avatarPos = d.avatarPos || null; }
+                if (d.bannerUrl && !/cdn\.discordapp\.com/i.test(d.bannerUrl)) { su.bannerUrl = d.bannerUrl; su.bannerCustom = true; }
+                if (d.decorationUrl) { su.decorationUrl = d.decorationUrl; su.decoCustom = true; }
+                if (d.profileColor)  su.profileColor  = d.profileColor;
+                if (d.profileColor2) su.profileColor2 = d.profileColor2;
+                if (d.nameColor)     su.nameColor     = d.nameColor;
+                if (typeof d.showBoostName === 'boolean') su.boostShowName = d.showBoostName;
+                if (typeof d.boost === 'boolean') su.boost = d.boost;
+                if (Array.isArray(d.gifs)) su.gifs = d.gifs;
+                if (d.bg)         su.boostBg    = d.bg;
+                if (d.swipeMusic) su.swipeMusic = d.swipeMusic;
+                if (d.socials && typeof d.socials === 'object') su.socials = d.socials;
+                if (typeof d.handleBlur === 'boolean') su.handleBlur = d.handleBlur;
+                if (d.profileVoice) su.profileVoice = d.profileVoice;
+                console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
+              }
+            }
+          } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
+        }
         save(); setAuth(true);
         // Sync AVANT l'appel Discord (awaited) : discord-join-dm lit profiles.data.boost
         // pour synchroniser le rôle Discord "Boost" → il faut que la base soit à jour
@@ -3433,9 +3474,14 @@
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
       _previewMode = false;
       document.body.removeAttribute('data-preview');
-      if (_previewFromEditor) {
+      // Signal robuste posé par l'éditeur avant la navigation (survit aux races
+      // entre onLogin/handleEditorReturn, contrairement à la variable JS seule).
+      let fromEditor = _previewFromEditor;
+      try { if (sessionStorage.getItem('mf_from_editor') === '1') fromEditor = true; } catch(_){}
+      if (fromEditor) {
         // Aperçu ouvert depuis l'éditeur → "Quitter" doit y retourner, pas au hub.
         _previewFromEditor = false;
+        try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
         location.href = 'editor.html';
         return;
       }
