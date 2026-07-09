@@ -573,6 +573,18 @@
           updated_at: new Date().toISOString(),
         };
         if (state.user && state.user.discordId) base.discord_id = state.user.discordId;
+        // ANTI-ÉCRASEMENT : un profil "vide" (identité Discord seule, onboarding pas
+        // rempli) ne doit JAMAIS écraser un profil riche déjà en base. On n'écrit alors
+        // que les colonnes legacy et on LAISSE la colonne data intacte (récupérable).
+        const _noOrbs = !Array.isArray(my.orbs) || my.orbs.length === 0;
+        const _noGifs = !Array.isArray(my.gifs) || my.gifs.length === 0;
+        const _noBio  = !my.bio || /Complète ta bio/.test(my.bio);
+        const looksEmpty = _noOrbs && _noGifs && _noBio && !my.age && !my.gender && !my.country && !my.swipeMusic;
+        if (looksEmpty) {
+          const { error } = await window.__supa.from('profiles').upsert(base, { onConflict: 'id' });
+          if (error) console.warn('[Matefindr] sync legacy-only failed', error.message || error);
+          return;
+        }
         // 1) Essai avec la colonne data (profil COMPLET : âge, genre, pays, gifs, fond, etc.)
         let { error } = await window.__supa.from('profiles').upsert({ ...base, data: my }, { onConflict: 'id' });
         // 2) Si la colonne data n'existe pas encore → upsert legacy seul (ne casse pas)
