@@ -1551,7 +1551,9 @@ function orbBounds(margin){
     const top=Math.max(s.minY,cy-fh/2+margin), bottom=Math.min(s.maxY,cy+fh/2-margin);
     return {minX:Math.min(left,right), maxX:Math.max(left,right), minY:Math.min(top,bottom), maxY:Math.max(top,bottom)};
   }
-  const top=Math.max(s.minY,c.top+margin), bottom=Math.min(s.maxY,c.bottom-margin);
+  // La zone des bulles déborde un peu au-dessus et en-dessous de la carte (des deux côtés).
+  const ext=c.height*0.14;
+  const top=Math.max(s.minY,c.top-ext), bottom=Math.min(s.maxY,c.bottom+ext);
   return {minX:s.minX, maxX:s.maxX, minY:Math.min(top,bottom), maxY:Math.max(top,bottom)};
 }
 /* Guide visuel des zones de placement (affiché pendant un drag). */
