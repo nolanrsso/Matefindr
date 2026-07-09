@@ -1061,9 +1061,9 @@
           ${guildsHtml}
         </div>
       `;
-      // En mode APERÇU, la carte est un endroit dédié et figé : pas de drag/swipe
-      // (sinon on peut traîner la carte et la détacher de ses GIFs de fond).
-      if (isTop && !_previewMode) attachDrag(c);
+      // En mode APERÇU on peut aussi traîner la carte : attachDrag détecte le
+      // preview et la fait rebondir au centre au relâchement (aucun swipe).
+      if (isTop) attachDrag(c);
       // Voice-memo player on the card (if any)
       bindCardVoice(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
@@ -2016,6 +2016,8 @@
         const p = e.touches ? e.touches[0] : e;
         dx = p.clientX - sx; dy = p.clientY - sy;
         card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
+        // Aperçu : on déplace librement la carte, sans stamps LIKE/NOPE ni boutons de swipe.
+        if (_previewMode) return;
         like.style.opacity = Math.max(0, Math.min(1, dx / 120));
         nope.style.opacity = Math.max(0, Math.min(1, -dx / 120));
         if (dx > 40) setDir('right');
@@ -2029,9 +2031,14 @@
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend', onUp);
         card.style.transition = '';
-        // En mode aperçu : la carte rebondit toujours (pas de swipe possible)
+        // En mode aperçu : la carte rebondit toujours au centre (pas de swipe possible).
         if (!_previewMode && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
-        else { card.style.transform = ''; like.style.opacity = 0; nope.style.opacity = 0; setDir(null); }
+        else {
+          // Retour au centre avec un léger ressort.
+          card.style.transition = 'transform .55s cubic-bezier(.34,1.4,.5,1)';
+          card.style.transform = '';
+          like.style.opacity = 0; nope.style.opacity = 0; setDir(null);
+        }
       }
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });

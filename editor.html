@@ -1501,9 +1501,22 @@ function addOrb(o){
 function stageBounds(margin){
   const tb=document.querySelector('.toolbar');
   const topbar=document.querySelector('.topbar');
-  const top=(topbar?topbar.getBoundingClientRect().bottom:56)+margin;
-  const bottom=(tb?tb.getBoundingClientRect().top:window.innerHeight)-margin;
-  return {minX:margin, maxX:window.innerWidth-margin, minY:top, maxY:Math.max(top,bottom)};
+  const vTop=(topbar?topbar.getBoundingClientRect().bottom:56)+margin;
+  const vBottom=(tb?tb.getBoundingClientRect().top:window.innerHeight)-margin;
+  const card=document.getElementById('card');
+  // Pas de carte : ancien comportement plein écran (fallback).
+  if(!card) return {minX:margin, maxX:window.innerWidth-margin, minY:vTop, maxY:Math.max(vTop,vBottom)};
+  // Zone bornée RELATIVE à la carte → stable au zoom navigateur. En dézoom, le
+  // viewport grandit (window.innerWidth explose) mais la carte garde sa taille CSS,
+  // donc on borne à un multiple de la carte (± ~1.7 largeur, ± ~0.5 hauteur) au lieu
+  // du viewport. Les positions sont stockées en % de la carte : ça cape o.x à ~±220 %
+  // (= la portée du layout par défaut) quel que soit le zoom. Capé aussi au viewport.
+  const c=card.getBoundingClientRect();
+  const cx=c.left+c.width/2, cy=c.top+c.height/2;
+  const halfW=c.width*1.70, halfH=c.height*1.0;
+  const minX=Math.max(margin, cx-halfW), maxX=Math.min(window.innerWidth-margin, cx+halfW);
+  const minY=Math.max(vTop, cy-halfH), maxY=Math.min(vBottom, cy+halfH);
+  return {minX:Math.min(minX,maxX), maxX:Math.max(minX,maxX), minY:Math.min(minY,maxY), maxY:Math.max(minY,maxY)};
 }
 /* Zone des BULLES = sur les côtés de la carte, JAMAIS au-dessus ni en dessous → Y borné à la hauteur de la carte. */
 function orbBounds(margin){
@@ -1526,7 +1539,16 @@ function orbBounds(margin){
   return {minX:s.minX, maxX:s.maxX, minY:Math.min(top,bottom), maxY:Math.max(top,bottom)};
 }
 /* Guide visuel des zones de placement (affiché pendant un drag). */
-function showGuide(mode){const g=$('dropGuide');if(!g)return;g.setAttribute('data-mode',mode);g.classList.add('show');}
+function showGuide(mode){
+  const g=$('dropGuide');if(!g)return;
+  // Positionne le cadre pointillé sur la VRAIE zone de clamp (bornée à la carte),
+  // pour qu'il reflète la limite réelle quel que soit le zoom.
+  const b=(mode==='orb')?orbBounds(0):stageBounds(0);
+  g.style.left=b.minX+'px';g.style.top=b.minY+'px';
+  g.style.width=Math.max(0,b.maxX-b.minX)+'px';g.style.height=Math.max(0,b.maxY-b.minY)+'px';
+  g.style.right='auto';g.style.bottom='auto';
+  g.setAttribute('data-mode',mode);g.classList.add('show');
+}
 function hideGuide(){const g=$('dropGuide');if(g)g.classList.remove('show');}
 /* MÊMES constantes que la carte de swipe (index.html ORB_LAYOUT) → placement identique. */
 const ORB_LAYOUT={COL0:0.735,COL_GAP:0.42,ROW_STEP:0.215,MAX_PER_COL:4};
