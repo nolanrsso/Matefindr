@@ -343,9 +343,16 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 }
 .username--boost::after{content:" ✦";-webkit-text-fill-color:#FFD83D;color:#FFD83D}
 /* Bouton bascule du style doré dans le popup pseudo */
-.uname-boost-btn{width:100%;margin:10px 0 2px;padding:10px 12px;border-radius:12px;cursor:pointer;font:inherit;font-weight:800;font-size:13px;
-  border:1.5px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#b9bbbe;transition:.15s}
-.uname-boost-btn.on{border-color:rgba(255,216,61,.55);background:linear-gradient(180deg,rgba(255,216,61,.18),rgba(255,179,71,.08));color:#FFE08A}
+.uname-color{display:flex;align-items:center;gap:11px;margin:12px 0 2px}
+.uname-color[hidden]{display:none}
+.uname-color-swatch{position:relative;width:40px;height:40px;border-radius:12px;overflow:hidden;flex:0 0 auto;cursor:pointer;
+  box-shadow:0 3px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4) inset}
+.uname-color-swatch input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer}
+.uname-color-swatch input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.uname-color-swatch input[type=color]::-webkit-color-swatch{border:none}
+.uname-color-lbl{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--dim)}
+.uname-color-def{padding:8px 13px;border-radius:10px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:12px;cursor:pointer;transition:.15s}
+.uname-color-def:hover{background:rgba(255,255,255,.1)}
 .divider{height:1px;background:rgba(255,255,255,.12);margin:2px 0}
 .bio{position:relative;padding:11px 13px;border-radius:13px;cursor:pointer;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13.5px;line-height:1.5;min-height:44px;white-space:pre-wrap}
 .bio textarea{width:100%;min-height:74px;resize:vertical;font:inherit;color:#fff;background:transparent;border:none;outline:none}
@@ -576,6 +583,44 @@ body.not-boost .pset-panel{display:none} /* Presets réservés Boost */
   backdrop-filter:blur(24px) saturate(150%);box-shadow:0 24px 70px rgba(0,0,0,.65);opacity:0;pointer-events:none;
   transition:opacity .22s ease, transform .26s cubic-bezier(.2,.8,.3,1)}
 .sheet.open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+
+/* ===== Panneau "Couleur de la carte" : tiroir gauche + carte glissée à droite ===== */
+.color-panel{position:fixed;left:0;top:0;bottom:0;z-index:41;width:min(84vw,300px);
+  padding:72px 20px 26px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:linear-gradient(180deg,rgba(26,21,48,.97),rgba(13,11,24,.98));
+  border-right:1px solid var(--stroke-2);box-shadow:24px 0 70px rgba(0,0,0,.55);
+  transform:translateX(-101%);transition:transform .34s cubic-bezier(.6,.05,.2,1);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+body.color-open .color-panel{transform:translateX(0)}
+.card-zone{transition:transform .34s cubic-bezier(.6,.05,.2,1)}
+body.color-open .card-zone{transform:translateX(158px)}
+@media (max-width:720px){
+  .color-panel{width:min(58vw,258px);padding-left:15px;padding-right:15px}
+  /* Écran étroit : carte réduite et poussée à droite pour dégager le panneau — elle
+     déborde un peu à droite, on garde sa partie droite + le dégradé qui s'actualise
+     en live (le scale n'affecte que le visuel — pas de drag d'orbe pendant l'édition). */
+  body.color-open .card-zone{transform:translateX(66vw) scale(.6);transform-origin:center center}
+}
+.cp-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke-2);
+  background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:13px;font-family:inherit}
+.cp-close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.cp-title{font-size:12px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
+.cp-grad-wrap{display:flex;align-items:stretch;gap:16px;margin-bottom:20px}
+.grad-vert{position:relative;width:92px;min-height:232px;border-radius:22px;flex:0 0 auto;
+  box-shadow:0 12px 34px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.4) inset}
+.gv-handle{position:absolute;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;
+  border:3px solid #fff;cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3)}
+.gv-handle:hover{transform:translateX(-50%) scale(1.08)}
+.gv-top{top:14px}.gv-bot{bottom:14px}
+.gv-handle input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer;opacity:0}
+.gv-labels{display:flex;flex-direction:column;justify-content:space-between;padding:6px 0;font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.03em}
+.cp-sub{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 11px}
+.cp-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
+.cp-swatches button{height:42px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);transition:transform .12s ease}
+.cp-swatches button:hover{transform:scale(1.07)}
+.cp-reset{width:100%;padding:12px;border-radius:13px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);
+  color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+.cp-reset:hover{background:rgba(255,255,255,.1)}
 .sheet h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;justify-content:space-between;font-weight:700}
 .sheet h3 .close{width:26px;height:26px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:12px;font-family:inherit}
 .sheet h3 .close:hover{color:#fff;background:rgba(255,79,160,.18)}
@@ -956,10 +1001,16 @@ html.perf-lite *{
 <div class="conn-pop" id="unamePop" hidden>
   <div class="conn-pop-head"><b>Ton pseudo Matefindr</b></div>
   <input id="unameInput" maxlength="32" placeholder="Ton pseudo…" autocomplete="off">
-  <button type="button" class="uname-boost-btn" id="unameBoostBtn" hidden></button>
+  <div class="uname-color" id="unameColorRow" hidden>
+    <label class="uname-color-swatch" title="Couleur du pseudo"><input type="color" id="unameColor" value="#ffd83d"></label>
+    <span class="uname-color-lbl">Couleur du pseudo</span>
+    <button type="button" class="uname-color-def" id="unameColorDef">Défaut</button>
+  </div>
   <div class="conn-pop-actions"><button class="btn" id="unameCancel">Fermer</button><button class="btn primary" id="unameSave">Enregistrer</button></div>
 </div>
 
+<!-- Panneau couleur de la carte : glisse la carte à droite et s'ouvre sur sa gauche -->
+<div class="color-panel" id="colorPanel"></div>
 <div class="sheet" id="sheet"></div>
 
 <div class="modal" id="boostGate"><div class="box boost-gate-box">
@@ -1070,6 +1121,12 @@ function applyUsernameBoostStyle(){
   slot.style.color = hasCustom ? S.nameColor : '';
   slot.style.webkitTextFillColor = hasCustom ? S.nameColor : '';
 }
+/* Applique une couleur de pseudo (null = défaut : doré Boost si dispo, sinon blanc). */
+function applyNameColorVal(v){
+  S.nameColor = (v && /^#[0-9a-f]{6}$/i.test(v)) ? v : null;
+  applyUsernameBoostStyle();
+  if(typeof persist==='function') persist();
+}
 function applyTagBlur(){
   const tag=document.querySelector('.tag'); if(!tag) return;
   tag.classList.toggle('tag--blur', !!S.handleBlur);
@@ -1084,22 +1141,21 @@ function applyTagBlur(){
 /* Pseudo Matefindr : popup rename + (Boost) retrait du style doré */
 (function(){
   const slot=$('usernameSlot');
-  const pop=$('unamePop'), back=$('unameBackdrop'), inp=$('unameInput'), boostBtn=$('unameBoostBtn');
-  function refreshBoostBtn(){
-    const on=(S.boostShowName!==false);
-    boostBtn.classList.toggle('on', on);
-    boostBtn.textContent = on ? '✦ Pseudo doré Boost : Activé' : 'Pseudo doré Boost : Désactivé';
-  }
+  const pop=$('unamePop'), back=$('unameBackdrop'), inp=$('unameInput');
+  const colorRow=$('unameColorRow'), colorInp=$('unameColor'), colorDef=$('unameColorDef');
   window.openUnamePop=function(){
     inp.value=S.username;
     const isBoost=!document.body.classList.contains('not-boost');
-    boostBtn.hidden=!isBoost; if(isBoost) refreshBoostBtn();
+    colorRow.hidden=!isBoost;
+    if(isBoost) colorInp.value=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffd83d';
     back.hidden=false; pop.hidden=false; inp.focus(); inp.select();
   };
   window.closeUnamePop=function(){ pop.hidden=true; back.hidden=true; };
   slot.addEventListener('click',openUnamePop);
   back.addEventListener('click',closeUnamePop);
-  boostBtn.addEventListener('click',()=>{ S.boostShowName=(S.boostShowName===false); applyUsernameBoostStyle(); refreshBoostBtn(); persist(); });
+  // Couleur du pseudo directement dans le popup (Boost) — picker natif, défaut = doré.
+  colorInp.addEventListener('input',e=>applyNameColorVal(e.target.value));
+  colorDef.addEventListener('click',()=>{ applyNameColorVal(null); colorInp.value='#ffd83d'; toast('Pseudo remis par défaut'); });
   $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; slot.textContent=v; applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
@@ -1250,14 +1306,18 @@ function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMI
 
 /* ===== SHEET ===== */
 let activeTool=null;
-document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
+document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;
+  // Couleur de la carte : pas de bottom-sheet → tiroir gauche + carte glissée à droite.
+  if(tool==='color'){ if(document.body.classList.contains('color-open')){closeColorPanel();} else {closeSheet();openColorPanel();} return; }
+  closeColorPanel();
+  if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
 // Sélecteur d'orientation → bascule le mode d'édition (Bureau / Portrait / Paysage).
 document.querySelectorAll('.canvas-mode-btn').forEach(btn=>{btn.addEventListener('click',()=>setCanvasMode(btn.dataset.mode));});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
-function openBubblesSheet(){const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
+function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='')=>`<h3><span class="sh-title">${t}${badge}</span><button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
-function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);else if(tool==='color')renderColorSheet(sh);}
+function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);}
 
 /* ===== 1. BULLES = orbes d'intérêt (Musique / Jeu / Série·Film), comme le site ===== */
 const ORB_ICON={
@@ -1727,47 +1787,34 @@ function applyBg(bg){S.bg=bg;const layer=$('bgLayer');layer.innerHTML='';if(bg.t
 /* ===== 4. COULEURS (carte + pseudo) — sélecteur simplifié ===== */
 const SWATCH_PAIRS=[['#9146FF','#4A1BC1'],['#FF7EB6','#C92866'],['#5BE9FF','#1B6FC1'],['#5865F2','#404EED'],['#3BD17C','#1EA362'],['#FFB66E','#E8590C'],['#FF4FA0','#9146FF'],['#FFD83D','#FF7EB6']];
 const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','#3BD17C','#FFB66E','#FF5555','#5865F2'];
-function renderColorSheet(sh){
-  const nc = (S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor : null;
-  sh.innerHTML=sheetHeader('Couleurs du profil')+`
-    <div class="color2">
-      <div class="csec-lbl">Couleur de la carte</div>
-      <div class="grad-prev" id="gradPrev" style="background:linear-gradient(180deg,${S.c1},${S.c2})"></div>
-      <div class="col2-row2">
-        <label class="c2-dot big" style="background:${S.c1}"><input type="color" id="colP" value="${S.c1.toLowerCase()}"><span class="cdot-lbl">Haut</span></label>
-        <label class="c2-dot big" style="background:${S.c2}"><input type="color" id="colS" value="${S.c2.toLowerCase()}"><span class="cdot-lbl">Bas</span></label>
+/* Panneau "Couleur de la carte" : dégradé vertical à 2 poignées (haut = c1, bas = c2),
+   chaque poignée ouvre le picker natif. + dégradés 1 clic + reset Discord. */
+function renderColorPanel(){
+  const p=$('colorPanel');
+  p.innerHTML=`
+    <button class="cp-close" id="cpClose" aria-label="Fermer">✕</button>
+    <div class="cp-title">Couleur de la carte</div>
+    <div class="cp-grad-wrap">
+      <div class="grad-vert" id="gradVert" style="background:linear-gradient(180deg,${S.c1},${S.c2})">
+        <label class="gv-handle gv-top" style="background:${S.c1}" title="Couleur du haut"><input type="color" id="colP" value="${S.c1.toLowerCase()}"></label>
+        <label class="gv-handle gv-bot" style="background:${S.c2}" title="Couleur du bas"><input type="color" id="colS" value="${S.c2.toLowerCase()}"></label>
       </div>
-      <div class="csec-lbl sub">Dégradés en 1 clic</div>
-      <div class="swatches big">${SWATCH_PAIRS.map(p=>`<button data-c1="${p[0]}" data-c2="${p[1]}" title="${p[0]} → ${p[1]}" style="background:linear-gradient(180deg,${p[0]},${p[1]})"></button>`).join('')}</div>
-      <button class="btn color-reset" id="colReset">↺ Couleur Discord</button>
-
-      <div class="csec-div"></div>
-      <div class="csec-lbl">Couleur du pseudo</div>
-      <div class="name-prev" id="namePrev" style="color:${nc||'#fff'}">${esc(S.username||'Pseudo')}</div>
-      <div class="name-colors">
-        <button class="nc-def${nc?'':' sel'}" data-nc="">Défaut</button>
-        ${NAME_COLORS.map(c=>`<button class="nc-dot${nc&&nc.toLowerCase()===c.toLowerCase()?' sel':''}" data-nc="${c}" title="${c}" style="background:${c}"></button>`).join('')}
-        <label class="nc-custom" title="Couleur personnalisée"><input type="color" id="colName" value="${nc||'#ffffff'}"><span>+</span></label>
-      </div>
-    </div>`;
-  const gp=()=>{ const g=sh.querySelector('#gradPrev'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
-    const dp=sh.querySelector('#colP').closest('.c2-dot'); if(dp) dp.style.background=S.c1;
-    const ds=sh.querySelector('#colS').closest('.c2-dot'); if(ds) ds.style.background=S.c2; };
-  sh.querySelector('#colP').addEventListener('input',e=>{ applyColors(e.target.value, S.c2); gp(); });
-  sh.querySelector('#colS').addEventListener('input',e=>{ applyColors(S.c1, e.target.value); gp(); });
-  sh.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); sh.querySelector('#colP').value=S.c1.toLowerCase(); sh.querySelector('#colS').value=S.c2.toLowerCase(); gp(); }));
-  sh.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#5865F2','#404EED'); sh.querySelector('#colP').value='#5865f2'; sh.querySelector('#colS').value='#404eed'; gp(); toast('Dégradé Discord appliqué'); });
-  // ---- Couleur du pseudo ----
-  function setNameColor(v){
-    S.nameColor = (v && /^#[0-9a-f]{6}$/i.test(v)) ? v : null;
-    applyUsernameBoostStyle(); if(typeof persist==='function') persist();
-    const np=sh.querySelector('#namePrev'); if(np) np.style.color = S.nameColor || '#fff';
-    sh.querySelectorAll('.nc-dot,.nc-def').forEach(b=>{ const bv=b.dataset.nc||''; b.classList.toggle('sel', bv ? (!!S.nameColor && bv.toLowerCase()===S.nameColor.toLowerCase()) : !S.nameColor); });
-    toast(S.nameColor ? 'Couleur du pseudo appliquée' : 'Pseudo remis en blanc');
-  }
-  sh.querySelectorAll('[data-nc]').forEach(b=>b.addEventListener('click',()=>setNameColor(b.dataset.nc)));
-  sh.querySelector('#colName').addEventListener('input',e=>setNameColor(e.target.value));
+      <div class="gv-labels"><span>Haut</span><span>Bas</span></div>
+    </div>
+    <div class="cp-sub">Dégradés en 1 clic</div>
+    <div class="cp-swatches">${SWATCH_PAIRS.map(pr=>`<button data-c1="${pr[0]}" data-c2="${pr[1]}" title="${pr[0]} → ${pr[1]}" style="background:linear-gradient(180deg,${pr[0]},${pr[1]})"></button>`).join('')}</div>
+    <button class="cp-reset" id="colReset">↺ Couleur Discord</button>`;
+  const sync=()=>{ const g=p.querySelector('#gradVert'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
+    const t=p.querySelector('.gv-top'); if(t) t.style.background=S.c1;
+    const b=p.querySelector('.gv-bot'); if(b) b.style.background=S.c2; };
+  p.querySelector('#colP').addEventListener('input',e=>{ applyColors(e.target.value, S.c2); sync(); });
+  p.querySelector('#colS').addEventListener('input',e=>{ applyColors(S.c1, e.target.value); sync(); });
+  p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); p.querySelector('#colP').value=S.c1.toLowerCase(); p.querySelector('#colS').value=S.c2.toLowerCase(); sync(); }));
+  p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#5865F2','#404EED'); p.querySelector('#colP').value='#5865f2'; p.querySelector('#colS').value='#404eed'; sync(); toast('Dégradé Discord appliqué'); });
+  p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
+function openColorPanel(){ renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
+function closeColorPanel(){ document.body.classList.remove('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.remove('active'); }
 
 /* ===== 5. MUSIQUE D'ENTRÉE ===== */
 const music={sel:null,startSec:0,audio:null};
@@ -2499,7 +2546,7 @@ function renderSettingsSheet(sh){
     card.style.left=left+'px'; card.style.top=top+'px';
   }
   function hide(){ spot.classList.remove('show'); card.classList.remove('show'); }
-  function panelOpen(){ return !!document.querySelector('.sheet.open, .modal.open, #boostGate.open'); }
+  function panelOpen(){ return document.body.classList.contains('color-open') || !!document.querySelector('.sheet.open, .modal.open, #boostGate.open'); }
 
   /* Clic sur la cible ⇒ un panneau s'ouvre : on s'efface, et on avance dès qu'il se referme. */
   function watchPanel(){
