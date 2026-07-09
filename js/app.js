@@ -64,9 +64,13 @@
         const prev = state.user || {};
         const keepBanner = prev.bannerCustom && prev.bannerUrl;
         const keepDeco   = prev.decoCustom && prev.decorationUrl;
+        // Photo de profil importée + son recadrage : sinon le merge Discord
+        // (user.avatarUrl = avatar Discord) écrase la pdp custom à chaque login.
+        const keepAvatar = prev.avatarCustom && prev.avatarUrl;
         state.user = Object.assign({}, prev, user);
         if (keepBanner) { state.user.bannerUrl = prev.bannerUrl; state.user.bannerCustom = true; }
         if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
+        if (keepAvatar) { state.user.avatarUrl = prev.avatarUrl; state.user.avatarCustom = true; state.user.avatarPos = prev.avatarPos || null; }
         // Restore an archived profile if we have one for this Discord ID
         try {
           const key = state.user.discordId || state.user.email || state.user.discordTag;

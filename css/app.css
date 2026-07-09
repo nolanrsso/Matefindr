@@ -1350,6 +1350,7 @@
     width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
     font-family:"Clash Display",sans-serif;font-weight:800;font-size:52px;color:#fff;
     position:relative;z-index:2;
+    overflow:hidden; /* clippe l'<img> zoomée (transform:scale du crop) dans le cercle, comme .avatar dans l'éditeur */
   }
   /* Nitro decoration — animated rainbow conic ring on top of the avatar */
   .swipe-card .avatar-wrap.nitro::before{
