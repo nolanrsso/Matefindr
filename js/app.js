@@ -1,0 +1,6766 @@
+  /* ====== Supabase client (real Discord OAuth) ====== */
+  const SUPABASE_URL = 'https://pdhffpxssagclexttfox.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaGZmcHhzc2FnY2xleHR0Zm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzA4NjgsImV4cCI6MjA5NjI0Njg2OH0.wqnVvxAcjMGfl6QgeUfgEs4EEJAQDjVLMOwy676sccg';
+  const supa = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+  window.__supa = supa;
+
+  /* Redimensionne/compresse une image côté client avant upload (évite les
+     photos de plusieurs Mo qui gonflaient la base en base64). */
+  function resizeImageFile(file, maxDim, quality){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale); height = Math.round(height * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('toBlob failed')), 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+      img.src = url;
+    });
+  }
+
+  /* Upload un blob vers Supabase Storage (bucket profile-media, un dossier par
+     user id) et retourne l'URL publique. Remplace le stockage base64 en base
+     (qui faisait exploser la taille de la DB à quelques dizaines d'utilisateurs). */
+  async function uploadProfileMedia(blob, kind /* 'avatar' | 'banner' */){
+    if (!window.__supa) return null;
+    const { data: { session } } = await window.__supa.auth.getSession();
+    if (!session) return null;
+    const path = session.user.id + '/' + kind + '-' + Date.now() + '.jpg';
+    const { error } = await window.__supa.storage.from('profile-media').upload(path, blob, {
+      upsert: true, contentType: 'image/jpeg',
+    });
+    if (error) { console.warn('uploadProfileMedia failed', error); return null; }
+    const { data } = window.__supa.storage.from('profile-media').getPublicUrl(path);
+    return data && data.publicUrl;
+  }
+
+  /* Fetch full Discord profile (banner, badges, decoration) via provider token.
+     Supabase only mirrors a subset of fields into user_metadata, so we hit
+     Discord directly with the OAuth access token to get the rest. */
+  async function fetchDiscordProfile(accessToken){
+    if (!accessToken) return null;
+    try {
+      const r = await fetch('https://discord.com/api/v10/users/@me', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch { return null; }
+  }
+  async function fetchDiscordGuilds(accessToken){
+    if (!accessToken) return [];
+    try {
+      const r = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+      if (!r.ok) return [];
+      const list = await r.json();
+      // Keep what we need: id, name, icon hash → URL
+      return (list || []).map(g => ({
+        id: g.id,
+        name: g.name,
+        iconUrl: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${g.icon.startsWith('a_') ? 'gif' : 'png'}?size=64` : null,
+      }));
+    } catch { return []; }
+  }
+  function discordBannerUrl(id, hash){
+    if (!id || !hash) return null;
+    const ext = hash.startsWith('a_') ? 'gif' : 'png';
+    return `https://cdn.discordapp.com/banners/${id}/${hash}.${ext}?size=600`;
+  }
+  function discordAvatarUrl(id, hash){
+    if (!id || !hash) return null;
+    const ext = hash.startsWith('a_') ? 'gif' : 'png';
+    return `https://cdn.discordapp.com/avatars/${id}/${hash}.${ext}?size=256`;
+  }
+  function discordDecorationUrl(asset){
+    // Discord serves the decoration as an animated APNG. The `passthrough=false`
+    // variant returns a STATIC version, so we use the default (animated) URL.
+    // `size=128` gives a high-res asset that scales cleanly.
+    return asset ? `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=128` : null;
+  }
+
+  /* Build the user payload Matefindr expects from a Supabase session.
+     If we have a provider_token, we enrich with a direct Discord API call so
+     we always get banner / decoration / public_flags / premium_type / accent_color. */
+  async function userFromSupabaseSession(session){
+    if (!session || !session.user) return null;
+    const u = session.user;
+    const m = u.user_metadata || {};
+    let id = m.provider_id || m.sub || u.id;
+
+    // Defaults from Supabase metadata (always present)
+    let avatar_url = m.avatar_url || null;
+    let banner_url = discordBannerUrl(id, m.banner);
+    let deco = m.avatar_decoration_data || m.custom_claims?.avatar_decoration_data;
+    let decoration_url = discordDecorationUrl(deco?.asset);
+    let public_flags = m.public_flags || 0;
+    let premium_type = m.premium_type || 0;
+    let accent_color = m.accent_color || null;
+    let displayName = m.global_name || m.full_name || m.name || m.user_name || 'Discord user';
+    let discordTag  = (m.user_name || m.preferred_username || m.name || '').replace(/#0$/, '') || null;
+
+    // Enrich from Discord API if provider_token is available.
+    // Try session first, fallback to localStorage (captured at OAuth callback).
+    let token = session.provider_token;
+    if (!token) {
+      const stored = localStorage.getItem('matefindr_discord_token');
+      const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
+      // Discord access tokens last ~7 days; we keep ours up to 24h to be safe.
+      if (stored && (Date.now() - ts) < 24 * 3600 * 1000) token = stored;
+    }
+    let guilds = [];
+    if (token) {
+      console.log('[Matefindr] Fetching real Discord profile…');
+      const d = await fetchDiscordProfile(token);
+      console.log('[Matefindr] Discord profile:', d);
+      if (d) {
+        id = d.id || id;
+        if (d.avatar) avatar_url = discordAvatarUrl(d.id, d.avatar);
+        if (d.banner) banner_url = discordBannerUrl(d.id, d.banner);
+        if (d.avatar_decoration_data?.asset) decoration_url = discordDecorationUrl(d.avatar_decoration_data.asset);
+        public_flags = (typeof d.public_flags === 'number') ? d.public_flags : public_flags;
+        premium_type = (typeof d.premium_type === 'number') ? d.premium_type : premium_type;
+        accent_color = (typeof d.accent_color === 'number') ? d.accent_color : accent_color;
+        displayName  = d.global_name || d.username || displayName;
+        discordTag   = (d.username || '').replace(/#0$/, '') || discordTag;
+      }
+      guilds = await fetchDiscordGuilds(token);
+      console.log('[Matefindr] Discord guilds:', guilds.length);
+    }
+
+    return {
+      displayName,
+      discordTag,
+      discordId:   id,
+      email:       u.email || m.email || null,
+      avatarUrl:   avatar_url,
+      bannerUrl:   banner_url,
+      decorationUrl: decoration_url,
+      publicFlags: public_flags,
+      premiumType: premium_type,
+      accentColor: accent_color,
+      guilds,
+      mode:        'discord',
+    };
+  }
+
+  /* Kick off Discord OAuth through Supabase. */
+  function signInWithDiscord(){
+    if (!supa) { alert('Supabase non chargé.'); return; }
+    return supa.auth.signInWithOAuth({
+      provider: 'discord',
+      options: {
+        scopes: 'identify email guilds guilds.join',
+        redirectTo: window.location.origin + window.location.pathname,
+      },
+    });
+  }
+  window.signInWithDiscord = signInWithDiscord;
+
+  /* ====== Animated bubble field with mouse repulsion + click explosion ====== */
+  const layer = document.getElementById('bubbles');
+
+  const ICONS = {
+    pad:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h4M8 10v4"/><circle cx="15.5" cy="12" r=".9" fill="currentColor"/><circle cx="17.5" cy="14" r=".9" fill="currentColor"/><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/></svg>',
+    mic:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>',
+    dice:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1" fill="currentColor" stroke="none"/></svg>',
+    chat:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c0 4.4-4 8-9 8-1.3 0-2.6-.3-3.7-.7L3 21l1.3-4.6C3.5 15.1 3 13.6 3 12c0-4.4 4-8 9-8s9 3.6 9 8Z"/></svg>',
+    heart:  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg>',
+    ghost:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V10a7 7 0 0 1 14 0v11l-2-2-2 2-2-2-2 2-2-2-2 2-2-2Z"/><circle cx="9.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11" r="1" fill="currentColor" stroke="none"/></svg>',
+    bolt:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>',
+    sparkle:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.6 6.4L20 10l-6.4 1.6L12 18l-1.6-6.4L4 10l6.4-1.6L12 2Z"/></svg>',
+    star:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6.4 7 .7-5.3 4.7 1.6 6.8L12 17.7l-6.2 3.4 1.6-6.8L2.1 9.6l7-.7L12 2.5Z"/></svg>',
+    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>',
+    discord:'<svg viewBox="0 0 127 96" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2.04 20.94 9.86 43.7 9.86 64.64 0 .87.7 1.76 1.38 2.66 2.04a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.15c2.64-27.38-4.51-51.11-18.91-72.14ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69Z"/></svg>',
+  };
+
+  /* Images de marque pour le hub (CDN stables, hotlink OK) — fallback emoji si échec */
+  const HUB_MEDIA = {
+    carti:      'https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ba/1e/05/ba1e058e-5637-e53c-563c-f5b9a1a6c344/20UM1IM18331.rgb.jpg/300x300bb.jpg',
+    minecraft:  'https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/c9/81/16/c981164e-410c-7a07-d76b-3a8e4238793b/AppIcon-0-0-1x_U007emarketing-0-10-0-85-220.png/300x300bb.jpg',
+    tokyoghoul: 'https://cdn.myanimelist.net/images/anime/1498/134443.jpg',
+    valorant:   'https://cdn.simpleicons.org/valorant/ffffff',
+  };
+
+  const AVATAR_PALETTES = [
+    ['#FF7EB6','#9146FF','#fff'],
+    ['#5BE9FF','#9146FF','#fff'],
+    ['#FFB66E','#FF4FA0','#0D0B1E'],
+    ['#3BD17C','#5BE9FF','#0D0B1E'],
+    ['#A65BFF','#FF7EB6','#fff'],
+  ];
+
+  const CONFIG = [
+    { kind:'img',   src:HUB_MEDIA.carti,      fb:'💿', size:118, hue:'#c0152b' },
+    { kind:'logo',  src:HUB_MEDIA.valorant,   fb:'🎯', size:100, hue:'#FF4655', bg:'linear-gradient(150deg,#FF4655,#8a1020)' },
+    { kind:'img',   src:HUB_MEDIA.minecraft,  fb:'⛏️', size:104, hue:'#5d9c3c' },
+    { kind:'img',   src:HUB_MEDIA.tokyoghoul, fb:'🎭', size:112, hue:'#8a0f1a' },
+    { kind:'glyph', glyph:'♂', size:80, hue:'#5B8DEF', color:'#9DC3FF' },
+    { kind:'glyph', glyph:'♀', size:74, hue:'#FF7EB6', color:'#FFB3D8' },
+    { kind:'icon',  icon:'chat',    size:82, hue:'#5BE9FF' },
+    { kind:'icon',  icon:'discord', size:96, hue:'#5865F2' },
+    { kind:'icon',  icon:'heart',   size:86, hue:'#FF4FA0' },
+  ];
+
+  let W = layer.clientWidth, H = layer.clientHeight;
+  const bubbles = [];
+  const mouse = { x: -9999, y: -9999, has: false };
+  // exclusion zone (center text)
+  function centerRect(){
+    const r = layer.getBoundingClientRect();
+    return {
+      cx: r.width/2, cy: r.height/2,
+      w: Math.min(r.width*.7, 760), h: 360
+    };
+  }
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  function spawn(cfg, idx, initial){
+    const c = centerRect();
+    const el = document.createElement('div');
+    el.className = 'bubble';
+    el.style.width = cfg.size + 'px';
+    el.style.height = cfg.size + 'px';
+    // Taille de base exposée en variable CSS : permet à la media query de
+    // recalculer une taille responsive (fluide) tout en gardant les
+    // proportions relatives entre bulles (grosse pochette vs petit glyphe).
+    el.style.setProperty('--bsize', cfg.size + 'px');
+
+    if (cfg.kind === 'icon'){
+      el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div>${ICONS[cfg.icon]}`;
+    } else if (cfg.kind === 'glyph'){
+      el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div><div class="b-glyph" style="color:${cfg.color || '#fff'}">${cfg.glyph}</div>`;
+    } else if (cfg.kind === 'img' || cfg.kind === 'logo'){
+      if (cfg.bg) el.style.background = cfg.bg;
+      const cls = cfg.kind === 'logo' ? 'b-logo' : 'b-img';
+      el.innerHTML = `<div class="glow" style="background:${cfg.hue}"></div><img class="${cls}" src="${cfg.src}" alt="" loading="lazy">`;
+      const img = el.querySelector('img');
+      img.addEventListener('error', () => { img.outerHTML = `<div class="b-glyph">${cfg.fb || '✨'}</div>`; });
+    } else {
+      const p = AVATAR_PALETTES[cfg.palette];
+      el.innerHTML = `<div class="glow" style="background:${p[0]}"></div><div class="face" style="background:linear-gradient(135deg,${p[0]},${p[1]});color:${p[2]}">${cfg.letter}</div>`;
+    }
+
+    // pick a position outside the center text rect
+    let x, y, tries = 0;
+    do {
+      x = rand(20, W - cfg.size - 20);
+      y = rand(20, H - cfg.size - 20);
+      tries++;
+    } while (insideCenter(x + cfg.size/2, y + cfg.size/2, c) && tries < 40);
+
+    const b = {
+      el, cfg,
+      x, y,
+      // free-drifting velocity
+      vx: rand(-.16,.16), vy: rand(-.16,.16),
+      r: cfg.size/2,
+      // wandering phases — keep the bubble gently drifting on its own
+      wphase: Math.random()*Math.PI*2,
+      wphase2: Math.random()*Math.PI*2,
+      wspd: rand(.008,.014),
+      idx,
+      alive: true,
+    };
+    layer.appendChild(el);
+    el.addEventListener('click', (e) => { e.stopPropagation(); explode(b); });
+    bubbles.push(b);
+    return b;
+  }
+
+  function insideCenter(px, py, c){
+    return Math.abs(px - c.cx) < c.w/2 && Math.abs(py - c.cy) < c.h/2;
+  }
+
+  function init(){
+    W = layer.clientWidth; H = layer.clientHeight;
+    layer.innerHTML = '';
+    bubbles.length = 0;
+    CONFIG.forEach((cfg, i) => spawn(cfg, i, true));
+  }
+
+  function resize(){
+    W = layer.clientWidth; H = layer.clientHeight;
+  }
+  window.addEventListener('resize', resize);
+
+  window.addEventListener('mousemove', (e) => {
+    const r = layer.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+    mouse.has = true;
+  });
+  window.addEventListener('mouseleave', () => { mouse.has = false; mouse.x = -9999; mouse.y = -9999; });
+
+  /* explosion */
+  function explode(b){
+    if (!b.alive) return;
+    b.alive = false;
+
+    // Center computed from the actual rendered bubble — bulletproof against any
+    // transform / layout edge case. (cx, cy) are coords inside the .bubbles layer.
+    const bubbleRect = b.el.getBoundingClientRect();
+    const layerRect  = layer.getBoundingClientRect();
+    const cx = bubbleRect.left - layerRect.left + bubbleRect.width  / 2;
+    const cy = bubbleRect.top  - layerRect.top  + bubbleRect.height / 2;
+
+    const palette = b.cfg.kind === 'avatar'
+      ? AVATAR_PALETTES[b.cfg.palette]
+      : [b.cfg.hue, '#FF7EB6', '#fff'];
+    const main = palette[0];
+    const accent = palette[1] || '#FF7EB6';
+
+    // 1) Core flash (white → main color) — short, bright
+    const flash = document.createElement('div');
+    flash.className = 'particle';
+    flash.style.cssText = `left:${cx}px;top:${cy}px;width:${b.r*2.2}px;height:${b.r*2.2}px;border-radius:50%;background:radial-gradient(circle, #fff 0%, ${main} 45%, transparent 72%);transform:translate(-50%,-50%) scale(.4);mix-blend-mode:screen;filter:blur(3px)`;
+    layer.appendChild(flash);
+    flash.animate(
+      [{transform:'translate(-50%,-50%) scale(.4)', opacity:1},
+       {transform:'translate(-50%,-50%) scale(1.5)', opacity:.85, offset:.35},
+       {transform:'translate(-50%,-50%) scale(2.4)', opacity:0}],
+      {duration:380, easing:'cubic-bezier(.1,.7,.3,1)', fill:'forwards'}
+    ).onfinish = () => flash.remove();
+
+    // 2) Single clean shockwave ring
+    const ring = document.createElement('div');
+    ring.className = 'particle';
+    ring.style.cssText = `left:${cx}px;top:${cy}px;width:${b.r*2}px;height:${b.r*2}px;border-radius:50%;border:2px solid ${main};transform:translate(-50%,-50%) scale(.7);box-shadow:0 0 24px ${main}, inset 0 0 12px ${main}80`;
+    layer.appendChild(ring);
+    ring.animate(
+      [{transform:'translate(-50%,-50%) scale(.7)', opacity:.9, borderWidth:'2px'},
+       {transform:'translate(-50%,-50%) scale(2.8)', opacity:0,  borderWidth:'.5px'}],
+      {duration:650, easing:'cubic-bezier(.2,.7,.25,1)', fill:'forwards'}
+    ).onfinish = () => ring.remove();
+
+    // 3) Confetti shards — colored chunks tumbling outward
+    const shardCount = 7;
+    for (let i=0; i<shardCount; i++){
+      const s = document.createElement('div');
+      const ssize = rand(b.r*.35, b.r*.7);
+      const c = palette[i % palette.length];
+      s.className = 'particle';
+      s.style.cssText = `left:${cx}px;top:${cy}px;width:${ssize}px;height:${ssize*rand(.5,1)}px;border-radius:${rand(20,50)}% ${rand(40,70)}% ${rand(30,60)}% ${rand(20,50)}%;background:linear-gradient(135deg, ${c}, ${c}66);border:1px solid rgba(255,255,255,.4);box-shadow:0 4px 14px ${c}88;transform:translate(-50%,-50%);`;
+      layer.appendChild(s);
+      const ang = (i/shardCount)*Math.PI*2 + rand(-.3,.3);
+      const dist = rand(110, 200);
+      const dx = Math.cos(ang)*dist;
+      const dy = Math.sin(ang)*dist;
+      const rot = rand(-480, 480);
+      const dur = rand(750, 1100);
+      s.animate(
+        [{transform:'translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1)', opacity:1},
+         {transform:`translate(-50%,-50%) translate(${dx*.55}px, ${dy*.55 - 16}px) rotate(${rot*.5}deg) scale(.95)`, opacity:.95, offset:.45},
+         {transform:`translate(-50%,-50%) translate(${dx}px, ${dy + dist*.85}px) rotate(${rot}deg) scale(.35)`, opacity:0}],
+        {duration:dur, easing:'cubic-bezier(.2,.6,.3,1)', fill:'forwards'}
+      ).onfinish = () => s.remove();
+    }
+
+    // 4) Sparks — small bright dots, radial burst with gravity
+    const sparkN = 24 + Math.floor(Math.random()*6);
+    for (let i=0; i<sparkN; i++){
+      const p = document.createElement('div');
+      const size = rand(3, 6);
+      const c = palette[i % palette.length];
+      p.className = 'particle';
+      p.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;border-radius:50%;background:${c};box-shadow:0 0 12px ${c}, 0 0 3px #fff;transform:translate(-50%,-50%)`;
+      layer.appendChild(p);
+      const ang = (i / sparkN) * Math.PI*2 + rand(-.25,.25);
+      const dist = rand(90, 240);
+      const dx = Math.cos(ang)*dist;
+      const dy = Math.sin(ang)*dist;
+      const grav = rand(70, 140);
+      const dur = rand(700, 1100);
+      p.animate(
+        [{transform:'translate(-50%,-50%) translate(0,0) scale(1.3)', opacity:1},
+         {transform:`translate(-50%,-50%) translate(${dx*.5}px,${dy*.5 - 4}px) scale(1)`, opacity:1, offset:.3},
+         {transform:`translate(-50%,-50%) translate(${dx}px,${dy + grav}px) scale(.15)`, opacity:0}],
+        {duration:dur, easing:'cubic-bezier(.2,.55,.3,1)', fill:'forwards'}
+      ).onfinish = () => p.remove();
+    }
+
+    // 5) Dying bubble — animate with translate preserved (no class‑based @keyframes
+    //    which would clobber the translate and visually “reset” the bubble to 0,0).
+    const startT = `translate(${b.x}px, ${b.y}px)`;
+    b.el.style.pointerEvents = 'none';
+    b.el.animate(
+      [{transform:`${startT} scale(1) rotate(0)`,    opacity:1, filter:'brightness(1)'},
+       {transform:`${startT} scale(1.25) rotate(6deg)`, opacity:1, filter:'brightness(2)', offset:.28},
+       {transform:`${startT} scale(.15) rotate(-32deg)`, opacity:0, filter:'brightness(3)'}],
+      {duration:380, easing:'cubic-bezier(.2,.7,.3,1)', fill:'forwards'}
+    ).onfinish = () => b.el.remove();
+
+    // 6) Shockwave — nudge nearby bubbles outward (also feeds collision system)
+    for (const other of bubbles){
+      if (other === b || !other.alive) continue;
+      const ox = other.x + other.r, oy = other.y + other.r;
+      const dx = ox - cx, dy = oy - cy;
+      const d = Math.hypot(dx, dy);
+      const range = 220;
+      if (d < range){
+        const force = (1 - d/range) * 12;
+        const nx = dx / (d || 1), ny = dy / (d || 1);
+        other.vx += nx * force;
+        other.vy += ny * force;
+      }
+    }
+
+    // respawn after 15 seconds
+    setTimeout(() => respawn(b.cfg, b.idx), 15000);
+    const idx = bubbles.indexOf(b);
+    if (idx >= 0) bubbles.splice(idx, 1);
+  }
+
+  function respawn(cfg, idx){
+    const c = centerRect();
+    // enter from a random wall, drifting inward
+    const fromRight = Math.random() < 0.5;
+    const x = fromRight ? W + cfg.size : -cfg.size;
+    const y = rand(20, H - cfg.size - 20);
+    const b = spawn(cfg, idx, false);
+    b.x = x; b.y = y;
+    // head toward a random spot outside the center text
+    let ax, ay, tries=0;
+    do {
+      ax = rand(40, W - cfg.size - 40);
+      ay = rand(40, H - cfg.size - 40);
+      tries++;
+    } while (insideCenter(ax + cfg.size/2, ay + cfg.size/2, c) && tries < 40);
+    b.vx = (ax - b.x) * 0.012;
+    b.vy = (ay - b.y) * 0.012;
+  }
+
+  /* simulation */
+  function step(){
+    const c = centerRect();
+    for (const b of bubbles){
+      if (!b.alive) continue;
+
+      // 1) wandering très léger — dérive lente quand on n'interagit pas
+      b.wphase  += b.wspd;
+      b.wphase2 += b.wspd * 0.7;
+      b.vx += Math.cos(b.wphase)  * 0.0112;
+      b.vy += Math.sin(b.wphase2) * 0.0112;
+
+      // 2) mouse interaction — grand rayon, MAIS zone d'attrape près du curseur
+      if (mouse.has){
+        const dx = (b.x + b.r) - mouse.x;
+        const dy = (b.y + b.r) - mouse.y;
+        const d2 = dx*dx + dy*dy;
+        const range  = 320;              // grand rayon de répulsion
+        const catchR = b.r;              // frein seulement dans la zone cliquable de la bulle
+        if (d2 < catchR*catchR){
+          // curseur posé sur la bulle → pas de frein, elle garde sa glisse
+          // (le push est annulé ici pour qu'elle reste facile à cliquer)
+        } else if (d2 < range*range){
+          const d = Math.sqrt(d2) || 1;
+          // poussée qui culmine à mi-distance et S'ANNULE près du curseur
+          const t = (d - catchR) / (range - catchR);   // 0 près, 1 au bord
+          const force = Math.sin(t * Math.PI);          // 0 aux extrémités, 1 au milieu
+          b.vx += (dx/d) * force * 0.48;
+          b.vy += (dy/d) * force * 0.48;
+        }
+      }
+
+      // 3) soft push away from center text rect
+      const px = b.x + b.r, py = b.y + b.r;
+      if (insideCenter(px, py, c)){
+        const dx = px - c.cx, dy = py - c.cy;
+        const d = Math.hypot(dx,dy) || 1;
+        b.vx += (dx/d) * 0.24;
+        b.vy += (dy/d) * 0.24;
+      }
+
+      // 4) damping plus fort = repos beaucoup plus lent
+      b.vx *= 0.965;
+      b.vy *= 0.965;
+
+      // clamp max speed — doux
+      const sp = Math.hypot(b.vx, b.vy);
+      const max = 1.92;
+      if (sp > max){ b.vx = b.vx/sp*max; b.vy = b.vy/sp*max; }
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      // bounce off walls
+      if (b.x < 8){ b.x = 8; b.vx = Math.abs(b.vx)*.65; }
+      if (b.x + b.cfg.size > W - 8){ b.x = W - 8 - b.cfg.size; b.vx = -Math.abs(b.vx)*.65; }
+      if (b.y < 8){ b.y = 8; b.vy = Math.abs(b.vy)*.65; }
+      if (b.y + b.cfg.size > H - 8){ b.y = H - 8 - b.cfg.size; b.vy = -Math.abs(b.vy)*.65; }
+    }
+
+    // === bubble ↔ bubble collisions ===
+    for (let i=0; i<bubbles.length; i++){
+      const a = bubbles[i];
+      if (!a.alive) continue;
+      for (let j=i+1; j<bubbles.length; j++){
+        const b2 = bubbles[j];
+        if (!b2.alive) continue;
+        const ax = a.x + a.r, ay = a.y + a.r;
+        const bx = b2.x + b2.r, by = b2.y + b2.r;
+        const dx = bx - ax, dy = by - ay;
+        const minDist = a.r + b2.r;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < minDist*minDist && d2 > 0.0001){
+          const d = Math.sqrt(d2);
+          const nx = dx / d, ny = dy / d;
+          // positional correction (equal mass)
+          const overlap = (minDist - d) * 0.5;
+          a.x  -= nx * overlap;  a.y  -= ny * overlap;
+          b2.x += nx * overlap;  b2.y += ny * overlap;
+          // elastic exchange along normal
+          const va = a.vx*nx + a.vy*ny;
+          const vb = b2.vx*nx + b2.vy*ny;
+          if (va - vb > 0) continue;
+          const restitution = 0.8;
+          const impulse = (vb - va) * restitution;
+          a.vx  += nx * impulse;  a.vy  += ny * impulse;
+          b2.vx -= nx * impulse;  b2.vy -= ny * impulse;
+        }
+      }
+    }
+
+    // commit transforms
+    for (const b of bubbles){
+      if (!b.alive) continue;
+      b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Bulles créées seulement si largeur ET hauteur ≥1000px (aligné sur le CSS).
+  const _noBubbles = !window.matchMedia('(min-width:1000px) and (min-height:1000px)').matches;
+  if (_noBubbles) { layer.style.display = 'none'; }
+  else { init(); requestAnimationFrame(step); }
+
+  // background blob parallax
+  const blobsEls = document.querySelectorAll('.blob');
+  let rx=0, ry=0, tx=0, ty=0;
+  window.addEventListener('mousemove', (e) => {
+    tx = (e.clientX / window.innerWidth - .5) * 30;
+    ty = (e.clientY / window.innerHeight - .5) * 30;
+  }, { passive:true });
+  function blobTick(){
+    rx += (tx-rx)*.04; ry += (ty-ry)*.04;
+    blobsEls.forEach((b,i) => {
+      const f = (i+1)*0.6;
+      b.style.translate = `${rx*f}px ${ry*f}px`;
+    });
+    requestAnimationFrame(blobTick);
+  }
+  blobTick();
+
+  // Nombre RÉEL de membres en ligne sur le serveur Discord, via l'API d'invitation
+  // publique (with_counts) — CORS autorisé, aucun token requis. Rafraîchi toutes les 60 s.
+  const el = document.getElementById('onlineCount');
+  if (el) {
+    const INVITE = 'hxCBJGPDsP';
+    const fmt = v => v.toLocaleString('fr-FR').replace(/,/g, ' ');
+    let shown = null;
+    function animateTo(target){
+      let n = shown == null ? Math.max(0, target - Math.min(6, target)) : shown;
+      const step = setInterval(() => {
+        n += Math.sign(target - n) || 0;
+        el.textContent = fmt(n);
+        shown = n;
+        if (n === target) clearInterval(step);
+      }, 70);
+    }
+    async function fetchOnline(){
+      try {
+        const r = await fetch('https://discord.com/api/v10/invites/' + INVITE + '?with_counts=true');
+        if (!r.ok) return;
+        const j = await r.json();
+        const n = j.approximate_presence_count;
+        if (typeof n === 'number' && n !== shown) animateTo(n);
+      } catch(_){ /* hors-ligne / rate-limit : on garde la dernière valeur */ }
+    }
+    fetchOnline();
+    setInterval(fetchOnline, 60000);
+  }
+
+  // Shared i18n dictionary (used by language switcher AND auth modal)
+  const I18N = {
+      FR: {
+        login:        'Se connecter',
+        badge:        'Bêta ouverte',
+        tagline:      'Trouve un <span class="accent">Mate</span>, pas un random',
+        sub:          '<b>Swipe</b> des profils Discord, <b>Like</b> les pépites à ton goût<br><b>Match</b> et à toi de jouer',
+        cta:          'Se connecter avec Discord',
+        online:       'en ligne',
+        tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Rencontres',
+        footer:       'EXPLOSE LES BULLES, ON SAIT JAMAIS, ELLES TE CACHENT PEUT-ÊTRE QUELQUE CHOSE',
+        auth_title:   'Se connecter',
+        auth_sub:     'Choisis ta méthode préférée',
+        auth_discord: 'Continuer avec Discord',
+        auth_email:   'Continuer avec un email',
+        email_title:  'Connexion par email',
+        email_sub:    'Entre tes identifiants pour continuer',
+        email_label:  'Adresse email',
+        pw_label:     'Mot de passe',
+        remember:     'Se souvenir de moi',
+        forgot:       'Mot de passe oublié ?',
+        email_submit: 'Se connecter',
+        no_account:   'Pas encore de compte ?',
+        signup:       "S'inscrire",
+        signup_title: 'Créer un compte',
+        signup_sub:   'Rejoins Matefindr en 30 secondes',
+        signup_submit:'Créer mon compte',
+        has_account:  'Déjà inscrit ?',
+        sign_in:      'Se connecter',
+        msg_signed:   'Connexion réussie. Bienvenue !',
+        msg_created:  'Compte créé. Bienvenue sur Matefindr !',
+        msg_invalid:  'Email ou mot de passe invalide.',
+        msg_short_pw: 'Le mot de passe doit faire au moins 6 caractères.',
+        my_account:   'Mon profil',
+        onb_q1:       'Ton genre ?',
+        onb_q1_sub:   'Cette info aide à proposer les bonnes rencontres',
+        pronoun_autre:'Non binaire',
+        onb_q2:       'Quel âge as-tu ?',
+        onb_q2_sub:   'Tu dois avoir 18 ans ou plus',
+        onb_q3:       'Tu cherches quoi ?',
+        onb_q3_sub:   'Tu pourras changer plus tard dans ton profil',
+        gender_male:  'Homme',
+        gender_female:'Femme',
+        gender_nb:    'Non-binaire',
+        gender_trans_m:'Trans homme',
+        gender_trans_f:'Trans femme',
+        gender_fluid: 'Genderfluid',
+        gender_agender:'Agender',
+        gender_other: 'Préfère pas dire',
+        look_chill:   'Chill',
+        look_game:    'Une game',
+        look_now:     'Mate maintenant',
+        look_sleep:   'Sleepcall',
+        look_chill_sub:'Détente, discussions',
+        look_game_sub: 'Tryhard ou casual',
+        look_now_sub:  'Dispo immédiatement',
+        look_sleep_sub:"Voix douce pour s'endormir",
+        msg_title:    'Messages',
+        msg_send:     'Envoyer',
+        msg_empty:    "Aucune conversation pour l'instant. Like des profils pour matcher !",
+        joined_on:    'A rejoint Matefindr le',
+        nitro:        'NITRO',
+        continue:     'Continuer',
+        back:         'Retour',
+        onb_finish:   'Découvrir Matefindr',
+        acc_gender:   'Genre',
+        acc_age:      'Âge',
+        acc_looking:  'Je cherche',
+        acc_bio:      'Bio',
+        acc_edit:     'Modifier mon profil',
+        acc_pseudo:   'Pseudo',
+        acc_music:    '🎵 Musique préférée',
+        acc_game:     '🎮 Jeu préféré',
+        acc_anime:    '📺 Anime / Série préférée',
+        acc_preview:  'Aperçu de ton profil',
+        acc_socials:  'Comptes liés',
+        acc_lang:     'Langue',
+        acc_account:  'Infos compte',
+        connect:      'Connecter',
+        connected:    'Connecté ✓',
+        save:         'Enregistrer',
+        back_to_swipe:'← Retour aux profils',
+        logout:       'Se déconnecter',
+        saved:        'Profil mis à jour ✓',
+        no_more:      'Plus personne pour le moment !',
+        no_more_sub:  'Reviens plus tard pour découvrir de nouveaux profils.',
+      },
+      EN: {
+        login:        'Sign in',
+        badge:        'Open beta',
+        tagline:      'Find a <span class="accent">Mate</span>, not just a random',
+        sub:          '<b>Swipe</b> Discord profiles, <b>Like</b> the gems you fancy<br><b>Match</b> and game on',
+        cta:          'Sign in with Discord',
+        online:       'online',
+        tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Dating',
+        footer:       'POP THE BUBBLES — WHO KNOWS WHAT THEY MIGHT BE HIDING',
+        auth_title:   'Sign in',
+        auth_sub:     'Pick your preferred method',
+        auth_discord: 'Continue with Discord',
+        auth_email:   'Continue with email',
+        email_title:  'Sign in with email',
+        email_sub:    'Enter your credentials to continue',
+        email_label:  'Email address',
+        pw_label:     'Password',
+        remember:     'Remember me',
+        forgot:       'Forgot password?',
+        email_submit: 'Sign in',
+        no_account:   'No account yet?',
+        signup:       'Sign up',
+        signup_title: 'Create an account',
+        signup_sub:   'Join Matefindr in 30 seconds',
+        signup_submit:'Create my account',
+        has_account:  'Already a member?',
+        sign_in:      'Sign in',
+        msg_signed:   'Signed in. Welcome!',
+        msg_created:  'Account created. Welcome to Matefindr!',
+        msg_invalid:  'Invalid email or password.',
+        msg_short_pw: 'Password must be at least 6 characters.',
+        my_account:   'My profile',
+        onb_q1:       'Your gender?',
+        onb_q1_sub:   'Helps us suggest better matches',
+        pronoun_autre:'Non-binary',
+        onb_q2:       'How old are you?',
+        onb_q2_sub:   'You must be 18 or older',
+        onb_q3:       'What are you looking for?',
+        onb_q3_sub:   'You can change this later in your profile',
+        gender_male:  'Male',
+        gender_female:'Female',
+        gender_nb:    'Non-binary',
+        gender_trans_m:'Trans man',
+        gender_trans_f:'Trans woman',
+        gender_fluid: 'Genderfluid',
+        gender_agender:'Agender',
+        gender_other: 'Prefer not to say',
+        look_chill:   'Chill',
+        look_game:    'A game',
+        look_now:     'Mate now',
+        look_sleep:   'Sleepcall',
+        look_chill_sub:'Hang out & chat',
+        look_game_sub: 'Sweaty or casual',
+        look_now_sub:  'Available right now',
+        look_sleep_sub:'Soft voice for falling asleep',
+        msg_title:    'Messages',
+        msg_send:     'Send',
+        msg_empty:    'No conversations yet. Like profiles to match!',
+        joined_on:    'Joined Matefindr on',
+        nitro:        'NITRO',
+        continue:     'Continue',
+        back:         'Back',
+        onb_finish:   'Discover Matefindr',
+        acc_gender:   'Gender',
+        acc_age:      'Age',
+        acc_looking:  'Looking for',
+        acc_bio:      'Bio',
+        acc_edit:     'Edit my profile',
+        acc_pseudo:   'Username',
+        acc_music:    '🎵 Favorite track',
+        acc_game:     '🎮 Favorite game',
+        acc_anime:    '📺 Favorite anime / show',
+        acc_preview:  'Profile preview',
+        acc_socials:  'Linked accounts',
+        acc_lang:     'Language',
+        acc_account:  'Account info',
+        connect:      'Connect',
+        connected:    'Connected ✓',
+        save:         'Save',
+        back_to_swipe:'← Back to swipe',
+        logout:       'Sign out',
+        saved:        'Profile updated ✓',
+        no_more:      'No one left for now!',
+        no_more_sub:  'Come back later to discover new profiles.',
+      },
+    };
+
+  // Language switcher
+  (() => {
+    const root = document.getElementById('langSwitch');
+    const btn  = root.querySelector('.ls-btn');
+    const menu = root.querySelector('.ls-menu');
+    const cur  = root.querySelector('.ls-current');
+    let open = false;
+
+    function applyLang(code){
+      const dict = I18N[code] || I18N.FR;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        if (dict[k] != null) el.innerHTML = dict[k];
+      });
+      document.documentElement.lang = code.toLowerCase();
+    }
+
+    function setOpen(v){
+      open = v;
+      root.setAttribute('data-open', String(v));
+      btn.setAttribute('aria-expanded', String(v));
+      menu.hidden = !v;
+    }
+    function select(code){
+      cur.textContent = code;
+      menu.querySelectorAll('li').forEach(li => {
+        li.setAttribute('aria-selected', li.dataset.code === code);
+      });
+      applyLang(code);
+      setOpen(false);
+    }
+
+    btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!open); });
+    menu.addEventListener('click', (e) => {
+      const li = e.target.closest('li[data-code]');
+      if (li) select(li.dataset.code);
+    });
+    document.addEventListener('click', (e) => {
+      if (open && !root.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) setOpen(false); });
+  })();
+
+  // CTA click — if logged in: go to swipe; otherwise: Discord OAuth
+  function refreshLandingCta(){
+    const label = document.getElementById('joinLabel');
+    const icoD  = document.getElementById('joinIcoDiscord');
+    const icoP  = document.getElementById('joinIcoPlay');
+    const loggedIn = document.body.getAttribute('data-auth') === 'in';
+    if (!label) return;
+    if (loggedIn) {
+      label.textContent = 'Commencer à swiper';
+      if (icoD) icoD.style.display = 'none';
+      if (icoP) icoP.style.display = '';
+    } else {
+      label.textContent = (window.__i18n && window.__i18n('cta')) || 'Se connecter avec Discord';
+      if (icoD) icoD.style.display = '';
+      if (icoP) icoP.style.display = 'none';
+    }
+  }
+  window.refreshLandingCta = refreshLandingCta;
+  document.getElementById('join')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const b = e.currentTarget;
+    b.animate(
+      [{ transform: 'translateY(-2px) scale(1)' }, { transform: 'translateY(-2px) scale(0.97)' }, { transform: 'translateY(-2px) scale(1)' }],
+      { duration: 220, easing: 'ease-out' }
+    );
+    const loggedIn = document.body.getAttribute('data-auth') === 'in';
+    if (loggedIn) {
+      // Connected: skip OAuth, go straight to swipe (onboarding if profile missing)
+      setTimeout(() => {
+        if (window.__matefindr && typeof window.__matefindr.go === 'function') {
+          window.__matefindr.go(window.__matefindr.hasProfile && window.__matefindr.hasProfile() ? 'swipe' : 'onboarding');
+        }
+      }, 220);
+      return;
+    }
+    setTimeout(() => { window.signInWithDiscord && window.signInWithDiscord(); }, 220);
+  });
+
+  // ===== Auth modal =====
+  (() => {
+    const modal = document.getElementById('authModal');
+    const trigger = document.getElementById('loginBtn');
+    const closeBtn = document.getElementById('authClose');
+
+    // OAuth URL — built dynamically so the redirect_uri always matches the current origin.
+    const DISCORD_CLIENT_ID = '1504782353199927296';
+    const REDIRECT = location.origin + location.pathname;
+    const DISCORD_URL = 'https://discord.com/oauth2/authorize?client_id=' + DISCORD_CLIENT_ID + '&response_type=code&scope=identify%20email&redirect_uri=' + encodeURIComponent(REDIRECT);
+    // Sync the main CTA href too (it had a stale hardcoded URL previously).
+    const joinLink = document.getElementById('join');
+    if (joinLink) joinLink.setAttribute('href', DISCORD_URL);
+
+    function open(){
+      modal.setAttribute('data-open', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+    function close(){
+      modal.setAttribute('data-open', 'false');
+      document.body.style.overflow = '';
+    }
+
+    trigger.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    closeBtn.addEventListener('click', close);
+    modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && modal.getAttribute('data-open') === 'true') close();
+    });
+
+    document.getElementById('authDiscord')?.addEventListener('click', () => {
+      // Real Discord OAuth via Supabase. Will redirect to Discord, then back here.
+      close();
+      window.signInWithDiscord && window.signInWithDiscord();
+    });
+
+    // ----- Email view -----
+    const card        = document.getElementById('authCard');
+    const backBtn     = document.getElementById('authBack');
+    const emailBtn    = document.getElementById('authEmail');
+    const emailForm   = document.getElementById('emailForm');
+    const emailInput  = document.getElementById('emailInput');
+    const pwInput     = document.getElementById('pwInput');
+    const emailMsg    = document.getElementById('emailMsg');
+    const emailSwitch = document.getElementById('emailSwitch');
+    const emailForgot = document.getElementById('emailForgot');
+
+    let mode = 'signin'; // 'signin' | 'signup'
+
+    function t(key){
+      const code = (document.documentElement.lang || 'fr').toUpperCase();
+      const dict = (window.__I18N_FOR_AUTH && window.__I18N_FOR_AUTH[code]) || null;
+      return dict && dict[key] ? dict[key] : key;
+    }
+    // expose I18N for t() — populated in select() lifecycle. Fallback dict:
+    window.__I18N_FOR_AUTH = I18N;
+
+    function setView(view){
+      card.setAttribute('data-view', view);
+      backBtn.style.display = view === 'email' ? 'grid' : 'none';
+      emailMsg.setAttribute('data-show', 'false');
+      if (view === 'email') setTimeout(() => emailInput.focus(), 80);
+    }
+    function setMode(next){
+      mode = next;
+      const isSignup = mode === 'signup';
+      const card2 = card;
+      // update labels via i18n keys depending on mode
+      card2.querySelector('.auth-view--email h2').textContent      = t(isSignup ? 'signup_title' : 'email_title');
+      card2.querySelector('.auth-view--email .auth-sub').textContent= t(isSignup ? 'signup_sub'   : 'email_sub');
+      card2.querySelector('.auth-submit').textContent              = t(isSignup ? 'signup_submit': 'email_submit');
+      card2.querySelector('.auth-footer span').textContent         = t(isSignup ? 'has_account'  : 'no_account');
+      emailSwitch.textContent                                       = t(isSignup ? 'sign_in'      : 'signup');
+      pwInput.autocomplete = isSignup ? 'new-password' : 'current-password';
+      emailMsg.setAttribute('data-show', 'false');
+    }
+
+    if (emailBtn) emailBtn.addEventListener('click', () => setView('email'));
+    backBtn.addEventListener('click',  () => { setView('providers'); setMode('signin'); });
+    emailSwitch.addEventListener('click', (e) => { e.preventDefault(); setMode(mode === 'signin' ? 'signup' : 'signin'); });
+
+    emailForgot.addEventListener('click', (e) => {
+      e.preventDefault();
+      const v = (emailInput.value || '').trim();
+      if (!v) { emailInput.focus(); emailInput.classList.add('invalid'); return; }
+      showMsg(t('msg_signed').replace(/[.!]$/, '') + ' — ' + (document.documentElement.lang === 'en' ? 'reset link sent to ' : 'lien envoyé à ') + v, true);
+    });
+
+    function showMsg(text, ok){
+      emailMsg.textContent = text;
+      emailMsg.setAttribute('data-show', 'true');
+      emailMsg.style.background = ok ? 'rgba(59,209,124,.12)' : 'rgba(255,79,160,.12)';
+      emailMsg.style.borderColor = ok ? 'rgba(59,209,124,.35)' : 'rgba(255,79,160,.45)';
+      emailMsg.style.color = ok ? '#9CF0BD' : '#FFB1D2';
+    }
+
+    emailForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const pw    = pwInput.value;
+      const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      emailInput.classList.toggle('invalid', !okEmail);
+      pwInput.classList.toggle('invalid', pw.length < 6);
+
+      if (!okEmail) { showMsg(t('msg_invalid'), false); return; }
+      if (pw.length < 6) { showMsg(t('msg_short_pw'), false); return; }
+
+      // Demo: persist a fake session (no backend)
+      try {
+        localStorage.setItem('matefindr_user', JSON.stringify({ email, mode, ts: Date.now() }));
+      } catch(_){}
+      showMsg(mode === 'signup' ? t('msg_created') : t('msg_signed'), true);
+      setTimeout(() => {
+        close(); setView('providers'); setMode('signin'); emailForm.reset();
+        window.__matefindr && window.__matefindr.onLogin({ email, displayName: email.split('@')[0], mode });
+      }, 1100);
+    });
+
+    // Reset to providers view whenever modal reopens
+    trigger.addEventListener('click', () => { setView('providers'); setMode('signin'); emailForm.reset(); });
+  })();
+
+  /* ============================================================
+     APP STATE MACHINE — landing → onboarding → swipe → account
+     ============================================================ */
+  (() => {
+    // ⚠️ SÉCURITÉ : ce secret Spotify est EXPOSÉ dans le frontend public.
+    // N'importe qui peut le récupérer dans le code source et l'utiliser pour
+    // consommer le quota de notre app. À DÉPLACER ABSOLUMENT côté backend
+    // (Supabase Edge Function "spotify-token" qui proxie la génération de token)
+    // avant la mise en production réelle. En attendant, surveille la console
+    // Spotify Developer (https://developer.spotify.com/dashboard) pour repérer
+    // tout abus, et révoque/recrée le secret en cas de compromission.
+    const SPOTIFY_CLIENT_ID     = '97ee507ff2694d9c916f2cd930afcb4c';
+    const SPOTIFY_CLIENT_SECRET = '1775eb6d41204c489c9e0ed9cf72f2bb';
+
+    const KEY = 'matefindr_state';
+    let state = { user:null, profile:null };
+    try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
+
+    function save(){
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(_){}
+      try { if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); } catch(_){}
+    }
+    function tx(k){
+      const code = (document.documentElement.lang || 'fr').toUpperCase();
+      return (I18N[code] && I18N[code][k]) || (I18N.FR[k]) || k;
+    }
+    function setScreen(name){
+      document.body.setAttribute('data-screen', name);
+      if (name === 'account') renderAccount();
+      if (name === 'onboarding' && typeof window.__initOnboarding === 'function') window.__initOnboarding();
+      if (name === 'swipe')   { deckIdx = 0; ensureDeck(); refreshMyStatusUI(); refreshSwipeTools(); }
+      if (name !== 'swipe')   {
+        stopSwipeMusic();
+        if (typeof orbSimStop === 'function') orbSimStop();
+        const _gb = document.getElementById('swipeGifsBg'); if (_gb) _gb.remove();
+        _previewMode = false; document.body.removeAttribute('data-preview'); // sort du mode aperçu
+      }
+    }
+    function setAuth(on){
+      document.body.setAttribute('data-auth', on ? 'in' : 'out');
+      if (on) updateChip();
+      if (typeof refreshLandingCta === 'function') refreshLandingCta();
+    }
+    function updateChip(){
+      const u = state.user || {};
+      const avi = document.getElementById('accountChipAvatar');
+      if (u.avatarUrl) {
+        avi.innerHTML = `<img src="${u.avatarUrl}" alt="${escapeHtmlMini(u.displayName || '')}">`;
+        avi.style.background = 'none';
+      } else {
+        avi.textContent = (u.displayName || u.email || 'U').charAt(0).toUpperCase();
+        avi.style.background = 'linear-gradient(135deg,#FF7EB6,#9146FF)';
+      }
+    }
+
+    // Hand-off used by login/signup handlers
+    window.__matefindr = {
+      async onLogin(user){
+        // Déjà connecté et déjà dans l'app ? (ex : onAuthStateChange qui refire quand on
+        // revient sur l'onglet) → on met à jour les données SANS changer l'écran courant.
+        const alreadyInApp = document.body.getAttribute('data-auth') === 'in'
+          && !['landing','onboarding'].includes(document.body.getAttribute('data-screen'));
+        // Préserve les assets custom (Boost) avant le merge Discord
+        const prev = state.user || {};
+        const keepBanner = prev.bannerCustom && prev.bannerUrl;
+        const keepDeco   = prev.decoCustom && prev.decorationUrl;
+        state.user = Object.assign({}, prev, user);
+        if (keepBanner) { state.user.bannerUrl = prev.bannerUrl; state.user.bannerCustom = true; }
+        if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
+        // Restore an archived profile if we have one for this Discord ID
+        try {
+          const key = state.user.discordId || state.user.email || state.user.discordTag;
+          if (key && !state.profile) {
+            const archives = JSON.parse(localStorage.getItem('matefindr_archived_profiles') || '{}');
+            const arch = archives[key];
+            if (arch && arch.profile) {
+              state.profile = arch.profile;
+              // Merge non-identity user extras (voice, color, music settings, boost, etc.)
+              if (arch.userExtras) {
+                Object.entries(arch.userExtras).forEach(([k, v]) => {
+                  if (v !== null && v !== undefined && state.user[k] == null) state.user[k] = v;
+                });
+                // Custom banner overrides the Discord one if the user had imported one
+                if (arch.userExtras.bannerCustom && arch.userExtras.bannerUrl) {
+                  state.user.bannerUrl = arch.userExtras.bannerUrl;
+                  state.user.bannerCustom = true;
+                }
+              }
+              console.log('[Matefindr] Restored archived profile for', key);
+            }
+          }
+        } catch (e) { console.warn('restore archive failed', e); }
+        save(); setAuth(true);
+        // Sync AVANT l'appel Discord (awaited) : discord-join-dm lit profiles.data.boost
+        // pour synchroniser le rôle Discord "Boost" → il faut que la base soit à jour
+        // (ex: juste après un achat Boost) avant que la fonction ne la lise.
+        try { if (typeof syncMyProfileToCloud === 'function') await syncMyProfileToCloud(); } catch(_){}
+        try { window.__discordJoinDM && await window.__discordJoinDM(); } catch(_){}
+        try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
+        // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
+        // re-événement d'auth (focus d'onglet) → sinon ça renverrait à l'accueil sans cesse.
+        if (!alreadyInApp) setScreen(state.profile ? 'landing' : 'onboarding');
+      },
+      go(screen){ setScreen(screen); },
+      hasProfile(){ return !!state.profile; },
+    };
+
+    /* Ajoute l'utilisateur au serveur Discord (scope guilds.join) puis lui envoie
+       un DM de bienvenue via le bot — appel à l'edge function Supabase.
+       Rappelée à CHAQUE login (pas juste la 1re fois) pour re-ajouter automatiquement
+       quelqu'un qui aurait quitté le serveur Discord entre-temps. Le DM de bienvenue,
+       lui, n'est envoyé qu'UNE SEULE FOIS DANS LA VIE de l'utilisateur — c'est
+       l'Edge Function qui le garantit côté serveur (table discord_welcome_dm), pas
+       le navigateur, donc ça tient même en changeant d'appareil ou en vidant le cache. */
+    let _joinDmCalled = false; // évite le double appel getSession()+onAuthStateChange sur CE chargement de page
+    window.__discordJoinDM = async function(){
+      const u = state.user || {};
+      const token  = localStorage.getItem('matefindr_discord_token');
+      const userId = u.discordId;
+      if (!token || !userId) return;
+      if (_joinDmCalled) return;
+      _joinDmCalled = true;
+      try {
+        const res = await fetch(SUPABASE_URL + '/functions/v1/discord-join-dm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ access_token: token, user_id: userId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        console.log('[Matefindr] discord join+DM:', data);
+      } catch (e) {
+        console.warn('[Matefindr] discord join+DM failed', e);
+      }
+    };
+
+    // ---------- Onboarding (welcome → age → genre → pays → perso) ----------
+    const draft = { age:null, gender:null, country:null, countryFlag:'', pseudo:'', bio:'', color1:null, color2:null, avatar:null };
+    function selectOpt(container, value){
+      container.querySelectorAll('.onb-opt').forEach(b => b.classList.toggle('selected', b.dataset.val === value));
+    }
+    function $onb(id){ return document.getElementById(id); }
+
+    // Populate the welcome "Hey, X !" page from any known name/avatar (priorité au compte Discord connecté)
+    function initOnboarding(){
+      let name = 'toi', avatarUrl = null;
+      try {
+        const u = state.user || {};
+        name = u.displayName
+            || (window.__discordUser && window.__discordUser.username)
+            || (document.getElementById('accName') && document.getElementById('accName').textContent.trim())
+            || (state.profile && state.profile.pseudo) || 'toi';
+        avatarUrl = u.avatarUrl
+            || (window.__discordUser && window.__discordUser.avatarUrl)
+            || null;
+      } catch(_){}
+      const nEl = $onb('onbWelcomeName'); if (nEl) nEl.textContent = (name && name !== '—' && name.trim()) ? name : 'toi';
+      const av = $onb('onbWelcomeAvatar');
+      if (av) {
+        if (avatarUrl) { av.classList.add('has-img'); av.innerHTML = '<img src="'+avatarUrl+'" alt="">'; }
+        else { av.classList.remove('has-img'); av.textContent = '🎉'; }
+      }
+      // Préremplit pseudo (depuis Discord) + bio (étape perso)
+      try {
+        const u = state.user || {};
+        const pseudoEl = $onb('onbPseudo');
+        if (pseudoEl && !pseudoEl.value && (u.displayName || name !== 'toi')) {
+          pseudoEl.value = u.displayName || name;
+          draft.pseudo = pseudoEl.value;
+        }
+        const bioEl = $onb('onbBio');
+        if (bioEl && !bioEl.value && u.bio) { bioEl.value = u.bio; draft.bio = u.bio; }
+      } catch(_){}
+      goStep(1);
+    }
+    window.__initOnboarding = initOnboarding;
+
+    // Step 1 — page fusionnée : âge + genre + pays (validation unifiée)
+    function refreshStep1Validation(){
+      const next = $onb('onbNext1');
+      if (!next) return;
+      next.disabled = !(draft.age != null && draft.gender && draft.country);
+    }
+    $onb('onbGender').addEventListener('click', e => {
+      const b = e.target.closest('.onb-opt'); if (!b) return;
+      draft.gender = b.dataset.val;
+      selectOpt(b.parentElement, draft.gender);
+      $onb('onbGenderSkip')?.classList.remove('is-active');
+      refreshStep1Validation();
+    });
+    $onb('onbGenderSkip')?.addEventListener('click', e => {
+      draft.gender = e.currentTarget.dataset.val; // 'hidden'
+      document.querySelectorAll('#onbGender .onb-opt').forEach(b => b.classList.remove('selected'));
+      e.currentTarget.classList.add('is-active');
+      refreshStep1Validation();
+    });
+    $onb('onbAge').addEventListener('input', e => {
+      const v = parseInt(e.target.value, 10);
+      draft.age = (v >= 18 && v <= 99) ? v : null;
+      refreshStep1Validation();
+    });
+    $onb('onbCountry').addEventListener('change', e => {
+      const opt = e.target.selectedOptions[0];
+      draft.country = e.target.value || null;
+      draft.countryFlag = opt ? (opt.getAttribute('data-flag') || '') : '';
+      refreshStep1Validation();
+    });
+
+    /* Country picker custom — affiche les vraies images flagcdn dans le dropdown */
+    (function initCountryPicker(){
+      const picker  = $onb('onbCountryPicker');
+      const trigger = $onb('onbCountryTrigger');
+      const search  = $onb('onbCountrySearch');
+      const list    = $onb('onbCountryList');
+      const select  = $onb('onbCountry');
+      if (!picker || !trigger || !search || !list || !select) return;
+      const countries = [...select.querySelectorAll('option')]
+        .filter(o => o.value)
+        .map(o => ({ code: o.value, name: o.textContent.replace(/^\s*\S+\s*/, '').trim() })); // retire emoji devant
+      const flagUrl = c => c === 'OTHER' ? '' : `https://flagcdn.com/${c.toLowerCase()}.svg`;
+      function renderList(filter){
+        const q = (filter || '').toLowerCase().trim();
+        const matches = countries.filter(c => !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+        list.innerHTML = matches.length
+          ? matches.map(c => `<div class="ctry-item" data-code="${c.code}"><span style="display:inline-flex;width:26px;height:18px;justify-content:center;align-items:center;flex:0 0 auto">${c.code === 'OTHER' ? '🏳️' : `<img src="${flagUrl(c.code)}" alt="${c.code}" loading="lazy">`}</span><span>${c.name}</span></div>`).join('')
+          : `<div class="ctry-empty">Aucun pays</div>`;
+      }
+      function setTriggerLabel(code, name){
+        if (!code) { trigger.innerHTML = '<span class="ctry-name ctry-placeholder">Choisis ton pays…</span>'; return; }
+        const flag = code === 'OTHER' ? '<span style="font-size:18px">🏳️</span>' : `<img class="ctry-flag" src="${flagUrl(code)}" alt="${code}">`;
+        trigger.innerHTML = `${flag}<span class="ctry-name">${name}</span>`;
+      }
+      function open(){ picker.setAttribute('data-open', 'true'); renderList(''); search.value=''; setTimeout(() => search.focus(), 0); }
+      function close(){ picker.setAttribute('data-open', 'false'); }
+      function pick(code){
+        const c = countries.find(x => x.code === code); if (!c) return;
+        select.value = code;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        setTriggerLabel(code, c.name);
+        close();
+      }
+      trigger.addEventListener('click', e => { e.stopPropagation(); picker.getAttribute('data-open') === 'true' ? close() : open(); });
+      search.addEventListener('input', e => renderList(e.target.value));
+      list.addEventListener('click', e => { const it = e.target.closest('.ctry-item'); if (it) pick(it.dataset.code); });
+      document.addEventListener('click', e => { if (!picker.contains(e.target)) close(); });
+      // Init affichage si valeur déjà sélectionnée
+      if (select.value) { const c = countries.find(x => x.code === select.value); if (c) setTriggerLabel(c.code, c.name); }
+      renderList('');
+    })();
+    // Step 4 — personnalisation : champs déplacés dans l'éditeur (bindings gardés null-safe)
+    $onb('onbPseudo')?.addEventListener('input', e => { draft.pseudo = e.target.value.trim(); });
+    $onb('onbBio')?.addEventListener('input', e => { draft.bio = e.target.value.trim(); });
+    $onb('onbColor1')?.addEventListener('input', e => { draft.color1 = e.target.value; });
+    $onb('onbColor2')?.addEventListener('input', e => { draft.color2 = e.target.value; });
+    $onb('onbAvatarFile')?.addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => { draft.avatar = rd.result; const inner = $onb('onbAvatarInner'); if (inner) inner.outerHTML = '<img id="onbAvatarInner" src="'+rd.result+'" alt="">'; };
+      rd.readAsDataURL(f);
+    });
+
+    function goStep(n){
+      document.querySelectorAll('.onb-step').forEach(s => {
+        s.hidden = parseInt(s.dataset.step, 10) !== n;
+      });
+      // 2 dots : step 1 (bienvenue + formulaire) et step 4 (perso)
+      const dots = $onb('onbProgress').children;
+      const stepIdx = (n === 1) ? 1 : 2;
+      for (let i=0; i<dots.length; i++) dots[i].classList.toggle('done', i < stepIdx);
+      try { $onb('screen-onboarding').scrollTop = 0; } catch(_){}
+    }
+    $onb('onbStart')?.addEventListener('click', () => goStep(1));
+    $onb('onbNext1').addEventListener('click', () => goStep(4));
+    document.querySelectorAll('#screen-onboarding [data-go]').forEach(b => b.addEventListener('click', () => goStep(parseInt(b.dataset.go, 10))));
+
+    function finishOnboarding(openBubbles){
+      state.profile = {
+        gender: draft.gender, age: draft.age,
+        country: draft.country, countryFlag: draft.countryFlag,
+        looking: 'chill',
+        pseudo: draft.pseudo || '', bio: draft.bio || '',
+        color1: draft.color1, color2: draft.color2,
+        avatar: draft.avatar || null
+      };
+      save();
+      // Reflète les choix de perso dans le compte si les champs existent
+      try {
+        if (draft.pseudo){ const el=$onb('accPseudo'); if(el){ el.value=draft.pseudo; el.dispatchEvent(new Event('input',{bubbles:true})); } }
+        if (draft.bio){ const el=$onb('accBio'); if(el){ el.value=draft.bio; el.dispatchEvent(new Event('input',{bubbles:true})); } }
+        if (draft.color1){ const el=$onb('accProfileColor'); if(el){ el.value=draft.color1; el.dispatchEvent(new Event('input',{bubbles:true})); } }
+        if (draft.color2){ const el=$onb('accProfileColor2'); if(el){ el.value=draft.color2; el.dispatchEvent(new Event('input',{bubbles:true})); } }
+      } catch(_){}
+      if (openBubbles){
+        // Les bulles s'éditent dans l'éditeur → on ouvre l'éditeur (pas l'écran Paramètres).
+        location.href = 'editor.html';
+      } else {
+        setScreen('swipe');
+      }
+    }
+    // « Personnaliser votre profil » → ouvre l'éditeur ; « Plus tard » → va au swipe
+    $onb('onbPersoBtn')?.addEventListener('click', () => finishOnboarding(true));
+    $onb('onbSkip')?.addEventListener('click', () => finishOnboarding(false));
+    $onb('onbFinish')?.addEventListener('click', () => finishOnboarding(false));
+    $onb('onbBubblesBtn')?.addEventListener('click', () => finishOnboarding(true));
+
+    // ---------- Swipe deck ----------
+    // Mock profiles. Each has nitro flag, joinedOn date, and an `orbs` array
+    // — bubbles that orbit the card. Click an orb to hear/see its content.
+    // Bots retirés — la liste est désormais alimentée par Supabase (table public.profiles).
+    // Cf. _remoteProfiles ci-dessous et fetchOtherProfiles() qui hydrate ce cache.
+    const _PROFILES_LEGACY = [
+      { name:'Alex', tag:'alex', age:21, gender:'male', looking:'game', status:'online', nitro:true, boost:true,
+        joinedOn:'14 oct. 2025',
+        activity:{type:'game', title:'CS2', sub:'En partie — Dust2 16-12'},
+        games:['CS2','Valorant','Apex'], bio:'Faceit lvl 8, on tryhard ?',
+        common:{friends:3, servers:2}, c1:'#FF7EB6', c2:'#9146FF', initial:'A',
+        orbs:[
+          {kind:'music', title:'Sicko Mode',         sub:'Travis Scott',     emoji:'🎵', voice:null},
+          {kind:'voice', title:'Note vocale',        sub:"« Yo c'est Alex »", emoji:'🎤', voice:"Yo, c'est Alex. On tryhard CS ce soir ?"},
+          {kind:'game',  title:'Counter-Strike 2',    sub:'2 134 h de jeu',   emoji:'🎮', rank:'Global Elite'},
+          {kind:'film', title:'One Piece',           sub:'Anime préféré',     emoji:'📺'},
+          {kind:'music', title:'Mo Bamba',           sub:'Sheck Wes',         emoji:'🎵'},
+          {kind:'game',  title:'Valorant',            sub:'Immortal 2',        emoji:'🎮', rank:'Immortal'},
+        ] },
+      { name:'Léa', tag:'leah_', age:19, gender:'female', looking:'chill', status:'idle', nitro:true,
+        joinedOn:'2 sept. 2025',
+        activity:{type:'music', title:'Spotify', sub:'Sweater Weather · The Neighbourhood'},
+        games:['Stardew','Hades'], bio:'Stardew & Animal Crossing, binôme cosy 🌱',
+        common:{friends:1, servers:4}, c1:'#5BE9FF', c2:'#9146FF', initial:'L',
+        orbs:[
+          {kind:'music', title:'Sweater Weather',    sub:'The Neighbourhood', emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Salut toi »",     emoji:'🎤', voice:"Coucou, moi c'est Léa, ravie de te rencontrer !"},
+          {kind:'film', title:'Studio Ghibli',       sub:'Pokoyo, Totoro',    emoji:'📺'},
+          {kind:'game',  title:'Stardew Valley',     sub:'400h+ de farm',     emoji:'🎮'},
+          {kind:'music', title:'Strawberries & Cigarettes', sub:'Troye Sivan', emoji:'🎵'},
+          {kind:'film', title:'Demon Slayer',       sub:'En cours',          emoji:'📺'},
+        ] },
+      { name:'Mo', tag:'mo.zzz', age:23, gender:'male', looking:'sleep', status:'dnd', nitro:false,
+        joinedOn:'21 août 2025',
+        activity:{type:'call', title:'Dans un appel', sub:'Voicechat — Matefindr Chill'},
+        games:['Minecraft','Rocket League'], bio:'Insomniaque. Sleepcall ce soir ?',
+        common:{friends:0, servers:1}, c1:'#FFB66E', c2:'#FF4FA0', initial:'M',
+        orbs:[
+          {kind:'voice', title:'Note vocale',        sub:"« Bonne nuit »",    emoji:'🎤', voice:"Hey, si tu galères à dormir, je suis dispo en sleepcall."},
+          {kind:'music', title:'Drown',              sub:'Cuco',              emoji:'🎵'},
+          {kind:'game',  title:'Minecraft',          sub:'Realm chill',       emoji:'🎮'},
+          {kind:'film', title:'Cowboy Bebop',       sub:'Anime culte',       emoji:'📺'},
+        ] },
+      { name:'Sam', tag:'sam.exe', age:20, gender:'other', looking:'talk', status:'online', nitro:true, boost:true,
+        joinedOn:'5 nov. 2025',
+        activity:{type:'game', title:'League of Legends', sub:'File d\'attente — Solo/Duo'},
+        games:['LoL','TFT'], bio:'Main support, je carry les mid 🙃',
+        common:{friends:5, servers:3}, c1:'#3BD17C', c2:'#5BE9FF', initial:'S',
+        orbs:[
+          {kind:'game',  title:'League of Legends', sub:'Soraka one-trick',   emoji:'🎮'},
+          {kind:'music', title:'Industry Baby',      sub:'Lil Nas X',         emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Duo maintenant ? »", emoji:'🎤', voice:"Yo, t'es chaud pour un duo ranked maintenant ?"},
+          {kind:'film', title:'Jujutsu Kaisen',     sub:'Saison 2',          emoji:'📺'},
+        ] },
+      { name:'Nora', tag:'noraaa', age:22, gender:'female', looking:'chill', status:'online', nitro:false,
+        joinedOn:'12 juil. 2025',
+        activity:{type:'game', title:'Phasmophobia', sub:'En partie depuis 23 min'},
+        games:['Phasmo','Stardew'], bio:"Films d'horreur + popcorn, t'es chaud ?",
+        common:{friends:2, servers:2}, c1:'#A65BFF', c2:'#FF7EB6', initial:'N',
+        orbs:[
+          {kind:'film', title:'Junji Ito',          sub:'Tomié, Uzumaki',    emoji:'📺'},
+          {kind:'music', title:'Bury a Friend',       sub:'Billie Eilish',     emoji:'🎵'},
+          {kind:'game',  title:'Phasmophobia',       sub:'Pro hunter',        emoji:'🎮'},
+          {kind:'voice', title:'Note vocale',        sub:"« Halloween toute l'année »", emoji:'🎤', voice:"Hello, on regarde Insidious ensemble ?"},
+        ] },
+      { name:'Theo', tag:'theo_apex', age:25, gender:'male', looking:'talk', status:'online', nitro:true,
+        joinedOn:'29 juin 2025',
+        activity:{type:'game', title:'Apex Legends', sub:'En partie ranked'},
+        games:['Apex','Warzone'], bio:'Predator EU. Cherche duo sérieux maintenant.',
+        common:{friends:4, servers:1}, c1:'#FF4FA0', c2:'#9146FF', initial:'T',
+        orbs:[
+          {kind:'game',  title:'Apex Legends',       sub:'Predator EU',       emoji:'🎮'},
+          {kind:'music', title:'Sicko Mode',          sub:'Travis Scott',      emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Duo Apex now ? »", emoji:'🎤', voice:"Yo, je cherche un duo Apex là, t'es bon comment ?"},
+          {kind:'game',  title:'Warzone',            sub:'KD 2.4',            emoji:'🎮'},
+        ] },
+      { name:'Iris', tag:'iris_zzz', age:18, gender:'female', looking:'sleep', status:'idle', nitro:true, boost:true,
+        joinedOn:'18 sept. 2025',
+        activity:{type:'call', title:'Dans un appel', sub:'2 personnes'},
+        games:['Minecraft'], bio:'Voix douce, sleepcall calme ☁️',
+        common:{friends:1, servers:5}, c1:'#5BE9FF', c2:'#FF7EB6', initial:'I',
+        orbs:[
+          {kind:'voice', title:'Note vocale',        sub:"« Bonsoir »",       emoji:'🎤', voice:"Bonsoir, je m'appelle Iris. Tu veux un sleepcall ?"},
+          {kind:'music', title:'Lover',               sub:'Taylor Swift',      emoji:'🎵'},
+          {kind:'film', title:'Your Name',          sub:'Makoto Shinkai',    emoji:'📺'},
+          {kind:'game',  title:'Minecraft',          sub:'Survie tranquille', emoji:'🎮'},
+        ] },
+      { name:'Kai', tag:'kai.lofi', age:24, gender:'other', looking:'chill', status:'online', nitro:false,
+        joinedOn:'3 oct. 2025',
+        activity:{type:'music', title:'Spotify', sub:'lofi hip hop radio — beats'},
+        games:['Disco Elysium'], bio:'Lecture, lo-fi, débats jusqu\'à 4h du mat.',
+        common:{friends:0, servers:6}, c1:'#9146FF', c2:'#3BD17C', initial:'K',
+        orbs:[
+          {kind:'music', title:'lofi beats',          sub:'ChilledCow',        emoji:'🎵'},
+          {kind:'film', title:'Mushishi',           sub:'Slow anime',        emoji:'📺'},
+          {kind:'game',  title:'Disco Elysium',      sub:'3x rejoué',         emoji:'🎮'},
+          {kind:'voice', title:'Note vocale',        sub:"« Hello »",         emoji:'🎤', voice:"Salut, je m'appelle Kai. On discute philo ce soir ?"},
+        ] },
+      { name:'Zoé', tag:'zoe.dia', age:21, gender:'female', looking:'talk', status:'online', nitro:true,
+        joinedOn:'24 oct. 2025',
+        activity:{type:'game', title:'Valorant', sub:'Ranked — Diamond II'},
+        games:['Valorant','Overwatch'], bio:'Diamond mais je rage pas (trop)',
+        common:{friends:6, servers:2}, c1:'#FF7EB6', c2:'#FFB66E', initial:'Z',
+        orbs:[
+          {kind:'game',  title:'Valorant',           sub:'Diamond II',        emoji:'🎮'},
+          {kind:'music', title:'Bad Habits',          sub:'Ed Sheeran',        emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« Duo Valo ? »",    emoji:'🎤', voice:"Hello, t'es chaud pour une ranked Valo là ?"},
+          {kind:'game',  title:'Overwatch 2',        sub:'Master support',    emoji:'🎮'},
+        ] },
+      { name:'Hugo', tag:'hugo.rev', age:26, gender:'male', looking:'chill', status:'dnd', nitro:false,
+        joinedOn:'11 avr. 2025',
+        activity:{type:'game', title:'Elden Ring', sub:'Boss : Malenia'},
+        games:['Resident Evil','Elden Ring'], bio:'Marathon Resi 4, stream le soir.',
+        common:{friends:2, servers:3}, c1:'#6B2BFF', c2:'#5BE9FF', initial:'H',
+        orbs:[
+          {kind:'game',  title:'Elden Ring',         sub:'NG+3',              emoji:'🎮'},
+          {kind:'film', title:'Berserk',            sub:'Manga + anime',     emoji:'📺'},
+          {kind:'music', title:'Mind Mischief',       sub:'Tame Impala',       emoji:'🎵'},
+          {kind:'voice', title:'Note vocale',        sub:"« On stream ? »",   emoji:'🎤', voice:"Yo, je stream Resi 4 ce soir, t'es chaud pour venir ?"},
+        ] },
+    ];
+    let deckIdx = 0;
+    let _previewMode = false; // true = aperçu complet de SA carte (pas de swipe, bouton "Quitter")
+    let _previewFromEditor = false; // true = aperçu ouvert depuis editor.html (#preview) → "Quitter" doit y retourner
+    // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
+    const ENTRY_MUSIC_GAIN = 0.55;
+    const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
+
+    function buildUserProfile(){
+      const u = state.user || {};
+      const p = state.profile || {};
+      if (!u.displayName && !u.email && !u.discordTag) return null;
+      const subByKind  = {music:'musique', game:'jeu', anime:'série', film:'film'};
+      const emoByKind  = {music:'🎵', game:'🎮', anime:'📺', film:'🎬'};
+      const orbs = (p.userOrbs || []).map(o => ({
+        kind: o.kind, title: o.title,
+        sub: (o.kind === 'game' && o.rank) ? o.rank : (subByKind[o.kind] || ''),
+        emoji: emoByKind[o.kind] || '✨',
+        cover: o.cover || null, previewUrl: o.previewUrl || null,
+        rank: o.rank || null, clipUrl: o.clipUrl || null,
+        // Conserver la position custom (drag&drop) pour que la carte de swipe
+        // place la bulle exactement là où l'utilisateur l'a posée dans l'éditeur.
+        // + positions séparées par orientation (portrait/paysage téléphone).
+        customX: o.customX, customY: o.customY,
+        posPortrait: o.posPortrait || null, posLandscape: o.posLandscape || null,
+      }));
+      return {
+        name: u.displayName || u.email?.split('@')[0] || 'Moi',
+        tag: u.discordTag || 'moi',
+        age: p.age || '',
+        gender: p.gender || '',
+        country: p.country || '',
+        countryFlag: p.countryFlag || '',
+        looking: p.looking || 'game',
+        status: 'online',
+        nitro: !!(u.boost && u.fakeNitro),
+        fakeDeco: (u.boost && u.fakeNitro) ? (u.fakeDeco || null) : null,
+        boost: !!u.boost,
+        showBoostName: u.boostShowName !== false,
+        nameColor: u.nameColor || null,
+        handleBlur: !!u.handleBlur,
+        joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
+        activity: {type:'game', title:'Matefindr', sub:'Swipe en cours…'},
+        games: [p.game].filter(Boolean),
+        bio: p.bio || '✏️ Complète ta bio dans Mon profil !',
+        common: {friends:0, servers:0},
+        c1:'#393a41', c2:'#393a41',
+        initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
+        avatarUrl: u.avatarUrl || null,
+        avatarPos: u.avatarPos || null,
+        bannerUrl: u.bannerUrl || null,
+        decorationUrl: u.decorationUrl || null,
+        // Couleur Discord par défaut (#393a41) tant que l'utilisateur n'a pas choisi la sienne.
+        profileColor: u.profileColor || '#393a41',
+        profileColor2: u.profileColor2 || '#393a41',
+        accentColor: u.accentColor || null,
+        profileVoice: u.profileVoice || null,
+        // IDs des serveurs Discord → calcul des serveurs en commun chez les autres.
+        guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => g.id) : []),
+        orbs,
+        publicFlags: u.publicFlags || 0,
+        premiumType: u.premiumType || 0,
+        socials: u.socials || {},
+        // Cross-user : GIFs, fond perso et musique d'entrée → visibles par les autres
+        gifs: Array.isArray(u.gifs) ? u.gifs : [],
+        bg: u.boostBg || null,
+        swipeMusic: u.swipeMusic || null,
+        connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
+        isMe: true,
+      };
+    }
+
+    /* ===== Cloud sync (Supabase) — la liste de profils provient des vrais utilisateurs ===== */
+    let _remoteProfiles = []; // hydraté depuis Supabase
+    let _remoteFetchedAt = 0;
+    let _syncTimer = null;
+
+    /* UPSERT du profil courant dans Supabase. Debounce pour éviter le spam. */
+    function scheduleCloudSync(){
+      clearTimeout(_syncTimer);
+      _syncTimer = setTimeout(syncMyProfileToCloud, 800);
+    }
+    async function syncMyProfileToCloud(){
+      try {
+        if (!window.__supa) return;
+        const { data: { session } } = await window.__supa.auth.getSession();
+        if (!session) return;
+        const my = buildUserProfile();
+        if (!my) return;
+        delete my.isMe;
+        // Colonnes "legacy" du schéma existant (lisibles par tous, même sans colonne data)
+        const base = {
+          id: session.user.id,
+          display_name: my.name || null,
+          avatar_url: my.avatarUrl || null,
+          banner_url: my.bannerUrl || null,
+          decoration_url: my.decorationUrl || null,
+          bio: my.bio || null,
+          look_for: my.looking || null,
+          updated_at: new Date().toISOString(),
+        };
+        if (state.user && state.user.discordId) base.discord_id = state.user.discordId;
+        // 1) Essai avec la colonne data (profil COMPLET : âge, genre, pays, gifs, fond, etc.)
+        let { error } = await window.__supa.from('profiles').upsert({ ...base, data: my }, { onConflict: 'id' });
+        // 2) Si la colonne data n'existe pas encore → upsert legacy seul (ne casse pas)
+        if (error && /data/i.test((error.message || '') + (error.details || ''))) {
+          ({ error } = await window.__supa.from('profiles').upsert(base, { onConflict: 'id' }));
+        }
+        if (error) console.warn('[Matefindr] sync profile failed', error.message || error);
+      } catch (e) { console.warn('[Matefindr] sync profile error', e); }
+    }
+    window.__syncMyProfileToCloud = syncMyProfileToCloud;
+    window.__scheduleCloudSync = scheduleCloudSync;
+
+    /* Convertit une ligne Supabase (data jsonb OU colonnes legacy) en profil pour buildCard. */
+    function rowToProfile(r){
+      if (!r) return null;
+      // Profil complet stocké dans data → on l'utilise tel quel
+      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; return p; }
+      // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
+      if (!r.display_name && !r.avatar_url) return null;
+      const subByKind = {music:'musique', game:'jeu', anime:'série', film:'film'};
+      const emoByKind = {music:'🎵', game:'🎮', anime:'📺', film:'🎬'};
+      let bubbles = [];
+      if (Array.isArray(r.bubbles)) bubbles = r.bubbles;
+      else if (r.bubbles && Array.isArray(r.bubbles.userOrbs)) bubbles = r.bubbles.userOrbs;
+      const orbs = bubbles.map(o => ({
+        kind: o.kind, title: o.title,
+        sub: (o.kind === 'game' && o.rank) ? o.rank : (subByKind[o.kind] || ''),
+        emoji: emoByKind[o.kind] || '✨',
+        cover: o.cover || null, previewUrl: o.previewUrl || null,
+        rank: o.rank || null, customX: o.customX, customY: o.customY,
+        posPortrait: o.posPortrait || null, posLandscape: o.posLandscape || null,
+      }));
+      return {
+        name: r.display_name || 'Matefindr',
+        tag: r.discord_tag || (r.discord_id ? String(r.discord_id).slice(0, 8) : 'user'),
+        age: r.age || '', gender: r.gender || '', country: r.country || '', countryFlag: '',
+        looking: r.look_for || 'chill', status: 'online',
+        nitro: false, boost: false,
+        joinedOn: r.created_at ? new Date(r.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}) : 'récemment',
+        activity: {type:'game', title:'Matefindr', sub:'Sur Matefindr'},
+        games: [], bio: r.bio || '',
+        common: {friends:0, servers:0},
+        c1:'#5865F2', c2:'#404EED',
+        profileColor:'#393a41', profileColor2:'#393a41',
+        initial: (r.display_name || 'T').charAt(0).toUpperCase(),
+        avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
+        accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
+        orbs, socials:{}, isMe:false, uid: r.id,
+      };
+    }
+
+    /* SELECT tous les autres profils (cache 30s pour ne pas spam). */
+    let _profilesInFlight = null;
+    async function fetchOtherProfiles(force){
+      if (!window.__supa) return _remoteProfiles;
+      if (!force && Date.now() - _remoteFetchedAt < 30000) return _remoteProfiles;
+      if (_profilesInFlight) return _profilesInFlight; // évite les requêtes concurrentes (lag)
+      _profilesInFlight = (async () => {
+        try {
+          const { data: { session } } = await window.__supa.auth.getSession();
+          const myId = session && session.user && session.user.id;
+          let q = window.__supa.from('profiles').select('*').order('updated_at', { ascending: false }).limit(200);
+          if (myId) q = q.neq('id', myId);
+          // Timeout 8s : un Supabase lent ne doit jamais bloquer indéfiniment.
+          const result = await Promise.race([q, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]);
+          const { data, error } = result;
+          if (error) { console.warn('[Matefindr] fetch profiles failed', error.message || error); return _remoteProfiles; }
+          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean);
+          _remoteFetchedAt = Date.now();
+          return _remoteProfiles;
+        } catch (e) { console.warn('[Matefindr] fetch profiles error', e); return _remoteProfiles; }
+        finally { _profilesInFlight = null; }
+      })();
+      return _profilesInFlight;
+    }
+    window.__fetchOtherProfiles = fetchOtherProfiles;
+
+    /* ===== Likes / Match (table public.likes) ===== */
+    async function recordLike(profile){
+      try {
+        if (!window.__supa || !profile || !profile.uid) return;
+        const { data:{ session } } = await window.__supa.auth.getSession();
+        if (!session) return;
+        const myId = session.user.id;
+        await window.__supa.from('likes').upsert({ liker_id: myId, liked_id: profile.uid }, { onConflict: 'liker_id,liked_id' });
+        // L'autre m'a-t-il déjà liké ? → MATCH
+        const { data: back } = await window.__supa.from('likes')
+          .select('liker_id').eq('liker_id', profile.uid).eq('liked_id', myId).limit(1);
+        if (back && back.length && typeof triggerMatch === 'function') triggerMatch(profile);
+      } catch(e){ console.warn('[Matefindr] like error', e); }
+    }
+    function triggerMatch(p){
+      // Like réciproque détecté → crée le match en DB (l'autre est notifié via Realtime) + anim.
+      if (typeof startMatch === 'function') startMatch(p, { unread:false });
+      else if (typeof playMatchAnimation === 'function') playMatchAnimation(p, 'm_'+Date.now());
+    }
+    /* uids des likers auxquels j'ai DÉJÀ répondu (❤️ like en retour OU ✕ rejet).
+       Persisté en localStorage → un like traité ne revient JAMAIS dans le panneau,
+       même si l'écriture Supabase échoue ou sur un autre device après sync. */
+    const DISMISSED_LIKERS = (() => {
+      try { return new Set(JSON.parse(localStorage.getItem('matefindr_dismissed_likers') || '[]')); }
+      catch(_){ return new Set(); }
+    })();
+    function dismissLiker(uid){
+      if (!uid) return;
+      DISMISSED_LIKERS.add(uid);
+      try { localStorage.setItem('matefindr_dismissed_likers', JSON.stringify([...DISMISSED_LIKERS])); } catch(_){}
+    }
+    /* Récupère les profils qui M'ONT liké (pour le panneau + badge cœur). */
+    async function fetchLikesReceived(){
+      try {
+        if (!window.__supa) return [];
+        const { data:{ session } } = await window.__supa.auth.getSession();
+        if (!session) return [];
+        const myId = session.user.id;
+        const { data: rows } = await window.__supa.from('likes').select('liker_id, created_at').eq('liked_id', myId).order('created_at',{ascending:false}).limit(100);
+        if (!rows || !rows.length) return [];
+        // Exclure ceux à qui j'ai déjà répondu (like en retour = match) → ils quittent le panneau.
+        let likedBack = new Set();
+        try { const { data: mine } = await window.__supa.from('likes').select('liked_id').eq('liker_id', myId);
+              likedBack = new Set((mine||[]).map(r => r.liked_id)); } catch(_){}
+        const fresh = rows.filter(r => !likedBack.has(r.liker_id) && !DISMISSED_LIKERS.has(r.liker_id));
+        if (!fresh.length) return [];
+        const ids = fresh.map(r => r.liker_id);
+        const { data: profs } = await window.__supa.from('profiles').select('*').in('id', ids);
+        return fresh.map(r => { const pr = (profs||[]).find(p => p.id === r.liker_id); return pr ? rowToProfile(pr) : null; }).filter(Boolean);
+      } catch(e){ console.warn('[Matefindr] fetch likes error', e); return []; }
+    }
+    async function refreshLikesReceived(){
+      const list = await fetchLikesReceived();
+      if (typeof LIKED_ME === 'undefined') return;
+      LIKED_ME.length = 0;
+      list.forEach(p => LIKED_ME.push({ name:p.name, tag:p.tag, age:p.age||'', c1:p.c1||'#5865F2', c2:p.c2||'#404EED', initial:p.initial||(p.name||'?').charAt(0), avatarUrl:p.avatarUrl||null, uid:p.uid, _full:p }));
+      if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
+      const lp = document.getElementById('likedPanel');
+      if (typeof renderLikedMe === 'function' && lp && lp.getAttribute('data-open') === 'true') renderLikedMe();
+    }
+    window.__recordLike = recordLike;
+    window.__refreshLikesReceived = refreshLikesReceived;
+
+    function genderFilteredProfiles(){
+      const f = state.user && state.user.boost && state.user.genderFilter;
+      const pool = _remoteProfiles;
+      if (!f || f === 'all') return pool;
+      const map = { il:['male','il'], elle:['female','elle'] };
+      const accept = map[f] || [];
+      return pool.filter(p => accept.includes(p.gender));
+    }
+    function ensureDeck(){
+      // Rendu IMMÉDIAT (depuis le cache + ta propre carte) → jamais d'écran blanc/bloqué
+      // en attendant le réseau Supabase. Le rafraîchissement se fait en arrière-plan.
+      ensureDeckSync();
+      const wasEmpty = document.body.getAttribute('data-swipe-empty') === 'true';
+      fetchOtherProfiles().then(() => {
+        if (document.body.getAttribute('data-screen') !== 'swipe') return;
+        // On ne re-rend QUE si on était sur le deck vide et que de nouveaux profils sont arrivés
+        // (évite de relancer la musique / faire clignoter la carte déjà affichée).
+        if (wasEmpty) ensureDeckSync();
+      }).catch(() => {});
+    }
+    function ensureDeckSync(){
+      const wrap = document.getElementById('swipeWrap');
+      wrap.innerHTML = '';
+      const myP = buildUserProfile();
+      // Ta propre carte n'est dans le deck QU'en mode APERÇU (endroit dédié, figé).
+      // En mode normal (le hub), on ne se swipe pas soi-même → deck = uniquement les autres.
+      const inPreview = !!(_previewMode && myP);
+      // En mode APERÇU on ne montre QUE soi : jamais d'autres profils, même si ma
+      // carte manque (sinon on verrait un inconnu sans pouvoir interagir).
+      const pool = _previewMode ? [] : genderFilteredProfiles();
+      const offset = inPreview ? 1 : 0;
+      const total = pool.length + offset;
+      if (deckIdx >= total) {
+        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        renderOrbs(null);
+        renderSwipeGifs(null);              // retire les GIFs (plus de carte)
+        playProfileEntryMusic(null);        // coupe la musique d'entrée
+        document.body.setAttribute('data-swipe-empty', 'true'); // revert le fond perso
+        return;
+      }
+      document.body.removeAttribute('data-swipe-empty');
+      const p = inPreview ? myP : pool[deckIdx];
+      // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
+      if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg);
+      // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
+      // au lieu de laisser le deck vide et bloqué (cause du « on ne peut plus swiper »).
+      try {
+        wrap.appendChild(buildCard(p, true));
+        renderOrbs(p);
+        renderSwipeGifs(p);
+        // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
+        // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
+        playProfileEntryMusic(p);
+      } catch (err) {
+        console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
+        wrap.innerHTML = '';
+        if (deckIdx < total - 1) { deckIdx++; ensureDeckSync(); return; }
+        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        document.body.setAttribute('data-swipe-empty', 'true');
+      }
+    }
+
+    /* (legacy) Plays the profile owner's entry music when the card is displayed.
+       No longer called automatically — voice memo replaces this behavior. */
+    function _smSetPlayingUI(playing){
+      const cov = document.getElementById('smCover');
+      if (cov) cov.classList.toggle('is-paused', !playing);
+      const ip = document.getElementById('smIcoPlay'), ipa = document.getElementById('smIcoPause');
+      if (ip)  ip.style.display  = playing ? 'none' : '';
+      if (ipa) ipa.style.display = playing ? '' : 'none';
+    }
+    async function playProfileEntryMusic(p){
+      // Nouveau profil : on coupe la bulle de musique éventuellement en cours et on réinitialise le relais.
+      _swipeMusicPausedForOrb = false;
+      if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) { _spotifyAudio._userStopped = true; try { _spotifyAudio.pause(); } catch(_){} _spotifyAudio = null; document.querySelectorAll('.interest-orb.playing,.orb.playing').forEach(o=>o.classList.remove('playing')); }
+      if (_swipeMusicAudio) { _swipeMusicAudio.pause(); _swipeMusicAudio = null; }
+      const box = document.getElementById('swipeMusic');
+      if (box) box.setAttribute('data-show', 'false');
+      // Musique d'intro de profil retirée du site — plus aucune lecture d'entrée.
+      return;
+    }
+    /* Débloque l'autoplay : au premier geste de l'utilisateur, si une musique d'entrée
+       est en attente (chip affiché mais en pause car autoplay bloqué), on la lance. */
+    let _audioUnlockBound = false;
+    function _bindAudioUnlock(){
+      if (_audioUnlockBound) return;
+      _audioUnlockBound = true;
+      const tryResume = () => {
+        // Ne pas relancer la musique d'entrée si une bulle de musique joue (ou l'a volontairement coupée).
+        if (_spotifyAudio || _swipeMusicPausedForOrb) return;
+        const box = document.getElementById('swipeMusic');
+        if (_swipeMusicAudio && _swipeMusicAudio.paused && box && box.getAttribute('data-show') === 'true') {
+          _swipeMusicAudio.play().then(() => _smSetPlayingUI(true)).catch(() => {});
+        }
+      };
+      document.addEventListener('pointerdown', tryResume, true);
+      document.addEventListener('keydown', tryResume, true);
+    }
+    _bindAudioUnlock();
+
+    /* GIFs en couche d'arrière-plan (body > .swipe-gifs-bg, z:1) :
+       - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
+       - positions calculées en pixels viewport à partir des % de la carte
+       - se mettent à jour à chaque resize */
+    let _swipeGifsResize = null;
+    function renderSwipeGifs(p){
+      // Nettoie l'ancien layer s'il existe
+      const old = document.getElementById('swipeGifsBg');
+      if (old) old.remove();
+      if (_swipeGifsResize) {
+        window.removeEventListener('resize', _swipeGifsResize);
+        _swipeGifsResize = null;
+      }
+      // GIFs : les miens (state.user) OU ceux du profil affiché (cross-user, depuis p.gifs)
+      const isMe = p && p.isMe;
+      const gifs = isMe ? ((state.user && state.user.gifs) || []) : ((p && p.gifs) || []);
+      if (!gifs.length) return;
+      const wrap = document.getElementById('swipeWrap');
+      if (!wrap) return;
+      const layer = document.createElement('div');
+      layer.id = 'swipeGifsBg';
+      layer.className = 'swipe-gifs-bg';
+      const items = gifs.map(g => {
+        const el = document.createElement('div');
+        el.className = 'swipe-gif';
+        el.innerHTML = `<img src="${g.full || g.preview}" alt="">`;
+        layer.appendChild(el);
+        return { el, g };
+      });
+      document.body.appendChild(layer);
+      // Position d'un GIF selon l'orientation courante (portrait/paysage/bureau).
+      function gifPos(g){
+        const mode = activeLayoutMode();
+        const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
+                : (mode === 'landscape' && g.landscape) ? g.landscape
+                : g;
+        return {
+          x: (typeof m.x === 'number') ? m.x : 50,
+          y: (typeof m.y === 'number') ? m.y : 30,
+          w: (typeof m.w === 'number') ? m.w : 32,
+          rot: m.rot || 0,
+        };
+      }
+      function reposition(){
+        const wr = wrap.getBoundingClientRect();
+        items.forEach(({ el, g }) => {
+          const p = gifPos(g);
+          const wpx = (p.w / 100) * wr.width;
+          const cx = wr.left + (p.x / 100) * wr.width;
+          const cy = wr.top  + (p.y / 100) * wr.height;
+          el.style.left = (cx - wpx / 2) + 'px';
+          el.style.top  = (cy - wpx / 2) + 'px';
+          el.style.width = wpx + 'px';
+          el.style.transform = `rotate(${p.rot}deg)`;
+        });
+      }
+      reposition();
+      _swipeGifsResize = () => reposition();
+      window.addEventListener('resize', _swipeGifsResize);
+    }
+    /* Bind the play button of the profile voice-memo widget on a card */
+    function bindCardVoice(card){
+      const widget = card.querySelector('.card-voice');
+      if (!widget) return;
+      const src  = widget.dataset.voice;
+      const btn  = widget.querySelector('.card-voice-play');
+      const bar  = widget.querySelector('.card-voice-bar');
+      const time = widget.querySelector('.card-voice-time');
+      const audio = new Audio(src);
+      audio.preload = 'metadata';
+      const fmt = t => { const s = Math.floor(t || 0); return '0:' + (s < 10 ? '0' + s : s); };
+      audio.addEventListener('loadedmetadata', () => { time.textContent = fmt(audio.duration); });
+      audio.addEventListener('play',  () => widget.setAttribute('data-playing','true'));
+      audio.addEventListener('pause', () => widget.setAttribute('data-playing','false'));
+      audio.addEventListener('ended', () => { widget.setAttribute('data-playing','false'); bar.style.width = '0%'; time.textContent = fmt(audio.duration); });
+      audio.addEventListener('timeupdate', () => {
+        if (audio.duration && isFinite(audio.duration)) {
+          bar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+          time.textContent = fmt(audio.duration - audio.currentTime);
+        }
+      });
+      btn.addEventListener('click', (ev) => {
+        ev.preventDefault(); ev.stopPropagation();
+        if (audio.paused) audio.play().catch(()=>{});
+        else audio.pause();
+      });
+    }
+
+    function activityIcon(type){
+      if (type === 'call')  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5be9ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>`;
+      if (type === 'music') return `<svg width="18" height="18" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg>`;
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 12h2M9 11v2M14 12h.01M16 13h.01"/></svg>`;
+    }
+    const STATUS_LABEL = { online:'En ligne sur Matefindr', idle:'Inactif', dnd:'Ne pas déranger', offline:'Inactif' };
+    /* Moon icon shown over the avatar for inactive/offline users (Discord-style) */
+    const STATUS_MOON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#dcddde"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>';
+    // Outline-style SVG icons (white) for looking_for badges — same DA as ♂ ♀ ⭐
+    const LOOK_SVG = {
+      chill: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/><path d="M3 14v-3a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v3"/><path d="M3 14h18"/><path d="M6 19v2M18 19v2"/></svg>',
+      game:  '<svg width="22" height="22" viewBox="0 0 28 28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h14a3 3 0 0 1 2.9 2.2l1 4A3 3 0 0 1 22 19c-1.4 0-2.2-.8-3-1.6L17.2 16H10.8L9 17.4C8.2 18.2 7.4 19 6 19a3 3 0 0 1-2.9-3.8l1-4A3 3 0 0 1 7 9Z"/><path d="M9 13h2M10 12v2"/><circle cx="17.5" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="19.5" cy="14" r="1" fill="#fff" stroke="none"/></svg>',
+      talk:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.3 7.3L3 21l1.7-6.7A8 8 0 1 1 21 12Z"/><circle cx="9" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="12" cy="12" r="1" fill="#fff" stroke="none"/><circle cx="15" cy="12" r="1" fill="#fff" stroke="none"/></svg>',
+      sleep: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>',
+    };
+    // Backwards-compat alias (some legacy code uses LOOK_EMOJI string)
+    const LOOK_EMOJI = LOOK_SVG;
+
+    function buildCard(p, isTop){
+      const c = document.createElement('div');
+      c.className = 'swipe-card' + (isTop ? ' entering' : '');
+      c.style.setProperty('--c1', p.c1);
+      c.style.setProperty('--c2', p.c2);
+      if (!isTop) {
+        c.style.transform = 'scale(0.96) translateY(10px)';
+        c.style.pointerEvents = 'none';
+        c.style.opacity = '0.85';
+      }
+      const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), talk:tx('look_talk'), sleep:tx('look_sleep') }[p.looking] || p.looking;
+      // BANNER : only the top strip — uses Discord banner image, accent color, or default gradient.
+      const accentHex = p.accentColor ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
+      const bannerStyle = p.bannerUrl
+        ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
+        : (accentHex ? `background:${accentHex}` : '');
+      // PROFILE BODY COLOR : primary + optional secondary as a gradient on the card body (below banner).
+      // Si pas de couleur custom → on retombe sur l'accent_color Discord (= "reset Discord").
+      const pc1 = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
+      const pc2 = (p.profileColor2 && p.profileColor2 !== 'discord') ? p.profileColor2 : null;
+      if (pc1 && pc2) c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
+      else if (pc1)   c.style.background = pc1;
+      else if (accentHex) c.style.background = accentHex;
+      // Auto-contrast : if the card body is too light, switch text to dark.
+      const lum = (hex) => {
+        const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
+        const r = parseInt(m[1].slice(0,2),16)/255, g = parseInt(m[1].slice(2,4),16)/255, b = parseInt(m[1].slice(4,6),16)/255;
+        const lin = (v) => (v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4));
+        return .2126*lin(r) + .7152*lin(g) + .0722*lin(b);
+      };
+      const L1 = lum(pc1), L2 = lum(pc2);
+      const avg = (L1!=null && L2!=null) ? (L1+L2)/2 : (L1!=null ? L1 : (L2!=null ? L2 : null));
+      if (avg != null && avg > 0.55) c.classList.add('light-bg');
+      // (default stays #1c1d22 from the .swipe-card class)
+      // Avatar wrap background follows the card body so the circle blends in
+      const aviBg = pc1 || '#1c1d22';
+      // Recadrage de la photo (depuis l'éditeur) : object-position + zoom appliqués à la carte.
+      const ap = (p.avatarPos && typeof p.avatarPos === 'object') ? p.avatarPos : null;
+      const apStyle = ap
+        ? `${(typeof ap.posX === 'number' && typeof ap.posY === 'number') ? `object-position:${ap.posX}% ${ap.posY}%;` : ''}${(typeof ap.scale === 'number' && ap.scale !== 1) ? `transform:scale(${ap.scale});` : ''}`
+        : '';
+      const aviInner = p.avatarUrl
+        ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;${apStyle}" alt="${p.name}">`
+        : p.initial;
+      const aviStyle = p.avatarUrl ? '' : `style="background:linear-gradient(135deg,${p.c1},${p.c2})"`;
+      // Décorations Discord retirées du site → plus d'overlay de décoration sur l'avatar.
+      const decoHtml = '';
+      // Fake-Nitro custom decoration (CSS effect around the avatar) — Boost uniquement.
+      const fakeDeco = (p.nitro && p.fakeDeco && p.fakeDeco !== 'none') ? p.fakeDeco : null;
+      const fakeDecoHtml = fakeDeco ? `<span class="deco-effect deco-${fakeDeco}"></span>` : '';
+      // Discord common guilds (icons + count). For mock profiles, pick a random subset
+      // of the user's real guilds the first time we build the card, then cache it on
+      // the profile so re-renders stay stable for that session.
+      // Serveurs en commun RÉELS : intersection entre mes serveurs Discord et ceux de l'autre
+      // (p.guildIds = liste d'IDs stockée dans son profil). On affiche les serveurs via MES
+      // propres icônes/noms (je suis forcément dedans aussi). Si l'autre n'a pas encore d'IDs
+      // synchronisés → on n'affiche rien (plutôt qu'un faux nombre aléatoire).
+      const myGuilds = (state.user && Array.isArray(state.user.guilds)) ? state.user.guilds : [];
+      let commonGuilds = [];
+      if (p.isMe) {
+        commonGuilds = myGuilds;
+      } else if (Array.isArray(p.guildIds) && myGuilds.length > 0) {
+        const theirs = new Set(p.guildIds.map(String));
+        commonGuilds = myGuilds.filter(g => theirs.has(String(g.id)));
+      }
+      const guildIconHtml = (g) => g.iconUrl
+        ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
+        : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
+      const guildsHtml = commonGuilds.length > 0 ? `
+        <div class="card-guilds">
+          <div class="cg-icons">
+            ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
+            ${commonGuilds.length > 5 ? `<span class="cg-more">+${commonGuilds.length - 5}</span>` : ''}
+          </div>
+          <span class="cg-label"><b>${commonGuilds.length}</b> serveur${commonGuilds.length > 1 ? 's' : ''} en commun</span>
+        </div>
+      ` : '';
+      const s = p.socials || {};
+      const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
+      const igH = cleanHandle(s.instagram), ttH = cleanHandle(s.tiktok), spH = cleanHandle(s.spotify);
+      const igUrl = igH ? `https://instagram.com/${encodeURIComponent(igH)}` : null;
+      const ttUrl = ttH ? `https://www.tiktok.com/@${encodeURIComponent(ttH)}` : null;
+      const spUrl = spH ? `https://open.spotify.com/user/${encodeURIComponent(spH)}` : null;
+      const socialHtml = (igUrl || ttUrl || spUrl) ? `<div class="card-socials">
+        ${igUrl ? `<a href="${igUrl}" target="_blank" rel="noopener" class="card-social" data-kind="instagram" title="Voir le profil Instagram"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4a4 4 0 1 1-7.9 1.1A4 4 0 0 1 16 11.4z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg><span>@${escapeHtmlMini(igH)}</span></a>` : ''}
+        ${ttUrl ? `<a href="${ttUrl}" target="_blank" rel="noopener" class="card-social" data-kind="tiktok" title="Voir le profil TikTok"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg><span>@${escapeHtmlMini(ttH)}</span></a>` : ''}
+        ${spUrl ? `<a href="${spUrl}" target="_blank" rel="noopener" class="card-social" data-kind="spotify" title="Voir le profil Spotify"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Z"/></svg><span>${escapeHtmlMini(spH)}</span></a>` : ''}
+      </div>` : '';
+      // Connexions (éditeur) : logos d'apps + pseudo, cliquables quand l'app a une page profil.
+      const CONN_COLOR = {spotify:'1DB954',steam:'ffffff',twitch:'9146FF',youtube:'FF0000',x:'ffffff',instagram:'E4405F',tiktok:'ffffff',riotgames:'EB0029',epicgames:'ffffff'};
+      const CONN_URL = {
+        spotify:u=>`https://open.spotify.com/search/${encodeURIComponent(u)}`,
+        steam:u=>`https://steamcommunity.com/id/${encodeURIComponent(u)}`,
+        twitch:u=>`https://twitch.tv/${encodeURIComponent(u)}`,
+        youtube:u=>`https://youtube.com/@${encodeURIComponent(u.replace(/^@/,''))}`,
+        x:u=>`https://x.com/${encodeURIComponent(u.replace(/^@/,''))}`,
+        instagram:u=>`https://instagram.com/${encodeURIComponent(u.replace(/^@/,''))}`,
+        tiktok:u=>`https://www.tiktok.com/@${encodeURIComponent(u.replace(/^@/,''))}`,
+      };
+      const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
+      const connKeys = Object.keys(conns).filter(k => conns[k]);
+      const connectionsHtml = connKeys.length ? `<div class="card-connections">${connKeys.map(k => {
+        const u = String(conns[k]); const color = CONN_COLOR[k] || 'ffffff';
+        const logo = `https://cdn.simpleicons.org/${k}/${color}`;
+        const href = CONN_URL[k] ? CONN_URL[k](u) : null;
+        const inner = `<img src="${logo}" alt="" loading="lazy"><span>${escapeHtmlMini(u)}</span>`;
+        return href
+          ? `<a href="${href}" target="_blank" rel="noopener" class="card-conn" title="${escapeHtmlMini(k)} : ${escapeHtmlMini(u)}">${inner}</a>`
+          : `<span class="card-conn" title="${escapeHtmlMini(k)} : ${escapeHtmlMini(u)}">${inner}</span>`;
+      }).join('')}</div>` : '';
+      // Age + gender badge in the top-right corner of the banner.
+      // 'hidden' (Je préfère ne pas dire) : no symbol — just the age.
+      // 'autre' : outline star SVG (white) instead of ⚧.
+      const GENDER_SYM = {
+        male:'♂', il:'♂',
+        female:'♀', elle:'♀',
+        nonbinary: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
+        other:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
+        autre:     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
+      };
+      const gSym = GENDER_SYM[p.gender] || '';
+      // Drapeau : image flagcdn (les emojis 🇫🇷 s'affichent "FR" sur Windows)
+      const countryCode = (p.country && typeof p.country === 'string' && /^[A-Z]{2}$/i.test(p.country)) ? p.country.toUpperCase() : null;
+      const flagImg = countryCode ? `<img src="https://flagcdn.com/${countryCode.toLowerCase()}.svg" alt="${countryCode}" loading="lazy">` : (p.countryFlag || '');
+      const ageBadgeHtml = (p.age || gSym || flagImg) ? `
+        <div class="card-age-badge">
+          ${p.age ? `<span class="cab-age">${p.age}</span>` : ''}
+          ${flagImg ? `<span class="cab-flag" title="${countryCode || ''}">${flagImg}</span>` : ''}
+          ${gSym ? `<span class="cab-gender" data-g="${p.gender || ''}">${gSym}</span>` : ''}
+        </div>` : '';
+      c.innerHTML = `
+        <div class="badge-stamp like">LIKE</div>
+        <div class="badge-stamp nope">NOPE</div>
+        ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
+        <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
+        ${ageBadgeHtml}
+        <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
+          ${fakeDecoHtml}
+          <div class="avi" ${aviStyle}>${aviInner}</div>
+          <span class="status-dot ${p.status}">${(p.status === 'offline' || p.status === 'idle') ? STATUS_MOON_SVG : ''}</span>
+        </div>
+        ${p.nitro ? `<span class="nitro-badge">${tx('nitro')}</span>` : ''}
+        <div class="body">
+          <div>
+            <div class="name-row">
+              <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
+            </div>
+            <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span> <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
+            <div class="joined">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              ${tx('joined_on')} ${p.joinedOn}
+            </div>
+          </div>
+          <hr class="div"/>
+          ${p.profileVoice ? `
+            <div class="card-voice" data-voice="${escapeHtmlMini(p.profileVoice)}">
+              <button type="button" class="card-voice-play" aria-label="Lecture vocal">
+                <svg class="ico-play"  width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>
+                <svg class="ico-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+              </button>
+              <div class="card-voice-info">
+                <b>Vocal du profil</b>
+                <div class="card-voice-track"><span class="card-voice-bar"></span></div>
+              </div>
+              <span class="card-voice-time">0:00</span>
+            </div>
+          ` : (() => {
+            // Garde-fou : certains profils (anciennes sauvegardes) n'ont pas d'objet activity.
+            // Sans ce fallback, p.activity.type lève une exception qui fait planter buildCard
+            // → la carte ne se construit pas → le deck reste vide et on ne peut plus swiper.
+            const act = (p.activity && typeof p.activity === 'object') ? p.activity : { type:'game', title:'Matefindr', sub:'Sur Matefindr' };
+            return `
+            <div class="activity">
+              <div class="icon">${activityIcon(act.type)}</div>
+              <div class="lbl"><b>${act.title || ''}</b><span>${act.sub || ''}</span></div>
+            </div>
+          `; })()}
+          <div class="bio"><b>Bio</b>${p.bio}</div>
+          ${socialHtml}
+          ${connectionsHtml}
+          ${guildsHtml}
+        </div>
+      `;
+      // En mode APERÇU, la carte est un endroit dédié et figé : pas de drag/swipe
+      // (sinon on peut traîner la carte et la détacher de ses GIFs de fond).
+      if (isTop && !_previewMode) attachDrag(c);
+      // Voice-memo player on the card (if any)
+      bindCardVoice(c);
+      // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
+      c.addEventListener('animationend', (ev) => { if (ev.animationName === 'cardIn') c.classList.remove('entering'); }, { once:true });
+      return c;
+    }
+
+    /* Bubble budget — socials no longer count against the bubble limit.
+       Free: 4 bubbles. Boost: 14 bubbles. */
+    function orbBudget(){ return (state.user && state.user.boost) ? 16 : 4; }
+    function socialsCount(){
+      const s = (state.user && state.user.socials) || {};
+      return ['instagram','tiktok','spotify'].filter(k => s[k]).length;
+    }
+    function orbsUsed(){
+      return ((state.profile && state.profile.userOrbs) || []).length;
+    }
+
+    /* SVG icons used inside each orb (so all orbs of the same kind look identical) */
+    const ORB_SVG = {
+      /* Spotify logo */
+      music: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28C13.68 12.07 9.15 11.54 5.63 12.6a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9C14.39 8.64 8.51 8.44 5.12 9.48a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg>',
+      /* Microphone with sound waves */
+      voice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M9 21h6"/></svg>',
+      /* Star (anime) */
+      anime: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.6-5.1 4.5 1.6 6.8L12 17l-6.3 3.2 1.6-6.8L2.2 8.9l6.9-.6L12 2z"/></svg>',
+      /* Gamepad */
+      game:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><circle cx="15.5" cy="12" r="1" fill="currentColor"/><circle cx="17.5" cy="14" r="1" fill="currentColor"/><path d="M8 11h4M10 9v4"/></svg>',
+      /* Film strip */
+      film:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M17 7h5M2 17h5M17 17h5"/></svg>',
+    };
+    /* Build the inside of an orb: a cover image (if available) or a fallback SVG */
+    function orbInner(o){
+      if (o && o.cover) return `<img class="orb-cover" src="${o.cover}" alt="" />`;
+      return ORB_SVG[o.kind] || ORB_SVG.music;
+    }
+
+    /* ===== Source unique de vérité pour le placement des bulles =====
+       Calcule, pour une liste de bulles, une position NORMALISÉE {rx, ry} :
+         - rx = fraction de la LARGEUR de la carte, relative au centre carte (négatif = gauche)
+         - ry = fraction de la HAUTEUR de la carte, relative au centre carte (négatif = haut)
+       Cette même fonction est utilisée par l'éditeur (overlay) ET par la carte de swipe,
+       donc une bulle posée à gauche reste à gauche partout, au même emplacement relatif.
+       - Bulle avec customX/customY (drag&drop) → garde sa position exacte.
+       - Bulle sans position → slot par défaut : colonnes symétriques gauche/droite,
+         max 4 par colonne, nouvelle colonne plus loin si pleine.
+       Renvoie { rel: Map(orb -> {rx,ry}), plus: {rx,ry}|null } (plus = emplacement du "+"). */
+    const ORB_LAYOUT = { COL0: 0.735, COL_GAP: 0.42, ROW_STEP: 0.215, MAX_PER_COL: 4 };
+    /* Orientation d'affichage courante → détermine quelle disposition de profil
+       utiliser (le profil peut être arrangé séparément par orientation dans l'éditeur).
+       - portrait : téléphone étroit (≤600px)
+       - landscape : téléphone tenu à l'horizontale (pointeur grossier, court en hauteur)
+       - desktop : tout le reste (grand écran). */
+    function activeLayoutMode(){
+      try {
+        if (window.matchMedia('(max-width:600px)').matches) return 'portrait';
+        if (window.matchMedia('(pointer:coarse) and (orientation:landscape) and (max-height:600px)').matches) return 'landscape';
+      } catch(_){}
+      return 'desktop';
+    }
+    function orbRelLayout(orbs, withPlus, mode){
+      mode = mode || 'desktop';
+      const { COL0, COL_GAP, ROW_STEP, MAX_PER_COL } = ORB_LAYOUT;
+      // Position sauvegardée POUR LE MODE courant (portrait/paysage), repli sur bureau.
+      const posFor = (o) => {
+        if (!o) return null;
+        if (mode === 'portrait'  && o.posPortrait  && typeof o.posPortrait.x  === 'number') return { rx: o.posPortrait.x,  ry: o.posPortrait.y  };
+        if (mode === 'landscape' && o.posLandscape && typeof o.posLandscape.x === 'number') return { rx: o.posLandscape.x, ry: o.posLandscape.y };
+        if (typeof o.customX === 'number' && typeof o.customY === 'number') return { rx: o.customX, ry: o.customY };
+        return null;
+      };
+      const rel = new Map();
+      // 1) Bulles avec position sauvegardée pour ce mode : prioritaire
+      orbs.forEach(o => { const p = posFor(o); if (p) rel.set(o, p); });
+      const auto = orbs.filter(o => !rel.has(o));
+      // 2a) PORTRAIT (téléphone) : 1 colonne étroite par côté, alternée et centrée
+      //     verticalement — identique à l'éditeur portrait (orbLayout).
+      if (mode === 'portrait'){
+        const MCOL = 0.64;
+        const leftN = Math.ceil(auto.length / 2), rightN = Math.floor(auto.length / 2);
+        const MROW = Math.min(0.33, 1.6 / Math.max(leftN, 1));
+        let li = 0, ri = 0;
+        auto.forEach((o, i) => {
+          const side = (i % 2 === 0) ? -1 : 1;
+          const idxOnSide = (side < 0) ? li++ : ri++;
+          const cnt = (side < 0) ? leftN : rightN;
+          rel.set(o, { rx: side * MCOL, ry: (idxOnSide - (cnt - 1) / 2) * MROW });
+        });
+        return { rel, plus: null };
+      }
+      // 2b) BUREAU / PAYSAGE : colonnes symétriques larges (alternance gauche/droite, 4 max/colonne).
+      const sides = [[], []]; // 0 = gauche, 1 = droite
+      auto.forEach((o, i) => sides[i % 2].push(o));
+      const cols = [[], []]; // par côté : [{rx, count, lastRy}]
+      sides.forEach((arr, s) => {
+        const sign = s === 0 ? -1 : 1;
+        for (let c = 0; c * MAX_PER_COL < arr.length; c++){
+          const chunk = arr.slice(c * MAX_PER_COL, c * MAX_PER_COL + MAX_PER_COL);
+          const rx = sign * (COL0 + c * COL_GAP);
+          const startRy = -((chunk.length - 1) * ROW_STEP) / 2;
+          chunk.forEach((o, r) => rel.set(o, { rx, ry: startRy + r * ROW_STEP }));
+          cols[s].push({ rx, count: chunk.length, lastRy: startRy + (chunk.length - 1) * ROW_STEP });
+        }
+      });
+      // 3) "+" : sous la colonne du côté le moins rempli (gauche en cas d'égalité),
+      //    sans déplacer les bulles existantes. Nouvelle colonne si la dernière est pleine.
+      let plus = null;
+      if (withPlus){
+        const s = sides[0].length <= sides[1].length ? 0 : 1;
+        const sign = s === 0 ? -1 : 1;
+        const sc = cols[s];
+        if (!sc.length) plus = { rx: sign * COL0, ry: 0 };
+        else {
+          const last = sc[sc.length - 1];
+          plus = last.count >= MAX_PER_COL
+            ? { rx: sign * (COL0 + sc.length * COL_GAP), ry: 0 }
+            : { rx: last.rx, ry: last.lastRy + ROW_STEP };
+        }
+      }
+      return { rel, plus };
+    }
+
+    /* Petit popup affiché au clic sur une bulle verrouillée (compte incomplet). */
+    function showLockPopup(ownCount){
+      const msg = (ownCount === 0)
+        ? "Pour voir tout le contenu du profil, finis de compléter ton propre profil."
+        : "Ajoute plus de bulles à ton profil pour débloquer celles des autres.";
+      let el = document.getElementById('orbLockPop');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'orbLockPop';
+        el.className = 'orb-lock-pop';
+        el.innerHTML = '<div class="olp-backdrop"></div><div class="olp-box">'
+          + '<span class="olp-ico">🔒</span><p class="olp-msg"></p>'
+          + '<button type="button" class="olp-btn">Compléter mon profil</button></div>';
+        document.body.appendChild(el);
+        el.querySelector('.olp-backdrop').addEventListener('click', () => el.classList.remove('open'));
+        el.querySelector('.olp-btn').addEventListener('click', () => { el.classList.remove('open'); location.href = 'editor.html'; });
+      }
+      el.querySelector('.olp-msg').textContent = msg;
+      el.classList.add('open');
+    }
+
+    /* Render the orb constellation around the top card */
+    /* Live physics state for the profile orbs (mouse repulsion + drift) */
+    let _orbSim = { items: [], mouse: { x: -9999, y: -9999, has: false }, raf: null };
+
+    let _swipeCurrentP = null;      // profil actuellement affiché (pour re-render à la rotation)
+    let _swipeRenderedMode = null;  // orientation utilisée au dernier rendu des bulles
+    function renderOrbs(p){
+      _swipeCurrentP = p;
+      _swipeRenderedMode = activeLayoutMode();
+      const orbit = document.getElementById('swipeOrbit');
+      orbit.innerHTML = '';
+      _orbSim.items = [];
+      if (_orbSim.raf) { cancelAnimationFrame(_orbSim.raf); _orbSim.raf = null; }
+      if (!p || !p.orbs) return;
+      // Build a set of my own orbs (kind + normalized title) so we can highlight
+      // bubbles shared with the displayed profile.
+      const norm = (s) => (s || '').toLowerCase().trim();
+      const myOrbs = (state.profile && state.profile.userOrbs) || [];
+      const mineSet = new Set(myOrbs.map(o => `${o.kind}::${norm(o.title)}`));
+
+      // === Verrouillage des bulles (comptes SANS Boost) ===
+      // L'utilisateur voit, sur le profil des autres, autant de bulles qu'il en a
+      // sur le SIEN : 0→aucune (toutes « ? »), 1→1, 2→2, 3→3, 4+→toutes. Boost = tout.
+      const viewerBoost = !!(state.user && state.user.boost);
+      const ownCount = myOrbs.length;
+      const unlimited = p.isMe || viewerBoost || ownCount >= 4;
+      const unlockCount = unlimited ? Infinity : ownCount;
+
+      // Sur les autres profils on affiche TOUTES leurs bulles (max 14) ; certaines
+      // seront verrouillées. Sur sa propre carte, on garde son budget.
+      const maxOrbs = p.isMe ? orbBudget() : 16;
+      const list = p.orbs.slice(0, maxOrbs);
+      const n = list.length;
+      orbit.classList.toggle('orbit--dynamic', n > 0);
+
+      // Déverrouille en priorité les bulles EN COMMUN avec l'autre profil.
+      let unlockedSet = null;
+      if (!unlimited) {
+        const commonIdx = [], otherIdx = [];
+        list.forEach((o, i) => {
+          (mineSet.has(`${o.kind}::${norm(o.title)}`) ? commonIdx : otherIdx).push(i);
+        });
+        unlockedSet = new Set(commonIdx.concat(otherIdx).slice(0, unlockCount));
+      }
+
+      // Fullscreen viewport bounds
+      const sw = window.innerWidth;
+      const sh = window.innerHeight;
+
+      // Position the orbs around the visible profile card using the SAME normalized
+      // layout as the edit overlay (orbRelLayout). Each position is a fraction of the
+      // card (rx of width, ry of height) relative to the card center — so a bubble the
+      // user dropped on the left in the editor stays on the left here, same spot.
+      // Use the swipeWrap rect (stable, no transform) — the card itself may be mid
+      // slide-in animation when this runs, so its own rect is unreliable for frame 1.
+      const wrapEl = document.getElementById('swipeWrap');
+      const cardRect = wrapEl
+        ? wrapEl.getBoundingClientRect()
+        : { left: sw/2 - 190, top: sh/2 - 310, width: 380, height: 620 };
+      const cardCx = cardRect.left + cardRect.width / 2;
+      const cardCy = cardRect.top  + cardRect.height / 2;
+      // Orientation active (portrait / paysage téléphone / bureau) → détermine
+      // quelles positions lire ET la taille des bulles. La disposition compacte
+      // portrait est centralisée dans orbRelLayout (source unique éditeur+swipe).
+      const layoutMode = activeLayoutMode();
+      const orbRadius = () => layoutMode === 'portrait' ? 32 : layoutMode === 'landscape' ? 38 : 58;
+      // Map orb -> {rx, ry} : positions du mode courant (posPortrait/posLandscape/customX).
+      const { rel: orbRel } = orbRelLayout(list, false, layoutMode);
+      function relToPx(rel, orbR){
+        const r = rel || { rx: ORB_LAYOUT.COL0, ry: 0 };
+        const x = cardCx + r.rx * cardRect.width;
+        const y = cardCy + r.ry * cardRect.height;
+        return {
+          x: Math.max(orbR + 6, Math.min(sw - orbR - 6, x)),
+          y: Math.max(orbR + 6, Math.min(sh - orbR - 6, y)),
+        };
+      }
+      function pickPos(orbR, idx){ return relToPx(orbRel.get(list[idx]), orbR); }
+
+      list.forEach((o, i) => {
+        const locked = unlockedSet ? !unlockedSet.has(i) : false;
+        const isCommon = !p.isMe && !locked && mineSet.has(`${o.kind}::${norm(o.title)}`);
+        const wrap = document.createElement('div');
+        wrap.className = 'orb-wrap' + (isCommon ? ' orb-wrap--common' : '') + (locked ? ' orb-wrap--locked' : '');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'orb' + (isCommon ? ' orb--common' : '') + (locked ? ' orb--locked' : '');
+        btn.dataset.kind = o.kind;
+        if (locked) {
+          btn.title = 'Bulle verrouillée';
+          btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
+        } else {
+          btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}`;
+          btn.innerHTML = orbInner(o);
+        }
+        // Rank as a round mini-bubble (with the tier icon) orbiting around the game orb
+        if (!locked && o.kind === 'game' && o.rank) {
+          const v = rankVisual(o.rank);
+          const iconUrl = rankIconUrl(o.title, o.rank);
+          const iconHtml = iconUrl
+            ? `<img class="orb-rank-img" src="${iconUrl}" alt="${escapeHtmlMini(o.rank)}" loading="lazy" decoding="async">`
+            : `<span class="orb-rank-ico">${v.ico}</span>`;
+          const rk = document.createElement('span');
+          rk.className = 'orb-rank-orbit';
+          rk.innerHTML = `<span class="orb-rank-ball${iconUrl ? ' orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}">${iconHtml}</span>`;
+          btn.appendChild(rk);
+        }
+        // (Le "+" pour ajouter rank/clip n'apparaît PLUS sur la carte de swipe —
+        // il reste accessible uniquement via l'overlay d'édition des bulles.
+        // Empêche le clic accidentel "+" en bord de bulle pendant le swipe.)
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (locked) { showLockPopup(ownCount); return; }
+          // Sound-wave ripple on music orbs only
+          if (o.kind === 'music') {
+            for (let r = 0; r < 3; r++) {
+              const ripple = document.createElement('span');
+              ripple.className = 'orb-sound-ripple';
+              ripple.style.animationDelay = (r * 0.18) + 's';
+              btn.appendChild(ripple);
+              setTimeout(() => ripple.remove(), 1500);
+            }
+          }
+          playOrb(o, btn);
+        });
+        const label = document.createElement('span');
+        label.className = 'orb-label';
+        label.textContent = locked ? '' : ((o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || ''));
+        wrap.appendChild(btn);
+        wrap.appendChild(label);
+
+        const isMusic = o.kind === 'music';
+        const orbR = orbRadius(o);
+        const pos = pickPos(orbR, i);
+
+        if (isMusic) wrap.classList.add('orb-wrap--music');
+        wrap.style.position = 'absolute';
+        wrap.style.left = '0';
+        wrap.style.top  = '0';
+        wrap.style.willChange = 'transform';
+        wrap.style.animation = 'none';
+        wrap.style.zIndex = isMusic ? '6' : '5';
+
+        orbit.appendChild(wrap);
+
+        // Start at rest at the anchor — the spring keeps them locked unless interacted.
+        _orbSim.items.push({
+          el: wrap,
+          orb: o,
+          rel: orbRel.get(o) || { rx: ORB_LAYOUT.COL0, ry: 0 },
+          ax: pos.x, ay: pos.y,
+          x:  pos.x, y:  pos.y,
+          vx: 0, vy: 0,
+          phase: Math.random() * Math.PI * 2,
+          r: wrap.offsetWidth / 2 || orbR,
+          isMusic,
+        });
+      });
+
+      // Initial paint
+      _orbSim.items.forEach(it => { it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`; });
+      orbSimStart();
+    }
+    // Recompute anchors on viewport resize from each orb's stored relative position
+    // (rx, ry) — keeps bubbles locked to the same spot relative to the card.
+    window.addEventListener('resize', () => {
+      // Changement d'orientation (portrait <-> paysage <-> bureau) → re-rendu complet
+      // des bulles pour lire la disposition ET la taille du nouveau mode.
+      if (activeLayoutMode() !== _swipeRenderedMode) {
+        if (_swipeCurrentP) renderOrbs(_swipeCurrentP);
+        return;
+      }
+      if (!_orbSim.items.length) return;
+      const wrapEl = document.getElementById('swipeWrap');
+      if (!wrapEl) return;
+      const cardRect = wrapEl.getBoundingClientRect();
+      const cardCx = cardRect.left + cardRect.width / 2;
+      const cardCy = cardRect.top  + cardRect.height / 2;
+      const sw = window.innerWidth, sh = window.innerHeight;
+      for (const it of _orbSim.items){
+        const r = it.rel || { rx: ORB_LAYOUT.COL0, ry: 0 };
+        it.ax = Math.max(it.r + 6, Math.min(sw - it.r - 6, cardCx + r.rx * cardRect.width));
+        it.ay = Math.max(it.r + 6, Math.min(sh - it.r - 6, cardCy + r.ry * cardRect.height));
+      }
+    });
+    // La rotation du téléphone ne déclenche pas toujours 'resize' → on force le re-rendu.
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => { if (_swipeCurrentP && activeLayoutMode() !== _swipeRenderedMode) renderOrbs(_swipeCurrentP); }, 120);
+    });
+
+    /* Mouse tracking on the WHOLE viewport (orbit is fullscreen) */
+    (function bindOrbMouse(){
+      window.addEventListener('mousemove', (e) => {
+        _orbSim.mouse.x = e.clientX;
+        _orbSim.mouse.y = e.clientY;
+        _orbSim.mouse.has = true;
+      });
+      window.addEventListener('mouseleave', () => { _orbSim.mouse.has = false; });
+    })();
+
+    /* Returns a list of rects representing UI zones bubbles must avoid.
+       Each rect: { x, y, w, h, hard:bool }. hard=true => no entry allowed. */
+    function forbiddenRects(){
+      const rects = [];
+      const add = (sel, hard, padding = 12) => {
+        document.querySelectorAll(sel).forEach(el => {
+          if (!el || el.hidden) return;
+          const r = el.getBoundingClientRect();
+          if (!r.width || !r.height) return;
+          rects.push({
+            x: r.left - padding,
+            y: r.top - padding,
+            w: r.width + padding * 2,
+            h: r.height + padding * 2,
+            hard,
+          });
+        });
+      };
+      // Hard block — top navigation bar
+      add('header', true, 6);
+      // Soft avoid — interactive UI
+      add('.msg-fab', false, 20);
+      add('.swipe-actions', false, 16);
+      add('.swipe-tools', false, 14);
+      add('.my-status', false, 16);
+      add('.acc-discord-fab', false, 16);
+      add('.bf-fab', false, 18);
+      add('.swipe-vol', false, 14);
+      return rects;
+    }
+
+    function orbSimStart(){
+      if (_orbSim.raf) return;
+      let _zoneCache = null, _zoneCacheT = 0;
+      const step = () => {
+        const m = _orbSim.mouse;
+        const sw = window.innerWidth;
+        const sh = window.innerHeight;
+        // Refresh forbidden zones every ~400ms (cheaper than every frame)
+        const now = performance.now();
+        if (!_zoneCache || now - _zoneCacheT > 400){
+          _zoneCache = forbiddenRects();
+          _zoneCacheT = now;
+        }
+        const zones = _zoneCache;
+        for (const it of _orbSim.items){
+          it.phase += 0.014;
+
+          // Forbidden-zone repulsion — push the orb out of nav/FAB/etc.
+          for (const z of zones){
+            // Closest point on rect to orb center
+            const cx = Math.max(z.x, Math.min(it.x, z.x + z.w));
+            const cy = Math.max(z.y, Math.min(it.y, z.y + z.h));
+            const dx = it.x - cx;
+            const dy = it.y - cy;
+            const inside = dx === 0 && dy === 0;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            const reach = it.r + (z.hard ? 6 : 18);
+            if (inside || d < reach){
+              // Compute push direction (use rect center if inside)
+              let nx, ny;
+              if (inside){
+                const rcx = z.x + z.w / 2, rcy = z.y + z.h / 2;
+                nx = (it.x - rcx) || 1;
+                ny = (it.y - rcy) || 1;
+                const nl = Math.hypot(nx, ny) || 1;
+                nx /= nl; ny /= nl;
+              } else {
+                nx = dx / (d || 1);
+                ny = dy / (d || 1);
+              }
+              const fScale = z.hard ? 8 : 3.5;
+              const overlap = Math.max(0, reach - d);
+              it.vx += nx * (0.6 + overlap * 0.05) * fScale * 0.3;
+              it.vy += ny * (0.6 + overlap * 0.05) * fScale * 0.3;
+              // Hard zones : also clamp position so orbs really can't enter
+              if (z.hard && inside){
+                it.x = z.x + z.w / 2 + nx * (z.w / 2 + it.r + 4);
+                it.y = z.y + z.h / 2 + ny * (z.h / 2 + it.r + 4);
+              }
+            }
+          }
+
+          // Mouse repulsion — identique pour toutes les bulles
+          if (m.has){
+            const dx = it.x - m.x;
+            const dy = it.y - m.y;
+            const d2 = dx*dx + dy*dy;
+            const range  = 100;
+            const fScale = 0.42;
+            if (d2 < range*range){
+              const d = Math.sqrt(d2) || 1;
+              const force = (1 - d/range);
+              it.vx += (dx/d) * force * fScale;
+              it.vy += (dy/d) * force * fScale;
+            }
+          }
+
+          // Mouvement subtil — TOUTES les bulles bougent pareil (les bulles musique ne
+          // vibrent plus). Un peu plus d'amplitude qu'avant pour qu'elles soient moins fixes,
+          // mais le ressort (sk) les garde ancrées à leur position.
+          const breathAmp = 3.2;
+          const jitter   = 0.045;
+          const maxSp    = 1.7;
+          const breathX = Math.cos(it.phase * 0.55) * breathAmp;
+          const breathY = Math.sin(it.phase * 0.45) * breathAmp;
+          const sk = 0.034;  // ressort un peu plus mou → balancement plus ample, reste ancré
+          it.vx += ((it.ax + breathX) - it.x) * sk;
+          it.vy += ((it.ay + breathY) - it.y) * sk;
+          it.vx += (Math.random() - 0.5) * jitter;
+          it.vy += (Math.random() - 0.5) * jitter;
+          const damp = 0.84;
+          it.vx *= damp;
+          it.vy *= damp;
+          const sp = Math.hypot(it.vx, it.vy);
+          if (sp > maxSp) { it.vx = it.vx / sp * maxSp; it.vy = it.vy / sp * maxSp; }
+
+          it.x += it.vx;
+          it.y += it.vy;
+
+          // Rebond dans une ZONE limitée (pas tout l'écran) — bulles restent autour de la carte
+          const zoneMX = sw * 0.06;          // marge horizontale (6% de chaque côté)
+          const zoneTop = sh * 0.12;         // marge haute (sous le header)
+          const zoneBot = sh * 0.90;         // marge basse (au-dessus des boutons swipe)
+          const minX = zoneMX + it.r, maxX = sw - zoneMX - it.r;
+          const minY = zoneTop + it.r, maxY = zoneBot - it.r;
+          if (it.x < minX)      { it.x = minX; it.vx = Math.abs(it.vx); }
+          else if (it.x > maxX) { it.x = maxX; it.vx = -Math.abs(it.vx); }
+          if (it.y < minY)      { it.y = minY; it.vy = Math.abs(it.vy); }
+          else if (it.y > maxY) { it.y = maxY; it.vy = -Math.abs(it.vy); }
+        }
+        // Pairwise interactions :
+        // 1. Personal-space repulsion (soft) when close but not touching
+        // 2. Elastic collision (hard) when overlapping
+        const items = _orbSim.items;
+        for (let i = 0; i < items.length; i++){
+          const a = items[i];
+          for (let j = i + 1; j < items.length; j++){
+            const b = items[j];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const d  = Math.hypot(dx, dy);
+            if (d <= 0) continue;
+            const minD = a.r + b.r;
+            const space = minD + 26; // personal-space radius
+            const nx = dx / d, ny = dy / d;
+
+            if (d < minD){
+              // HARD collision — separate + elastic bounce
+              const overlap = (minD - d);
+              const totalR = a.r + b.r;
+              const wa = b.r / totalR, wb = a.r / totalR;
+              a.x -= nx * overlap * wa;
+              a.y -= ny * overlap * wa;
+              b.x += nx * overlap * wb;
+              b.y += ny * overlap * wb;
+              const va = a.vx * nx + a.vy * ny;
+              const vb = b.vx * nx + b.vy * ny;
+              const diff = vb - va;
+              a.vx += nx * diff * 0.5 * 0.7;
+              a.vy += ny * diff * 0.5 * 0.7;
+              b.vx -= nx * diff * 0.5 * 0.7;
+              b.vy -= ny * diff * 0.5 * 0.7;
+            } else if (d < space){
+              // SOFT push — encourages spacing without sticking
+              const force = (1 - (d - minD) / (space - minD)) * 0.18;
+              a.vx -= nx * force;
+              a.vy -= ny * force;
+              b.vx += nx * force;
+              b.vy += ny * force;
+            }
+          }
+        }
+        // Apply transforms after collision resolution
+        for (const it of items){
+          it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`;
+        }
+        _orbSim.raf = requestAnimationFrame(step);
+      };
+      _orbSim.raf = requestAnimationFrame(step);
+    }
+    /* Pause simulation when not on swipe screen (saves CPU) */
+    function orbSimStop(){ if (_orbSim.raf) { cancelAnimationFrame(_orbSim.raf); _orbSim.raf = null; } }
+    function escapeHtmlMini(s){ return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+    /* Spotify Client Credentials */
+    let _spotifyToken = null, _spotifyTokenExp = 0;
+    async function getSpotifyToken(){
+      if (_spotifyToken && _spotifyTokenExp > Date.now()) return _spotifyToken;
+      const resp = await fetch('https://accounts.spotify.com/api/token', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/x-www-form-urlencoded',
+          'Authorization':'Basic ' + btoa(SPOTIFY_CLIENT_ID + ':' + SPOTIFY_CLIENT_SECRET),
+        },
+        body:'grant_type=client_credentials',
+      });
+      const d = await resp.json();
+      _spotifyToken = d.access_token;
+      _spotifyTokenExp = Date.now() + (d.expires_in - 60) * 1000;
+      return _spotifyToken;
+    }
+    /* iTunes Search API — fallback #2 pour les previews 30s */
+    const _itunesCache = new Map();
+    async function itunesPreview(artist, name){
+      const key = ((artist||'') + '|' + (name||'')).toLowerCase().trim();
+      if (_itunesCache.has(key)) return _itunesCache.get(key);
+      try {
+        const q = encodeURIComponent(((artist||'') + ' ' + (name||'')).trim());
+        const resp = await fetch('https://itunes.apple.com/search?term=' + q + '&entity=song&limit=1&media=music');
+        const d = await resp.json();
+        const url = d.results?.[0]?.previewUrl || null;
+        _itunesCache.set(key, url);
+        return url;
+      } catch { _itunesCache.set(key, null); return null; }
+    }
+
+    /* Deezer API — fallback #1 pour les previews 30s. CORS bloque /search direct
+       → on utilise leur endpoint JSONP qui marche depuis le navigateur. */
+    const _deezerCache = new Map();
+    function jsonpFetch(url, timeoutMs = 5000){
+      return new Promise((resolve, reject) => {
+        const cbName = 'dz_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        const sep = url.includes('?') ? '&' : '?';
+        const fullUrl = url + sep + 'output=jsonp&callback=' + cbName;
+        const script = document.createElement('script');
+        const cleanup = () => { delete window[cbName]; script.remove(); };
+        const timeout = setTimeout(() => { cleanup(); reject(new Error('jsonp timeout')); }, timeoutMs);
+        window[cbName] = (data) => { clearTimeout(timeout); cleanup(); resolve(data); };
+        script.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('jsonp error')); };
+        script.src = fullUrl;
+        document.head.appendChild(script);
+      });
+    }
+    async function deezerPreview(artist, name){
+      const key = ((artist||'') + '|' + (name||'')).toLowerCase().trim();
+      if (_deezerCache.has(key)) return _deezerCache.get(key);
+      try {
+        const q = encodeURIComponent(((artist||'') + ' ' + (name||'')).trim());
+        const data = await jsonpFetch('https://api.deezer.com/search?q=' + q + '&limit=1');
+        const url = data?.data?.[0]?.preview || null;
+        _deezerCache.set(key, url);
+        return url;
+      } catch { _deezerCache.set(key, null); return null; }
+    }
+
+    async function searchSpotifyTracks(query, limit=6){
+      const token = await getSpotifyToken();
+      const resp = await fetch(
+        'https://api.spotify.com/v1/search?q=' + encodeURIComponent(query) + '&type=track&limit=' + limit,
+        { headers:{ Authorization:'Bearer ' + token } }
+      );
+      const d = await resp.json();
+      const items = (d.tracks?.items || []).map(t => ({
+        name:       t.name,
+        artist:     t.artists?.[0]?.name || '',
+        cover:      t.album?.images?.[2]?.url || t.album?.images?.[0]?.url || null,
+        previewUrl: t.preview_url,
+        durationMs: t.duration_ms,
+      }));
+      // Cascade : Spotify → Deezer → iTunes pour le preview URL
+      await Promise.all(items.map(async t => {
+        if (!t.previewUrl) t.previewUrl = await deezerPreview(t.artist, t.name);
+        if (!t.previewUrl) t.previewUrl = await itunesPreview(t.artist, t.name);
+      }));
+      return items;
+    }
+    let _spotifyAudio = null;
+    let _swipeMusicPausedForOrb = false;
+    // Volume cible d'une bulle de musique = même réglage que la musique d'entrée.
+    function orbMusicTarget(){
+      const v = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
+      return v * ENTRY_MUSIC_GAIN;
+    }
+    // Quand une bulle de musique démarre : on met en pause la musique d'entrée (pas de superposition).
+    function pauseProfileMusicForOrb(){
+      if (_swipeMusicAudio && !_swipeMusicAudio.paused) { _swipeMusicAudio.pause(); _smSetPlayingUI(false); _swipeMusicPausedForOrb = true; }
+    }
+    // Quand plus aucune bulle ne joue : on relance la musique d'entrée si on l'avait coupée.
+    function resumeProfileMusicAfterOrb(){
+      if (!_swipeMusicPausedForOrb) return;
+      _swipeMusicPausedForOrb = false;
+      if (_swipeMusicAudio && _swipeMusicAudio.paused) {
+        _swipeMusicAudio.play().then(() => _smSetPlayingUI(true)).catch(() => {});
+      }
+    }
+
+    /* Audio fade helpers */
+    function fadeIn(audio, target=0.45, dur=700){
+      if (!audio) return;
+      const step = 40, n = Math.max(1, Math.round(dur/step));
+      let i = 0;
+      audio.volume = 0;
+      const tick = () => {
+        if (!audio || audio.paused) return;
+        i++;
+        audio.volume = Math.min(target, (i/n) * target);
+        if (i < n) setTimeout(tick, step);
+      };
+      tick();
+    }
+    function fadeOutAndStop(audio, dur=250){
+      if (!audio) return;
+      const start = audio.volume, step = 40, n = Math.max(1, Math.round(dur/step));
+      let i = 0;
+      const tick = () => {
+        if (!audio) return;
+        i++;
+        audio.volume = Math.max(0, start * (1 - i/n));
+        if (i < n) setTimeout(tick, step);
+        else audio.pause();
+      };
+      tick();
+    }
+
+    /* Jikan API for anime covers (free, no auth). Prefer large/HD image variants. */
+    async function searchAnime(query){
+      try {
+        const resp = await withTimeout(fetch('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(query) + '&limit=6&sfw=true&order_by=popularity&sort=asc'), 2500);
+        if (!resp) return [];
+        const d = await resp.json();
+        return (d.data || []).map(a => ({
+          name:   a.title_english || a.title,
+          sub:    a.title_japanese || (a.type || '') + (a.year ? ' · ' + a.year : ''),
+          cover:  a.images?.webp?.large_image_url
+                || a.images?.jpg?.large_image_url
+                || a.images?.webp?.image_url
+                || a.images?.jpg?.image_url
+                || null,
+        }));
+      } catch(_){ return []; }
+    }
+
+    /* Wikipedia search → thumbnails (free, CORS-friendly). Used for games + films. */
+    async function searchWiki(query, kindHint){
+      const hint = kindHint === 'film' ? ' film' : kindHint === 'game' ? ' video game' : '';
+      try {
+        const url = 'https://en.wikipedia.org/w/api.php?action=query&format=json' +
+          '&prop=pageimages|pageterms&piprop=thumbnail&pithumbsize=300&wbptterms=description' +
+          '&generator=search&gsrlimit=6&origin=*&gsrsearch=' + encodeURIComponent(query + hint);
+        const resp = await fetch(url);
+        const d = await resp.json();
+        const pages = d.query?.pages ? Object.values(d.query.pages) : [];
+        return pages
+          .sort((a,b) => (a.index||0) - (b.index||0))
+          .map(p => ({
+            name:  p.title,
+            sub:   (p.terms?.description?.[0] || '').slice(0,60),
+            cover: p.thumbnail?.source || null,
+          }))
+          .filter(r => r.cover);
+      } catch(_){ return []; }
+    }
+
+    /* Toast + media playback for an orb */
+    let _voice = null;
+    function showToast(ico, title, sub){
+      const t = document.getElementById('swipeToast');
+      document.getElementById('toastIco').textContent = ico;
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastSub').textContent = sub;
+      t.setAttribute('data-show', 'true');
+      clearTimeout(showToast._h);
+      showToast._h = setTimeout(() => t.setAttribute('data-show', 'false'), 3200);
+    }
+    /* ===== Game meta modal (rank + clip URL after a game bubble is added) ===== */
+    let _editingGameOrb = null;
+    function openGameMetaModal(orb){
+      _editingGameOrb = orb;
+      const modal     = document.getElementById('gameMetaModal');
+      const nameEl    = document.getElementById('gmmGameName');
+      const rankWrap  = document.getElementById('gmmRankField');
+      const rankSel   = document.getElementById('gmmRankSelect');
+      const clipInput = document.getElementById('gmmClipInput');
+      if (!modal) return;
+      nameEl.textContent = orb.title;
+      const ranks = RANKED_GAMES[orb.title];
+      if (ranks) {
+        rankWrap.hidden = false;
+        rankSel.innerHTML = '<option value="">Pas classé</option>' + ranks.map(r => `<option value="${r}">${r}</option>`).join('');
+        rankSel.value = orb.rank || '';
+      } else {
+        rankWrap.hidden = true;
+        rankSel.value = '';
+      }
+      clipInput.value = orb.clipUrl || '';
+      modal.setAttribute('data-open', 'true');
+      setTimeout(() => clipInput.focus(), 60);
+    }
+    function closeGameMetaModal(){
+      _editingGameOrb = null;
+      document.getElementById('gameMetaModal').setAttribute('data-open', 'false');
+    }
+    window.openGameMetaModal = openGameMetaModal;
+    (function bindGameMetaModal(){
+      const modal = document.getElementById('gameMetaModal');
+      if (!modal) return;
+      document.getElementById('gmmClose')?.addEventListener('click', closeGameMetaModal);
+      document.getElementById('gmmBackdrop')?.addEventListener('click', closeGameMetaModal);
+      document.getElementById('gmmSkip')?.addEventListener('click', closeGameMetaModal);
+      document.getElementById('gmmSave')?.addEventListener('click', () => {
+        if (!_editingGameOrb) { closeGameMetaModal(); return; }
+        const editedOrb = _editingGameOrb; // capture before close nulls the ref
+        const rank = document.getElementById('gmmRankSelect').value.trim();
+        const clip = document.getElementById('gmmClipInput').value.trim();
+        if (rank) editedOrb.rank = rank; else delete editedOrb.rank;
+        if (clip) editedOrb.clipUrl = clip; else delete editedOrb.clipUrl;
+        save();
+        renderUserOrbs();
+        if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        // Re-render the bubble layout(s) so the new rank icon shows immediately
+        if (typeof renderOrbEditLayout === 'function' && document.getElementById('orbEditOverlay')?.getAttribute('data-show') === 'true') {
+          renderOrbEditLayout();
+        }
+        if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') {
+          ensureDeck();
+        }
+        closeGameMetaModal();
+        showToast('🎮', 'Bulle mise à jour', `${editedOrb.title || ''} ${rank ? '· ' + rank : ''}`);
+      });
+    })();
+
+    /* ===== Clip overlay (plays when a game orb is clicked) ===== */
+    /* Whitelist d'embeds — bloque les URL malicieuses (javascript:, data:, etc.)
+       Seuls les hosts trusted YouTube/Twitch/Streamable + fichiers vidéo directs (https only) sont acceptés. */
+    function clipUrlToEmbed(url){
+      if (!url) return null;
+      const u = String(url).trim();
+      // YouTube watch / short / shorts — extract video ID. Use youtube.com (pas nocookie) car
+      // certaines vidéos refusent l'embed nocookie. Le param "playsinline=1" évite les erreurs sur mobile.
+      let m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/i);
+      if (m) return { type:'iframe', src:`https://www.youtube.com/embed/${encodeURIComponent(m[1])}?autoplay=1&rel=0&playsinline=1`, externalUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(m[1])}` };
+      // Twitch clip
+      m = u.match(/clips\.twitch\.tv\/([\w-]+)/i) || u.match(/twitch\.tv\/\w+\/clip\/([\w-]+)/i);
+      if (m) return { type:'iframe', src:`https://clips.twitch.tv/embed?clip=${encodeURIComponent(m[1])}&parent=${encodeURIComponent(location.hostname)}&autoplay=true` };
+      // Streamable
+      m = u.match(/streamable\.com\/([\w-]+)/i);
+      if (m) return { type:'iframe', src:`https://streamable.com/e/${encodeURIComponent(m[1])}?autoplay=1` };
+      // Direct video file — HTTPS only, no javascript: or data: URLs
+      if (/^https:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(u)) return { type:'video', src:u };
+      // Unknown source → reject (was previously a fallback that allowed any URL)
+      return null;
+    }
+    function openClipOverlay(orb){
+      const overlay = document.getElementById('clipOverlay');
+      const content = document.getElementById('clipContent');
+      if (!overlay || !content) return;
+      const url = orb && orb.clipUrl;
+      const embed = clipUrlToEmbed(url);
+      const safeTitle = escapeHtmlMini((orb && orb.title) || 'cette bulle');
+      // Always use DOM manipulation (createElement + setAttribute) for embed src
+      // so we never inject untrusted strings into innerHTML.
+      content.innerHTML = '';
+      if (!embed) {
+        const div = document.createElement('div');
+        div.className = 'clip-empty';
+        div.innerHTML = `Pas de clip associé à ${safeTitle}.<br><small>Le propriétaire du profil n'a rien partagé pour le moment.</small>`;
+        content.appendChild(div);
+      } else if (embed.type === 'video') {
+        const v = document.createElement('video');
+        v.src = embed.src;
+        v.autoplay = true; v.controls = true; v.playsInline = true;
+        content.appendChild(v);
+      } else {
+        const f = document.createElement('iframe');
+        f.src = embed.src;
+        f.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture');
+        f.setAttribute('allowfullscreen', '');
+        // PAS de referrerpolicy no-referrer : YouTube a besoin du referrer pour valider
+        // le domaine, sinon erreur 153. On garde origin-when-cross-origin (défaut sûr).
+        content.appendChild(f);
+        // Fallback : lien externe en bas (utile si l'embed est bloqué par le créateur)
+        if (embed.externalUrl) {
+          const fb = document.createElement('a');
+          fb.href = embed.externalUrl;
+          fb.target = '_blank';
+          fb.rel = 'noopener noreferrer';
+          fb.className = 'clip-external-link';
+          fb.textContent = 'Si la vidéo ne se charge pas → l\'ouvrir directement';
+          content.appendChild(fb);
+        }
+      }
+      overlay.setAttribute('data-show', 'true');
+    }
+    function closeClipOverlay(){
+      const overlay = document.getElementById('clipOverlay');
+      if (!overlay) return;
+      overlay.setAttribute('data-show', 'false');
+      // Stop the video by emptying the iframe
+      document.getElementById('clipContent').innerHTML = '';
+    }
+    (function bindClipOverlay(){
+      const overlay = document.getElementById('clipOverlay');
+      if (!overlay) return;
+      document.getElementById('clipClose')?.addEventListener('click', closeClipOverlay);
+      document.getElementById('clipBackdrop')?.addEventListener('click', closeClipOverlay);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && overlay.getAttribute('data-show') === 'true') closeClipOverlay(); });
+    })();
+    window.openClipOverlay = openClipOverlay;
+
+    function playOrb(o, el){
+      // Game orb → ouvre le clip UNIQUEMENT s'il y en a un (sinon rien ne se passe).
+      if (o.kind === 'game') { if (o.clipUrl) openClipOverlay(o); return; }
+      if (o.kind === 'voice' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(o.voice || o.title);
+          u.lang = (document.documentElement.lang === 'en') ? 'en-US' : 'fr-FR';
+          u.rate = 1; u.pitch = 1;
+          el.classList.add('playing');
+          u.onend = () => el.classList.remove('playing');
+          u.onerror = () => el.classList.remove('playing');
+          window.speechSynthesis.speak(u);
+        } catch(_){}
+      } else if (o.kind === 'music') {
+        // Toggle: re-click on the same playing orb stops it
+        if (_spotifyAudio && _spotifyAudio._orbEl === el) {
+          _spotifyAudio._userStopped = true;
+          fadeOutAndStop(_spotifyAudio);
+          _spotifyAudio = null;
+          el.classList.remove('playing');
+          resumeProfileMusicAfterOrb();
+          return;
+        }
+        // Different orb: stop previous, start new
+        if (_spotifyAudio) { _spotifyAudio._userStopped = true; fadeOutAndStop(_spotifyAudio); _spotifyAudio = null; }
+        el.classList.add('playing');
+        // Sépare "Titre · Artiste" pour pouvoir re-chercher une preview ailleurs.
+        const parseTitle = () => {
+          const t = (o.title || '').trim();
+          const parts = t.split('·');
+          return { name: (parts[0] || t).trim(), artist: (parts[1] || o.sub || '').trim() };
+        };
+        const playUrl = (url) => {
+          if (!url) { el.classList.remove('playing'); return; }
+          pauseProfileMusicForOrb();
+          const a = new Audio(url);
+          a._orbEl = el;
+          a._userStopped = false;
+          a.volume = 0;
+          const startSec = (state.user && typeof state.user.musicStartTime === 'number') ? state.user.musicStartTime : 0;
+          if (startSec > 0) a.currentTime = Math.min(startSec, 28);
+          a.play().catch(() => {});
+          fadeIn(a, orbMusicTarget(), 700);
+          a.addEventListener('ended', () => { el.classList.remove('playing'); if (_spotifyAudio === a) { _spotifyAudio = null; resumeProfileMusicAfterOrb(); } });
+          // URL morte (preview Spotify expirée, 404…) → on retente une fois via Deezer/iTunes.
+          a.addEventListener('error', () => {
+            if (_spotifyAudio !== a) return;
+            _spotifyAudio = null;
+            if (!o._triedMusicFallback) { o._triedMusicFallback = true; resolveAndPlay(true); }
+            else el.classList.remove('playing');
+          });
+          // Anti-cutoff : si l'audio est pausé sans intervention utilisateur (swipe, re-render,
+          // perte de focus de l'onglet…), on le redémarre automatiquement.
+          a.addEventListener('pause', () => {
+            if (a._userStopped || a.ended) return;
+            if (_spotifyAudio !== a) return;
+            setTimeout(() => {
+              if (!a._userStopped && !a.ended && _spotifyAudio === a && a.paused) {
+                a.play().catch(() => {});
+              }
+            }, 50);
+          });
+          _spotifyAudio = a;
+        };
+        // Résout une preview JOUABLE sans dépendre d'un token Spotify :
+        // 1) previewUrl sauvegardé  2) Deezer  3) iTunes  4) recherche Spotify (si dispo).
+        async function resolveAndPlay(skipSaved){
+          try {
+            const { name, artist } = parseTitle();
+            let url = (!skipSaved && o.previewUrl) ? o.previewUrl : null;
+            if (!url) url = await deezerPreview(artist, name);
+            if (!url) url = await itunesPreview(artist, name);
+            if (!url) { try { const r = (await searchSpotifyTracks(o.title, 1))[0]; if (r && r.previewUrl) url = r.previewUrl; } catch(_){} }
+            if (url) playUrl(url); else el.classList.remove('playing');
+          } catch { el.classList.remove('playing'); }
+        }
+        resolveAndPlay(false);
+      }
+    }
+    function attachDrag(card){
+      let sx=0, sy=0, dx=0, dy=0, dragging=false;
+      const like = card.querySelector('.badge-stamp.like');
+      const nope = card.querySelector('.badge-stamp.nope');
+      function onDown(e){
+        // Don't start a drag if user is clicking an interactive element (links, buttons)
+        const tgt = e.target;
+        if (tgt && (tgt.closest('a') || tgt.closest('button'))) return;
+        dragging = true;
+        const p = e.touches ? e.touches[0] : e;
+        sx = p.clientX; sy = p.clientY; dx = 0; dy = 0;
+        card.style.transition = 'none';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive:false });
+        document.addEventListener('touchend', onUp);
+      }
+      const wrap = document.getElementById('swipeWrap');
+      const actions = wrap.parentElement.querySelector('.swipe-actions');
+      function setDir(dir){
+        actions.classList.toggle('dir-right', dir === 'right');
+        actions.classList.toggle('dir-left',  dir === 'left');
+      }
+      function onMove(e){
+        if (!dragging) return;
+        if (e.touches) e.preventDefault();
+        const p = e.touches ? e.touches[0] : e;
+        dx = p.clientX - sx; dy = p.clientY - sy;
+        card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
+        like.style.opacity = Math.max(0, Math.min(1, dx / 120));
+        nope.style.opacity = Math.max(0, Math.min(1, -dx / 120));
+        if (dx > 40) setDir('right');
+        else if (dx < -40) setDir('left');
+        else setDir(null);
+      }
+      function onUp(){
+        dragging = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        card.style.transition = '';
+        // En mode aperçu : la carte rebondit toujours (pas de swipe possible)
+        if (!_previewMode && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
+        else { card.style.transform = ''; like.style.opacity = 0; nope.style.opacity = 0; setDir(null); }
+      }
+      card.addEventListener('mousedown', onDown);
+      card.addEventListener('touchstart', onDown, { passive:true });
+    }
+    function commitSwipe(dir, cardEl){
+      if (_previewMode) return; // pas de swipe en mode aperçu
+      const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
+      cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
+      cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
+      cardEl.style.opacity = '0';
+      const actions = document.querySelector('#screen-swipe .swipe-actions');
+      if (actions) actions.classList.remove('dir-right', 'dir-left');
+      state.user = state.user || {};
+      state.user.stats = state.user.stats || { viewed:0, liked:0 };
+      state.user.stats.viewed++;
+      // LIKE → enregistre un vrai like dans Supabase (match auto si l'autre m'a déjà liké)
+      if (dir === 'yes') {
+        state.user.stats.liked++;
+        const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
+        const swiped = pool[deckIdx]; // mode normal : le deck ne contient que les autres
+        if (swiped && !swiped.isMe && swiped.uid && typeof recordLike === 'function') {
+          recordLike(swiped);
+        }
+      }
+      save();
+      refreshSwipeTools();
+      setTimeout(() => { deckIdx++; ensureDeck(); }, 320);
+    }
+
+    /* Swipe toolbar : update counts + filter / music labels */
+    function refreshSwipeTools(){
+      const u = state.user || {};
+      const stats = u.stats || { viewed:0, liked:0 };
+      document.getElementById('stoolViewed').textContent = stats.viewed;
+      document.getElementById('stoolLikesGiven').textContent = stats.liked;
+      const rate = stats.viewed > 0 ? Math.round((stats.liked / stats.viewed) * 100) : null;
+      document.getElementById('stoolRate').textContent = rate != null ? rate + '%' : '—';
+      document.getElementById('stoolLikesCount').textContent = LIKED_ME.length;
+      const filt = (u.boost && u.genderFilter) || 'all';
+      document.getElementById('stoolFilterLbl').textContent = ({all:'Tous', il:'Il', elle:'Elle'}[filt] || 'Tous');
+    }
+    document.getElementById('stoolLikes')?.addEventListener('click', () => {
+      renderLikedMe();
+      document.getElementById('likedPanel').setAttribute('data-open','true');
+    });
+    document.getElementById('stoolFilter')?.addEventListener('click', () => {
+      if (!state.user || !state.user.boost) { openBoostModal(); return; }
+      const order = ['all','il','elle'];
+      const cur = state.user.genderFilter || 'all';
+      const next = order[(order.indexOf(cur)+1) % order.length];
+      state.user.genderFilter = next;
+      save();
+      deckIdx = 0;
+      ensureDeck();
+      refreshSwipeTools();
+      showToast('🔍', 'Filtre', {all:'Tous', il:'Hommes (Il)', elle:'Femmes (Elle)'}[next]);
+    });
+    function topCard(){ return document.querySelector('#swipeWrap .swipe-card:last-child'); }
+    document.getElementById('swipeYes')?.addEventListener('click', () => { const t = topCard(); if (t) commitSwipe('yes', t); });
+    document.getElementById('swipeNo')?.addEventListener('click',  () => { const t = topCard(); if (t) commitSwipe('no',  t); });
+
+    // ---------- My-status floating control ----------
+    const LOOK_EMO = { chill:'🛋️', game:'🎮', now:'⌨️', sleep:'💤' };
+    function refreshMyStatusUI(){
+      const cur = (state.profile && state.profile.looking) || 'game';
+      const btn = document.getElementById('myStatusBtn');
+      btn.setAttribute('data-look', cur);
+      document.getElementById('myStatusEmoji').textContent = LOOK_EMO[cur] || '🎮';
+      const lbl = document.getElementById('myStatusLabel');
+      lbl.setAttribute('data-i18n', 'look_' + cur);
+      lbl.textContent = tx('look_' + cur);
+      document.querySelectorAll('#myStatusPop button').forEach(b => b.classList.toggle('selected', b.dataset.val === cur));
+    }
+    const msBtn = document.getElementById('myStatusBtn');
+    const msPop = document.getElementById('myStatusPop');
+    msBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      msPop.setAttribute('data-open', msPop.getAttribute('data-open') === 'true' ? 'false' : 'true');
+    });
+    msPop.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-val]');
+      if (!b) return;
+      state.profile = state.profile || { gender:null, age:null, looking:null, bio:'' };
+      state.profile.looking = b.dataset.val;
+      save();
+      refreshMyStatusUI();
+      msPop.setAttribute('data-open', 'false');
+      showToast(LOOK_EMO[state.profile.looking] || '🎮', tx('saved'), tx('look_' + state.profile.looking));
+    });
+    document.addEventListener('click', (e) => {
+      if (msPop.getAttribute('data-open') === 'true' && !msPop.contains(e.target) && !msBtn.contains(e.target)) {
+        msPop.setAttribute('data-open', 'false');
+      }
+    });
+    // Make sure the status pill is correct as soon as we land on swipe
+    if (document.body.getAttribute('data-screen') === 'swipe') refreshMyStatusUI();
+
+    // ---------- Messages panel ----------
+    // Conversations mock retirées — sera branche sur Supabase a part
+    const CONVOS = [];
+
+    const panel = document.getElementById('msgPanel');
+    const fab   = document.getElementById('msgFab');
+    const fabBadge = document.getElementById('msgFabBadge');
+    const listEl = document.getElementById('msgList');
+    const chatBody = document.getElementById('msgChatBody');
+    const msgInput = document.getElementById('msgInput');
+    const msgInputField = document.getElementById('msgInputField');
+    let activeConvo = null;
+
+    function renderMsgList(){
+      const unread = CONVOS.filter(c => c.unread).length;
+      if (unread > 0) { fabBadge.textContent = unread; fabBadge.style.display = 'grid'; }
+      else fabBadge.style.display = 'none';
+      if (!CONVOS.length) {
+        listEl.innerHTML = `<p class="msg-empty">${tx('msg_empty')}</p>`;
+        return;
+      }
+      listEl.innerHTML = '';
+      CONVOS.forEach(c => {
+        const el = document.createElement('button');
+        el.type = 'button';
+        el.className = 'msg-item' + (c.unread ? '' : ' read');
+        el.dataset.id = c.id;
+        // Heure affichée = celle du dernier message (et non « à l'instant »).
+        const lastWithTime = [...c.msgs].reverse().find(m => m.t);
+        const tLabel = lastWithTime ? lastWithTime.t : '';
+        el.innerHTML = `
+          <div class="avi" style="background:linear-gradient(135deg, ${c.c1}, ${c.c2});overflow:hidden">${c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : c.initial}</div>
+          <div class="info">
+            <div class="top"><b>${c.name}</b><span class="t">${tLabel}</span></div>
+            <p>${c.last}</p>
+          </div>
+          ${c.unread ? '<span class="dot"></span>' : ''}`;
+        el.addEventListener('click', () => openConvo(c.id));
+        listEl.appendChild(el);
+      });
+    }
+
+    function openConvo(id){
+      const c = CONVOS.find(x => x.id === id);
+      if (!c) return;
+      activeConvo = c;
+      c.unread = false;
+      panel.setAttribute('data-view', 'chat');
+      const chatAvi = document.getElementById('msgChatAvi');
+      chatAvi.style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
+      chatAvi.style.overflow = 'hidden';
+      chatAvi.innerHTML = c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : escapeHtml(c.initial || '');
+      document.getElementById('msgChatName').textContent = c.name;
+      document.getElementById('msgChatSub').textContent = '@' + c.tag;
+      // Clic sur l'avatar / le nom → ouvre le profil de la personne.
+      const openProf = (e) => { if (e) e.stopPropagation(); openConvoProfile(c); };
+      chatAvi.onclick = openProf;
+      const nameWrap = document.getElementById('msgChatName').parentElement;
+      if (nameWrap) nameWrap.onclick = openProf;
+      chatBody.innerHTML = '';
+      chatBody._lastTs = null;
+      c.msgs.forEach(m => renderMsgInto(m, c));
+      chatBody.scrollTop = chatBody.scrollHeight;
+      setTimeout(() => msgInputField.focus(), 200);
+      renderMsgList();
+    }
+    // Ouvre le profil complet d'une personne depuis sa conversation.
+    async function openConvoProfile(c){
+      if (!c) return;
+      let p = null;
+      try { if (c.uid && typeof rtProfile === 'function') p = await rtProfile(c.uid); } catch(_){}
+      if (!p) p = { name:c.name, tag:c.tag, c1:c.c1, c2:c.c2, initial:c.initial, avatarUrl:c.avatarUrl, age:'', orbs:[] };
+      if (typeof openLikerProfile === 'function') openLikerProfile(p);
+    }
+    function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+
+    fab.addEventListener('click', () => {
+      panel.setAttribute('data-open', 'true');
+      panel.setAttribute('data-view', 'list');
+      renderMsgList();
+    });
+    document.getElementById('msgClose')?.addEventListener('click', () => panel.setAttribute('data-open', 'false'));
+    document.getElementById('msgCloseChat')?.addEventListener('click', () => panel.setAttribute('data-open', 'false'));
+    document.getElementById('msgBack')?.addEventListener('click', () => { panel.setAttribute('data-view', 'list'); activeConvo = null; });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && panel.getAttribute('data-open') === 'true') {
+        if (panel.getAttribute('data-view') === 'chat') panel.setAttribute('data-view', 'list');
+        else panel.setAttribute('data-open', 'false');
+      }
+    });
+    msgInput.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = msgInputField.value.trim();
+      if (!v || !activeConvo) return;
+      const t = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      const msg = { who:'me', text:v, t, ts: Date.now() };
+      activeConvo.msgs.push(msg);
+      activeConvo.last = v;
+      activeConvo.t    = t;
+      msgInputField.value = '';
+      renderMsgInto(msg, activeConvo);
+      chatBody.scrollTop = chatBody.scrollHeight;
+      // Envoi réel vers Supabase (l'autre le reçoit via Realtime).
+      if (activeConvo.matchId && window.__supa) {
+        rtMyId().then(me => {
+          if (!me) return;
+          window.__supa.from('messages').insert({ match_id: activeConvo.matchId, sender_id: me, body: v })
+            .then(({ error }) => { if (error) console.warn('[Matefindr] send msg', error.message || error); });
+        });
+      }
+      renderMsgList();
+    });
+    renderMsgList();
+
+    /* ===================================================================
+       TEMPS RÉEL — matches + messages (Supabase). Relie les 2 clients :
+       like réciproque → match (animation chez les 2), conversations live.
+       Échoue en silence si les tables n'existent pas encore.
+       =================================================================== */
+    const RT = { myId:null, ready:false, convoByMatch:new Map(), seenMsgIds:new Set(), pollTimer:null };
+    function fmtMsgTime(iso){ try { return new Date(iso).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }); } catch(_){ return ''; } }
+    function msgBubbleEl(m, c){
+      if (m.who === 'system') {
+        const s = document.createElement('div'); s.className = 'msg-bubble system'; s.textContent = m.text; return s;
+      }
+      const me = m.who === 'me';
+      const u = (state && state.user) || {};
+      const avatarUrl = me ? u.avatarUrl : (c && c.avatarUrl);
+      const initial = me ? ((u.displayName || 'M').charAt(0).toUpperCase()) : ((c && c.initial) || '?');
+      const c1 = me ? '#5865F2' : ((c && c.c1) || '#5865F2');
+      const c2 = me ? '#404EED' : ((c && c.c2) || '#404EED');
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + m.who;
+      row.innerHTML =
+        `<div class="msg-avi" style="background:linear-gradient(135deg,${c1},${c2})">${avatarUrl ? `<img src="${avatarUrl}" alt="">` : escapeHtml(initial)}</div>` +
+        `<div class="msg-col">` +
+          (m.t ? `<span class="msg-time">${m.t}</span>` : '') +
+          `<div class="msg-bubble ${m.who}">${escapeHtml(m.text)}</div>` +
+        `</div>`;
+      return row;
+    }
+    // Deux timestamps tombent-ils le même jour calendaire ?
+    function sameDay(a, b){
+      const da = new Date(a), db = new Date(b);
+      return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+    }
+    // Libellé d'un séparateur de date : "Aujourd'hui", "Hier", "lundi" (cette semaine),
+    // sinon "lundi 23 juin" (et l'année si différente).
+    function fmtDaySep(ts){
+      const d = new Date(ts), now = new Date();
+      const start = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+      const diff = Math.round((start(now) - start(d)) / 86400000);
+      if (diff === 0) return "Aujourd'hui";
+      if (diff === 1) return "Hier";
+      if (diff > 1 && diff < 7) return d.toLocaleDateString('fr-FR', { weekday:'long' });
+      const sameYear = d.getFullYear() === now.getFullYear();
+      return d.toLocaleDateString('fr-FR', sameYear
+        ? { weekday:'long', day:'numeric', month:'long' }
+        : { day:'numeric', month:'long', year:'numeric' });
+    }
+    // Crée la chip-séparateur de jour.
+    function daySepEl(ts){
+      const s = document.createElement('div');
+      s.className = 'msg-daysep';
+      s.textContent = fmtDaySep(ts);
+      return s;
+    }
+    // Ajoute un message au flux de chat, précédé d'un séparateur de jour si la date
+    // diffère du dernier message rendu (chatBody._lastTs sert de curseur).
+    function renderMsgInto(m, c){
+      const ts = m.ts || Date.now();
+      if (m.who !== 'system' && (chatBody._lastTs == null || !sameDay(chatBody._lastTs, ts))){
+        chatBody.appendChild(daySepEl(ts));
+      }
+      chatBody.appendChild(msgBubbleEl(m, c));
+      if (m.who !== 'system') chatBody._lastTs = ts;
+    }
+    async function rtMyId(){
+      if (RT.myId) return RT.myId;
+      try { const { data:{ session } } = await window.__supa.auth.getSession(); RT.myId = (session && session.user && session.user.id) || null; } catch(_){}
+      return RT.myId;
+    }
+    async function rtProfile(otherId){
+      let p = (typeof _remoteProfiles !== 'undefined') && _remoteProfiles.find(x => x.uid === otherId);
+      if (p) return p;
+      try { const { data } = await window.__supa.from('profiles').select('*').eq('id', otherId).limit(1);
+            if (data && data[0] && typeof rowToProfile === 'function') return rowToProfile(data[0]); } catch(_){}
+      return null;
+    }
+    // Crée (ou retrouve) la ligne match normalisée (user_a < user_b). Renvoie son id.
+    async function ensureMatchRow(otherId){
+      const me = await rtMyId();
+      if (!me || !otherId || !window.__supa) return null;
+      const a = me < otherId ? me : otherId, b = me < otherId ? otherId : me;
+      try {
+        const { data, error } = await window.__supa.from('matches')
+          .upsert({ user_a:a, user_b:b }, { onConflict:'user_a,user_b' }).select('id').limit(1);
+        if (error) { console.warn('[Matefindr] match upsert', error.message || error); return null; }
+        return (data && data[0] && data[0].id) || null;
+      } catch(e){ console.warn('[Matefindr] match err', e); return null; }
+    }
+    // Construit/maj une conversation locale liée à un matchId.
+    function rtUpsertConvo(matchId, otherId, p, opts){
+      opts = opts || {};
+      let c = CONVOS.find(x => x.matchId === matchId)
+           || (p && CONVOS.find(x => (p.tag && x.tag === p.tag) || (otherId && x.uid === otherId)));
+      if (!c) {
+        c = { id:'m_'+matchId, matchId, uid:otherId,
+              name:(p&&p.name)||'Match', tag:(p&&p.tag)||'',
+              c1:(p&&p.c1)||'#5865F2', c2:(p&&p.c2)||'#404EED',
+              initial:(p&&p.initial)||(((p&&p.name)||'?').charAt(0)), avatarUrl:(p&&p.avatarUrl)||null,
+              t:"à l'instant", unread:!!opts.unread,
+              last:opts.last || 'Vous venez de matcher 🎉',
+              msgs: (opts.system === false) ? [] : [{ who:'system', text:`🎉 C'est un match${(p&&p.name)?` avec ${p.name}`:''} ! Lancez la conversation.` }] };
+        CONVOS.unshift(c);
+      } else {
+        c.matchId = matchId; if (otherId) c.uid = otherId;
+        if (p) { if(p.name)c.name=p.name; if(p.tag)c.tag=p.tag; if(p.avatarUrl)c.avatarUrl=p.avatarUrl; if(p.c1)c.c1=p.c1; if(p.c2)c.c2=p.c2; if(p.initial)c.initial=p.initial; }
+        if (opts.unread) c.unread = true;
+      }
+      RT.convoByMatch.set(matchId, c);
+      return c;
+    }
+    // Point d'entrée unique « démarrer un match » (swipe réciproque OU clic cœur dans les likes).
+    async function startMatch(p, opts){
+      opts = opts || {};
+      let c;
+      if (p && p.uid) {
+        const matchId = await ensureMatchRow(p.uid);
+        if (matchId) c = rtUpsertConvo(matchId, p.uid, p, { unread:!!opts.unread });
+      }
+      if (!c) { // fallback hors-ligne / sans uid
+        const id = 'm_' + Date.now();
+        c = CONVOS.find(x => p && p.tag && x.tag === p.tag);
+        if (!c) { c = { id, name:p.name, tag:p.tag, uid:p.uid||null, c1:p.c1||'#5865F2', c2:p.c2||'#404EED',
+              initial:p.initial||(p.name||'?').charAt(0), avatarUrl:p.avatarUrl||null,
+              t:"à l'instant", unread:!!opts.unread, last:'Vous venez de matcher 🎉',
+              msgs:[{ who:'system', text:`🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }] }; CONVOS.unshift(c); }
+      }
+      if (typeof renderMsgList === 'function') renderMsgList();
+      if (typeof playMatchAnimation === 'function') playMatchAnimation(p, c.id);
+      return c;
+    }
+    // Retrouve un match par son id (vérifie via RLS qu'il m'appartient) et crée la convo.
+    async function rtResolveMatch(matchId){
+      const me = await rtMyId(); if (!me) return null;
+      try {
+        const { data } = await window.__supa.from('matches').select('*').eq('id', matchId).limit(1);
+        if (!data || !data[0]) return null;
+        const m = data[0]; const other = m.user_a === me ? m.user_b : m.user_a;
+        const p = await rtProfile(other);
+        return rtUpsertConvo(matchId, other, p, { system:false });
+      } catch(_){ return null; }
+    }
+    // Message entrant (Realtime) — n'affiche QUE les messages des autres dans mes convos.
+    function rtHandleIncomingMessage(row){
+      RT.seenMsgIds.add(row.id);
+      rtMyId().then(async me => {
+        if (!me || row.sender_id === me) return; // mes propres messages sont déjà affichés (optimiste)
+        let c = RT.convoByMatch.get(row.match_id) || CONVOS.find(x => x.matchId === row.match_id);
+        if (!c) c = await rtResolveMatch(row.match_id); // match créé hors session
+        if (!c) return; // pas un de mes matchs → ignoré
+        if (c.msgs.some(m => m._id === row.id)) return;
+        const tm = fmtMsgTime(row.created_at);
+        const msg = { who:'them', text:row.body, _id:row.id, t:tm, ts: new Date(row.created_at).getTime() };
+        c.msgs.push(msg);
+        c.last = row.body; c.t = "à l'instant";
+        if (activeConvo && activeConvo.matchId === c.matchId) {
+          renderMsgInto(msg, c);
+          chatBody.scrollTop = chatBody.scrollHeight;
+          c.unread = false;
+        } else { c.unread = true; }
+        renderMsgList();
+      });
+    }
+    // Nouveau match (Realtime) — l'autre utilisateur reçoit l'animation en même temps que moi.
+    function rtHandleNewMatch(row){
+      rtMyId().then(async me => {
+        if (!me || (row.user_a !== me && row.user_b !== me)) return;
+        if (RT.convoByMatch.has(row.id)) return; // c'est moi qui l'ai initié → déjà animé
+        const other = row.user_a === me ? row.user_b : row.user_a;
+        const p = await rtProfile(other) || { name:'Nouveau match', initial:'?', uid:other, c1:'#FF7EB6', c2:'#9146FF' };
+        const c = rtUpsertConvo(row.id, other, p, { unread:true });
+        renderMsgList();
+        if (typeof playMatchAnimation === 'function') playMatchAnimation(p, c.id);
+        if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
+      });
+    }
+    // Charge mes conversations existantes (matchs + historique) au démarrage.
+    async function rtLoadConversations(){
+      const me = await rtMyId(); if (!me || !window.__supa) return;
+      let matches = [];
+      try {
+        const { data, error } = await window.__supa.from('matches').select('*')
+          .or(`user_a.eq.${me},user_b.eq.${me}`).order('created_at', { ascending:false }).limit(200);
+        if (error) { console.warn('[Matefindr] load matches', error.message || error); return; }
+        matches = data || [];
+      } catch(_){ return; }
+      for (const m of matches) {
+        const other = m.user_a === me ? m.user_b : m.user_a;
+        const p = await rtProfile(other);
+        const c = rtUpsertConvo(m.id, other, p, { system:true });
+        try {
+          const { data: msgs } = await window.__supa.from('messages').select('*')
+            .eq('match_id', m.id).order('created_at', { ascending:true }).limit(500);
+          if (msgs && msgs.length) {
+            c.msgs = msgs.map(r => { RT.seenMsgIds.add(r.id); return { who: r.sender_id === me ? 'me' : 'them', text:r.body, _id:r.id, t:fmtMsgTime(r.created_at), ts:new Date(r.created_at).getTime() }; });
+            c.last = msgs[msgs.length-1].body;
+          }
+        } catch(_){}
+      }
+      renderMsgList();
+    }
+    // Filet de sécurité : sondage toutes les 2 s. Suivi par ID (anti-décalage d'horloge) →
+    // instantané et fiable même si le Realtime ne délivre pas.
+    async function rtPoll(){
+      if (!RT.ready || !window.__supa) return;
+      const me = RT.myId; if (!me) return;
+      try {
+        // 1) nouveaux matchs : ceux pas encore connus (convoByMatch fait office de curseur)
+        const { data: matches, error: mErr } = await window.__supa.from('matches').select('*')
+          .or(`user_a.eq.${me},user_b.eq.${me}`).order('created_at', { ascending:true }).limit(100);
+        if (mErr) throw mErr;
+        if (matches) for (const m of matches) { if (!RT.convoByMatch.has(m.id)) rtHandleNewMatch(m); }
+        // 2) nouveaux messages : derniers messages de mes convos, on traite les ID jamais vus
+        const ids = Array.from(RT.convoByMatch.keys());
+        if (ids.length) {
+          const { data: msgs, error: msgErr } = await window.__supa.from('messages').select('*')
+            .in('match_id', ids).order('created_at', { ascending:false }).limit(60);
+          if (msgErr) throw msgErr;
+          if (msgs) msgs.slice().reverse().forEach(row => {
+            if (RT.seenMsgIds.has(row.id)) return;
+            RT.seenMsgIds.add(row.id);
+            if (row.sender_id !== me) rtHandleIncomingMessage(row);
+          });
+        }
+        RT.pollFails = 0;
+      } catch(e){
+        // Coupe-circuit : si matches/messages n'existent pas (SQL pas encore lancé),
+        // on arrête le sondage après 3 échecs pour ne pas marteler Supabase (cause de lag).
+        RT.pollFails = (RT.pollFails || 0) + 1;
+        if (RT.pollFails >= 3 && RT.pollTimer) {
+          clearInterval(RT.pollTimer); RT.pollTimer = null;
+          console.warn('[Matefindr] sondage Realtime arrêté (tables matches/messages manquantes ?)', e && e.message);
+        }
+      }
+    }
+    // Abonnement Realtime (idempotent).
+    async function rtStart(){
+      if (RT.ready || !window.__supa) return;
+      const me = await rtMyId(); if (!me) return;
+      RT.ready = true;
+      await rtLoadConversations();
+      try {
+        window.__supa.channel('rt-'+me)
+          .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages' }, payload => rtHandleIncomingMessage(payload.new))
+          .on('postgres_changes', { event:'INSERT', schema:'public', table:'matches'  }, payload => rtHandleNewMatch(payload.new))
+          .subscribe();
+      } catch(e){ console.warn('[Matefindr] realtime subscribe', e); }
+      // Filet de sécurité : sondage toutes les 2 s (instantané garanti même sans Realtime).
+      if (!RT.pollTimer) RT.pollTimer = setInterval(rtPoll, 2000);
+    }
+    window.__rtStart = rtStart;
+
+    // Create a match from a liker → match animation, then fly to msg-fab + badge
+    window.createMatchFromLiker = function(p){
+      const idx = LIKED_ME.findIndex(x => x.tag === p.tag);
+      if (idx >= 0) LIKED_ME.splice(idx, 1);
+      // Ce liker a reçu une réponse → il ne doit JAMAIS revenir dans le panneau.
+      dismissLiker(p.uid);
+      // Enregistre mon like en retour en DB (upsert direct, sans re-déclencher de match)
+      // → likedBack le filtrera aussi sur les autres appareils après sync.
+      (async () => {
+        try {
+          if (window.__supa && p.uid) {
+            const { data:{ session } } = await window.__supa.auth.getSession();
+            if (session) await window.__supa.from('likes')
+              .upsert({ liker_id: session.user.id, liked_id: p.uid }, { onConflict: 'liker_id,liked_id' });
+          }
+        } catch(_){}
+      })();
+      // Discord notification (match)
+      if (typeof sendDiscordNotif === 'function') sendDiscordNotif('match', p);
+      // Crée le vrai match en DB (anti-doublon géré par startMatch/Realtime) + notifie l'autre.
+      if (typeof startMatch === 'function') startMatch(p, { unread:true });
+      else playMatchAnimation(p, 'm_'+Date.now());
+      // Close the liked panel + refresh
+      if (typeof renderLikedMe === 'function') renderLikedMe();
+      if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
+      document.getElementById('likedPanel').setAttribute('data-open', 'false');
+    };
+
+    function playMatchAnimation(p, convoId){
+      const overlay = document.getElementById('matchOverlay');
+      const aviMe   = document.getElementById('matchAviMe');
+      const aviThem = document.getElementById('matchAviThem');
+      const initMe   = document.getElementById('matchInitMe');
+      const initThem = document.getElementById('matchInitThem');
+      const nameMe   = document.getElementById('matchNameMe');
+      const nameThem = document.getElementById('matchNameThem');
+      const fly      = document.getElementById('matchFly');
+      const flyInit  = document.getElementById('matchFlyInit');
+
+      // CLEANUP : reset all leftover state from a previous match animation so
+      // we never see ghost avatars / opacities / classes overlapping.
+      fly.classList.remove('is-flying');
+      fly.hidden = true;
+      fly.style.cssText = '';
+      flyInit.innerHTML = '';
+      aviThem.style.background = '';
+      aviMe.style.background = '';
+      initMe.innerHTML = '';
+      initThem.innerHTML = '';
+      overlay.querySelector('.match-content').style.opacity = '';
+      overlay.querySelector('.match-content').style.transition = '';
+
+      const u = state.user || {};
+      const myName = u.displayName || 'Moi';
+      const myInit = (myName || 'M').charAt(0).toUpperCase();
+      const myAvatar = u.avatarUrl;
+      const themInit = (p.initial || (p.name || '?').charAt(0)).toUpperCase();
+      const themAvatar = p.avatarUrl;
+
+      nameMe.textContent = myName;
+      nameThem.textContent = p.name;
+      initMe.innerHTML = myAvatar ? `<img src="${myAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : escapeHtmlMini(myInit);
+      initThem.innerHTML = themAvatar ? `<img src="${themAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : escapeHtmlMini(themInit);
+      // Only show the gradient fallback when the other person has no real avatar
+      if (!themAvatar) aviThem.style.background = `linear-gradient(135deg,${p.c1 || '#FF7EB6'},${p.c2 || '#9146FF'})`;
+
+      overlay.setAttribute('data-show', 'true');
+      document.body.classList.add('match-active');
+
+      // After 1.9s : start the fly-to-fab animation
+      setTimeout(() => {
+        const aviRect = aviThem.getBoundingClientRect();
+        const fab = document.getElementById('msgFab');
+        const fabRect = fab ? fab.getBoundingClientRect() : { left: 30, top: window.innerHeight - 50 };
+        const fx = (fabRect.left + fabRect.width / 2) - (aviRect.left + aviRect.width / 2);
+        const fy = (fabRect.top  + fabRect.height / 2) - (aviRect.top  + aviRect.height / 2);
+
+        fly.style.left = aviRect.left + 'px';
+        fly.style.top  = aviRect.top  + 'px';
+        fly.style.width  = aviRect.width  + 'px';
+        fly.style.height = aviRect.height + 'px';
+        if (themAvatar) {
+          flyInit.innerHTML = `<img src="${themAvatar}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+          fly.style.background = '';
+        } else {
+          flyInit.textContent = themInit;
+          fly.style.background = `linear-gradient(135deg,${p.c1 || '#FF7EB6'},${p.c2 || '#9146FF'})`;
+        }
+        fly.style.setProperty('--fx', fx + 'px');
+        fly.style.setProperty('--fy', fy + 'px');
+        fly.hidden = false;
+
+        // Fade out the main content while the avatar flies
+        overlay.querySelector('.match-content').style.transition = 'opacity .3s';
+        overlay.querySelector('.match-content').style.opacity = '0';
+
+        // Start the fly animation
+        requestAnimationFrame(() => fly.classList.add('is-flying'));
+
+        // When the avatar lands : update badge + pulse + close overlay
+        setTimeout(() => {
+          fly.classList.remove('is-flying');
+          fly.hidden = true;
+          overlay.setAttribute('data-show', 'false');
+          document.body.classList.remove('match-active');
+          overlay.querySelector('.match-content').style.opacity = '';
+          // Bump the FAB unread badge + pulse
+          if (fab) {
+            fab.classList.remove('pulse-match'); void fab.offsetWidth; fab.classList.add('pulse-match');
+          }
+          renderMsgList();
+        }, 1100);
+      }, 1900);
+    }
+
+    // ---------- Orb manager ----------
+    let selectedOrbKind = 'music';
+    const orbPlaceholders = {
+      music:'Recherche un son Spotify…',
+      game: 'ex: Valorant, Minecraft…',
+      anime:'ex: One Piece, Demon Slayer…',
+      film: 'ex: Inception, Breaking Bad…',
+    };
+
+    function renderUserOrbs(){
+      const p = state.profile || {};
+      const orbs = p.userOrbs || [];
+      const grid = document.getElementById('accOrbGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      // Set a count class so CSS can shrink bubbles when >6 (and even more when >12)
+      grid.classList.toggle('acc-orb-grid--many',  orbs.length > 6  && orbs.length <= 12);
+      grid.classList.toggle('acc-orb-grid--many2', orbs.length > 12);
+      orbs.forEach((o, i) => {
+        const item = document.createElement('div');
+        item.className = 'acc-orb-item';
+        const circle = document.createElement('div');
+        circle.className = 'acc-orb-circle';
+        circle.dataset.kind = o.kind;
+        circle.innerHTML = orbInner(o);
+        if (o.kind === 'game' && o.rank) {
+          const rb = document.createElement('span');
+          rb.className = 'orb-rank';
+          rb.textContent = o.rank;
+          circle.appendChild(rb);
+        }
+        // Click on a game orb tile → re-open the rank+clip modal to edit
+        if (o.kind === 'game') {
+          circle.style.cursor = 'pointer';
+          circle.addEventListener('click', () => openGameMetaModal(o));
+        }
+        const lbl = document.createElement('span');
+        lbl.className = 'acc-orb-lbl';
+        lbl.textContent = o.title + (o.rank ? ` · ${o.rank}` : '');
+        const del = document.createElement('button');
+        del.className = 'acc-orb-del';
+        del.type = 'button';
+        del.textContent = '×';
+        del.addEventListener('click', () => {
+          (state.profile.userOrbs || []).splice(i, 1);
+          renderUserOrbs();
+          refreshAccountPreview();
+        });
+        item.append(circle, lbl, del);
+        grid.appendChild(item);
+      });
+      const pill = document.getElementById('orbCounterPill');
+      const used = orbsUsed();
+      const max = orbBudget();
+      if (pill) {
+        const sc = socialsCount();
+        pill.textContent = used + '/' + max + (sc ? ' (' + sc + ' social' + (sc>1?'s':'') + ')' : '');
+      }
+      // Sync the chip next to the Bulles tab (legacy — tab is now hidden)
+      const tabCount = document.getElementById('tabBulleCount');
+      if (tabCount) {
+        const orbsOnly = ((state.profile && state.profile.userOrbs) || []).length;
+        tabCount.textContent = orbsOnly;
+        tabCount.setAttribute('data-show', orbsOnly > 0 ? 'true' : 'false');
+      }
+      // Update the "Mes bulles" CTA counter on the Profil tab
+      if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
+    }
+
+    document.querySelectorAll('.acc-orb-cat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.acc-orb-cat').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedOrbKind = btn.dataset.kind;
+        document.getElementById('accOrbInput').placeholder = orbPlaceholders[selectedOrbKind] || 'Tape ici…';
+      });
+    });
+
+    let _pendingSpotifyOrb = null;
+    let _suggDebounce = null;
+
+    function closeSugg(){
+      const s = document.getElementById('spotifySugg');
+      s.innerHTML = ''; s.classList.remove('open');
+    }
+
+    function addOrb(orbOverride){
+      const input = document.getElementById('accOrbInput');
+      const val = input.value.trim();
+      if (!val) return;
+      state.profile = state.profile || {};
+      state.profile.userOrbs = state.profile.userOrbs || [];
+      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
+      const orb = orbOverride || _pendingSpotifyOrb || {kind: selectedOrbKind, title: val};
+      // Empêche les doublons (même kind + même titre normalisé)
+      const normTitle = (orb.title || '').toLowerCase().trim();
+      const dup = (state.profile.userOrbs || []).some(o => o.kind === orb.kind && (o.title || '').toLowerCase().trim() === normTitle);
+      if (dup) { showToast('⚠️', 'Déjà ajoutée', orb.title); return; }
+      state.profile.userOrbs.push(orb);
+      _pendingSpotifyOrb = null;
+      input.value = '';
+      closeSugg();
+      save();
+      renderUserOrbs();
+      refreshAccountPreview();
+      showToast(({music:'🎵',anime:'📺',game:'🎮',film:'🎬'}[orb.kind]||'✨'), 'Bulle ajoutée', orb.title);
+    }
+
+    // Free-text adding is disabled — orbs can only be created by clicking a suggestion
+    document.getElementById('accOrbAdd')?.addEventListener('click', () => {
+      showToast('🔎', 'Choisis dans la liste', 'Clique sur une suggestion pour créer une bulle');
+      document.getElementById('accOrbInput').focus();
+    });
+    document.getElementById('accOrbInput')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const first = document.querySelector('#spotifySugg .sp-item');
+        if (first) first.dispatchEvent(new MouseEvent('mousedown'));
+        else showToast('🔎', 'Choisis dans la liste', 'Aucune suggestion à valider');
+      }
+    });
+
+    /* Games that have a ranked / competitive ladder → we ask the user which
+       rank they're at when they add the bubble. The rank shows as a small
+       badge on the orb and on the profile card. */
+    /* Unified ranking strategy : main tiers as a single label, then the
+       TWO LAST tiers BEFORE the apex get sub-divisions (1/2/3), then the apex.
+       Example Valorant: Iron, …, Diamond, Ascendant 1/2/3, Immortal 1/2/3, Radiant. */
+    function _ranksWithTopSubTiers(base, apex) {
+      const out = [];
+      const lastTwoStart = Math.max(0, base.length - 2);
+      for (let i = 0; i < base.length; i++) {
+        if (i >= lastTwoStart) {
+          for (const n of [1,2,3]) out.push(`${base[i]} ${n}`);
+        } else {
+          out.push(base[i]);
+        }
+      }
+      if (apex) out.push(apex);
+      return out;
+    }
+    const RANKED_GAMES = {
+      'Valorant':                       _ranksWithTopSubTiers(['Iron','Bronze','Silver','Gold','Platinum','Diamond','Ascendant','Immortal'], 'Radiant'),
+      'League of Legends':              _ranksWithTopSubTiers(['Iron','Bronze','Silver','Gold','Platinum','Emerald','Diamond','Master','Grandmaster'], 'Challenger'),
+      'Counter-Strike 2':               _ranksWithTopSubTiers(['Silver','Gold Nova','Master Guardian','DMG','LE','LEM','Supreme','Global Elite'], 'Premier'),
+      'Rocket League':                  _ranksWithTopSubTiers(['Bronze','Silver','Gold','Platinum','Diamond','Champion','Grand Champion'], 'Supersonic Legend'),
+      'Apex Legends':                   _ranksWithTopSubTiers(['Rookie','Bronze','Silver','Gold','Platinum','Diamond','Master'], 'Apex Predator'),
+      'Overwatch 2':                    _ranksWithTopSubTiers(['Bronze','Silver','Gold','Platinum','Diamond','Master','Grandmaster'], 'Top 500'),
+      "Tom Clancy's Rainbow Six Siege": _ranksWithTopSubTiers(['Copper','Bronze','Silver','Gold','Platinum','Emerald','Diamond'], 'Champion'),
+      'Dota 2':                         _ranksWithTopSubTiers(['Herald','Guardian','Crusader','Archon','Legend','Ancient','Divine'], 'Immortal'),
+      'Fortnite':                       _ranksWithTopSubTiers(['Bronze','Silver','Gold','Platinum','Diamond','Elite','Champion'], 'Unreal'),
+      'PUBG: Battlegrounds':            _ranksWithTopSubTiers(['Bronze','Silver','Gold','Platinum','Diamond','Crown','Ace'], 'Master'),
+      'Marvel Rivals':                  _ranksWithTopSubTiers(['Bronze','Silver','Gold','Platinum','Diamond','Grandmaster','Celestial','Eternity'], 'One Above All'),
+      'Call of Duty: Warzone':          _ranksWithTopSubTiers(['Bronze','Silver','Gold','Platinum','Diamond','Crimson','Iridescent'], 'Top 250'),
+      'Mortal Kombat 1':                _ranksWithTopSubTiers(['Apprentice','Novice','Warrior','Kombatant','Elite','Champion','Demigod'], 'Elder God'),
+      'Tekken 8':                       _ranksWithTopSubTiers(['Beginner','Vanquisher','Cavalry','Warrior','Fighter','Eliminator','Vindicator','Tekken King'], 'Tekken God'),
+      'Street Fighter 6':               _ranksWithTopSubTiers(['Rookie','Iron','Bronze','Silver','Gold','Platinum','Diamond'], 'Master'),
+    };
+    function isRankedGame(title){ return !!RANKED_GAMES[title]; }
+
+    /* Visuals for each rank tier : emoji-style icon + brand color.
+       Used to render the rank as a small round bubble (not a text chip). */
+    const RANK_VISUAL = {
+      // Universal tiers
+      'Iron':              { ico:'⚙', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Copper':            { ico:'🟤', c1:'#cd7f32', c2:'#7a4818' },
+      'Bronze':            { ico:'🥉', c1:'#cd7f32', c2:'#5c3a14' },
+      'Silver':            { ico:'🥈', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Gold':              { ico:'🥇', c1:'#ffd700', c2:'#8c6e0a' },
+      'Gold Nova':         { ico:'🥇', c1:'#ffd700', c2:'#8c6e0a' },
+      'Master Guardian':   { ico:'🛡', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'DMG':               { ico:'🛡', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'LE':                { ico:'🦅', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'LEM':               { ico:'🦅', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Platinum':          { ico:'💠', c1:'#5ce0ff', c2:'#14495c' },
+      'Emerald':           { ico:'🟢', c1:'#3bff8c', c2:'#0e3a1f' },
+      'Diamond':           { ico:'💎', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'Ascendant':         { ico:'🔱', c1:'#3bd17c', c2:'#0e3a1f' },
+      'Master':            { ico:'👑', c1:'#C7A5FF', c2:'#4a1bc1' },
+      'Immortal':          { ico:'⚔', c1:'#9c27b0', c2:'#3a0e5c' },
+      'Radiant':           { ico:'✨', c1:'#fffacd', c2:'#8c7014' },
+      'Grandmaster':       { ico:'👑', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Challenger':        { ico:'🏆', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Global Elite':      { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Supreme':           { ico:'⚔', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Premier':           { ico:'🎯', c1:'#9146FF', c2:'#2a0e5c' },
+      // Apex / Overwatch / etc.
+      'Apex Predator':     { ico:'🦅', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Top 500':           { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Top 250':           { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Rookie':            { ico:'🔰', c1:'#7a7a7a', c2:'#3a3a3a' },
+      // Rocket League
+      'Champion':          { ico:'🏆', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Grand Champion':    { ico:'👑', c1:'#C7A5FF', c2:'#4a1bc1' },
+      'Supersonic Legend': { ico:'🚀', c1:'#FF4FA0', c2:'#5c0e2a' },
+      // Fortnite / COD / R6
+      'Elite':             { ico:'⭐', c1:'#3bff8c', c2:'#0e3a1f' },
+      'Crimson':           { ico:'🔥', c1:'#ED4245', c2:'#5c1414' },
+      'Iridescent':        { ico:'🌈', c1:'#FF7EB6', c2:'#5c0e3a' },
+      'Unreal':            { ico:'⚡', c1:'#9146FF', c2:'#2a0e5c' },
+      // Dota
+      'Herald':            { ico:'🛡', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Guardian':          { ico:'🛡', c1:'#cd7f32', c2:'#5c3a14' },
+      'Crusader':          { ico:'⚔', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Archon':            { ico:'🛡', c1:'#ffd700', c2:'#8c6e0a' },
+      'Legend':            { ico:'⚔', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'Ancient':           { ico:'💎', c1:'#3bd17c', c2:'#0e3a1f' },
+      'Divine':            { ico:'👑', c1:'#C7A5FF', c2:'#4a1bc1' },
+      // PUBG
+      'Crown':             { ico:'👑', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Ace':               { ico:'🎯', c1:'#9146FF', c2:'#2a0e5c' },
+      // Marvel Rivals
+      'Celestial':         { ico:'🌟', c1:'#FF7EB6', c2:'#5c0e3a' },
+      'Eternity':          { ico:'♾', c1:'#9c27b0', c2:'#3a0e5c' },
+      'One Above All':     { ico:'☀', c1:'#fffacd', c2:'#8c7014' },
+      // MK / Tekken / SF
+      'Apprentice':        { ico:'🌱', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Novice':            { ico:'⚪', c1:'#cd7f32', c2:'#5c3a14' },
+      'Warrior':           { ico:'⚔', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Kombatant':         { ico:'🥊', c1:'#ffd700', c2:'#8c6e0a' },
+      'Demigod':           { ico:'⚡', c1:'#9c27b0', c2:'#3a0e5c' },
+      'Elder God':         { ico:'☠', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Beginner':          { ico:'🔰', c1:'#7a7a7a', c2:'#3a3a3a' },
+      'Vanquisher':        { ico:'⚔', c1:'#cd7f32', c2:'#5c3a14' },
+      'Cavalry':           { ico:'🐎', c1:'#d8d8d8', c2:'#6a6a6a' },
+      'Fighter':           { ico:'🥊', c1:'#5ce0ff', c2:'#1a3a5c' },
+      'Eliminator':        { ico:'🎯', c1:'#3bff8c', c2:'#0e3a1f' },
+      'Vindicator':        { ico:'⚔', c1:'#FF4FA0', c2:'#5c0e2a' },
+      'Tekken King':       { ico:'👑', c1:'#FFD83D', c2:'#8c6e0a' },
+      'Tekken God':        { ico:'⚡', c1:'#fffacd', c2:'#8c7014' },
+    };
+    function rankVisual(rank){
+      if (!rank) return null;
+      // Try exact match first, then strip the sub-tier ("Platinum 2" → "Platinum")
+      if (RANK_VISUAL[rank]) return RANK_VISUAL[rank];
+      const base = String(rank).replace(/\s+\d+\s*$/, '');
+      if (RANK_VISUAL[base]) return RANK_VISUAL[base];
+      return { ico:'⭐', c1:'#FFD83D', c2:'#8c6e0a' };
+    }
+
+    /* Real rank icons (cropped from official rank charts). Keyed by game → rank → URL.
+       When present, the orbiting rank bubble displays this image instead of an emoji. */
+    /* Helper : Valorant has 3 sub-tiers per rank (Iron 1/2/3, Bronze 1/2/3, …) +
+       Radiant. We expose every sub-tier individually so the rank picker can
+       offer "Platinum 2" etc., and each gets its own cropped PNG. */
+    function _valorantRanks(){
+      const base = ['iron','bronze','silver','gold','platinum','diamond','ascendant','immortal'];
+      const out = {};
+      const CAP = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+      for (const r of base) {
+        // Canonical fallback (no sub-tier)
+        out[CAP(r)] = `assets/ranks/valorant/${r}.png`;
+        for (const n of [1,2,3]) out[`${CAP(r)} ${n}`] = `assets/ranks/valorant/${r}_${n}.png`;
+      }
+      out['Radiant'] = 'assets/ranks/valorant/radiant.png';
+      return out;
+    }
+    const RANK_ICONS = {
+      'Valorant': _valorantRanks(),
+      'Fortnite': {
+        'Bronze':   'assets/ranks/fortnite/bronze.png',
+        'Silver':   'assets/ranks/fortnite/silver.png',
+        'Gold':     'assets/ranks/fortnite/gold.png',
+        'Platinum': 'assets/ranks/fortnite/platinum.png',
+        'Diamond':  'assets/ranks/fortnite/diamond.png',
+        'Elite':    'assets/ranks/fortnite/elite.png',
+        'Champion': 'assets/ranks/fortnite/champion.png',
+        'Unreal':   'assets/ranks/fortnite/unreal.png',
+      },
+      'Rocket League': {
+        'Bronze':             'assets/ranks/rocket-league/bronze.png',
+        'Silver':             'assets/ranks/rocket-league/silver.png',
+        'Gold':               'assets/ranks/rocket-league/gold.png',
+        'Platinum':           'assets/ranks/rocket-league/platinum.png',
+        'Diamond':            'assets/ranks/rocket-league/diamond.png',
+        'Champion':           'assets/ranks/rocket-league/champion.png',
+        'Grand Champion':     'assets/ranks/rocket-league/grand_champion.png',
+        'Supersonic Legend':  'assets/ranks/rocket-league/supersonic_legend.png',
+      },
+      'League of Legends': {
+        'Iron':         'assets/ranks/league-of-legends/iron.png',
+        'Bronze':       'assets/ranks/league-of-legends/bronze.png',
+        'Silver':       'assets/ranks/league-of-legends/silver.png',
+        'Gold':         'assets/ranks/league-of-legends/gold.png',
+        'Platinum':     'assets/ranks/league-of-legends/platinum.png',
+        'Emerald':      'assets/ranks/league-of-legends/emerald.png',
+        'Diamond':      'assets/ranks/league-of-legends/diamond.png',
+        'Master':       'assets/ranks/league-of-legends/master.png',
+        'Grandmaster':  'assets/ranks/league-of-legends/grandmaster.png',
+        'Challenger':   'assets/ranks/league-of-legends/challenger.png',
+      },
+    };
+    function rankIconUrl(game, rank){
+      if (!game || !rank) return null;
+      const g = RANK_ICONS[game];
+      if (!g) return null;
+      // Try exact match first ("Platinum 2"), then strip the sub-tier ("Platinum")
+      if (g[rank]) return g[rank];
+      const base = String(rank).replace(/\s+\d+\s*$/, '');
+      return g[base] || null;
+    }
+
+    /* Curated suggestion lists by category — used as the primary set of
+       suggestions for game / anime / film bubbles. Covers are fetched on
+       demand via Wikipedia (game / film) or Jikan (anime). */
+    const ORB_SUGGESTIONS = {
+      game: ["Minecraft","Valorant","Rocket League","Fortnite","League of Legends","Counter-Strike 2","Grand Theft Auto V","Roblox","Apex Legends","Call of Duty: Warzone","Overwatch 2","Tom Clancy's Rainbow Six Siege","Dota 2","PUBG: Battlegrounds","Genshin Impact","World of Warcraft","Final Fantasy XIV","Destiny 2","Honkai: Star Rail","Diablo IV","The Sims 4","Stardew Valley","Terraria","Among Us","Fall Guys","Marvel Rivals","Sea of Thieves","Dead by Daylight","Phasmophobia","Warframe","Path of Exile 2","Hearthstone","Magic: The Gathering Arena","Elden Ring","Cyberpunk 2077","Baldur's Gate 3","The Witcher 3: Wild Hunt","Red Dead Redemption 2","The Elder Scrolls V: Skyrim","EA Sports FC 24","NBA 2K24","Forza Horizon 5","Mortal Kombat 1","Tekken 8","Street Fighter 6","Lethal Company","Helldivers 2","Lost Ark","New World","Hogwarts Legacy"],
+      film: ["One Piece","Naruto","Dragon Ball Z","Bleach","Hunter x Hunter","Attack on Titan","Jujutsu Kaisen","Demon Slayer","Chainsaw Man","My Hero Academia","Fullmetal Alchemist: Brotherhood","Death Note","JoJo's Bizarre Adventure","Vinland Saga","Spy x Family","Cowboy Bebop","Neon Genesis Evangelion","Steins;Gate","Code Geass","Haikyuu!!","Blue Lock","Re:Zero","Mob Psycho 100","Made in Abyss","Tokyo Ghoul","Fire Force","Black Clover","Frieren","Solo Leveling","Bocchi the Rock!","Spirited Away","Princess Mononoke","Howl's Moving Castle","My Neighbor Totoro","Your Name","Akira","Ghost in the Shell","Breaking Bad","Better Call Saul","The Wire","The Sopranos","Peaky Blinders","Dexter","True Detective","Fargo","Sons of Anarchy","Narcos","Ozark","Mindhunter","Prison Break","The Shield","Boardwalk Empire","The Night Of","Game of Thrones","House of the Dragon","Stranger Things","The X-Files","Black Mirror","The Twilight Zone","Doctor Who","Battlestar Galactica","The Expanse","Westworld","Dark","The Boys","The Umbrella Academy","Lost","Fringe","Foundation","Silo","The Office","Friends","Seinfeld","The Simpsons","South Park","Rick and Morty","It's Always Sunny in Philadelphia","Parks and Recreation","Brooklyn Nine-Nine","How I Met Your Mother","Arrested Development","Community","Curb Your Enthusiasm","Ted Lasso","The Good Place","Silicon Valley","The Godfather","Pulp Fiction","Fight Club","Inception","Interstellar","The Dark Knight","The Matrix","Star Wars: A New Hope","The Empire Strikes Back","Return of the Jedi","The Lord of the Rings: The Fellowship of the Ring","The Two Towers","The Return of the King","Jurassic Park","Terminator","Terminator 2: Judgment Day","Blade Runner","Alien","The Shawshank Redemption","Forrest Gump","Saving Private Ryan","Gladiator","Se7en","Shutter Island","Parasite","Spirited Away","The Silence of the Lambs","The Shining","Psycho","Casablanca","Citizen Kane","2001: A Space Odyssey","Apocalypse Now","Taxi Driver","Goodfellas","Reservoir Dogs","The Big Lebowski","No Country for Old Men","There Will Be Blood","Whiplash","Birdman","The Grand Budapest Hotel","The Truman Show","Eternal Sunshine of the Spotless Mind","Memento","Donnie Darko","A Clockwork Orange","Full Metal Jacket","Dr. Strangelove","Lord of War","American Psycho","Scarface","Heat","Casino","The Departed","Dunkirk","Oppenheimer","Tenet","The Prestige","Batman Begins","The Dark Knight Rises","Joker","Logan","Mad Max: Fury Road","Braveheart","Troy","Kingdom of Heaven","300","Sin City","Watchmen","V for Vendetta","Children of Men","District 9","Arrival","Gravity","The Martian","Ad Astra","Moon","Ex Machina","Her","Up","Wall-E","Ratatouille","Finding Nemo","The Incredibles","Toy Story","The Lion King","Aladdin","Beauty and the Beast","Princess Mononoke","Howl's Moving Castle","My Neighbor Totoro","Grave of the Fireflies","Your Name","Weathering With You","Suzume"],
+    };
+    /* Cache: kind+title -> coverUrl. Mirrored in localStorage so covers fetched
+       in a previous session are instantly available — no Wikipedia/Wikidata round-trip. */
+    const COVER_CACHE_KEY = 'matefindr_cover_cache_v3';
+    /* Titres reconnus comme anime → on fetch via Jikan (artwork de qualité) au lieu
+       de Wikipedia/Wikidata qui retournent souvent des posters moches ou des covers
+       de tome 1 de manga. Liste à étendre quand on ajoute des animes dans ORB_SUGGESTIONS.film. */
+    const ANIME_TITLES = new Set([
+      'One Piece','Naruto','Dragon Ball Z','Bleach','Hunter x Hunter','Attack on Titan',
+      'Jujutsu Kaisen','Demon Slayer','Chainsaw Man','My Hero Academia','Fullmetal Alchemist: Brotherhood',
+      'Death Note',"JoJo's Bizarre Adventure",'Vinland Saga','Spy x Family','Cowboy Bebop',
+      'Neon Genesis Evangelion','Steins;Gate','Code Geass','Haikyuu!!','Blue Lock','Re:Zero',
+      'Mob Psycho 100','Made in Abyss','Tokyo Ghoul','Fire Force','Black Clover','Frieren',
+      'Solo Leveling','Bocchi the Rock!','Spirited Away','Princess Mononoke',"Howl's Moving Castle",
+      'My Neighbor Totoro','Your Name','Akira','Ghost in the Shell','Dragon Ball Super',
+      'Hellsing Ultimate','Death Parade','Erased','Monster','Berserk','Psycho-Pass',
+      'Parasyte: The Maxim','Future Diary','Another','The Promised Neverland','Hajime no Ippo',
+      'Slam Dunk',"Kuroko's Basketball",'Your Lie in April','Clannad','Toradora','Golden Time',
+      'Kaguya-sama: Love is War','Nichijou','Great Teacher Onizuka','Saiki K','March Comes in Like a Lion',
+      'Trigun','Samurai Champloo','FLCL','Tengen Toppa Gurren Lagann','Mobile Suit Gundam',
+      'Macross','Serial Experiments Lain','Paprika','Perfect Blue','Konosuba','Overlord',
+      'That Time I Got Reincarnated as a Slime','Mushoku Tensei','Ranking of Kings',
+      'Ping Pong the Animation','Kill la Kill','Devilman Crybaby','Dorohedoro','Golden Kamuy',
+      'Nana','Fruits Basket','Ouran High School Host Club','Azumanga Daioh','Lucky Star',
+      'K-On!','Cardcaptor Sakura','Sailor Moon','Pokemon','Digimon','Yu-Gi-Oh!','Inuyasha',
+      'Ranma 1/2','Maison Ikkoku','City Hunter','Space Dandy','Soul Eater','Fairy Tail',
+      'YuYu Hakusho','Seven Deadly Sins','Dr. Stone','Tokyo Revengers','Elfen Lied','Mushishi',
+      "Junji Ito",'Studio Ghibli','Weathering With You','Suzume','Grave of the Fireflies',
+    ]);
+    const _suggCoverCache = (() => {
+      try {
+        const raw = localStorage.getItem(COVER_CACHE_KEY);
+        if (raw) return new Map(Object.entries(JSON.parse(raw)));
+      } catch (_){}
+      return new Map();
+    })();
+    let _coverCachePersistTimer = null;
+    function persistCoverCache(){
+      clearTimeout(_coverCachePersistTimer);
+      _coverCachePersistTimer = setTimeout(() => {
+        try { localStorage.setItem(COVER_CACHE_KEY, JSON.stringify(Object.fromEntries(_suggCoverCache))); } catch(_){}
+      }, 800);
+    }
+
+    /* Wrap a Promise with a hard timeout — falls back to null if the network is slow,
+       so the UI never freezes waiting for a single fetch. */
+    function withTimeout(promise, ms){
+      return Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => resolve(null), ms)),
+      ]);
+    }
+
+    async function wikiPageSummary(title){
+      try {
+        const r = await withTimeout(fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/\s/g, '_'))), 2500);
+        if (!r || !r.ok) return null;
+        const d = await r.json();
+        return d.thumbnail?.source || d.originalimage?.source || null;
+      } catch { return null; }
+    }
+    /* Wikipedia → Wikidata QID (e.g. "Minecraft" → "Q49740") */
+    async function wikiWikibaseId(title){
+      try {
+        const url = 'https://en.wikipedia.org/w/api.php?action=query&prop=pageprops&ppprop=wikibase_item&redirects=1&titles=' + encodeURIComponent(title) + '&format=json&origin=*';
+        const r = await withTimeout(fetch(url), 2500);
+        if (!r || !r.ok) return null;
+        const d = await r.json();
+        const pages = d.query?.pages;
+        if (!pages) return null;
+        const first = Object.values(pages)[0];
+        return first?.pageprops?.wikibase_item || null;
+      } catch { return null; }
+    }
+    /* Wikidata claim → image. Tries each property in order (P154=logo, P18=image, P2716=collage). */
+    async function wikidataImage(qid, props){
+      if (!qid) return null;
+      try {
+        const r = await withTimeout(fetch('https://www.wikidata.org/wiki/Special:EntityData/' + qid + '.json'), 2500);
+        if (!r || !r.ok) return null;
+        const d = await r.json();
+        const claims = d.entities?.[qid]?.claims;
+        if (!claims) return null;
+        for (const p of props) {
+          const filename = claims?.[p]?.[0]?.mainsnak?.datavalue?.value;
+          if (filename) {
+            return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(filename) + '?width=400';
+          }
+        }
+        return null;
+      } catch { return null; }
+    }
+    /* High-level: title → image via Wikidata logo (preferred for games) or image (preferred for films). */
+    async function wikidataCover(title, props){
+      let qid = await wikiWikibaseId(title);
+      if (qid) {
+        const img = await wikidataImage(qid, props);
+        if (img) return img;
+      }
+      return null;
+    }
+    /* Detect images with a transparent background.
+       Strict mode : ANY pixel along the outer ring with alpha < 252 = transparent.
+       Tainted canvas (CORS denied) → treat as transparent (safer for the "no transparency" rule). */
+    async function imageHasTransparency(url){
+      return new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const TIMEOUT = setTimeout(() => resolve(true), 5000); // timeout → safer to skip
+        img.onload = () => {
+          clearTimeout(TIMEOUT);
+          try {
+            const canvas = document.createElement('canvas');
+            const w = canvas.width = 64, h = canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const data = ctx.getImageData(0, 0, w, h).data;
+            // Sample the full outer ring (top row, bottom row, left col, right col)
+            // Plus 1px inset to catch images with a tiny border.
+            let transparentCount = 0;
+            const sampleAlpha = (x, y) => data[(y * w + x) * 4 + 3];
+            for (let i = 0; i < w; i++) {
+              if (sampleAlpha(i, 0)   < 252) transparentCount++;
+              if (sampleAlpha(i, h-1) < 252) transparentCount++;
+              if (sampleAlpha(i, 1)   < 252) transparentCount++;
+              if (sampleAlpha(i, h-2) < 252) transparentCount++;
+            }
+            for (let j = 1; j < h-1; j++) {
+              if (sampleAlpha(0, j)   < 252) transparentCount++;
+              if (sampleAlpha(w-1, j) < 252) transparentCount++;
+              if (sampleAlpha(1, j)   < 252) transparentCount++;
+              if (sampleAlpha(w-2, j) < 252) transparentCount++;
+            }
+            // Total samples ≈ 4*w + 4*(h-2) = 4*64 + 4*62 = 504
+            // If >5% have transparency, it's a transparent-bg image
+            resolve(transparentCount > 25);
+          } catch {
+            // CORS-tainted canvas → can't read pixels → safer to skip this image
+            resolve(true);
+          }
+        };
+        img.onerror = () => { clearTimeout(TIMEOUT); resolve(true); };
+        img.src = url;
+      });
+    }
+    /* Manual overrides for specific games — used when Wikidata only has a
+       transparent logo or a bad asset. Either a forced URL, or "logo:true" to
+       accept a transparent logo for that game (e.g. Dead by Daylight). */
+    const GAME_COVER_OVERRIDES = {
+      // Custom covers (local assets) — replace each entry as we get the artwork
+      'Minecraft': 'assets/games/minecraft.png',
+      'Valorant':  'assets/games/valorant.png',
+      'Rocket League': 'assets/games/rocket-league.webp',
+      'Fortnite': 'assets/games/fortnite.png',
+      'League of Legends': 'assets/games/league-of-legends.png',
+      'Counter-Strike 2': 'assets/games/counter-strike-2.png',
+      'Grand Theft Auto V': 'assets/games/gta-v.png',
+      'Roblox': 'assets/games/roblox.png',
+      'Apex Legends': 'assets/games/apex-legends.png',
+      'Call of Duty: Warzone': 'assets/games/warzone.png',
+      'Overwatch 2': 'assets/games/overwatch-2.png',
+      "Tom Clancy's Rainbow Six Siege": 'assets/games/r6-siege.png',
+      'Dota 2': 'assets/games/dota-2.png',
+      'PUBG: Battlegrounds': 'assets/games/pubg.webp',
+      'Genshin Impact': 'assets/games/genshin-impact.png',
+      'Dead by Daylight': { logo: true }, // allow transparent logo
+    };
+
+    /* Quickly verifies an image URL loads (HEAD + size > 0). Returns true if usable. */
+    async function imageLoads(url){
+      return new Promise(resolve => {
+        const img = new Image();
+        const TIMEOUT = setTimeout(() => resolve(false), 4000);
+        img.onload = () => { clearTimeout(TIMEOUT); resolve(img.naturalWidth > 0); };
+        img.onerror = () => { clearTimeout(TIMEOUT); resolve(false); };
+        img.src = url;
+      });
+    }
+
+    /* Try Wikidata cover variants for games and pick the best image.
+       Strategy: prefer opaque, but ALWAYS return something if available
+       (fallback to transparent/logo). */
+    /* iTunes Search — rapide (200-400ms) et fiable pour les jeux populaires (Minecraft,
+       Fortnite, Among Us, Roblox, etc.). Retourne une image opaque carrée 512x512. */
+    async function itunesGameCover(title){
+      try {
+        const r = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(title) + '&entity=software&limit=3');
+        const d = await r.json();
+        if (!d.results || !d.results.length) return null;
+        // Prend le 1er résultat dont le nom matche raisonnablement
+        const q = title.toLowerCase();
+        const best = d.results.find(it => (it.trackName || '').toLowerCase().includes(q)) || d.results[0];
+        // artworkUrl100 → 512x512 pour une meilleure qualité
+        return (best.artworkUrl512 || best.artworkUrl100 || '').replace(/\/100x100bb\.(jpg|png)$/, '/512x512bb.$1');
+      } catch { return null; }
+    }
+
+    async function gameCoverOpaque(title){
+      // Manual override (forced URL) — verify it loads before using
+      const ovr = GAME_COVER_OVERRIDES[title];
+      if (ovr && typeof ovr === 'string') {
+        if (await imageLoads(ovr)) return ovr;
+      }
+      const allowLogo = !!(ovr && ovr.logo);
+
+      // === Premier essai : iTunes (rapide, opaque, fiable) ===
+      const itu = await itunesGameCover(title);
+      if (itu && await imageLoads(itu)) return itu;
+
+      // === Fallback : Wikidata (plus lent, plus de couverture) ===
+      const qid = await wikiWikibaseId(title);
+      if (!qid) return null;
+      const props = ['P18', 'P154', 'P2716'];
+      let firstAny = null;
+      for (const p of props){
+        const url = await wikidataImage(qid, [p]);
+        if (!url) continue;
+        if (!firstAny) firstAny = url;
+        // SVG : always transparent. If not allowed → only used as last-resort fallback.
+        if (/\.svg(\?|$)/i.test(url) && !allowLogo) continue;
+        const transparent = await imageHasTransparency(url);
+        if (!transparent) return url;
+      }
+      // No opaque image found — fall back to whatever we have (even transparent)
+      return firstAny;
+    }
+
+    async function fetchSuggCover(kind, title){
+      const k = kind + ':' + title;
+      if (_suggCoverCache.has(k)) return _suggCoverCache.get(k);
+      let cover = null;
+      try {
+        if (kind === 'anime') {
+          const r = await searchAnime(title);
+          cover = (r && r[0] && r[0].cover) || null;
+          if (!cover) cover = await wikidataCover(title, ['P154', 'P18']);
+          if (!cover) cover = await wikidataCover(title + ' (anime)', ['P154', 'P18']);
+        } else if (kind === 'game') {
+          // Try opaque cover first (skip transparent / SVG)
+          cover = await gameCoverOpaque(title);
+          if (!cover) cover = await gameCoverOpaque(title + ' (video game)');
+          // Fallback REST thumbnail if nothing opaque found
+          if (!cover) cover = await wikiPageSummary(title);
+        } else if (kind === 'film') {
+          // For known anime titles, prefer Jikan (much better artwork than Wikipedia)
+          if (ANIME_TITLES.has(title)) {
+            const r = await searchAnime(title);
+            cover = (r && r[0] && r[0].cover) || null;
+            if (!cover) {
+              const r2 = await searchAnime(title + ' anime');
+              cover = (r2 && r2[0] && r2[0].cover) || null;
+            }
+            if (!cover) cover = await wikidataCover(title + ' (anime)', ['P18', 'P154']);
+            if (!cover) cover = await wikidataCover(title, ['P18', 'P154']);
+          } else {
+            // Real films / TV series : Wikipedia/Wikidata first
+            cover = await wikidataCover(title, ['P18', 'P154']);
+            if (!cover) cover = await wikidataCover(title + ' (film)', ['P18', 'P154']);
+            if (!cover) cover = await wikidataCover(title + ' (TV series)', ['P18', 'P154']);
+            if (!cover) cover = await wikiPageSummary(title);
+            // Last resort : maybe it's actually an anime we don't know about
+            if (!cover) {
+              const r = await searchAnime(title);
+              cover = (r && r[0] && r[0].cover) || null;
+            }
+          }
+        }
+      } catch {}
+      _suggCoverCache.set(k, cover);
+      persistCoverCache();
+      return cover;
+    }
+    function curatedMatches(query, kind, limit){
+      const arr = ORB_SUGGESTIONS[kind] || [];
+      const q = (query || '').toLowerCase().trim();
+      if (!q) return arr.slice(0, limit);
+      const starts = [], contains = [];
+      for (const t of arr) {
+        const lt = t.toLowerCase();
+        if (lt.startsWith(q)) starts.push(t);
+        else if (lt.includes(q)) contains.push(t);
+        if (starts.length + contains.length >= limit + 4) break;
+      }
+      return starts.concat(contains).slice(0, limit);
+    }
+
+    /* Live search dropdown — kind-aware (Spotify / Jikan / Wikipedia) */
+    /* Render the suggestions panel from a normalized results array.
+       Items pending cover are dimmed and labelled "...". A click on an item
+       ensures a cover is fetched before adding — no cover = no bulle. */
+    async function ensureCoverThenAdd(r, kind){
+      let cover = r.cover;
+      if (!cover && (kind === 'game' || kind === 'film' || kind === 'anime')) {
+        cover = await fetchSuggCover(kind, r.orb.title);
+      }
+      if (!cover) {
+        showToast('⚠️', 'Pas d\'image trouvée', 'Choisis un autre titre');
+        return;
+      }
+      r.cover = cover; r.orb.cover = cover;
+      document.getElementById('accOrbInput').value = r.orb.title;
+      addOrb(r.orb);
+    }
+
+    function renderOrbSugg(results, kind){
+      const sugg = document.getElementById('spotifySugg');
+      const fallbackIcon = {music:'🎵', anime:'📺', game:'🎮', film:'🎬'}[kind] || '✨';
+      sugg.innerHTML = '';
+      results.forEach((r, idx) => {
+        const item = document.createElement('div');
+        item.className = 'sp-item' + (r.cover ? '' : ' sp-item--loading');
+        item.dataset.suggIdx = String(idx);
+        item.innerHTML =
+          (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
+          `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
+          `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
+        item.addEventListener('mousedown', ev => {
+          ev.preventDefault();
+          ensureCoverThenAdd(r, kind);
+        });
+        sugg.appendChild(item);
+      });
+      sugg.classList.add('open');
+    }
+
+    /* Lazy-fetch covers for curated suggestions (game/anime/film). */
+    async function hydrateCuratedCovers(results, kind, requestId){
+      const sugg = document.getElementById('spotifySugg');
+      for (let i = 0; i < results.length; i++) {
+        if (requestId !== _suggReqId) return; // newer query started
+        const r = results[i];
+        if (r.cover) continue;
+        const cover = await fetchSuggCover(kind, r.orb.title);
+        if (requestId !== _suggReqId) return;
+        const item = sugg.querySelector(`.sp-item[data-sugg-idx="${i}"]`);
+        if (cover) {
+          r.cover = cover; r.orb.cover = cover;
+          if (item) {
+            const ph = item.querySelector('.sp-no-cover');
+            if (ph) ph.outerHTML = `<img src="${cover}" alt="">`;
+            item.classList.remove('sp-item--loading');
+          }
+        } else if (item) {
+          // No cover available — visually mark and disable
+          item.classList.remove('sp-item--loading');
+          item.classList.add('sp-item--unavailable');
+        }
+      }
+    }
+
+    let _suggReqId = 0;
+    async function runOrbSearch(val){
+      const reqId = ++_suggReqId;
+      const sugg = document.getElementById('spotifySugg');
+      const kind = selectedOrbKind;
+
+      if (kind === 'music') {
+        if (val.length < 2) { closeSugg(); return; }
+        const tracks = await searchSpotifyTracks(val);
+        if (reqId !== _suggReqId) return;
+        const results = tracks
+          .filter(t => t.previewUrl && t.cover)
+          .map(t => ({ name:t.name, sub:t.artist, cover:t.cover,
+            orb:{kind:'music', title:t.name+' · '+t.artist, previewUrl:t.previewUrl, cover:t.cover}}));
+        if (!results.length) { closeSugg(); return; }
+        renderOrbSugg(results, kind);
+        return;
+      }
+
+      // game / anime / film : ONLY curated list (no Wikipedia/API fallback to avoid
+      // geographic places etc. polluting the suggestions).
+      const titles = curatedMatches(val, kind, 30);
+      const results = titles.map(t => ({
+        name: t, sub: '', cover: null,
+        orb: { kind, title: t, cover: null },
+      }));
+      if (results.length) {
+        renderOrbSugg(results, kind);
+        hydrateCuratedCovers(results, kind, reqId);
+      } else {
+        closeSugg();
+      }
+    }
+
+    document.getElementById('accOrbInput')?.addEventListener('input', e => {
+      _pendingSpotifyOrb = null;
+      const val = e.target.value.trim();
+      clearTimeout(_suggDebounce);
+      _suggDebounce = setTimeout(() => runOrbSearch(val), selectedOrbKind === 'music' ? 320 : 80);
+    });
+    /* Show curated suggestions immediately on focus (empty input → top of list) */
+    document.getElementById('accOrbInput')?.addEventListener('focus', () => {
+      if (selectedOrbKind === 'music') return;
+      const val = document.getElementById('accOrbInput').value.trim();
+      runOrbSearch(val);
+    });
+    document.getElementById('accOrbInput')?.addEventListener('blur', () => setTimeout(closeSugg, 200));
+
+    // ---------- Account screen ----------
+    function renderAccount(){
+      // Always reset to Profil tab on (re)entry — previously left tab state would
+      // bleed across screen transitions and look like a render bug.
+      const card = document.querySelector('#screen-account .acc-card');
+      // L'écran compte/paramètres a été retiré (les réglages sont dans l'éditeur).
+      if (!card) return;
+      card.setAttribute('data-current-tab', 'infos');
+      document.querySelectorAll('#accTabs .acc-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'infos'));
+      document.querySelectorAll('#screen-account .acc-tab').forEach(p => { p.hidden = (p.dataset.tab !== 'infos'); });
+      if (typeof refreshBillingUI === 'function') refreshBillingUI();
+      const u = state.user || {};
+      const p = state.profile || {};
+      document.getElementById('accName').textContent = u.displayName || u.email || 'Matefindr user';
+      document.getElementById('accHandle').textContent = u.discordTag ? '@' + u.discordTag : (u.email || '—');
+      const avi = document.getElementById('accAvatar');
+      if (u.avatarUrl) {
+        avi.innerHTML = `<img src="${u.avatarUrl}" alt="${u.displayName || ''}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`;
+        avi.style.background = 'none';
+        avi.style.color = 'transparent';
+        avi.style.fontSize = '0';
+      } else {
+        avi.innerHTML = '';
+        avi.textContent = (u.displayName || u.email || 'T').charAt(0).toUpperCase();
+        avi.style.background = 'linear-gradient(135deg,#FF7EB6,#9146FF)';
+        avi.style.color = '#fff';
+        avi.style.fontSize = '';
+      }
+      // Sync l'avatar visible dans le hero du nouveau layout
+      if (typeof refreshHeroAvatar === 'function') refreshHeroAvatar();
+      document.getElementById('accGender').textContent  = ({ il:'Il', elle:'Elle', autre:'Préciser / Autre', male:'Il', female:'Elle', nonbinary:'Iel', other:'Autre' }[p.gender] || '—');
+      const _accAgeEl = document.getElementById('accAge');
+      const _ccAcc = (p.country && /^[A-Z]{2}$/i.test(p.country)) ? p.country.toUpperCase() : null;
+      _accAgeEl.innerHTML = (p.age ? p.age : '—') + (_ccAcc ? `  <img src="https://flagcdn.com/${_ccAcc.toLowerCase()}.svg" alt="${_ccAcc}" style="width:22px;height:16px;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-left:4px">` : (p.countryFlag ? '  ' + p.countryFlag : ''));
+      const vol = typeof u.musicVolume === 'number' ? u.musicVolume : DEFAULT_MUSIC_VOL;
+      const volSlider = document.getElementById('musicVolume');
+      if (volSlider) { volSlider.value = Math.round(vol * 100); document.getElementById('musicVolVal').textContent = Math.round(vol * 100) + '%'; }
+      if (typeof window.__swipeVolRefresh === 'function') window.__swipeVolRefresh();
+      const startSec = typeof u.musicStartTime === 'number' ? u.musicStartTime : 0;
+      const startSlider = document.getElementById('musicStartTime');
+      if (startSlider) { startSlider.value = startSec; document.getElementById('musicStartVal').textContent = startSec + 's'; }
+      document.getElementById('accPseudo').value  = u.displayName || '';
+      document.getElementById('accBio').value     = p.bio || '';
+      document.getElementById('accLookSel').value = p.looking || 'game';
+      renderUserOrbs();
+      refreshBoostUI();
+      if (typeof window.__refreshBannerPrev === 'function') window.__refreshBannerPrev();
+      if (typeof window.__refreshDecoPicker === 'function') window.__refreshDecoPicker();
+      if (typeof window.__hydrateDiscordNotifs === 'function') window.__hydrateDiscordNotifs();
+      // Hydrate color wheels from state
+      const cw1 = document.getElementById('accProfileColor');
+      const cw2 = document.getElementById('accProfileColor2');
+      if (cw1) cw1.value = (u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)) ? u.profileColor : '#36393F';
+      if (cw2) cw2.value = (u.profileColor2 && /^#[0-9a-f]{6}$/i.test(u.profileColor2)) ? u.profileColor2 : '#2F3136';
+      // Update "Mes bulles" CTA counter
+      if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
+      const s = u.socials || {};
+      document.getElementById('socIg').value = s.instagram || '';
+      document.getElementById('socTt').value = s.tiktok    || '';
+      document.getElementById('socSp').value = s.spotify   || '';
+      [['Ig','instagram'],['Tt','tiktok'],['Sp','spotify']].forEach(([k,key]) => {
+        const btn = document.getElementById('soc' + k + 'Btn');
+        const has = !!(s[key]);
+        btn.textContent = has ? tx('connected') : tx('connect');
+        btn.classList.toggle('connected', has);
+      });
+      const cur = (document.documentElement.lang || 'fr').toUpperCase();
+      document.querySelectorAll('#accLangs button').forEach(b => b.classList.toggle('active', b.dataset.val === cur));
+      refreshAccountPreview();
+      // Reset dirty-state snapshot after fresh render
+      if (typeof window.__resetSaveSnapshot === 'function') window.__resetSaveSnapshot();
+    }
+    function refreshAccountPreview(){
+      const wrap = document.getElementById('accPreview');
+      if (!wrap) return;
+      // Sync transient form values into state so buildUserProfile picks them up
+      const pseudoEl = document.getElementById('accPseudo');
+      const bioEl    = document.getElementById('accBio');
+      state.user = state.user || {};
+      state.profile = state.profile || {};
+      if (pseudoEl && pseudoEl.value.trim()) state.user.displayName = pseudoEl.value.trim();
+      if (bioEl) state.profile.bio = bioEl.value.trim();
+      const myP = (typeof buildUserProfile === 'function') ? buildUserProfile() : null;
+      if (!myP) return;
+      // Render a non-draggable mini swipe-card
+      wrap.innerHTML = '';
+      const card = buildCard(myP, false);
+      // Strip the "background card" styling (opacity, scale, etc.)
+      card.style.cssText += ';position:relative !important;inset:auto !important;opacity:1 !important;transform:none !important;cursor:default !important;pointer-events:auto';
+      card.classList.add('preview-mode');
+      wrap.appendChild(card);
+    }
+    ['accPseudo','accBio','accLookSel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input',  refreshAccountPreview);
+      el.addEventListener('change', refreshAccountPreview);
+    });
+    /* Aperçu : ouvre le swipe sur SA PROPRE carte (bulles + GIFs + fond rendus en vrai),
+       en MODE APERÇU → uniquement MA carte, AUCUN swipe, un seul bouton "Quitter l'aperçu". */
+    function enterPreviewMode(){
+      _previewMode = true;
+      document.body.setAttribute('data-preview', 'true');
+      deckIdx = 0;
+      if (typeof setScreen === 'function') setScreen('swipe');
+    }
+    // Bouton legacy de l'ancien écran compte ; le vrai déclencheur est le retour de
+    // l'éditeur avec #preview (géré dans handleEditorReturn plus bas).
+    document.getElementById('accPreviewFull')?.addEventListener('click', enterPreviewMode);
+    document.getElementById('previewExitBtn')?.addEventListener('click', () => {
+      _previewMode = false;
+      document.body.removeAttribute('data-preview');
+      if (_previewFromEditor) {
+        // Aperçu ouvert depuis l'éditeur → "Quitter" doit y retourner, pas au hub.
+        _previewFromEditor = false;
+        location.href = 'editor.html';
+        return;
+      }
+      // Quitter l'aperçu → retour au swipe (le hub), pas aux Paramètres.
+      if (typeof setScreen === 'function') setScreen('swipe');
+    });
+    // Pseudo → met à jour le titre du header en live
+    document.getElementById('accPseudo')?.addEventListener('input', (e) => {
+      const v = e.target.value.trim();
+      if (v) document.getElementById('accName').textContent = v;
+    });
+    // Social connect buttons
+    function bindSocial(btnId, inputId, key){
+      const btn = document.getElementById(btnId), input = document.getElementById(inputId);
+      if (!btn || !input) return;
+      btn.addEventListener('click', () => {
+        const v = input.value.trim().replace(/^@/, '');
+        state.user = state.user || {};
+        state.user.socials = state.user.socials || {};
+        if (state.user.socials[key]) {
+          delete state.user.socials[key];
+          input.value = '';
+          btn.textContent = tx('connect');
+          btn.classList.remove('connected');
+        } else if (v) {
+          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
+          state.user.socials[key] = v;
+          btn.textContent = tx('connected');
+          btn.classList.add('connected');
+        }
+        save();
+        renderUserOrbs();
+      });
+    }
+    bindSocial('socIgBtn', 'socIg', 'instagram');
+    bindSocial('socTtBtn', 'socTt', 'tiktok');
+    bindSocial('socSpBtn', 'socSp', 'spotify');
+
+    /* ===== Boost: Fake Nitro toggle ===== */
+    /* Account tabs */
+    document.querySelectorAll('#accTabs .acc-tab-btn').forEach(b => {
+      b.addEventListener('click', () => {
+        document.querySelectorAll('#accTabs .acc-tab-btn').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        const t = b.dataset.tab;
+        document.querySelectorAll('#screen-account .acc-tab').forEach(p => {
+          p.hidden = (p.dataset.tab !== t);
+        });
+        // Track current tab on acc-card for identity panel visibility
+        const card = document.querySelector('#screen-account .acc-card');
+        if (card) card.setAttribute('data-current-tab', t);
+      });
+    });
+
+    function _toggleBoostBannerField(show){
+      const f = document.getElementById('boostBannerField');
+      if (f) f.hidden = !show;
+      const d = document.getElementById('boostDiscordDecoField');
+      if (d) d.hidden = !show;
+      const panel = document.getElementById('fnPanel');
+      if (panel) panel.classList.toggle('is-on', !!show);  // glow + révèle le corps du panneau
+    }
+    document.getElementById('boostFakeNitro')?.addEventListener('change', e => {
+      state.user = state.user || {};
+      state.user.fakeNitro = e.target.checked;
+      save();
+      _toggleBoostBannerField(e.target.checked);  // affiche/masque Bannière + Déco d'avatar
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+      if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+      showToast('👑', e.target.checked ? 'Fake Nitro activé' : 'Fake Nitro désactivé', 'Bannière + déco d\'avatar');
+    });
+    // Init banner visibility from state on load
+    setTimeout(() => {
+      const tg = document.getElementById('boostFakeNitro');
+      _toggleBoostBannerField(!!(tg && tg.checked));
+    }, 0);
+
+    /* ===== Boost: afficher / masquer le badge Boost sur le pseudo ===== */
+    const _boostShowNameTg = document.getElementById('boostShowName');
+    if (_boostShowNameTg) _boostShowNameTg.addEventListener('change', e => {
+      if (!state.user || !state.user.boost) { e.target.checked = true; openBoostModal(); return; }
+      state.user.boostShowName = e.target.checked;
+      save();
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+      if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+      showToast('👑', e.target.checked ? 'Badge Boost affiché' : 'Badge Boost masqué', 'Apparence de ton pseudo');
+    });
+
+    /* ===== Boost: Fond d'écran personnalisé ===== */
+    function ensureCustomBgLayer(){
+      let l = document.getElementById('customBgLayer');
+      if (!l) { l = document.createElement('div'); l.id = 'customBgLayer'; document.body.insertBefore(l, document.body.firstChild); }
+      return l;
+    }
+    function applyBgChoice(bg){
+      const picker = document.getElementById('bgPicker');
+      const layer = ensureCustomBgLayer();
+      // Fond personnalisé importé (URL Storage) → couche image/vidéo dédiée.
+      if (bg && /^https?:\/\//.test(bg)) {
+        document.body.removeAttribute('data-bg');
+        if (layer._src !== bg) {
+          layer._src = bg; layer.innerHTML = ''; layer.style.backgroundImage = '';
+          if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg)) {
+            const v = document.createElement('video'); v.src = bg; v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true;
+            layer.appendChild(v);
+          } else { layer.style.backgroundImage = `url("${bg}")`; }
+        }
+        layer.classList.add('on');
+        if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.remove('is-active'));
+        return;
+      }
+      // Sinon : preset (via data-bg) → on masque la couche custom.
+      layer.classList.remove('on'); layer.innerHTML = ''; layer.style.backgroundImage = ''; layer._src = '';
+      const v = bg || 'default';
+      if (v === 'default') document.body.removeAttribute('data-bg');
+      else document.body.setAttribute('data-bg', v);
+      if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.toggle('is-active', t.dataset.bg === v));
+    }
+    window.__applyBgChoice = applyBgChoice;
+    (function bindBgPicker(){
+      const picker = document.getElementById('bgPicker');
+      if (!picker) return;
+      picker.querySelectorAll('.bg-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+          const bg = tile.dataset.bg;
+          state.user = state.user || {};
+          state.user.boostBg = bg;
+          save();
+          applyBgChoice(bg);
+          const label = (tile.textContent || '').trim();
+          showToast('🎨', 'Fond mis à jour', label);
+        });
+      });
+    })();
+    // Applique le fond sauvegardé dès le chargement
+    applyBgChoice(state.user && state.user.boostBg);
+
+    /* ===== Boost: Gender filter ===== */
+    document.getElementById('boostGenderFilter')?.addEventListener('change', e => {
+      if (!state.user || !state.user.boost) { e.target.value = 'all'; openBoostModal(); return; }
+      state.user.genderFilter = e.target.value;
+      save();
+      deckIdx = 0;
+    });
+
+    /* ===== Boost: Liked-me list (mock) ===== */
+    // Mocks retirés — passera par Supabase quand la fonctionnalité "Likes recus" sera branchee
+    const LIKED_ME = [];
+    /* Open a liker's full profile in an overlay (Boost only) */
+    function openLikerProfile(p){
+      const overlay = document.getElementById('likerOverlay');
+      const wrap = document.getElementById('likerCardWrap');
+      if (!overlay || !wrap) return;
+      // Profil COMPLET : les entrées de la liste des likes ne portent qu'un
+      // sous-ensemble + le vrai profil dans _full. On part du profil complet
+      // (bio, orbes, bannière, connexions, GIFs…) si dispo, sinon des champs
+      // de surface + des valeurs par défaut.
+      const f = (p && p._full) ? p._full : p;
+      const profileObj = {
+        name: f.name || p.name,
+        tag: f.tag || p.tag,
+        age: f.age || p.age || '',
+        gender: f.gender || p.gender || '',
+        country: f.country || p.country || '',
+        countryFlag: f.countryFlag || p.countryFlag || '',
+        looking: f.looking || p.looking || 'game',
+        status: f.status || p.status || 'online',
+        nitro: !!f.nitro,
+        boost: !!f.boost,
+        nameColor: f.nameColor || null,
+        showBoostName: f.showBoostName,
+        joinedOn: f.joinedOn || 'récemment',
+        activity: f.activity || { type:'game', title:'Matefindr', sub:'Vient de te liker' },
+        games: f.games || [],
+        bio: f.bio || 'Vient de liker ton profil. Réponds vite ?',
+        common: f.common || { friends:0, servers:0 },
+        c1: f.c1 || p.c1, c2: f.c2 || p.c2,
+        profileColor: f.profileColor, profileColor2: f.profileColor2,
+        initial: f.initial || p.initial,
+        avatarUrl: f.avatarUrl || p.avatarUrl || null,
+        avatarPos: f.avatarPos || null,
+        bannerUrl: f.bannerUrl || p.bannerUrl || null,
+        decorationUrl: f.decorationUrl || p.decorationUrl || null,
+        orbs: f.orbs || p.orbs || [],
+        gifs: f.gifs || [],
+        bg: f.bg || null,
+        connections: f.connections || {},
+        publicFlags: f.publicFlags || 0,
+        premiumType: f.premiumType || 0,
+        socials: f.socials || {},
+        profileVoice: f.profileVoice || null,
+        isMe: false,
+      };
+      wrap.innerHTML = '';
+      const card = buildCard(profileObj, false);
+      wrap.appendChild(card);
+      overlay.setAttribute('data-show', 'true');
+    }
+    (function bindLikerOverlay(){
+      const overlay = document.getElementById('likerOverlay');
+      if (!overlay) return;
+      const close = () => overlay.setAttribute('data-show', 'false');
+      document.getElementById('likerClose')?.addEventListener('click', close);
+      document.getElementById('likerBackdrop')?.addEventListener('click', close);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.getAttribute('data-show') === 'true') close();
+      });
+    })();
+
+    function renderLikedMe(){
+      const list = document.getElementById('likedList');
+      list.innerHTML = '';
+      const unlocked = !!(state.user && state.user.boost);
+      const likers = LIKED_ME || [];
+
+      if (likers.length === 0) {
+        // No likes yet : simple message
+        const empty = document.createElement('div');
+        empty.className = 'liked-empty';
+        empty.innerHTML = `
+          <p>Personne ne t'a encore liké en secret.</p>
+          <p style="color:#72767d;font-size:12.5px">Continue à swiper pour augmenter tes chances ✨</p>
+        `;
+        list.appendChild(empty);
+        return;
+      }
+
+      // List of likers — photo always visible on the LEFT, info blurred for non-boost
+      // (revealed on hover). Boost users : click info area to OPEN profile, click ❤️ to match, click ✕ to reject.
+      likers.forEach((p, idx) => {
+        const it = document.createElement('div');
+        it.className = 'liked-item' + (unlocked ? ' liked-item--clickable' : ' liked-item--locked');
+        it.dataset.idx = String(idx);
+        it.innerHTML =
+          `<div class="lavi" style="background:linear-gradient(135deg,${p.c1},${p.c2})">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="" loading="lazy">` : p.initial}</div>` +
+          `<div class="li-info">
+             <b class="${unlocked ? '' : 'li-blur'}">${escapeHtmlMini(p.name)} · ${p.age}</b>
+             <small class="${unlocked ? '' : 'li-blur'}">@${escapeHtmlMini(p.tag)}</small>
+           </div>` +
+          (unlocked ? `
+            <button type="button" class="li-action li-act-heart" title="Like en retour">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.3-9.3C1 8.3 3 4.5 6.7 4.5c1.9 0 3.5 1 4.3 2.4l1 1.7 1-1.7C13.8 5.5 15.4 4.5 17.3 4.5 21 4.5 23 8.3 21.3 11.7 19 16.5 12 21 12 21Z"/></svg>
+            </button>
+            <button type="button" class="li-action li-act-x" title="Supprimer ce like">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></svg>
+            </button>
+          ` : '');
+        if (unlocked) {
+          // Click on the avatar/info area → open the full profile overlay
+          const heartBtn = it.querySelector('.li-act-heart');
+          const xBtn = it.querySelector('.li-act-x');
+          it.querySelector('.lavi').addEventListener('click', (e) => { e.stopPropagation(); openLikerProfile(p); });
+          it.querySelector('.li-info').addEventListener('click', (e) => { e.stopPropagation(); openLikerProfile(p); });
+          heartBtn.addEventListener('click', (e) => { e.stopPropagation(); createMatchFromLiker(p); });
+          xBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const i = LIKED_ME.findIndex(x => x.tag === p.tag);
+            if (i >= 0) LIKED_ME.splice(i, 1);
+            // Réponse (rejet) → ce liker ne doit JAMAIS revenir, même si le delete DB échoue.
+            dismissLiker(p.uid);
+            renderLikedMe();
+            if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
+            // Supprime le like en DB pour qu'il ne réapparaisse pas au prochain refresh.
+            try {
+              if (window.__supa && p.uid) {
+                const { data:{ session } } = await window.__supa.auth.getSession();
+                if (session) await window.__supa.from('likes').delete().eq('liker_id', p.uid).eq('liked_id', session.user.id);
+              }
+            } catch(_){}
+          });
+        }
+        list.appendChild(it);
+      });
+
+      if (!unlocked) {
+        // Paywall CTA at the bottom : text + boost button (no avatars row)
+        const cta = document.createElement('div');
+        cta.className = 'liked-paywall';
+        cta.innerHTML = `
+          <p class="lp-text">Pour voir qui t'as liké, passe à <b>Matefindr Boost</b> ✨</p>
+          <button type="button" class="acc-btn acc-btn--primary lp-cta" id="likedPaywallCta">Découvrir Boost</button>
+        `;
+        list.appendChild(cta);
+        const cta2 = list.querySelector('#likedPaywallCta');
+        if (cta2) cta2.addEventListener('click', () => {
+          document.getElementById('likedPanel').setAttribute('data-open','false');
+          if (typeof openBoostModal === 'function') openBoostModal();
+        });
+      }
+    }
+    document.getElementById('likedClose')?.addEventListener('click', () => {
+      document.getElementById('likedPanel').setAttribute('data-open','false');
+    });
+
+    /* ===== Boost: Swipe ambient music ===== */
+    let _smDebounce = null;
+    let _swipeMusicAudio = null;
+    function renderSwipeMusicCurrent(){
+      const box = document.getElementById('swipeMusicCurrent');
+      if (!box) return;
+      const sm = state.user && state.user.swipeMusic;
+      if (!sm) { box.hidden = true; box.innerHTML = ''; return; }
+      box.hidden = false;
+      box.innerHTML =
+        (sm.cover ? `<img src="${sm.cover}" alt="" loading="lazy" decoding="async">` : '') +
+        `<div class="smc-info"><b>${escapeHtmlMini(sm.title)}</b><small>${escapeHtmlMini(sm.artist || '')}</small></div>` +
+        `<button type="button" id="smcRemove">Retirer</button>`;
+      document.getElementById('smcRemove')?.addEventListener('click', () => {
+        state.user.swipeMusic = null;
+        save();
+        renderSwipeMusicCurrent();
+        stopSwipeMusic();
+      });
+    }
+    document.getElementById('swipeMusicInput')?.addEventListener('input', e => {
+      const val = e.target.value.trim();
+      const sugg = document.getElementById('swipeMusicSugg');
+      if (val.length < 2) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+      clearTimeout(_smDebounce);
+      _smDebounce = setTimeout(async () => {
+        try {
+          const allResults = await searchSpotifyTracks(val);
+          const results = allResults.filter(r => r.previewUrl);
+          if (!results.length) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+          sugg.innerHTML = '';
+          results.forEach(r => {
+            const it = document.createElement('div');
+            it.className = 'sp-item';
+            it.innerHTML =
+              (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : '<div class="sp-no-cover"></div>') +
+              `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
+              `<div class="sp-artist">${escapeHtmlMini(r.artist)}</div></div>`;
+            it.addEventListener('mousedown', ev => {
+              ev.preventDefault();
+              if (!state.user || !state.user.boost) { openBoostModal(); return; }
+              state.user.swipeMusic = { title: r.name+' · '+r.artist, artist: r.artist, previewUrl: r.previewUrl, cover: r.cover };
+              save();
+              document.getElementById('swipeMusicInput').value = '';
+              sugg.innerHTML=''; sugg.classList.remove('open');
+              renderSwipeMusicCurrent();
+              showToast('🎵', 'Musique d\'ambiance définie', r.name);
+            });
+            sugg.appendChild(it);
+          });
+          sugg.classList.add('open');
+        } catch(_){}
+      }, 320);
+    });
+    document.getElementById('swipeMusicInput')?.addEventListener('blur', () => setTimeout(() => {
+      const s = document.getElementById('swipeMusicSugg');
+      s.innerHTML=''; s.classList.remove('open');
+    }, 200));
+
+    async function startSwipeMusic(){
+      const sm = state.user && state.user.swipeMusic;
+      if (!sm) return;
+      if (_swipeMusicAudio) return;
+      if (!sm.previewUrl) {
+        const parts = (sm.title || '').split(' · ');
+        const itu = await itunesPreview(sm.artist || parts[1] || '', parts[0] || sm.title || '');
+        if (!itu) { showToast('🎵', sm.title || 'Musique', 'Pas de preview disponible'); return; }
+        sm.previewUrl = itu; save();
+      }
+      _swipeMusicAudio = new Audio(sm.previewUrl);
+      _swipeMusicAudio.loop = true;
+      _swipeMusicAudio.volume = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : 0.35;
+      _swipeMusicAudio.play().catch(() => {});
+      const box = document.getElementById('swipeMusic');
+      document.getElementById('smTitle').textContent = sm.title;
+      document.getElementById('smArtist').textContent = sm.artist || '';
+      document.getElementById('smCover').style.backgroundImage = sm.cover ? `url('${sm.cover}')` : '';
+      document.getElementById('smCover').classList.remove('is-paused');
+      document.getElementById('smIcoPlay').style.display = 'none';
+      document.getElementById('smIcoPause').style.display = '';
+      box.setAttribute('data-show', 'true');
+    }
+    function stopSwipeMusic(){
+      if (_swipeMusicAudio) { _swipeMusicAudio.pause(); _swipeMusicAudio = null; }
+      const box = document.getElementById('swipeMusic');
+      if (box) box.setAttribute('data-show', 'false');
+    }
+    document.getElementById('smToggle')?.addEventListener('click', () => {
+      if (!_swipeMusicAudio) return;
+      if (_swipeMusicAudio.paused) {
+        _swipeMusicAudio.play().catch(()=>{});
+        document.getElementById('smCover').classList.remove('is-paused');
+        document.getElementById('smIcoPlay').style.display = 'none';
+        document.getElementById('smIcoPause').style.display = '';
+      } else {
+        _swipeMusicAudio.pause();
+        document.getElementById('smCover').classList.add('is-paused');
+        document.getElementById('smIcoPlay').style.display = '';
+        document.getElementById('smIcoPause').style.display = 'none';
+      }
+    });
+
+    /* ===== Boost: GIFs (Giphy) ===== */
+    const GIPHY_KEY = 'XQIOH50ArLIvqYv8hK8BxmDB2QLqnnZ9';
+    const MAX_GIFS = 10;
+    let _gifDebounce = null;
+
+    async function searchGiphy(query){
+      try {
+        const url = 'https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_KEY +
+          '&q=' + encodeURIComponent(query) + '&limit=50&rating=pg-13&bundle=messaging_non_clips';
+        const resp = await fetch(url);
+        const d = await resp.json();
+        if (d.meta?.status && d.meta.status !== 200) {
+          showToast('⚠️', 'Clé Giphy invalide', 'Crée la tienne sur developers.giphy.com');
+          return [];
+        }
+        return (d.data || []).map(g => ({
+          preview: g.images?.fixed_height_small?.url || g.images?.fixed_width_small?.url,
+          full:    g.images?.fixed_height?.url || g.images?.original?.url,
+        })).filter(g => g.preview && g.full);
+      } catch(_){ return []; }
+    }
+
+    function refreshGifCounter(){
+      const n = ((state.user && state.user.gifs) || []).length;
+      const pill = document.getElementById('gifCounterPill');
+      if (pill) pill.textContent = n + '/' + MAX_GIFS;
+      const ctaC = document.getElementById('accGifsCtaCount');
+      if (ctaC) ctaC.textContent = n + ' / ' + MAX_GIFS;
+    }
+
+    function renderGifStage(){
+      const stage = document.getElementById('gifStage');
+      if (!stage) return;
+      stage.querySelectorAll('.gif-item').forEach(n => n.remove());
+      const gifs = (state.user && state.user.gifs) || [];
+      gifs.forEach((g, i) => {
+        const item = document.createElement('div');
+        item.className = 'gif-item';
+        item.style.left = g.x + '%';
+        item.style.top  = g.y + '%';
+        item.style.transform = 'translate(-50%,-50%)';
+        item.innerHTML = `<img src="${g.preview}" alt=""><button type="button" class="gif-del" aria-label="Supprimer">×</button>`;
+        item.querySelector('.gif-del').addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          state.user.gifs.splice(i, 1);
+          save();
+          renderGifStage();
+          refreshGifCounter();
+        });
+        attachGifDrag(item, i, stage);
+        stage.appendChild(item);
+      });
+      refreshGifCounter();
+    }
+
+    function attachGifDrag(item, idx, stage){
+      let dragging = false;
+      const onDown = (e) => {
+        if (e.target.classList.contains('gif-del')) return;
+        dragging = true;
+        e.preventDefault();
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive:false });
+        document.addEventListener('touchend', onUp);
+      };
+      const onMove = (e) => {
+        if (!dragging) return;
+        const p = e.touches ? e.touches[0] : e;
+        const rect = stage.getBoundingClientRect();
+        const x = Math.max(4, Math.min(96, ((p.clientX - rect.left) / rect.width) * 100));
+        const y = Math.max(4, Math.min(96, ((p.clientY - rect.top) / rect.height) * 100));
+        item.style.left = x + '%';
+        item.style.top  = y + '%';
+        if (state.user && state.user.gifs && state.user.gifs[idx]) {
+          state.user.gifs[idx].x = x;
+          state.user.gifs[idx].y = y;
+        }
+      };
+      const onUp = () => {
+        if (!dragging) return;
+        dragging = false;
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        save();
+      };
+      item.addEventListener('mousedown', onDown);
+      item.addEventListener('touchstart', onDown, { passive:false });
+    }
+
+    document.getElementById('gifInput')?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const sugg = document.getElementById('gifSugg');
+      if (val.length < 2) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+      clearTimeout(_gifDebounce);
+      _gifDebounce = setTimeout(async () => {
+        const results = await searchGiphy(val);
+        if (!results.length) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+        sugg.innerHTML = '';
+        sugg.style.display = 'grid';
+        sugg.style.gridTemplateColumns = 'repeat(3,1fr)';
+        sugg.style.gap = '6px';
+        sugg.style.padding = '8px';
+        results.forEach(r => {
+          const it = document.createElement('div');
+          it.style.cssText = 'cursor:pointer;border-radius:8px;overflow:hidden;aspect-ratio:1;background:#000';
+          it.innerHTML = `<img src="${r.preview}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
+          it.addEventListener('mousedown', (ev) => {
+            ev.preventDefault();
+            state.user = state.user || {};
+            state.user.gifs = state.user.gifs || [];
+            if (state.user.gifs.length >= MAX_GIFS) { showToast('🎞️', 'Limite atteinte', MAX_GIFS + ' GIFs max'); return; }
+            state.user.gifs.push({ preview:r.preview, full:r.full, x:-30, y:50, w:34, rot:0 });
+            save();
+            // Re-render dans l'aperçu pour montrer le GIF placé à gauche
+            const o2 = document.getElementById('swipeGifsBg'); if (o2) o2.remove();
+            document.getElementById('gifInput').value = '';
+            sugg.innerHTML=''; sugg.classList.remove('open');
+            renderGifStage();
+            showToast('🎞️', 'GIF ajouté', 'Fais-le glisser pour le positionner');
+          });
+          sugg.appendChild(it);
+        });
+        sugg.classList.add('open');
+      }, 320);
+    });
+    document.getElementById('gifInput')?.addEventListener('blur', () => setTimeout(() => {
+      const s = document.getElementById('gifSugg');
+      s.innerHTML=''; s.classList.remove('open');
+    }, 200));
+
+    /* ===== GIF edit overlay (drag + redimensionnement + rotation, comme l'éditeur de bulles) ===== */
+    const GIF_W_MIN = 12, GIF_W_MAX = 75; // taille raisonnable (% largeur carte)
+    /* Affiche les BULLES en read-only (contexte) autour de la carte d'un éditeur */
+    function renderContextOrbs(wrapEl){
+      if (!wrapEl) return;
+      [...wrapEl.querySelectorAll('.ctx-orb')].forEach(n => n.remove());
+      const orbs = (state.profile && state.profile.userOrbs) || [];
+      if (!orbs.length || typeof orbRelLayout !== 'function') return;
+      const { rel } = orbRelLayout(orbs, false);
+      orbs.forEach(o => {
+        const r = rel.get(o); if (!r) return;
+        const el = document.createElement('div');
+        el.className = 'ctx-orb';
+        el.style.cssText = `position:absolute;width:58px;height:58px;border-radius:50%;left:${(50+r.rx*100).toFixed(2)}%;top:${(50+r.ry*100).toFixed(2)}%;transform:translate(-50%,-50%);pointer-events:none;z-index:6;overflow:hidden;border:2px solid rgba(255,255,255,.55);box-shadow:0 6px 16px rgba(0,0,0,.55);background:#1c1d22;display:grid;place-items:center;color:#fff`;
+        el.innerHTML = o.cover ? `<img src="${o.cover}" alt="" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:22px">${({music:'🎵',game:'🎮',film:'🎬',anime:'📺',voice:'🎤'}[o.kind]||'🫧')}</span>`;
+        wrapEl.appendChild(el);
+      });
+    }
+    /* Affiche les GIFs en read-only (contexte) sur la carte d'un éditeur (sous les bulles) */
+    function renderContextGifs(wrapEl){
+      if (!wrapEl) return;
+      [...wrapEl.querySelectorAll('.ctx-gif')].forEach(n => n.remove());
+      const gifs = (state.user && state.user.gifs) || [];
+      gifs.forEach(g => {
+        const el = document.createElement('div');
+        el.className = 'ctx-gif';
+        el.style.cssText = `position:absolute;left:${g.x}%;top:${g.y}%;width:${g.w||34}%;transform:translate(-50%,-50%) rotate(${g.rot||0}deg);pointer-events:none;z-index:4;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,.22);box-shadow:0 8px 20px rgba(0,0,0,.5);opacity:.9`;
+        el.innerHTML = `<img src="${g.preview||g.full}" alt="" style="width:100%;height:auto;display:block">`;
+        wrapEl.appendChild(el);
+      });
+    }
+
+    function openGifEditOverlay(){
+      const overlay = document.getElementById('gifEditOverlay');
+      const wrap    = document.getElementById('gefCardWrap');
+      const layer   = document.getElementById('gefGifLayer');
+      if (!overlay || !wrap || !layer) return;
+      const myP = (typeof buildUserProfile === 'function') ? buildUserProfile() : null;
+      [...wrap.querySelectorAll('.swipe-card')].forEach(c => c.remove());
+      if (myP) {
+        const card = buildCard(myP, false);
+        card.style.cssText += ';position:absolute !important;inset:0 !important;opacity:1 !important;transform:none !important;cursor:default !important;pointer-events:none';
+        wrap.insertBefore(card, layer); // carte sous la couche d'édition
+      }
+      overlay.setAttribute('data-show', 'true');
+      const se = document.getElementById('gefSearch'); if (se) se.value = '';
+      const sg = document.getElementById('gefSugg'); if (sg){ sg.innerHTML=''; sg.classList.remove('open'); }
+      requestAnimationFrame(() => { renderGifEditItems(); renderContextOrbs(wrap); }); // montre aussi les bulles
+    }
+    function closeGifEditOverlay(){
+      const overlay = document.getElementById('gifEditOverlay');
+      if (overlay) overlay.setAttribute('data-show', 'false');
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+    }
+    function renderGifEditItems(){
+      const layer = document.getElementById('gefGifLayer');
+      if (!layer) return;
+      layer.innerHTML = '';
+      const gifs = (state.user && state.user.gifs) || [];
+      gifs.forEach((g, i) => layer.appendChild(makeEditGif(g, i, layer)));
+      refreshGifCounter();
+    }
+    function makeEditGif(g, idx, layer){
+      if (typeof g.x !== 'number') g.x = 50;
+      if (typeof g.y !== 'number') g.y = 30;
+      if (typeof g.w !== 'number') g.w = 34;
+      if (typeof g.rot !== 'number') g.rot = 0;
+      const el = document.createElement('div');
+      el.className = 'gef-gif';
+      const apply = () => {
+        el.style.left = g.x + '%';
+        el.style.top  = g.y + '%';
+        el.style.width = g.w + '%';
+        el.style.transform = `translate(-50%,-50%) rotate(${g.rot}deg)`;
+      };
+      apply();
+      el.innerHTML =
+        `<div class="gef-gif-inner"><img src="${g.preview || g.full}" alt="" draggable="false"></div>` +
+        `<button type="button" class="gef-handle gef-del" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>` +
+        `<div class="gef-handle gef-rotate" aria-label="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>` +
+        `<div class="gef-handle gef-resize" aria-label="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>`;
+      const center = () => { const r = el.getBoundingClientRect(); return { x: r.left + r.width/2, y: r.top + r.height/2 }; };
+      // Supprimer
+      const del = el.querySelector('.gef-del');
+      del.addEventListener('pointerdown', e => e.stopPropagation());
+      del.addEventListener('click', e => {
+        e.stopPropagation();
+        (state.user.gifs || []).splice(idx, 1);
+        save(); renderGifEditItems();
+      });
+      // Déplacer (corps)
+      let drag = null;
+      el.addEventListener('pointerdown', e => {
+        if (e.target.closest('.gef-handle')) return;
+        if (e.button !== undefined && e.button !== 0) return;
+        e.preventDefault();
+        try { el.setPointerCapture(e.pointerId); } catch(_){}
+        const lr = layer.getBoundingClientRect();
+        drag = { mx:e.clientX, my:e.clientY, x0:g.x, y0:g.y, lw:lr.width, lh:lr.height };
+        el.classList.add('dragging'); el.style.zIndex = '10';
+      });
+      el.addEventListener('pointermove', e => {
+        if (!drag) return;
+        // GIFs peuvent maintenant être placés en DEHORS de la carte (jusqu'à 60% sur les côtés)
+        g.x = Math.max(-60, Math.min(160, drag.x0 + (e.clientX - drag.mx) / drag.lw * 100));
+        g.y = Math.max(-30, Math.min(130, drag.y0 + (e.clientY - drag.my) / drag.lh * 100));
+        apply();
+      });
+      const endDrag = e => {
+        if (!drag) return; drag = null; el.classList.remove('dragging'); el.style.zIndex='';
+        try{ el.releasePointerCapture(e.pointerId);}catch(_){}
+        save();
+        // Avertissement si le GIF chevauche la carte de profil
+        const half = (g.w || 34) / 2;
+        if (g.x + half > 10 && g.x - half < 90 && g.y + half > 10 && g.y - half < 90 && typeof showToast === 'function') {
+          showToast('⚠️', 'Superposition déconseillée', 'Évite de poser un GIF sur la carte de profil');
+        }
+      };
+      el.addEventListener('pointerup', endDrag);
+      el.addEventListener('pointercancel', endDrag);
+      // Redimensionner (coin vert) — distance centre→pointeur (insensible à la rotation)
+      const rz = el.querySelector('.gef-resize');
+      rz.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        try { rz.setPointerCapture(e.pointerId); } catch(_){}
+        const c = center();
+        const d0 = Math.max(8, Math.hypot(e.clientX - c.x, e.clientY - c.y));
+        const w0 = g.w;
+        const mv = ev => { g.w = Math.max(GIF_W_MIN, Math.min(GIF_W_MAX, w0 * (Math.hypot(ev.clientX - c.x, ev.clientY - c.y) / d0))); apply(); };
+        const up = ev => { rz.removeEventListener('pointermove', mv); rz.removeEventListener('pointerup', up); try{ rz.releasePointerCapture(ev.pointerId);}catch(_){} save(); };
+        rz.addEventListener('pointermove', mv);
+        rz.addEventListener('pointerup', up);
+      });
+      // Rotation (coin bleu) — angle centre→pointeur
+      const ro = el.querySelector('.gef-rotate');
+      ro.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation();
+        try { ro.setPointerCapture(e.pointerId); } catch(_){}
+        const c = center();
+        const a0 = Math.atan2(e.clientY - c.y, e.clientX - c.x) * 180 / Math.PI;
+        const r0 = g.rot;
+        const mv = ev => { const a = Math.atan2(ev.clientY - c.y, ev.clientX - c.x) * 180 / Math.PI; g.rot = Math.round(r0 + (a - a0)); apply(); };
+        const up = ev => { ro.removeEventListener('pointermove', mv); ro.removeEventListener('pointerup', up); try{ ro.releasePointerCapture(ev.pointerId);}catch(_){} save(); };
+        ro.addEventListener('pointermove', mv);
+        ro.addEventListener('pointerup', up);
+      });
+      return el;
+    }
+    // Recherche d'ajout dans l'overlay GIF
+    let _gefDebounce = null;
+    (function(){
+      const se = document.getElementById('gefSearch');
+      if (!se) return;
+      se.addEventListener('input', e => {
+        const val = e.target.value.trim();
+        const sugg = document.getElementById('gefSugg');
+        if (val.length < 2) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+        clearTimeout(_gefDebounce);
+        _gefDebounce = setTimeout(async () => {
+          const results = await searchGiphy(val);
+          if (!results.length) { sugg.innerHTML=''; sugg.classList.remove('open'); return; }
+          sugg.innerHTML = '';
+          results.forEach(r => {
+            const it = document.createElement('div');
+            it.className = 'gef-sg-item';
+            it.innerHTML = `<img src="${r.preview}" alt="">`;
+            it.addEventListener('pointerdown', ev => {
+              ev.preventDefault();
+              state.user = state.user || {};
+              state.user.gifs = state.user.gifs || [];
+              if (state.user.gifs.length >= MAX_GIFS) { showToast('🎞️', 'Limite atteinte', MAX_GIFS + ' GIFs max'); return; }
+              state.user.gifs.push({ preview:r.preview, full:r.full, x:50, y:35, w:34, rot:0 });
+              save();
+              se.value = ''; sugg.innerHTML=''; sugg.classList.remove('open');
+              renderGifEditItems();
+              showToast('🎞️', 'GIF ajouté', 'Déplace · agrandis · oriente');
+            });
+            sugg.appendChild(it);
+          });
+          sugg.classList.add('open');
+        }, 320);
+      });
+      se.addEventListener('blur', () => setTimeout(() => { const s = document.getElementById('gefSugg'); if (s){ s.innerHTML=''; s.classList.remove('open'); } }, 200));
+    })();
+    document.getElementById('gefClose')?.addEventListener('click', closeGifEditOverlay);
+    document.getElementById('gefBackdrop')?.addEventListener('click', closeGifEditOverlay);
+    document.getElementById('accGifsCta')?.addEventListener('click', () => {
+      openGifEditOverlay();
+    });
+
+    /* ===== Boost banner + pricing modal ===== */
+    function refreshBoostUI(){
+      const active = !!(state.user && state.user.boost);
+      // Bannière + formulaires Boost : retirés avec l'écran compte → on no-op s'ils manquent.
+      const banner = document.getElementById('boostBanner');
+      if (banner) {
+        const title = document.getElementById('boostBannerTitle');
+        const sub   = document.getElementById('boostBannerSub');
+        const cta   = document.getElementById('boostBannerCta');
+        banner.classList.toggle('is-active', active);
+        if (active) {
+          const plan = state.user.boostPlan === 'lifetime' ? 'À vie' : 'Mensuel';
+          if (title) title.textContent = 'Matefindr Boost actif';
+          if (sub)   sub.textContent   = plan + ' · 16 bulles, Fake Nitro, filtre H/F…';
+          if (cta)   cta.textContent   = 'Gérer';
+        } else {
+          if (title) title.textContent = 'Passer en Matefindr Boost';
+          if (sub)   sub.textContent   = '16 bulles, Fake Nitro, filtre H/F, likes secrets…';
+          if (cta)   cta.textContent   = 'Découvrir';
+        }
+      }
+      const bmActive = document.getElementById('bmActive');
+      if (bmActive) {
+        document.querySelectorAll('.bm-plan').forEach(b => b.style.opacity = active ? '.45' : '1');
+        bmActive.hidden = !active;
+        const bmp = document.getElementById('bmActivePlan');
+        if (active && bmp) bmp.textContent = '· ' + (state.user.boostPlan === 'lifetime' ? '14,99€ à vie' : '3,79€/mois');
+      }
+      const fn = document.getElementById('boostFakeNitro');
+      if (fn) fn.checked = !!(state.user && state.user.fakeNitro);
+      const _bsn = document.getElementById('boostShowName');
+      if (_bsn) _bsn.checked = !(state.user && state.user.boostShowName === false);
+      if (typeof applyBgChoice === 'function') applyBgChoice(state.user && state.user.boostBg);
+      const gfEl = document.getElementById('boostGenderFilter');
+      if (gfEl) gfEl.value = (state.user && state.user.genderFilter) || 'all';
+      if (typeof renderSwipeMusicCurrent === 'function') renderSwipeMusicCurrent();
+      if (typeof renderGifStage === 'function') renderGifStage();
+      if (typeof renderUserOrbs === 'function') renderUserOrbs();
+    }
+    /* Vérifie l'échéance d'un abonnement MENSUEL (mock, sans backend de paiement) :
+       - période en cours (now < prochain paiement) → rien.
+       - échéance atteinte + résilié → l'abonnement EXPIRE (le Boost dure bien le mois payé, pas plus).
+       - échéance atteinte + actif → renouvellement (+1 mois), comme un vrai prélèvement. */
+    function checkBoostExpiry(){
+      const u = state.user;
+      if (!u || !u.boost || u.boostPlan !== 'monthly' || !u.boostNextPayment) return;
+      const now = Date.now(), due = new Date(u.boostNextPayment).getTime();
+      if (isNaN(due) || now < due) return;
+      if (u.boostCancelled) {
+        u.boost = false; u.boostPlan = null; u.boostNextPayment = null; u.boostSince = null; u.boostCancelled = false;
+      } else {
+        const d = new Date(due);
+        while (d.getTime() <= now) d.setMonth(d.getMonth() + 1); // rattrape plusieurs mois si besoin
+        u.boostNextPayment = d.toISOString();
+      }
+      save();
+      if (typeof refreshBoostUI === 'function') refreshBoostUI();
+    }
+    window.__checkBoostExpiry = checkBoostExpiry;
+
+    /* Section Abonnement & facturation (onglet Paramètres). */
+    function refreshBillingUI(){
+      checkBoostExpiry();
+      const box = document.getElementById('accBilling');
+      if (!box) return;
+      const u = state.user || {};
+      const fmt = (d) => { try { return new Date(d).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}); } catch(_){ return '—'; } };
+      if (!u.boost) {
+        box.innerHTML = `<div class="bill-row"><span class="bill-k">Formule</span><span class="bill-v">Gratuit</span></div>
+          <div class="bill-row"><span class="bill-k">Statut</span><span class="bill-v">Aucun abonnement actif</span></div>`;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'acc-btn acc-btn--primary'; btn.style.cssText = 'width:100%;margin-top:11px';
+        btn.textContent = 'Passer en Matefindr Boost';
+        btn.onclick = () => { window.location.href = 'checkout.html?plan=monthly'; };
+        box.appendChild(btn);
+        return;
+      }
+      const lifetime = u.boostPlan === 'lifetime';
+      const cancelled = !lifetime && !!u.boostCancelled;
+      box.innerHTML =
+        `<div class="bill-row"><span class="bill-k">Formule</span><span class="bill-v">${lifetime ? 'Boost à vie' : 'Boost mensuel'}</span></div>` +
+        `<div class="bill-row"><span class="bill-k">Prix</span><span class="bill-v">${lifetime ? '14,99€ · paiement unique' : '3,79€ / mois'}</span></div>` +
+        `<div class="bill-row"><span class="bill-k">Abonné depuis</span><span class="bill-v">${u.boostSince ? fmt(u.boostSince) : '—'}</span></div>` +
+        (lifetime
+          ? `<div class="bill-row"><span class="bill-k">Renouvellement</span><span class="bill-v">Aucun — accès à vie</span></div>`
+          : cancelled
+            ? `<div class="bill-row"><span class="bill-k">Statut</span><span class="bill-v" style="color:#FFB66E">Résilié</span></div>
+               <div class="bill-row"><span class="bill-k">Actif jusqu'au</span><span class="bill-v" style="color:#9CF0BD">${u.boostNextPayment ? fmt(u.boostNextPayment) : '—'}</span></div>`
+            : `<div class="bill-row"><span class="bill-k">Prochain paiement</span><span class="bill-v" style="color:#9CF0BD">${u.boostNextPayment ? fmt(u.boostNextPayment) : '—'}</span></div>`);
+      if (!lifetime) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = 'width:100%;margin-top:11px';
+        if (cancelled) {
+          btn.className = 'acc-btn acc-btn--primary';
+          btn.textContent = "Réactiver l'abonnement";
+          btn.onclick = () => {
+            state.user.boostCancelled = false; save();
+            refreshBillingUI();
+            if (typeof showToast === 'function') showToast('✓', 'Abonnement réactivé', 'Le renouvellement reprend');
+          };
+        } else {
+          btn.className = 'acc-btn acc-btn--ghost';
+          btn.textContent = "Résilier l'abonnement";
+          btn.onclick = () => {
+            const until = u.boostNextPayment ? fmt(u.boostNextPayment) : 'la fin de la période';
+            if (!confirm("Résilier ton abonnement Matefindr Boost ?\nTu gardes les avantages jusqu'au " + until + ", puis ton compte repassera en gratuit.")) return;
+            state.user.boostCancelled = true; // on garde boost=true jusqu'à l'échéance
+            save();
+            refreshBillingUI();
+            if (typeof showToast === 'function') showToast('✓', 'Résiliation programmée', 'Actif jusqu\'au ' + until);
+          };
+        }
+        box.appendChild(btn);
+      }
+    }
+    window.__refreshBillingUI = refreshBillingUI;
+    function openBoostModal(){ document.getElementById('boostModal').setAttribute('data-open','true'); refreshBoostUI(); }
+    function closeBoostModal(){ document.getElementById('boostModal').setAttribute('data-open','false'); }
+    document.getElementById('boostBanner')?.addEventListener('click', openBoostModal);
+    document.getElementById('boostModalClose')?.addEventListener('click', closeBoostModal);
+    document.getElementById('boostModalBackdrop')?.addEventListener('click', closeBoostModal);
+    document.querySelectorAll('.bm-plan').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (state.user && state.user.boost) return;
+        // Direction la page de paiement (le Boost est activé après le checkout)
+        window.location.href = 'checkout.html?plan=' + (btn.dataset.plan || 'monthly');
+      });
+    });
+    document.getElementById('bmCancel')?.addEventListener('click', () => {
+      if (!state.user) return;
+      state.user.boost = false;
+      state.user.boostPlan = null;
+      save();
+      refreshBoostUI();
+      showToast('💔', 'Boost annulé', 'Retour à la version gratuite');
+    });
+    // Language toggle in account
+    document.getElementById('accLangs')?.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-val]');
+      if (!b) return;
+      const li = document.querySelector(`#langSwitch .ls-menu li[data-code="${b.dataset.val}"]`);
+      if (li) li.click();
+      else document.documentElement.lang = b.dataset.val.toLowerCase();
+      document.querySelectorAll('#accLangs button').forEach(x => x.classList.toggle('active', x.dataset.val === b.dataset.val));
+      refreshAccountPreview();
+    });
+
+    // Avatar upload — click avatar to pick a file
+    (function bindAvatarUpload(){
+      // Legacy (caché)
+      const av = document.getElementById('accAvatar');
+      const fi = document.getElementById('accAvatarFile');
+      if (av && fi) {
+        av.addEventListener('click', () => fi.click());
+        fi.addEventListener('change', handleFile.bind(null, fi));
+      }
+      // Nouveau hero avatar
+      const fih = document.getElementById('accAvatarFileHero');
+      if (fih) fih.addEventListener('change', handleFile.bind(null, fih));
+      async function handleFile(input, e){
+        const f = e.target.files && e.target.files[0];
+        input.value = '';
+        if (!f) return;
+        try {
+          const blob = await resizeImageFile(f, 512, 0.86);
+          const url = await uploadProfileMedia(blob, 'avatar');
+          if (!url) { showToast('⚠️', 'Échec de l’envoi', 'Connecte-toi et réessaie'); return; }
+          state.user = state.user || {};
+          state.user.avatarUrl = url;
+          save();
+          renderAccount();
+          refreshAccountPreview();
+          refreshHeroAvatar();
+          showToast('📷', 'Photo de profil', 'Mise à jour');
+        } catch(err){
+          console.warn('avatar upload error', err);
+          showToast('⚠️', 'Erreur', 'Image invalide, réessaie');
+        }
+      }
+    })();
+
+    /* Sync l'avatar visible dans le hero avec state.user.avatarUrl */
+    function refreshHeroAvatar(){
+      const circle = document.getElementById('accHeroAvatar');
+      const img = document.getElementById('accHeroAvatarImg');
+      if (!circle || !img) return;
+      const url = (state.user && state.user.avatarUrl) || '';
+      if (url) {
+        img.src = url;
+        circle.setAttribute('data-has-img', 'true');
+      } else {
+        img.removeAttribute('src');
+        circle.removeAttribute('data-has-img');
+      }
+    }
+    window.__refreshHeroAvatar = refreshHeroAvatar;
+
+    // Music volume slider — live update + persistence
+    (function bindMusicVolume(){
+      const sl = document.getElementById('musicVolume');
+      if (!sl) return;
+      sl.addEventListener('input', () => {
+        const v = parseInt(sl.value, 10) / 100;
+        document.getElementById('musicVolVal').textContent = Math.round(v * 100) + '%';
+        if (_swipeMusicAudio) _swipeMusicAudio.volume = v * ENTRY_MUSIC_GAIN;
+        if (_spotifyAudio) _spotifyAudio.volume = v * ENTRY_MUSIC_GAIN;
+        state.user = state.user || {};
+        state.user.musicVolume = v;
+        save();
+      });
+    })();
+
+    // Volume musique — slider rapide sur l'écran swipe (à gauche du FAB cœur)
+    (function bindSwipeVol(){
+      const wrap  = document.getElementById('swipeVol');
+      const range = document.getElementById('swipeVolRange');
+      const ico   = document.getElementById('swipeVolIco');
+      if (!wrap || !range) return;
+      let _preMute = null;
+      const curVol = () => (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
+      // Nb d'ondes sonores selon le volume : <25% = 1, 25–70% = 2, >70% = 3 (0 = muet)
+      function setWaveLevel(v){ wrap.classList.remove('lvl1','lvl2','lvl3'); if (v > 0) wrap.classList.add(v > 0.70 ? 'lvl3' : (v < 0.25 ? 'lvl1' : 'lvl2')); }
+      function apply(v, persistIt){
+        v = Math.max(0, Math.min(1, v));
+        const eff = v * ENTRY_MUSIC_GAIN;
+        if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
+        if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) _spotifyAudio.volume = eff;
+        state.user = state.user || {};
+        state.user.musicVolume = v;
+        range.value = Math.round(v * 100);
+        wrap.classList.toggle('muted', v === 0);
+        setWaveLevel(v);
+        // garde le slider des réglages synchro s'il existe
+        const sl = document.getElementById('musicVolume');
+        if (sl) { sl.value = Math.round(v * 100); const vv = document.getElementById('musicVolVal'); if (vv) vv.textContent = Math.round(v * 100) + '%'; }
+        if (persistIt && typeof save === 'function') save();
+      }
+      range.addEventListener('input', () => apply(parseInt(range.value, 10) / 100, false));
+      range.addEventListener('change', () => { if (typeof save === 'function') save(); });
+      ico && ico.addEventListener('click', () => {
+        const v = curVol();
+        if (v > 0) { _preMute = v; apply(0, true); }
+        else { apply(_preMute || DEFAULT_MUSIC_VOL, true); _preMute = null; }
+      });
+      // Affichage seul (ne réécrit pas le state) — utilisé à l'init et après chargement du profil
+      window.__swipeVolRefresh = () => { const v = curVol(); range.value = Math.round(v * 100); wrap.classList.toggle('muted', v === 0); setWaveLevel(v); };
+      window.__swipeVolRefresh();
+    })();
+
+    // Discord resync button — fetches latest Discord profile and merges into state.user
+    /* ===== Voice memo (profile audio, max 5s, listen + delete only) ===== */
+    (function bindVoiceRecorder(){
+      const fab = document.getElementById('accVoiceFab');
+      const timer = document.getElementById('accVoiceTimer');
+      const lbl = document.getElementById('accVoiceLabel');
+      const preview = document.getElementById('accVoicePreview');
+      const audioEl = document.getElementById('accVoiceAudio');
+      const playBtn = document.getElementById('accVoicePlay');
+      const delBtn = document.getElementById('accVoiceDel');
+      const bar = document.getElementById('accVoiceBar');
+      const timeLbl = document.getElementById('accVoiceTime');
+      if (!fab) return;
+      let mediaRec = null, chunks = [], tickIv = null, secs = 0;
+      const MAX = 5;
+
+      function fmtTime(t){
+        const s = Math.floor(t); return '0:' + (s < 10 ? '0' + s : s);
+      }
+      function renderExisting(){
+        const u = state.user || {};
+        const has = !!u.profileVoice;
+        // Reset recording state
+        fab.setAttribute('data-state', 'idle');
+        timer.textContent = '';
+        if (has) {
+          audioEl.src = u.profileVoice;
+          preview.hidden = false;
+          fab.hidden = false;
+          lbl.textContent = 'Ré-enregistrer le vocal';
+        } else {
+          audioEl.src = '';
+          preview.hidden = true;
+          fab.hidden = false;
+          lbl.textContent = 'Enregistrer un vocal';
+        }
+      }
+      renderExisting();
+      window.__voiceRefresh = renderExisting;
+
+      async function start(){
+        if (!navigator.mediaDevices?.getUserMedia) { alert('Enregistrement non supporté par ce navigateur.'); return; }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          chunks = [];
+          mediaRec = new MediaRecorder(stream);
+          mediaRec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+          mediaRec.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+            const blob = new Blob(chunks, { type: mediaRec.mimeType || 'audio/webm' });
+            const reader = new FileReader();
+            reader.onload = () => {
+              state.user = state.user || {};
+              state.user.profileVoice = reader.result;
+              save();
+              renderExisting();
+            };
+            reader.readAsDataURL(blob);
+            clearInterval(tickIv); tickIv = null; secs = 0;
+          };
+          mediaRec.start();
+          fab.setAttribute('data-state', 'recording');
+          lbl.textContent = 'Enregistrement…';
+          secs = 0;
+          timer.textContent = (MAX - secs) + 's';
+          tickIv = setInterval(() => {
+            secs++;
+            timer.textContent = (MAX - secs) + 's';
+            if (secs >= MAX) stop();
+          }, 1000);
+        } catch (e) {
+          console.warn('mic denied', e);
+          alert('Accès au micro refusé.');
+        }
+      }
+      function stop(){ try { mediaRec?.stop(); } catch {} }
+      fab.addEventListener('click', () => {
+        if (fab.dataset.state === 'recording') stop(); else start();
+      });
+      delBtn.addEventListener('click', () => {
+        try { audioEl.pause(); } catch {}
+        state.user = state.user || {};
+        delete state.user.profileVoice;
+        save();
+        renderExisting();
+      });
+      // Custom player controls
+      playBtn.addEventListener('click', () => {
+        if (audioEl.paused) audioEl.play().catch(()=>{});
+        else audioEl.pause();
+      });
+      audioEl.addEventListener('play',  () => playBtn.setAttribute('data-playing','true'));
+      audioEl.addEventListener('pause', () => playBtn.setAttribute('data-playing','false'));
+      audioEl.addEventListener('ended', () => { playBtn.setAttribute('data-playing','false'); bar.style.width = '0%'; });
+      audioEl.addEventListener('timeupdate', () => {
+        if (!audioEl.duration || !isFinite(audioEl.duration)) return;
+        const p = (audioEl.currentTime / audioEl.duration) * 100;
+        bar.style.width = p + '%';
+        timeLbl.textContent = fmtTime(audioEl.currentTime);
+      });
+      audioEl.addEventListener('loadedmetadata', () => {
+        const dur = isFinite(audioEl.duration) ? audioEl.duration : 5;
+        timeLbl.textContent = fmtTime(dur);
+      });
+    })();
+
+    (function bindDiscordResync(){
+      const btn = document.getElementById('accResyncDiscord');
+      if (!btn) return;
+      const label = document.getElementById('accResyncLabel');
+      const ico   = document.getElementById('accResyncIco');
+      const hint  = document.getElementById('accResyncHint');
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        if (ico) ico.style.animation = 'nitroSpin 1s linear infinite';
+        const oldLabel = label.textContent;
+        label.textContent = 'Synchronisation en cours…';
+
+        let token = null;
+        try {
+          const { data: { session } } = await window.__supa.auth.getSession();
+          token = session?.provider_token;
+        } catch {}
+        if (!token) {
+          const stored = localStorage.getItem('matefindr_discord_token');
+          const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
+          if (stored && (Date.now() - ts) < 7 * 24 * 3600 * 1000) token = stored;
+        }
+
+        if (!token) {
+          // Need to re-login to get a fresh provider_token
+          label.textContent = 'Reconnexion Discord requise…';
+          if (ico) ico.style.animation = '';
+          setTimeout(() => { signInWithDiscord(); }, 800);
+          return;
+        }
+
+        const d = await fetchDiscordProfile(token);
+        if (ico) ico.style.animation = '';
+
+        if (!d) {
+          label.textContent = 'Échec — token expiré ?';
+          if (hint) hint.textContent = 'Reconnecte-toi avec Discord pour rafraîchir tes infos.';
+          setTimeout(() => { btn.disabled = false; label.textContent = oldLabel; }, 2600);
+          return;
+        }
+
+        // Merge fresh Discord data into state.user — Boost user's custom assets are preserved.
+        state.user = state.user || {};
+        const u = state.user;
+        u.discordId    = d.id || u.discordId;
+        if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
+        u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
+        if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+        // Bannière : si l'utilisateur a importé sa propre bannière (bannerCustom), on la garde
+        if (!u.bannerCustom) {
+          u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
+        }
+        // Décoration : si l'utilisateur a choisi une déco custom (decoCustom), on la garde
+        if (!u.decoCustom) {
+          u.decorationUrl = d.avatar_decoration_data?.asset
+            ? discordDecorationUrl(d.avatar_decoration_data.asset)
+            : null;
+        }
+        u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
+        u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
+        u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
+        save();
+        updateChip();
+        renderAccount();
+        refreshMyStatusUI();
+
+        label.textContent = 'Profil Discord à jour ✓';
+        setTimeout(() => { btn.disabled = false; label.textContent = oldLabel; }, 1800);
+      });
+    })();
+
+    // Profile color picker
+    (function bindProfileColor(){
+      const rows = document.querySelectorAll('.acc-color-row[data-target]');
+      if (!rows.length) return;
+      rows.forEach(row => {
+        const key = row.dataset.target; // 'profileColor' or 'profileColor2'
+        const swatches = row.querySelectorAll('.acc-color-swatch');
+        const pickerId = key === 'profileColor' ? 'accProfileColor' : 'accProfileColor2';
+        const picker = document.getElementById(pickerId);
+        function applyActive(val){
+          swatches.forEach(s => s.classList.toggle('active', s.dataset.color === val));
+        }
+        function setColor(val){
+          state.user = state.user || {};
+          state.user[key] = (val === 'discord') ? null : val;
+          save();
+          refreshAccountPreview();
+        }
+        swatches.forEach(s => {
+          s.addEventListener('click', () => {
+            const val = s.dataset.color;
+            applyActive(val);
+            setColor(val);
+          });
+        });
+        if (picker) {
+          picker.addEventListener('input', () => {
+            applyActive(null);
+            setColor(picker.value);
+          });
+        }
+        const stored = (state.user && state.user[key]) || 'discord';
+        applyActive(stored);
+        if (picker && stored && stored !== 'discord' && /^#[0-9a-f]{6}$/i.test(stored)) picker.value = stored;
+      });
+    })();
+
+    /* "Reset Discord" button on the color wheels */
+    (function bindColorReset(){
+      const btn = document.getElementById('accColorReset');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        state.user = state.user || {};
+        // Reset = couleur de base Discord (le gris sombre de l'app)
+        const DISCORD_BASE = '#36393F';
+        const DISCORD_BASE_DARK = '#2F3136';
+        state.user.profileColor  = DISCORD_BASE;
+        state.user.profileColor2 = DISCORD_BASE_DARK;
+        save();
+        const cw1 = document.getElementById('accProfileColor');
+        const cw2 = document.getElementById('accProfileColor2');
+        if (cw1) cw1.value = DISCORD_BASE;
+        if (cw2) cw2.value = DISCORD_BASE_DARK;
+        if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        showToast('↺', 'Couleur Discord appliquée', 'Gris de base');
+      });
+    })();
+
+    /* "Mes bulles" CTA → ouvre l'overlay d'édition des bulles */
+    (function bindBullesCta(){
+      const btn = document.getElementById('accBullesCta');
+      if (!btn) return;
+      function refresh(){
+        const used = (typeof orbsUsed === 'function') ? orbsUsed() : ((state.profile && state.profile.userOrbs) || []).length;
+        const max  = (typeof orbBudget === 'function') ? orbBudget() : 4;
+        const lbl  = document.getElementById('accBullesCtaCount');
+        if (lbl) lbl.textContent = `${used} / ${max}`;
+      }
+      window.__refreshBullesCta = refresh;
+      refresh();
+      btn.addEventListener('click', () => {
+        if (typeof openOrbEditOverlay === 'function') openOrbEditOverlay();
+      });
+    })();
+
+    // Custom banner import — file → data URL → state.user.bannerUrl
+    (function bindBannerImport(){
+      const importBtn = document.getElementById('accBannerImport');
+      const resetBtn  = document.getElementById('accBannerReset');
+      const fileEl    = document.getElementById('accBannerFile');
+      const prev      = document.getElementById('accBannerPrev');
+      if (!importBtn || !fileEl || !prev) return;
+      function refreshPrev(){
+        const url = state.user && state.user.bannerUrl;
+        if (url) {
+          prev.style.backgroundImage = `url('${url}')`;
+          resetBtn.hidden = !(state.user && state.user.bannerCustom);
+        } else {
+          prev.style.backgroundImage = '';
+          resetBtn.hidden = true;
+        }
+      }
+      refreshPrev();
+      window.__refreshBannerPrev = refreshPrev;
+      importBtn.addEventListener('click', () => {
+        fileEl.click();
+      });
+      fileEl.addEventListener('change', async e => {
+        const file = e.target.files && e.target.files[0];
+        fileEl.value = '';
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) {
+          showToast('⚠️', 'Image trop lourde', 'Maximum 20 Mo');
+          return;
+        }
+        try {
+          const blob = await resizeImageFile(file, 1600, 0.82);
+          const url = await uploadProfileMedia(blob, 'banner');
+          if (!url) { showToast('⚠️', 'Échec de l’envoi', 'Connecte-toi et réessaie'); return; }
+          state.user = state.user || {};
+          state.user.bannerUrl = url;
+          state.user.bannerCustom = true;
+          save();
+          refreshPrev();
+          if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+          showToast('🖼️', 'Bannière mise à jour', 'Visible sur ton profil');
+        } catch(err){
+          console.warn('banner upload error', err);
+          showToast('⚠️', 'Erreur', 'Image invalide, réessaie');
+        }
+      });
+      resetBtn.addEventListener('click', async () => {
+        state.user = state.user || {};
+        state.user.bannerUrl = null;
+        state.user.bannerCustom = false;
+        save();
+        // Re-fetch Discord pour récupérer l'URL de la bannière Discord (si l'utilisateur en a une)
+        try { if (typeof window.__autoResyncDiscord === 'function') await window.__autoResyncDiscord(); } catch(_){}
+        refreshPrev();
+        if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        showToast('↩️', 'Bannière réinitialisée', 'On utilise celle de Discord');
+      });
+    })();
+
+    // Fake-Nitro decoration picker (custom CSS effects around the avatar)
+    (function bindFakeDecoPicker(){
+      const grid = document.getElementById('accDecoGrid');
+      if (!grid) return;
+      const tiles = grid.querySelectorAll('.acc-deco-tile');
+      function applyActive(val){
+        tiles.forEach(t => t.classList.toggle('selected', t.dataset.deco === (val || 'none')));
+      }
+      tiles.forEach(t => {
+        t.addEventListener('click', () => {
+          if (!state.user || !state.user.boost) { openBoostModal(); return; }
+          const val = t.dataset.deco === 'none' ? null : t.dataset.deco;
+          state.user.fakeDeco = val;
+          // Enabling a decoration also enables fakeNitro (otherwise it wouldn't render)
+          if (val) {
+            state.user.fakeNitro = true;
+            const tg = document.getElementById('boostFakeNitro');
+            if (tg) tg.checked = true;
+          }
+          save();
+          applyActive(t.dataset.deco);
+          if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+          if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+        });
+      });
+      applyActive((state.user && state.user.fakeDeco) || 'none');
+      window.__refreshDecoPicker = () => applyActive((state.user && state.user.fakeDeco) || 'none');
+    })();
+
+    /* ===== Discord avatar-decoration picker (real Discord shop decos) =====
+       Loads assets/discord-decos.json (hash + label list) and renders a searchable
+       grid. Each tile is the real Discord PNG served by cdn.discordapp.com. */
+    (function bindDiscordDecoPicker(){
+      const grid = document.getElementById('ddDecoGrid');
+      const searchEl = document.getElementById('ddDecoSearch');
+      if (!grid || !searchEl) return;
+      const DD_CDN = (hash) => `https://cdn.discordapp.com/avatar-decoration-presets/${hash}.png?size=128&passthrough=true`;
+      let _decos = null;
+      let _selectedHash = (state.user && state.user.decorationHash) || '';
+      function applySelected(){
+        grid.querySelectorAll('.dd-deco-tile').forEach(t => {
+          t.classList.toggle('selected', (t.dataset.hash || '') === _selectedHash);
+        });
+      }
+      function tileHTML(d){
+        const url = DD_CDN(d.hash);
+        const safeName = escapeHtmlMini(d.label || d.hash);
+        return `<button type="button" class="dd-deco-tile" data-hash="${escapeHtmlMini(d.hash)}" data-label="${safeName}" title="${safeName}">
+          <img src="${url}" alt="${safeName}" loading="lazy" decoding="async" />
+          <span class="dd-deco-name">${safeName}</span>
+        </button>`;
+      }
+      function render(filter){
+        if (!_decos) return;
+        const q = (filter || '').trim().toLowerCase();
+        const items = q
+          ? _decos.filter(d => (d.label || '').toLowerCase().includes(q))
+          : _decos;
+        // Keep the "Aucune" tile (already in HTML), append filtered
+        grid.querySelectorAll('.dd-deco-tile:not(.dd-deco-tile--none)').forEach(el => el.remove());
+        if (!items.length) {
+          grid.insertAdjacentHTML('beforeend', '<div class="dd-deco-empty-wrap">Aucun résultat</div>');
+          return;
+        }
+        grid.insertAdjacentHTML('beforeend', items.slice(0, 60).map(tileHTML).join(''));
+        applySelected();
+      }
+      function pick(hash, label){
+        if (!state.user || !state.user.boost) { openBoostModal(); return; }
+        _selectedHash = hash || '';
+        state.user = state.user || {};
+        state.user.decorationHash = _selectedHash || null;
+        state.user.decoCustom = !!_selectedHash;
+        state.user.decorationUrl = _selectedHash ? DD_CDN(_selectedHash) : (state.user._originalDecorationUrl || null);
+        save();
+        applySelected();
+        if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+        if (_selectedHash) showToast('✨', 'Décoration appliquée', label || _selectedHash);
+        else showToast('↩️', 'Décoration retirée', 'Aucune');
+      }
+      grid.addEventListener('click', (e) => {
+        const t = e.target.closest('.dd-deco-tile');
+        if (!t) return;
+        pick(t.dataset.hash || '', t.dataset.label || '');
+      });
+      searchEl.addEventListener('input', (e) => render(e.target.value));
+      // Load decorations list (cached by browser after first fetch)
+      fetch('assets/discord-decos.json')
+        .then(r => r.ok ? r.json() : [])
+        .then(arr => {
+          _decos = Array.isArray(arr) ? arr : [];
+          render('');
+        })
+        .catch(() => { _decos = []; });
+      window.__refreshDiscordDecoPicker = () => {
+        _selectedHash = (state.user && state.user.decorationHash) || '';
+        applySelected();
+      };
+    })();
+
+    // Music start time slider
+    (function bindMusicStartTime(){
+      const sl = document.getElementById('musicStartTime');
+      if (!sl) return;
+      sl.addEventListener('input', () => {
+        const v = parseInt(sl.value, 10);
+        document.getElementById('musicStartVal').textContent = v + 's';
+        state.user = state.user || {};
+        state.user.musicStartTime = v;
+        save();
+      });
+    })();
+
+    /* Heart FAB — shows count of likes received */
+    (function bindHeartFab(){
+      const fab = document.getElementById('heartFab');
+      const badge = document.getElementById('heartFabBadge');
+      if (!fab) return;
+      function refresh(){
+        const n = (typeof LIKED_ME !== 'undefined') ? LIKED_ME.length : ((state.user && state.user.likesReceived) || 0);
+        badge.textContent = String(n);
+        badge.style.display = n > 0 ? 'grid' : 'none';
+      }
+      refresh();
+      window.__heartFabRefresh = refresh;
+      fab.addEventListener('click', async () => {
+        const panel = document.getElementById('likedPanel');
+        if (panel) panel.setAttribute('data-open', 'true');
+        if (typeof refreshLikesReceived === 'function') await refreshLikesReceived(); // vraies données
+        if (typeof renderLikedMe === 'function') renderLikedMe();
+      });
+      // Rafraîchit le compteur de likes reçus régulièrement + au démarrage
+      if (typeof refreshLikesReceived === 'function') {
+        refreshLikesReceived();
+        setInterval(refreshLikesReceived, 60000);
+      }
+    })();
+
+    /* ===== Discord webhook notifications ===== */
+    /* Build a stable PNG avatar URL from a profile. Discord webhooks need a real
+       https:// image for `thumbnail.url` — gradient + initial cards have no URL,
+       so we fall back to ui-avatars.com (free, CORS-friendly, returns a PNG). */
+    function profileToAvatarUrl(p){
+      if (!p) return null;
+      if (p.avatarUrl && /^https?:/i.test(p.avatarUrl)) return p.avatarUrl;
+      const name = encodeURIComponent(p.name || p.initial || '?');
+      const c1   = (p.c1 || '#9146FF').replace('#', '');
+      return `https://ui-avatars.com/api/?name=${name}&size=128&background=${c1}&color=fff&bold=true&format=png`;
+    }
+    /* Send an embed to the user's Discord webhook. type ∈ 'like'|'match'|'message'|'test'. */
+    async function sendDiscordNotif(type, p, extra){
+      const u = state.user || {};
+      const url = (u.discordWebhook || '').trim();
+      if (!url || !/^https:\/\/(?:discord|discordapp)\.com\/api\/webhooks\//i.test(url)) return false;
+      const enabled = u.notifTypes || {};
+      if (type !== 'test' && !enabled[type]) return false;
+      const meta = {
+        like:    { title: '❤️ Nouveau like sur Matefindr',    color: 0xFF4FA0, desc: `**${p?.name || 'Quelqu\'un'}** t'a liké !` },
+        match:   { title: '💞 C\'est un match !',           color: 0x9146FF, desc: `Tu as matché avec **${p?.name || 'quelqu\'un'}** sur Matefindr.` },
+        message: { title: '💬 Nouveau message Matefindr',     color: 0x5BE9FF, desc: `**${p?.name || 'Quelqu\'un'}** t'a écrit : ${extra ? `\n> ${String(extra).slice(0,200)}` : ''}` },
+        test:    { title: '🔔 Notification de test',        color: 0x3BD17C, desc: `Si tu vois ce message dans Discord, ton webhook est bien configuré !` },
+      }[type] || null;
+      if (!meta) return false;
+      const thumbUrl = profileToAvatarUrl(p);
+      const body = {
+        username: 'Matefindr',
+        avatar_url: 'https://ui-avatars.com/api/?name=T&size=128&background=9146FF&color=fff&bold=true&format=png',
+        embeds: [{
+          title: meta.title,
+          description: meta.desc,
+          color: meta.color,
+          thumbnail: thumbUrl ? { url: thumbUrl } : undefined,
+          timestamp: new Date().toISOString(),
+          footer: { text: 'Matefindr' },
+        }],
+      };
+      try {
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        return r.ok;
+      } catch (e) {
+        console.warn('Discord webhook failed', e);
+        return false;
+      }
+    }
+    window.sendDiscordNotif = sendDiscordNotif;
+
+    /* Sync notif prefs to Supabase so the server-side Edge Function can read them.
+       When Matefindr runs against the real backend (likes/matches/messages tables +
+       database webhooks → Edge Function "notify"), this is what makes the Discord
+       webhook fire even when the user's tab is closed. */
+    async function syncNotifPrefsToSupabase(){
+      try {
+        if (!window.__supa) return;
+        const { data: { user } } = await window.__supa.auth.getUser();
+        if (!user) return;
+        const u = state.user || {};
+        const t = u.notifTypes || {};
+        await window.__supa.from('user_notif_prefs').upsert({
+          user_id:         user.id,
+          discord_webhook: u.discordWebhook || null,
+          notif_like:      !!t.like,
+          notif_match:     !!t.match,
+          notif_message:   !!t.message,
+          display_name:    u.displayName || null,
+          avatar_url:      u.avatarUrl || null,
+          c1:              u.profileColor || '#36393F',
+          updated_at:      new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+      } catch (e) { console.warn('[Matefindr] syncNotifPrefs failed (table user_notif_prefs missing?):', e?.message || e); }
+    }
+    window.__syncNotifPrefs = syncNotifPrefsToSupabase;
+
+    /* Bind the Paramètres → Notifications Discord panel */
+    (function bindDiscordNotifs(){
+      const urlEl = document.getElementById('accDiscordWebhook');
+      const tg    = { like: document.getElementById('notifLike'), match: document.getElementById('notifMatch'), message: document.getElementById('notifMessage') };
+      const testBtn = document.getElementById('notifTestBtn');
+      const testStatus = document.getElementById('notifTestStatus');
+      if (!urlEl) return;
+      // Hydrate from state
+      function hydrate(){
+        state.user = state.user || {};
+        urlEl.value = state.user.discordWebhook || '';
+        const t = state.user.notifTypes || {};
+        tg.like.checked    = !!t.like;
+        tg.match.checked   = !!t.match;
+        tg.message.checked = !!t.message;
+      }
+      hydrate();
+      window.__hydrateDiscordNotifs = hydrate;
+      // Debounced sync (URL field fires lots of input events)
+      let _syncTimer = null;
+      function scheduleSync(){
+        clearTimeout(_syncTimer);
+        _syncTimer = setTimeout(syncNotifPrefsToSupabase, 600);
+      }
+      urlEl.addEventListener('input', () => {
+        state.user = state.user || {};
+        state.user.discordWebhook = urlEl.value.trim();
+        save();
+        scheduleSync();
+      });
+      Object.entries(tg).forEach(([k, el]) => {
+        el.addEventListener('change', () => {
+          state.user = state.user || {};
+          state.user.notifTypes = Object.assign({}, state.user.notifTypes || {}, { [k]: el.checked });
+          save();
+          scheduleSync();
+        });
+      });
+      testBtn.addEventListener('click', async () => {
+        testStatus.textContent = 'Envoi…';
+        testStatus.style.color = '#b9bbbe';
+        const me = state.user || {};
+        const fakeMe = {
+          name: me.displayName || 'Toi',
+          initial: (me.displayName || 'T').charAt(0).toUpperCase(),
+          avatarUrl: me.avatarUrl,
+          c1: '#9146FF', c2: '#FF7EB6',
+        };
+        const ok = await sendDiscordNotif('test', fakeMe);
+        testStatus.textContent = ok ? '✅ Envoyé ! Vérifie ton serveur Discord.' : '❌ Échec — URL invalide ?';
+        testStatus.style.color = ok ? '#3BD17C' : '#FF4FA0';
+        setTimeout(() => { testStatus.textContent = ''; }, 5000);
+      });
+    })();
+
+    /* ===== Orb edit overlay (fullscreen profile preview + symmetric "+" layout) ===== */
+    function openOrbEditOverlay(){
+      const overlay = document.getElementById('orbEditOverlay');
+      const wrap    = document.getElementById('oeoCardWrap');
+      if (!overlay || !wrap) return;
+      // Re-render the profile card big inside the overlay
+      const myP = (typeof buildUserProfile === 'function') ? buildUserProfile() : null;
+      wrap.innerHTML = '';
+      if (myP) {
+        const card = buildCard(myP, false);
+        card.style.cssText += ';position:absolute !important;inset:0 !important;opacity:1 !important;transform:none !important;cursor:default !important;pointer-events:auto';
+        wrap.appendChild(card);
+        if (typeof renderContextGifs === 'function') renderContextGifs(wrap); // montre aussi les GIFs (contexte)
+      } else {
+        wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#b9bbbe">Pas encore de profil — connecte-toi d\'abord.</div>';
+      }
+      overlay.setAttribute('data-show', 'true');
+      // Reset add panel
+      document.getElementById('oeoAddPanel').setAttribute('data-open', 'false');
+      document.getElementById('oeoSugg').innerHTML = '';
+      document.getElementById('oeoSearch').value = '';
+      // Render the symmetric orb layout (existing bubbles + floating "+")
+      // Wait a frame so the card has a measurable bounding box
+      requestAnimationFrame(renderOrbEditLayout);
+    }
+    /* Render the existing user orbs in two symmetric columns around the profile card,
+       and add a transparent "+" bubble at the next position.
+       Layout rules :
+         - 1ère bulle au milieu-gauche
+         - 2ème au milieu-droite (même y)
+         - 3ème en bas-gauche (les bulles gauche remontent pour rester centrées)
+         - 4ème en bas-droite (idem côté droit)
+         - etc.
+       Implémenté en split [pair → gauche, impair → droite], "+" sur la colonne qui
+       a le moins de bulles (gauche en cas d'égalité). */
+    function renderOrbEditLayout(){
+      const stage = document.getElementById('oeoStage');
+      const wrap  = document.getElementById('oeoCardWrap');
+      if (!stage || !wrap) return;
+      stage.querySelectorAll('.oeo-orb, .oeo-add-fab').forEach(el => el.remove());
+      const orbs = (state.profile && state.profile.userOrbs) || [];
+      const canAddMore = orbs.length < (typeof orbBudget === 'function' ? orbBudget() : 4);
+
+      const sRect = stage.getBoundingClientRect();
+      const cRect = wrap.getBoundingClientRect();
+      const cx = (cRect.left + cRect.width / 2) - sRect.left;
+      const cy = (cRect.top  + cRect.height / 2) - sRect.top;
+      // Lit la taille effective depuis le CSS — suit automatiquement les media queries
+      // (115px desktop, 70px mobile <780px). Garde l'éditeur À LA MÊME ÉCHELLE que le swipe.
+      const orbR = (function(){
+        const probe = document.createElement('div');
+        probe.className = 'oeo-orb';
+        probe.style.position = 'absolute';
+        probe.style.visibility = 'hidden';
+        stage.appendChild(probe);
+        const w = probe.offsetWidth || 115;
+        probe.remove();
+        return w / 2;
+      })();
+      const pad = 6;
+      // Si le panel "+" est ouvert (à droite), on réduit la zone utile pour ne pas
+      // poser de bulles sous le panel.
+      const panel = document.getElementById('oeoAddPanel');
+      const panelOpen = panel && panel.getAttribute('data-open') === 'true';
+      const panelLeft = panelOpen ? (panel.getBoundingClientRect().left - sRect.left) : sRect.width;
+      const availLeft  = pad + orbR;
+      const availRight = Math.min(sRect.width, panelLeft) - pad - orbR;
+      const availTop   = pad + orbR;
+      const availBot   = sRect.height - pad - orbR;
+      const clampX = (x) => Math.max(availLeft, Math.min(availRight, x));
+      const clampY = (y) => Math.max(availTop,  Math.min(availBot,  y));
+
+      // SAME normalized layout as the swipe card (orbRelLayout) → identical placement.
+      const { rel, plus } = orbRelLayout(orbs, canAddMore);
+
+      // PROPORTIONNEL : si la position par défaut (auto) sort de la zone, on
+      // resserre uniformément TOUTES les bulles auto (échelle X et Y) pour qu'elles
+      // rentrent — pas d'empilement au bord. Les bulles custom (drag) gardent
+      // leur position absolue : elles sont juste clampées si elles débordent.
+      const isCustom = (o) => o && typeof o.customX === 'number' && typeof o.customY === 'number';
+      let maxAutoRx = 0, maxAutoRy = 0;
+      rel.forEach((r, o) => {
+        if (!isCustom(o)) {
+          maxAutoRx = Math.max(maxAutoRx, Math.abs(r.rx));
+          maxAutoRy = Math.max(maxAutoRy, Math.abs(r.ry));
+        }
+      });
+      if (plus) {
+        maxAutoRx = Math.max(maxAutoRx, Math.abs(plus.rx));
+        maxAutoRy = Math.max(maxAutoRy, Math.abs(plus.ry));
+      }
+      // Espace disponible de chaque côté du centre carte (en px), puis fraction max
+      // que peut atteindre |rx| sans déborder
+      const sideXmax = Math.min(cx - availLeft, availRight - cx);
+      const sideYmax = Math.min(cy - availTop,  availBot  - cy);
+      const maxAllowedRx = sideXmax / cRect.width;
+      const maxAllowedRy = sideYmax / cRect.height;
+      const scaleX = (maxAutoRx > maxAllowedRx) ? (maxAllowedRx / maxAutoRx) : 1;
+      const scaleY = (maxAutoRy > maxAllowedRy) ? (maxAllowedRy / maxAutoRy) : 1;
+      const scale  = Math.min(scaleX, scaleY); // échelle uniforme → garde les proportions
+
+      const toPx = (r, custom) => {
+        const sx = custom ? 1 : scale;
+        const sy = custom ? 1 : scale;
+        return { x: clampX(cx + r.rx * sx * cRect.width), y: clampY(cy + r.ry * sy * cRect.height) };
+      };
+
+      // Garde en mémoire les positions (px) déjà occupées pour empêcher le "+" de chevaucher.
+      const occupied = [];
+      orbs.forEach(o => {
+        const r = rel.get(o); if (!r) return;
+        const p = toPx(r, isCustom(o));
+        occupied.push({ x: p.x, y: p.y });
+        stage.appendChild(makeMiniOrb(o, p.x - orbR, p.y - orbR, orbs.indexOf(o)));
+      });
+      if (plus){
+        let pp = toPx(plus, false);
+        // Le "+" doit être proche de la carte (par construction de plus.rx ~ COL0) mais
+        // ne doit pas chevaucher d'autres bulles. On le pousse hors collision.
+        const minGap = orbR * 2 + 6;
+        for (let pass = 0; pass < 8; pass++){
+          let collided = false;
+          for (const o of occupied){
+            const dxC = pp.x - o.x, dyC = pp.y - o.y;
+            const dist = Math.hypot(dxC, dyC) || 0.001;
+            if (dist < minGap){
+              const push = (minGap - dist) + 1;
+              pp.x += (dxC / dist) * push;
+              pp.y += (dyC / dist) * push;
+              collided = true;
+            }
+          }
+          pp.x = clampX(pp.x); pp.y = clampY(pp.y);
+          if (!collided) break;
+        }
+        // Évite la carte centrale (ne traverse pas)
+        const cardL = cRect.left - sRect.left, cardT = cRect.top - sRect.top;
+        const cardR = cardL + cRect.width, cardB = cardT + cRect.height;
+        if (pp.x > cardL && pp.x < cardR && pp.y > cardT && pp.y < cardB){
+          const distL = pp.x - cardL, distR = cardR - pp.x;
+          pp.x = (distL < distR) ? Math.max(availLeft, cardL - 2) : Math.min(availRight, cardR + 2);
+        }
+        stage.appendChild(makeAddFab(pp.x - orbR, pp.y - orbR));
+      }
+    }
+    function makeMiniOrb(o, leftPx, topPx, indexInUserOrbs){
+      const el = document.createElement('div');
+      el.className = 'oeo-orb';
+      el.dataset.kind = o.kind;
+      el.style.left = leftPx + 'px';
+      el.style.top  = topPx  + 'px';
+      el.title = `${o.title}${o.rank ? ' · ' + o.rank : ''} — glisse pour repositionner`;
+      const fallback = {music:'🎵', game:'🎮', film:'🎬'}[o.kind] || '✨';
+      if (o.cover) {
+        el.innerHTML = `<img src="${o.cover}" alt="${escapeHtmlMini(o.title)}" draggable="false">`;
+      } else {
+        el.innerHTML = `<span class="oeo-orb-ico">${fallback}</span>`;
+      }
+      // Rank as a round mini-bubble (with the tier icon) orbiting the game orb
+      if (o.kind === 'game' && o.rank){
+        const v = rankVisual(o.rank);
+        const iconUrl = rankIconUrl(o.title, o.rank);
+        const iconHtml = iconUrl
+          ? `<img class="oeo-orb-rank-img" src="${iconUrl}" alt="${escapeHtmlMini(o.rank)}" loading="lazy" decoding="async">`
+          : `<span class="oeo-orb-rank-ico">${v.ico}</span>`;
+        const rk = document.createElement('span');
+        rk.className = 'oeo-orb-rank-orbit';
+        rk.innerHTML = `<span class="oeo-orb-rank-ball${iconUrl ? ' oeo-orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}">${iconHtml}</span>`;
+        el.appendChild(rk);
+      }
+      // Delete (×) chip
+      const del = document.createElement('button');
+      del.className = 'oeo-orb-del';
+      del.type = 'button';
+      del.setAttribute('aria-label', 'Supprimer cette bulle');
+      del.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+      del.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (indexInUserOrbs >= 0) (state.profile.userOrbs || []).splice(indexInUserOrbs, 1);
+        save();
+        renderUserOrbs();
+        if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+        if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
+        renderOrbEditLayout();
+      });
+      el.appendChild(del);
+      // Mini "+" button (smaller than the orb) for game orbs → add/edit rank & clip
+      if (o.kind === 'game') {
+        const meta = document.createElement('button');
+        meta.className = 'oeo-orb-meta';
+        meta.type = 'button';
+        meta.setAttribute('aria-label', 'Ajouter rank / clip');
+        meta.innerHTML = '+';
+        meta.title = o.rank || o.clipUrl ? 'Modifier rank / clip' : 'Ajouter rank / clip';
+        meta.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (typeof openGameMetaModal === 'function') openGameMetaModal(o);
+        });
+        el.appendChild(meta);
+      }
+      // ===== Drag & drop pour positionner librement la bulle =====
+      // L'utilisateur peut attraper une bulle et la lâcher où il veut autour de la carte.
+      // La position est sauvegardée en fraction relative à la carte (customX, customY),
+      // et ré-appliquée à la fois dans cet overlay et sur la carte de swipe.
+      let dragMoved = false;
+      let dragData = null;
+      let recentDragEnd = 0;
+      el.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.oeo-orb-del') || e.target.closest('.oeo-orb-meta')) return;
+        if (e.button !== undefined && e.button !== 0) return;
+        try { el.setPointerCapture(e.pointerId); } catch(_){}
+        const stage = document.getElementById('oeoStage');
+        const wrap  = document.getElementById('oeoCardWrap');
+        if (!stage || !wrap) return;
+        const sRect  = stage.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        dragData = {
+          startMouseX: e.clientX, startMouseY: e.clientY,
+          startLeft: elRect.left - sRect.left,
+          startTop:  elRect.top  - sRect.top,
+          stage, wrap,
+        };
+        dragMoved = false;
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!dragData) return;
+        const dx = e.clientX - dragData.startMouseX;
+        const dy = e.clientY - dragData.startMouseY;
+        if (!dragMoved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+          dragMoved = true;
+          el.classList.add('oeo-orb--dragging');
+          el.style.zIndex = '20';
+          el.style.transition = 'none';
+          el.style.cursor = 'grabbing';
+        }
+        if (dragMoved) {
+          const sRect = dragData.stage.getBoundingClientRect();
+          const w = el.offsetWidth, h = el.offsetHeight;
+          const pad = 4;
+          const panel = document.getElementById('oeoAddPanel');
+          const panelOpen = panel && panel.getAttribute('data-open') === 'true';
+          const panelLeft = panelOpen ? (panel.getBoundingClientRect().left - sRect.left) : sRect.width;
+          const maxLeft = Math.max(pad, Math.min(sRect.width - w - pad, panelLeft - w - pad));
+          const maxTop  = sRect.height - h - pad;
+          let left = Math.max(pad, Math.min(maxLeft, dragData.startLeft + dx));
+          let top  = Math.max(pad, Math.min(maxTop,  dragData.startTop  + dy));
+
+          // === Évite la carte de profil (la bulle ne peut PAS la traverser) ===
+          const cardRect = dragData.wrap.getBoundingClientRect();
+          const cardL = cardRect.left - sRect.left;
+          const cardT = cardRect.top  - sRect.top;
+          const cardR = cardL + cardRect.width;
+          const cardB = cardT + cardRect.height;
+          // bulle = cercle de rayon w/2 centré sur (left+w/2, top+h/2)
+          const cx = left + w/2, cy = top + h/2;
+          // Si le centre de la bulle entre dans la zone de la carte → on pousse au bord le plus proche
+          if (cx > cardL && cx < cardR && cy > cardT && cy < cardB){
+            // Distance à chaque bord (côté pointer)
+            const distL = cx - cardL, distR = cardR - cx, distT = cy - cardT, distB = cardB - cy;
+            const minDist = Math.min(distL, distR, distT, distB);
+            if (minDist === distL)      left = cardL - w/2;          // pousse à gauche
+            else if (minDist === distR) left = cardR - w/2;          // pousse à droite
+            else if (minDist === distT) top  = cardT - h/2;          // pousse en haut
+            else                        top  = cardB - h/2;          // pousse en bas
+            // Re-clamp dans le stage
+            left = Math.max(pad, Math.min(maxLeft, left));
+            top  = Math.max(pad, Math.min(maxTop,  top));
+          }
+
+          // === Évite les autres bulles (pas de chevauchement) ===
+          const others = [...dragData.stage.querySelectorAll('.oeo-orb')].filter(n => n !== el);
+          const minGap = 4; // px de marge entre cercles
+          for (let pass = 0; pass < 4; pass++){
+            let collided = false;
+            for (const other of others){
+              const oRect = other.getBoundingClientRect();
+              const ow = other.offsetWidth, oh = other.offsetHeight;
+              const ocx = (oRect.left - sRect.left) + ow/2;
+              const ocy = (oRect.top  - sRect.top)  + oh/2;
+              const cx2 = left + w/2, cy2 = top + h/2;
+              const dxC = cx2 - ocx, dyC = cy2 - ocy;
+              const dist = Math.hypot(dxC, dyC) || 0.001;
+              const minDist = (w + ow) / 2 + minGap;
+              if (dist < minDist){
+                // Pousse la bulle dans la direction opposée à la collision
+                const push = (minDist - dist) + 0.5;
+                left += (dxC / dist) * push;
+                top  += (dyC / dist) * push;
+                collided = true;
+              }
+            }
+            left = Math.max(pad, Math.min(maxLeft, left));
+            top  = Math.max(pad, Math.min(maxTop,  top));
+            if (!collided) break;
+          }
+
+          el.style.left = left + 'px';
+          el.style.top  = top  + 'px';
+        }
+      });
+      function endDrag(e){
+        if (!dragData) return;
+        try { el.releasePointerCapture(e.pointerId); } catch(_){}
+        el.classList.remove('oeo-orb--dragging');
+        el.style.zIndex = '';
+        el.style.transition = '';
+        el.style.cursor = '';
+        if (dragMoved) {
+          // Position finale : centre de la bulle relatif au centre de la carte, en fraction de la taille carte
+          const elRect   = el.getBoundingClientRect();
+          const cardRect = dragData.wrap.getBoundingClientRect();
+          const cx = (elRect.left + elRect.width / 2);
+          const cy = (elRect.top  + elRect.height / 2);
+          const ccx = cardRect.left + cardRect.width  / 2;
+          const ccy = cardRect.top  + cardRect.height / 2;
+          o.customX = (cx - ccx) / cardRect.width;
+          o.customY = (cy - ccy) / cardRect.height;
+          try { save(); } catch(_){}
+          if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+          recentDragEnd = Date.now();
+        }
+        dragData = null;
+      }
+      el.addEventListener('pointerup', endDrag);
+      el.addEventListener('pointercancel', endDrag);
+      // Click on the orb itself → play the content (clip for game, audio for music)
+      // Ignore le click si on vient juste de drag (évite ouvrir le clip après un déplacement)
+      el.addEventListener('click', (ev) => {
+        if (Date.now() - recentDragEnd < 250) { ev.preventDefault(); return; }
+        if (typeof playOrb === 'function') playOrb(o, el);
+      });
+      return el;
+    }
+    function makeAddFab(leftPx, topPx){
+      const btn = document.createElement('button');
+      btn.className = 'oeo-add-fab';
+      btn.type = 'button';
+      btn.title = 'Ajouter une bulle';
+      btn.style.left = leftPx + 'px';
+      btn.style.top  = topPx  + 'px';
+      btn.innerHTML = '<span class="oeo-plus">+</span>';
+      btn.addEventListener('click', () => {
+        document.getElementById('oeoAddPanel').setAttribute('data-open', 'true');
+        setTimeout(() => document.getElementById('oeoSearch').focus(), 200);
+      });
+      return btn;
+    }
+    window.renderOrbEditLayout = renderOrbEditLayout;
+    function closeOrbEditOverlay(){
+      document.getElementById('orbEditOverlay').setAttribute('data-show', 'false');
+      document.getElementById('oeoAddPanel').setAttribute('data-open', 'false');
+      // Defensive : force a save + refresh of the account preview/counter
+      // so any in-memory orb that wasn't yet persisted gets locked in.
+      try { save(); } catch(_){}
+      if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+      if (typeof renderUserOrbs === 'function') renderUserOrbs();
+      if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
+      const n = ((state.profile && state.profile.userOrbs) || []).length;
+      console.log('[Matefindr] orbs after close:', n, state.profile && state.profile.userOrbs);
+    }
+    window.openOrbEditOverlay = openOrbEditOverlay;
+
+    (function bindOrbEditOverlay(){
+      const overlay = document.getElementById('orbEditOverlay');
+      if (!overlay) return;
+      document.getElementById('oeoBackdrop')?.addEventListener('click', closeOrbEditOverlay);
+      document.getElementById('oeoClose')?.addEventListener('click', closeOrbEditOverlay);
+      document.getElementById('oeoPanelClose')?.addEventListener('click', () => {
+        document.getElementById('oeoAddPanel').setAttribute('data-open', 'false');
+      });
+      // The "+" FAB is now created dynamically by renderOrbEditLayout()
+      // and opens the add panel via the click handler set in makeAddFab().
+      // Category tabs
+      let oeoKind = 'music';
+      document.querySelectorAll('#oeoCats button').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelectorAll('#oeoCats button').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          oeoKind = b.dataset.kind;
+          const ph = { music:'Recherche un son Spotify…', game:'ex: Valorant, Minecraft…', film:'ex: One Piece, Inception…' };
+          document.getElementById('oeoSearch').placeholder = ph[oeoKind] || 'Tape ici…';
+          runOeoSearch(document.getElementById('oeoSearch').value);
+        });
+      });
+      // Live search (reuses the curated lists + cover fetcher already in the app)
+      let _oeoDebounce = null;
+      async function runOeoSearch(q){
+        clearTimeout(_oeoDebounce);
+        _oeoDebounce = setTimeout(async () => {
+          const sugg = document.getElementById('oeoSugg');
+          sugg.innerHTML = '<div style="color:#72767d;font-size:12.5px;padding:8px">Chargement…</div>';
+          let results = [];
+          if (oeoKind === 'music') {
+            if (!q.trim()) { sugg.innerHTML = '<div style="color:#72767d;font-size:12.5px;padding:8px">Tape le nom d\'un son…</div>'; return; }
+            const items = await searchSpotifyTracks(q, 8);
+            results = (items || []).map(it => ({
+              name: it.name, sub: it.artist, cover: it.cover,
+              orb: { kind:'music', title: it.name, sub: it.artist, cover: it.cover, previewUrl: it.previewUrl || null },
+            }));
+          } else {
+            const titles = curatedMatches(q, oeoKind, 10);
+            results = titles.map(t => ({ name:t, sub:'', cover:null, orb:{ kind: oeoKind, title: t } }));
+            // Fire-and-forget : prefetch covers
+            results.forEach(async (r, i) => {
+              const cv = await fetchSuggCover(oeoKind, r.orb.title);
+              if (cv) {
+                r.cover = cv; r.orb.cover = cv;
+                const node = sugg.children[i];
+                if (node) {
+                  const img = node.querySelector('img');
+                  if (img) img.src = cv;
+                }
+              }
+            });
+          }
+          if (!results.length) {
+            sugg.innerHTML = '<div style="color:#72767d;font-size:12.5px;padding:8px">Aucun résultat</div>';
+            return;
+          }
+          sugg.innerHTML = '';
+          const fallbackIcon = {music:'🎵', game:'🎮', film:'🎬'}[oeoKind] || '✨';
+          results.forEach(r => {
+            const item = document.createElement('div');
+            item.className = 'sp-item';
+            item.innerHTML =
+              (r.cover ? `<img src="${r.cover}" alt="" loading="lazy" decoding="async">` : `<div class="sp-no-cover">${fallbackIcon}</div>`) +
+              `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
+              `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
+            item.addEventListener('click', async () => {
+              // Make sure we have a cover before adding
+              if (!r.cover && oeoKind !== 'music') {
+                r.cover = await fetchSuggCover(oeoKind, r.orb.title);
+                r.orb.cover = r.cover;
+              }
+              if (!r.cover && oeoKind !== 'music') { showToast('⚠️','Pas d\'image','Choisis un autre titre'); return; }
+              state.profile = state.profile || {};
+              state.profile.userOrbs = state.profile.userOrbs || [];
+              if (orbsUsed() >= orbBudget()) { showToast('🫧','Limite atteinte', orbBudget()+' bulles max'); return; }
+              // Empêche les doublons (même kind + même titre normalisé)
+              const dupKey = (r.orb.title || '').toLowerCase().trim();
+              const isDup = state.profile.userOrbs.some(o => o.kind === r.orb.kind && (o.title || '').toLowerCase().trim() === dupKey);
+              if (isDup) { showToast('⚠️','Déjà ajoutée', r.orb.title); return; }
+              state.profile.userOrbs.push(r.orb);
+              save();
+              renderUserOrbs();
+              if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+              if (typeof window.__refreshBullesCta === 'function') window.__refreshBullesCta();
+              showToast(fallbackIcon, 'Bulle ajoutée', r.orb.title);
+              // Re-render just the bubbles layout (keep card in place, close panel)
+              renderOrbEditLayout();
+              document.getElementById('oeoAddPanel').setAttribute('data-open', 'false');
+              document.getElementById('oeoSearch').value = '';
+              document.getElementById('oeoSugg').innerHTML = '';
+            });
+            sugg.appendChild(item);
+          });
+        }, 220);
+      }
+      document.getElementById('oeoSearch')?.addEventListener('input', e => runOeoSearch(e.target.value));
+      // Esc closes the overlay
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && overlay.getAttribute('data-show') === 'true') closeOrbEditOverlay();
+      });
+      // Re-render layout on resize (keeps the columns aligned with the card)
+      window.addEventListener('resize', () => {
+        if (overlay.getAttribute('data-show') === 'true') renderOrbEditLayout();
+      });
+    })();
+
+    document.getElementById('orbPreviewBtn')?.addEventListener('click', openOrbEditOverlay);
+    document.getElementById('accountChip')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Clic sur « mon compte » → ouvre directement l'éditeur de profil.
+      location.href = 'editor.html';
+    });
+    /* Retour depuis l'éditeur :
+       #account → écran Paramètres (le SEUL endroit où les réglages apparaissent, accessible uniquement via l'éditeur).
+       #preview → aperçu direct du profil (mode aperçu sur le swipe), SANS passer par l'écran Paramètres. */
+    (function handleEditorReturn(){
+      const h = location.hash;
+      if (h !== '#account' && h !== '#preview') return;
+      let tries = 0;
+      const iv = setInterval(() => {
+        tries++;
+        if (document.body.getAttribute('data-auth') === 'in' && typeof setScreen === 'function') {
+          clearInterval(iv);
+          if (h === '#preview') {
+            // Aperçu direct depuis l'éditeur : on entre VRAIMENT en mode aperçu
+            // (ma carte uniquement, figée). Avant on cherchait #accPreviewFull qui
+            // n'existe plus → fallback sur le hub normal = aperçu cassé (carte absente).
+            _previewFromEditor = true; // "Quitter l'aperçu" devra revenir sur editor.html
+            enterPreviewMode();
+          } else {
+            // L'écran Paramètres a été retiré → les réglages sont dans l'éditeur.
+            location.href = 'editor.html';
+          }
+          try { history.replaceState(null, '', location.pathname); } catch(_){}
+        } else if (tries > 80) { clearInterval(iv); }
+      }, 150);
+    })();
+    /* Dirty-state tracking: snapshot of editable fields at render time.
+       If any field differs from the snapshot, the floating save bar appears. */
+    let _accSnapshot = null;
+    function _accSnap(){
+      const pseudoEl = document.getElementById('accPseudo');
+      if (!pseudoEl) return '';
+      const fn = document.getElementById('boostFakeNitro');
+      const gf = document.getElementById('boostGenderFilter');
+      return JSON.stringify({
+        pseudo: pseudoEl.value,
+        bio:    document.getElementById('accBio').value,
+        look:   document.getElementById('accLookSel').value,
+        fakeNitro: fn ? !!fn.checked : false,
+        gender: gf ? gf.value : 'all',
+      });
+    }
+    function refreshSaveBar(){
+      const bar = document.getElementById('accSaveBar');
+      if (!bar) return;
+      const dirty = _accSnapshot !== null && _accSnap() !== _accSnapshot;
+      bar.setAttribute('data-show', dirty ? 'true' : 'false');
+    }
+    window.__resetSaveSnapshot = () => { _accSnapshot = _accSnap(); refreshSaveBar(); };
+    // Re-snapshot whenever the account screen is rendered fresh
+    const _origRenderAccount = window.renderAccount;
+    // Hook into setScreen: snapshot when entering account
+    (function hookAccountSnapshot(){
+      const origSet = window.setScreen;
+      // Auto-save profile fields after a short debounce — no need to click "Sauvegarder"
+      let _autoSaveTimer = null;
+      function scheduleAutoSave(){
+        clearTimeout(_autoSaveTimer);
+        _autoSaveTimer = setTimeout(() => {
+          // Inline silent save (no toast / message)
+          state.profile = state.profile || { gender:null, age:null, looking:null };
+          const bioEl = document.getElementById('accBio');
+          const lookEl = document.getElementById('accLookSel');
+          const pseudoEl = document.getElementById('accPseudo');
+          if (bioEl)    state.profile.bio     = bioEl.value.trim();
+          if (lookEl)   state.profile.looking = lookEl.value;
+          if (pseudoEl && pseudoEl.value.trim()) {
+            state.user = state.user || {};
+            state.user.displayName = pseudoEl.value.trim();
+          }
+          const fn = document.getElementById('boostFakeNitro');
+          const gf = document.getElementById('boostGenderFilter');
+          if (fn) {
+            state.user = state.user || {};
+            // Only persist fakeNitro if user has Boost (otherwise toggle was cancelled)
+            if (state.user.boost) state.user.fakeNitro = !!fn.checked;
+          }
+          if (gf && state.user && state.user.boost) state.user.genderFilter = gf.value;
+          save();
+          updateChip();
+          if (typeof refreshMyStatusUI === 'function') refreshMyStatusUI();
+          if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+          // Mark as clean so the save bar disappears
+          _accSnapshot = _accSnap();
+          refreshSaveBar();
+        }, 400);
+      }
+      ['accPseudo','accBio','accLookSel','boostFakeNitro','boostGenderFilter'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input',  () => { refreshSaveBar(); scheduleAutoSave(); });
+        el.addEventListener('change', () => { refreshSaveBar(); scheduleAutoSave(); });
+      });
+      // Also auto-save when the user leaves the page
+      window.addEventListener('beforeunload', () => { try { save(); } catch(_){} });
+    })();
+
+    function doAccSave(){
+      state.profile = state.profile || { gender:null, age:null, looking:null };
+      state.profile.bio     = document.getElementById('accBio').value.trim();
+      state.profile.looking = document.getElementById('accLookSel').value;
+      const pseudo = document.getElementById('accPseudo').value.trim();
+      if (pseudo) { state.user = state.user || {}; state.user.displayName = pseudo; }
+
+      // If the user edited Boost-only options without being premium, auto-impose Boost
+      const fakeNitro = !!document.getElementById('boostFakeNitro').checked;
+      const genderFilter = document.getElementById('boostGenderFilter').value || 'all';
+      // Le Boost ne s'auto-active PLUS : il s'obtient uniquement via le paiement (checkout.html).
+      // Les réglages Boost ne sont appliqués que si l'utilisateur est déjà abonné.
+      if (state.user && state.user.boost) {
+        state.user.fakeNitro = fakeNitro;
+        state.user.genderFilter = genderFilter;
+      }
+
+      save();
+      updateChip();
+      refreshMyStatusUI();
+      _accSnapshot = _accSnap();
+      refreshSaveBar();
+      const msg = document.getElementById('accMsg');
+      msg.textContent = tx('saved');
+      msg.setAttribute('data-show', 'true');
+      setTimeout(() => msg.setAttribute('data-show', 'false'), 1800);
+    }
+    document.getElementById('accSave')?.addEventListener('click', doAccSave);
+    // Delete account
+    document.getElementById('accDeleteAccount')?.addEventListener('click', () => {
+      if (!confirm('Supprimer définitivement ton compte Matefindr ? Toutes tes données locales seront effacées.')) return;
+      try { localStorage.clear(); } catch {}
+      try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch {}
+      state = { user:null, profile:null };
+      setAuth(false);
+      setScreen('landing');
+    });
+    document.getElementById('accSaveReset')?.addEventListener('click', () => {
+      // Revert fields to last snapshot
+      const u = state.user || {}; const p = state.profile || {};
+      document.getElementById('accPseudo').value  = u.displayName || '';
+      document.getElementById('accBio').value     = p.bio || '';
+      document.getElementById('accLookSel').value = p.looking || 'game';
+      _accSnapshot = _accSnap();
+      refreshSaveBar();
+      refreshAccountPreview();
+    });
+    document.getElementById('accBackSwipe')?.addEventListener('click', () => setScreen('swipe'));
+    document.getElementById('accLogout')?.addEventListener('click', () => {
+      // Archive the current profile so we can restore it on next Discord reconnect.
+      // Keyed by Discord ID (or email as fallback) so different users keep separate profiles.
+      try {
+        const u = state.user || {};
+        const key = u.discordId || u.email || u.discordTag;
+        if (key && state.profile) {
+          const archives = JSON.parse(localStorage.getItem('matefindr_archived_profiles') || '{}');
+          archives[key] = {
+            profile: state.profile,
+            userExtras: {
+              profileVoice: u.profileVoice || null,
+              profileColor: u.profileColor || null,
+              profileColor2: u.profileColor2 || null,
+              musicVolume: u.musicVolume || null,
+              musicStartTime: u.musicStartTime || null,
+              socials: u.socials || null,
+              swipeMusic: u.swipeMusic || null,
+              gifs: u.gifs || null,
+              fakeNitro: u.fakeNitro || null,
+              fakeDeco: u.fakeDeco || null,
+              bannerUrl: u.bannerCustom ? (u.bannerUrl || null) : null,
+              bannerCustom: u.bannerCustom || null,
+              discordWebhook: u.discordWebhook || null,
+              notifTypes: u.notifTypes || null,
+              genderFilter: u.genderFilter || null,
+              boost: u.boost || null,
+              boostPlan: u.boostPlan || null,
+              boostSince: u.boostSince || null,
+              boostNextPayment: u.boostNextPayment || null,
+              boostCancelled: u.boostCancelled || null,
+              boostShowName: (u.boostShowName === false) ? false : null,
+              boostBg: u.boostBg || null,
+            },
+            savedAt: Date.now(),
+          };
+          localStorage.setItem('matefindr_archived_profiles', JSON.stringify(archives));
+        }
+      } catch (e) { console.warn('archive failed', e); }
+      // Invalide la session Supabase (pas juste l'état local) — sinon un reload
+      // reconnecte automatiquement via la session persistée en localStorage.
+      try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch {}
+      state = { user:null, profile:null };
+      save();
+      setAuth(false);
+      setScreen('landing');
+    });
+
+    /* Backfill covers for orbs created before the cover feature existed.
+       Runs in background, updates state.profile.userOrbs and re-renders. */
+    async function backfillCovers(){
+      const orbs = state.profile && state.profile.userOrbs;
+      if (!Array.isArray(orbs) || !orbs.length) return false;
+      let dirty = false;
+      for (const o of orbs) {
+        if (o.cover) continue;
+        try {
+          if (o.kind === 'music') {
+            const r = (await searchSpotifyTracks(o.title, 1))[0];
+            if (r) {
+              if (r.cover) { o.cover = r.cover; dirty = true; }
+              if (!o.previewUrl && r.previewUrl) { o.previewUrl = r.previewUrl; dirty = true; }
+            }
+          } else if (o.kind === 'anime') {
+            const r = (await searchAnime(o.title))[0];
+            if (r && r.cover) { o.cover = r.cover; dirty = true; }
+          } else if (o.kind === 'game' || o.kind === 'film') {
+            const r = (await searchWiki(o.title, o.kind))[0];
+            if (r && r.cover) { o.cover = r.cover; dirty = true; }
+          }
+        } catch(_){}
+      }
+      if (dirty) {
+        save();
+        if (document.body.getAttribute('data-screen') === 'account') renderUserOrbs();
+        if (document.body.getAttribute('data-screen') === 'swipe')   ensureDeck();
+      }
+      return dirty;
+    }
+
+    // Migration : ancien statut 'now' -> nouveau 'talk' (Discuter)
+    if (state.profile && state.profile.looking === 'now') {
+      state.profile.looking = 'talk';
+      save();
+    }
+
+    // ---------- Init from persisted state ----------
+    if (typeof checkBoostExpiry === 'function') checkBoostExpiry(); // expiration/renouvellement mensuel au chargement
+    if (state.user) {
+      setAuth(true);
+      setScreen(state.profile ? 'landing' : 'onboarding');
+      backfillCovers();
+    }
+    if (typeof refreshLandingCta === 'function') refreshLandingCta();
+
+    // ---------- Supabase: hydrate from session (after OAuth redirect) ----------
+    (async () => {
+      if (!window.__supa) return;
+
+      // Capture provider_token from URL hash IMMEDIATELY (before Supabase eats it)
+      // because Supabase doesn't persist provider_token between page loads.
+      function capProviderToken(){
+        try {
+          const hash = window.location.hash || '';
+          if (!hash.includes('provider_token')) return;
+          const params = new URLSearchParams(hash.slice(1));
+          const pt = params.get('provider_token');
+          if (pt) {
+            localStorage.setItem('matefindr_discord_token', pt);
+            localStorage.setItem('matefindr_discord_token_ts', String(Date.now()));
+            console.log('[Matefindr] Discord provider_token captured.');
+          }
+        } catch {}
+      }
+      capProviderToken();
+
+      try {
+        const { data: { session } } = await window.__supa.auth.getSession();
+        console.log('[Matefindr] Supabase session:', !!session, 'provider_token:', !!session?.provider_token);
+        if (session) {
+          const u = await userFromSupabaseSession(session);
+          if (u) window.__matefindr.onLogin(u);
+          if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
+        }
+        window.__supa.auth.onAuthStateChange(async (event, s) => {
+          console.log('[Matefindr] auth event:', event, 'provider_token:', !!s?.provider_token);
+          if (s) {
+            // Save token from session if present (Supabase may include it in SIGNED_IN)
+            if (s.provider_token) {
+              localStorage.setItem('matefindr_discord_token', s.provider_token);
+              localStorage.setItem('matefindr_discord_token_ts', String(Date.now()));
+            }
+            const u = await userFromSupabaseSession(s);
+            if (u) window.__matefindr.onLogin(u);
+            if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
+          }
+        });
+
+        /* === Auto-resync avec Discord ===
+           Re-fetch le profil Discord (avatar/banner/déco/flags/etc.) toutes les 5min
+           et à chaque fois que l'onglet redevient visible. Préserve bannerCustom +
+           decoCustom (les Boost users qui ont une bannière/déco custom ne sont pas
+           écrasés). */
+        async function autoResyncDiscord(){
+          try {
+            const stored = localStorage.getItem('matefindr_discord_token');
+            const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
+            if (!stored || (Date.now() - ts) > 7 * 24 * 3600 * 1000) return;
+            const d = await fetchDiscordProfile(stored);
+            if (!d) return;
+            const u = state.user = state.user || {};
+            u.discordId    = d.id || u.discordId;
+            // Pseudo / avatar personnalisés (renommé ou photo importée dans l'éditeur) :
+            // on NE les écrase PAS avec ceux de Discord (sinon « le pseudo/la photo ne se sauvegarde pas »).
+            if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
+            u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
+            if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+            if (!u.bannerCustom) u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
+            if (!u.decoCustom) {
+              u.decorationUrl = d.avatar_decoration_data?.asset
+                ? discordDecorationUrl(d.avatar_decoration_data.asset)
+                : null;
+            }
+            u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
+            u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
+            u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
+            save();
+            if (typeof updateChip === 'function') updateChip();
+            if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
+            if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+            console.log('[Matefindr] auto-resync Discord OK');
+          } catch (e) { console.warn('[Matefindr] auto-resync failed', e); }
+        }
+        // Toutes les 5 minutes
+        setInterval(autoResyncDiscord, 5 * 60 * 1000);
+        // Quand l'onglet redevient visible (user revient sur l'app)
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') autoResyncDiscord();
+        });
+        // Au chargement initial (après quelques secondes pour ne pas bloquer le init)
+        setTimeout(autoResyncDiscord, 3000);
+        window.__autoResyncDiscord = autoResyncDiscord;
+      } catch (e) { console.warn('Supabase session error', e); }
+    })();
+  })();
+
+  // Sign-out wrapper: call Supabase sign-out alongside our local reset.
+  // (The original accLogout listener runs first and clears local state; this just
+  // makes sure the Supabase session is also invalidated so the next reload
+  // doesn't re-hydrate it.)
+  document.addEventListener('click', (e) => {
+    if (e.target.closest && e.target.closest('#accLogout') && window.__supa) {
+      window.__supa.auth.signOut().catch(() => {});
+    }
+  });
