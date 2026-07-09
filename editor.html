@@ -2551,8 +2551,15 @@ function renderSettingsSheet(sh){
     try{ localStorage.setItem(STATE_KEY,JSON.stringify(s)); }catch(_){}
   });
   sh.querySelector('#ssBoost')?.addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
-  sh.querySelector('#ssLogout').addEventListener('click',()=>{
-    try{ const sb=edSupa(); if(sb) sb.auth.signOut().catch(()=>{}); }catch(_){}
+  sh.querySelector('#ssLogout').addEventListener('click',async(e)=>{
+    const btn=e.currentTarget;
+    try{ btn.disabled=true; btn.textContent='Déconnexion…'; }catch(_){}
+    // await : sinon la navigation coupe la requête et la session Supabase persiste
+    // → index.html te reconnecte automatiquement (= "déconnexion qui ne marche pas").
+    try{ const sb=edSupa(); if(sb) await sb.auth.signOut(); }catch(_){}
+    // Vraie déconnexion : on efface l'état local. Le profil est restauré depuis le
+    // cloud (profiles.data) à la prochaine connexion Discord.
+    try{ localStorage.removeItem(STATE_KEY); }catch(_){}
     location.href='index.html';
   });
   sh.querySelector('#ssDelete').addEventListener('click',()=>{
