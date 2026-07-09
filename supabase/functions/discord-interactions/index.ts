@@ -49,7 +49,10 @@ const PICK_COMPONENTS = [{
   }],
 }];
 
-// Les 3 boutons de choix rapide, affichés après clic sur "Ajuster les notifications".
+// Les 3 boutons de choix rapide, affichés après clic sur l'ANCIEN bouton
+// "Ajuster les notifications" (custom_id notif_adjust_open). Conservés pour les
+// messages déjà envoyés dans les MP des utilisateurs ; les nouveaux messages
+// utilisent désormais le panneau complet (notif_panel_open) ci-dessous.
 const ADJUST_COMPONENTS = [{
   type: 1,
   components: [
@@ -58,6 +61,51 @@ const ADJUST_COMPONENTS = [{
     { type: 2, style: 4, label: "Ne rien recevoir", custom_id: "notif_all_off", emoji: { name: "🔕" } },
   ],
 }];
+
+// ===== Panneau "Changer les notifications" (notif_panel_open) =====
+// Un seul message qui montre TOUTES les possibilités d'un coup : un bouton par
+// type (Like / Match / Message) affichant son état actuel (✅ activé / 🔕 muet),
+// cliquable pour basculer, + "Tout activer" / "Tout couper". Le message se met à
+// jour en place (type 7) à chaque clic.
+const PANEL_TEXT = "🔔 **Tes notifications Matefindr**\nClique sur un type pour l'activer ✅ ou le couper 🔕.";
+
+const NOTIF_TYPES = [
+  { key: "like", emoji: "❤️", name: "Likes" },
+  { key: "match", emoji: "💞", name: "Matchs" },
+  { key: "message", emoji: "💬", name: "Messages" },
+];
+
+type NotifPrefs = { notif_like?: boolean; notif_match?: boolean; notif_message?: boolean } | null;
+
+// Pas de ligne / valeur absente = activé par défaut (cohérent avec notify).
+function prefOn(prefs: NotifPrefs, key: string): boolean {
+  return !(prefs && (prefs as Record<string, unknown>)[`notif_${key}`] === false);
+}
+
+function buildNotifPanel(prefs: NotifPrefs) {
+  return [
+    {
+      type: 1,
+      components: NOTIF_TYPES.map((t) => {
+        const on = prefOn(prefs, t.key);
+        return {
+          type: 2,
+          style: on ? 3 : 2, // vert = activé, gris = muet
+          label: `${t.name} : ${on ? "✅" : "🔕"}`,
+          custom_id: `notif_toggle_${t.key}`,
+          emoji: { name: t.emoji },
+        };
+      }),
+    },
+    {
+      type: 1,
+      components: [
+        { type: 2, style: 3, label: "Tout activer", custom_id: "notif_all_on", emoji: { name: "✅" } },
+        { type: 2, style: 4, label: "Tout couper", custom_id: "notif_all_off", emoji: { name: "🔕" } },
+      ],
+    },
+  ];
+}
 
 function hexToBytes(hex: string): Uint8Array {
   const arr = new Uint8Array(hex.length / 2);
@@ -93,6 +141,15 @@ async function setPrefs(sb: ReturnType<typeof createClient>, userId: string, pat
   await sb.from("user_notif_prefs").upsert({ user_id: userId, ...patch }, { onConflict: "user_id" });
 }
 
+async function loadNotifPrefs(sb: ReturnType<typeof createClient>, userId: string): Promise<NotifPrefs> {
+  const { data } = await sb
+    .from("user_notif_prefs")
+    .select("notif_like,notif_match,notif_message")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as NotifPrefs) ?? null;
+}
+
 Deno.serve(async (req) => {
   const signature = req.headers.get("x-signature-ed25519") ?? "";
   const timestamp = req.headers.get("x-signature-timestamp") ?? "";
@@ -126,21 +183,47 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 3) "Tout recevoir" / "Ne rien recevoir" — état absolu, pas un toggle.
+  // 2bis) NOUVEAU bouton "Changer les notifications" (notif_panel_open) — posé
+  //    sous le DM de bienvenue et sous chaque MP de notif. Envoie un NOUVEAU
+  //    message contenant le panneau complet (état actuel de chaque type).
+  if (customId === "notif_panel_open") {
+    const userId = await resolveUserId(sb, discordId);
+    const prefs = userId ? await loadNotifPrefs(sb, userId) : null;
+    return json({
+      type: 4,
+      data: { content: PANEL_TEXT, components: buildNotifPanel(prefs) },
+    });
+  }
+
+  // 2ter) Clic sur un type dans le panneau → bascule ce type et redessine le
+  //    panneau en place (type 7).
+  if (customId?.startsWith("notif_toggle_")) {
+    const key = customId.slice("notif_toggle_".length); // like | match | message
+    const userId = await resolveUserId(sb, discordId);
+    let prefs = userId ? await loadNotifPrefs(sb, userId) : null;
+    if (userId && NOTIF_TYPES.some((t) => t.key === key)) {
+      const next = !prefOn(prefs, key);
+      await setPrefs(sb, userId, { [`notif_${key}`]: next });
+      // État effectif après bascule, pour un rendu correct sans relire la base.
+      prefs = {
+        notif_like: prefOn(prefs, "like"),
+        notif_match: prefOn(prefs, "match"),
+        notif_message: prefOn(prefs, "message"),
+      };
+      (prefs as Record<string, boolean>)[`notif_${key}`] = next;
+    }
+    return json({ type: 7, data: { content: PANEL_TEXT, components: buildNotifPanel(prefs) } });
+  }
+
+  // 3) "Tout activer" / "Tout couper" — état absolu, pas un toggle. Redessine le
+  //    panneau en place avec le nouvel état (marche aussi pour les anciens
+  //    messages "Tout recevoir / Ne rien recevoir" déjà envoyés).
   if (customId === "notif_all_on" || customId === "notif_all_off") {
     const enable = customId === "notif_all_on";
     const userId = await resolveUserId(sb, discordId);
     if (userId) await setPrefs(sb, userId, { notif_like: enable, notif_match: enable, notif_message: enable });
-    return json({
-      type: 7,
-      data: {
-        content: enable
-          ? "✅ Tu recevras à nouveau toutes tes notifications (like, match, message)."
-          : "🔕 Notifications désactivées. Rouvre ce menu depuis le message de bienvenue pour les réactiver.",
-        embeds: [],
-        components: [],
-      },
-    });
+    const prefs = { notif_like: enable, notif_match: enable, notif_message: enable };
+    return json({ type: 7, data: { content: PANEL_TEXT, components: buildNotifPanel(prefs) } });
   }
 
   // 4) "Choisir précisément" → affiche le menu déroulant granulaire dans ce même message.

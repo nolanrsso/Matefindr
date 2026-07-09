@@ -39,11 +39,12 @@ function welcomeText(uid: string): string {
     "(likes, matchs, nouveaux messages).\n\n" +
     "Tu peux ajuster ce que tu reçois à tout moment avec le bouton ci-dessous.";
 }
-// Bouton posé sous le DM de bienvenue → ouvre le choix Tout/Choisir/Rien
-// (géré par l'Edge Function d'interactions, custom_id "notif_adjust_open").
+// Bouton posé sous le DM de bienvenue → ouvre le panneau complet des
+// notifications (géré par l'Edge Function d'interactions, custom_id
+// "notif_panel_open" : un message avec un bouton par type, activable/coupable).
 const WELCOME_COMPONENTS = [{
   type: 1,
-  components: [{ type: 2, style: 1, label: "Ajuster les notifications", custom_id: "notif_adjust_open", emoji: { name: "🔔" } }],
+  components: [{ type: 2, style: 1, label: "Changer les notifications", custom_id: "notif_panel_open", emoji: { name: "🔔" } }],
 }];
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;

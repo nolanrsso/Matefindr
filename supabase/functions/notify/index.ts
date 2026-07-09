@@ -24,12 +24,13 @@ const DISCORD_API = "https://discord.com/api/v10";
 
 const COLORS = { like: 0xff4fa0, match: 0x9146ff, message: 0x5be9ff };
 
-// Bouton "Ajuster les notifications" attaché sous CHAQUE MP du bot — géré par
-// l'Edge Function d'interactions (smooth-endpoint, custom_id "notif_adjust_open").
-// Il ouvre le choix Tout recevoir / Choisir précisément / Ne rien recevoir.
+// Bouton "Changer les notifications" attaché sous CHAQUE MP du bot — géré par
+// l'Edge Function d'interactions (smooth-endpoint, custom_id "notif_panel_open").
+// Il ouvre le panneau complet : un bouton par type (Like/Match/Message) à
+// activer ✅ ou couper 🔕, + Tout activer / Tout couper.
 const MUTE_COMPONENTS = [{
   type: 1,
-  components: [{ type: 2, style: 2, label: "Ajuster les notifications", custom_id: "notif_adjust_open", emoji: { name: "🔔" } }],
+  components: [{ type: 2, style: 2, label: "Changer les notifications", custom_id: "notif_panel_open", emoji: { name: "🔔" } }],
 }];
 
 function avatarFallback(name: string | null, c1: string | null) {
