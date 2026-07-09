@@ -144,7 +144,20 @@
         try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
         // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
         // re-événement d'auth (focus d'onglet) → sinon ça renverrait à l'accueil sans cesse.
-        if (!alreadyInApp) setScreen(state.profile ? 'landing' : 'onboarding');
+        if (!alreadyInApp) {
+          // Aperçu ouvert depuis l'éditeur : on entre DIRECTEMENT en aperçu ici (dernier
+          // setScreen après les awaits) → sinon ce setScreen écrase l'enterPreviewMode de
+          // handleEditorReturn et on retombe sur l'index (la landing).
+          let wantPreview = false;
+          try { wantPreview = location.hash === '#preview' || sessionStorage.getItem('mf_from_editor') === '1'; } catch(_){}
+          if (wantPreview && state.profile && typeof enterPreviewMode === 'function') {
+            _previewFromEditor = true;
+            enterPreviewMode();
+            try { history.replaceState(null, '', location.pathname); } catch(_){}
+          } else {
+            setScreen(state.profile ? 'landing' : 'onboarding');
+          }
+        }
       },
       go(screen){ setScreen(screen); },
       hasProfile(){ return !!state.profile; },
