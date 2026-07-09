@@ -3833,24 +3833,27 @@
     });
 
     /* ===== Boost: GIFs (Giphy) ===== */
-    const GIPHY_KEY = 'XQIOH50ArLIvqYv8hK8BxmDB2QLqnnZ9';
+    // GIFs via Klipy (clé publique côté front, comme une clé Giphy — pas un secret serveur).
+    const KLIPY_KEY = '5DKFHDcNL2x6c4fwtYy3UM1voKXxmrZqjkmZTdUtTHqFwZlbJeybC2J4M7DAi7lu';
     const MAX_GIFS = 10;
     let _gifDebounce = null;
+    function klipyCid(){ return (state.user && state.user.discordId) || 'anon'; }
 
+    // Conserve le nom searchGiphy (appelé ailleurs) ; renvoie { preview, full }.
     async function searchGiphy(query){
       try {
-        const url = 'https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_KEY +
-          '&q=' + encodeURIComponent(query) + '&limit=50&rating=pg-13&bundle=messaging_non_clips';
+        const url = 'https://api.klipy.com/api/v1/' + KLIPY_KEY + '/gifs/search?q=' +
+          encodeURIComponent(query) + '&per_page=50&page=1&customer_id=' + encodeURIComponent(klipyCid());
         const resp = await fetch(url);
         const d = await resp.json();
-        if (d.meta?.status && d.meta.status !== 200) {
-          showToast('⚠️', 'Clé Giphy invalide', 'Crée la tienne sur developers.giphy.com');
-          return [];
-        }
-        return (d.data || []).map(g => ({
-          preview: g.images?.fixed_height_small?.url || g.images?.fixed_width_small?.url,
-          full:    g.images?.fixed_height?.url || g.images?.original?.url,
-        })).filter(g => g.preview && g.full);
+        const items = (d && d.data && d.data.data) || [];
+        return items.map(it => {
+          const f = it.file || {};
+          return {
+            preview: (f.sm && f.sm.gif && f.sm.gif.url) || (f.xs && f.xs.gif && f.xs.gif.url) || (f.md && f.md.gif && f.md.gif.url),
+            full:    (f.md && f.md.gif && f.md.gif.url) || (f.hd && f.hd.gif && f.hd.gif.url) || (f.sm && f.sm.gif && f.sm.gif.url),
+          };
+        }).filter(g => g.preview && g.full);
       } catch(_){ return []; }
     }
 

@@ -42,7 +42,7 @@
 /* ====== DA Matefindr (reprise du site) ====== */
 :root{
   --accent:#9146FF;
-  --c1:#393a41; --c2:#393a41;
+  --c1:#242429; --c2:#242429;
   --bg:#0D0B1E;
   --card:#1c1d22;
   --stroke:rgba(255,255,255,.08);
@@ -517,7 +517,11 @@ body.not-boost .boost-fab{display:inline-flex}
 /* ===== Presets de profil (Boost uniquement) — colonne en haut à gauche ===== */
 .pset-panel{position:fixed;left:14px;top:70px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
   background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.45)}
-body.not-boost .pset-panel{display:none} /* Presets réservés Boost */
+/* Non-boost : les presets restent VISIBLES (upsell). Le "+" passe en or et
+   ouvre le pop-up Boost au clic (géré en JS). */
+body.not-boost .pset-slot--empty{border-color:rgba(245,166,35,.75);color:#FFD15C;background:rgba(245,166,35,.08)}
+body.not-boost .pset-slot--empty:hover{border-color:#FFD15C;color:#fff;background:rgba(245,166,35,.18)}
+body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;padding:0 2px 1px}
 .pset-boost{font-size:8px;color:#3d1e00;background:linear-gradient(180deg,#FFD15C,#F5A623);padding:1px 5px;border-radius:6px;font-weight:900;letter-spacing:.04em}
 .pset-slots{display:flex;flex-direction:row;gap:6px}
@@ -621,6 +625,7 @@ body.color-open .card-zone{transform:translateX(158px)}
 .cp-reset{width:100%;padding:12px;border-radius:13px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);
   color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
 .cp-reset:hover{background:rgba(255,255,255,.1)}
+.cp-div{height:1px;background:var(--stroke-2);margin:18px 0 14px}
 .sheet h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;justify-content:space-between;font-weight:700}
 .sheet h3 .close{width:26px;height:26px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:12px;font-family:inherit}
 .sheet h3 .close:hover{color:#fff;background:rgba(255,79,160,.18)}
@@ -1071,7 +1076,18 @@ html.perf-lite *{
 'use strict';
 /* Migration rebrand Tindord→Matefindr : recopie les anciennes cles localStorage tindord_* vers matefindr_* (aucun reset). */
 try{Object.keys(localStorage).forEach(function(k){if(k.indexOf('tindord_')===0){var nk='matefindr_'+k.slice(8);if(localStorage.getItem(nk)===null)localStorage.setItem(nk,localStorage.getItem(k));}});}catch(_){}
-const GIPHY_KEY = 'XQIOH50ArLIvqYv8hK8BxmDB2QLqnnZ9';
+const GIPHY_KEY = 'XQIOH50ArLIvqYv8hK8BxmDB2QLqnnZ9'; // legacy (remplacé par Klipy)
+// GIFs via Klipy (clé publique côté front, comme une clé Giphy — pas un secret serveur).
+const KLIPY_KEY = '5DKFHDcNL2x6c4fwtYy3UM1voKXxmrZqjkmZTdUtTHqFwZlbJeybC2J4M7DAi7lu';
+function klipyCid(){ try{ const st=readSite(); return (st.user&&st.user.discordId)||'anon'; }catch(_){ return 'anon'; } }
+// Recherche GIF Klipy paginée. Renvoie { gifs:[url…], hasNext:bool }.
+async function klipySearchGifs(q, page){
+  const url='https://api.klipy.com/api/v1/'+KLIPY_KEY+'/gifs/search?q='+encodeURIComponent(q)+'&per_page=24&page='+page+'&customer_id='+encodeURIComponent(klipyCid());
+  const r=await fetch(url); const d=await r.json();
+  const box=(d&&d.data)||{}; const items=box.data||[];
+  const gifs=items.map(it=>{ const f=it.file||{}; const t=f.md||f.sm||f.hd||f.xs||{}; return (t.gif&&t.gif.url)||''; }).filter(Boolean);
+  return { gifs, hasNext:!!box.has_next };
+}
 const $ = id => document.getElementById(id);
 const fmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
@@ -1081,7 +1097,7 @@ const S = {
   username:'Matefindr_user', bio:'',
   avatar:null, banner:null, voice:null, music:null,
   bg:{type:'preset', value:'default'},
-  c1:'#393a41', c2:'#393a41', // couleur Discord par défaut
+  c1:'#242429', c2:'#242429', // couleur Discord par défaut
   nameColor:null,             // couleur du pseudo (null = blanc par défaut)
   orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
@@ -1513,7 +1529,7 @@ function stageBounds(margin){
   // (= la portée du layout par défaut) quel que soit le zoom. Capé aussi au viewport.
   const c=card.getBoundingClientRect();
   const cx=c.left+c.width/2, cy=c.top+c.height/2;
-  const halfW=c.width*1.70, halfH=c.height*1.0;
+  const halfW=c.width*2.55, halfH=c.height*1.15;
   const minX=Math.max(margin, cx-halfW), maxX=Math.min(window.innerWidth-margin, cx+halfW);
   const minY=Math.max(vTop, cy-halfH), maxY=Math.min(vBottom, cy+halfH);
   return {minX:Math.min(minX,maxX), maxX:Math.max(minX,maxX), minY:Math.min(minY,maxY), maxY:Math.max(minY,maxY)};
@@ -1705,11 +1721,27 @@ window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=
 const GIF_MAX=10;
 function renderGifsSheet(sh){
   sh.innerHTML=sheetHeader('GIFs sur ta carte',`<span class="sheet-count" id="gifCount"><b>${S.gifs.length}</b> / ${GIF_MAX}</span>`)+`
-    <div class="search-row"><input id="gifSearch" placeholder="Rechercher un GIF (Giphy)…" autocomplete="off"></div>
+    <div class="search-row"><input id="gifSearch" placeholder="Rechercher un GIF (Klipy)…" autocomplete="off"></div>
     <div class="gif-grid" id="gifResults"></div>
     <div class="hint" id="gifHint">${S.gifs.length}/${GIF_MAX} GIFs · glisse pour déplacer · coin vert = taille · coin bleu = rotation</div>`;
-  let deb=null;
-  sh.querySelector('#gifSearch').addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();if(q.length<2)return;deb=setTimeout(async()=>{try{const r=await fetch('https://api.giphy.com/v1/gifs/search?api_key='+GIPHY_KEY+'&q='+encodeURIComponent(q)+'&limit=12&rating=pg-13');const d=await r.json();const grid=sh.querySelector('#gifResults');grid.innerHTML='';(d.data||[]).forEach(g=>{const url=g.images?.fixed_height?.url;if(!url)return;const b=document.createElement('button');b.innerHTML=`<img src="${url}" alt="" loading="lazy">`;b.addEventListener('click',()=>addGif(url));grid.appendChild(b);});}catch(_){toast('Recherche GIF indisponible');}},350);});
+  const grid=sh.querySelector('#gifResults');
+  let q='', page=1, hasNext=false, loading=false, deb=null;
+  function addTiles(gifs){ gifs.forEach(url=>{ const b=document.createElement('button'); b.innerHTML=`<img src="${url}" alt="" loading="lazy">`; b.addEventListener('click',()=>addGif(url)); grid.appendChild(b); }); }
+  async function run(reset){
+    if(loading||q.length<2) return;
+    loading=true;
+    if(reset){ page=1; grid.innerHTML='<div class="hint">Recherche…</div>'; }
+    try{
+      const {gifs,hasNext:hn}=await klipySearchGifs(q,page);
+      if(reset) grid.innerHTML='';
+      if(reset && !gifs.length){ grid.innerHTML='<div class="hint">Aucun résultat</div>'; }
+      addTiles(gifs); hasNext=hn;
+    }catch(_){ if(reset) grid.innerHTML=''; toast('Recherche GIF indisponible'); }
+    loading=false;
+  }
+  sh.querySelector('#gifSearch').addEventListener('input',e=>{ clearTimeout(deb); q=e.target.value.trim(); if(q.length<2){ grid.innerHTML=''; return; } deb=setTimeout(()=>run(true),350); });
+  // Scroll infini : la sheet scrolle → on charge la page suivante près du bas.
+  sh.addEventListener('scroll',()=>{ if(hasNext && !loading && sh.scrollTop+sh.clientHeight >= sh.scrollHeight-140){ page++; run(false); } });
   setTimeout(()=>sh.querySelector('#gifSearch').focus(),250);
 }
 // Mémorise la dernière position/taille où un GIF a été posé → les suivants y apparaissent.
@@ -1807,12 +1839,28 @@ $('fileBg').addEventListener('change',async e=>{const f=e.target.files&&e.target
 function applyBg(bg){S.bg=bg;const layer=$('bgLayer');layer.innerHTML='';if(bg.type==='preset'){layer.className='bg-layer bg-'+bg.value;if(bg.value==='default')layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';}else{layer.className='bg-layer';if(bg.video){const v=document.createElement('video');v.src=bg.value;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;layer.appendChild(v);}else{const im=document.createElement('img');im.src=bg.value;layer.appendChild(im);}}if(typeof persist==='function')persist();}
 
 /* ===== 4. COULEURS (carte + pseudo) — sélecteur simplifié ===== */
-const SWATCH_PAIRS=[['#9146FF','#4A1BC1'],['#FF7EB6','#C92866'],['#5BE9FF','#1B6FC1'],['#5865F2','#404EED'],['#3BD17C','#1EA362'],['#FFB66E','#E8590C'],['#FF4FA0','#9146FF'],['#FFD83D','#FF7EB6']];
+// 12 dégradés (Haut = c1, Bas = c2), affichés en grille 4×3. Estimés d'après tes captures.
+const SWATCH_PAIRS=[
+  ['#C3C9EA','#2C2E86'], // lavande → indigo
+  ['#F6D9E8','#D01E86'], // rose pâle → magenta
+  ['#D6D2DA','#5E2A48'], // gris clair → prune
+  ['#1B0E1A','#7A2154'], // sombre → bordeaux-magenta
+  ['#0D0A14','#EC1E8E'], // noir → magenta vif
+  ['#0E0A0A','#E01D1D'], // noir → rouge
+  ['#EAEAF0','#242430'], // argent → anthracite
+  ['#242430','#EAEAF0'], // anthracite → argent
+  ['#D51D1D','#0E0A0A'], // rouge → noir
+  ['#2FE3DA','#0E3E3A'], // cyan → teal profond
+  ['#CDE9C4','#1F5A2A'], // vert menthe → vert forêt
+  ['#DAD2A0','#6E6A1E'], // kaki clair → or foncé
+];
 const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','#3BD17C','#FFB66E','#FF5555','#5865F2'];
 /* Panneau "Couleur de la carte" : dégradé vertical à 2 poignées (haut = c1, bas = c2),
    chaque poignée ouvre le picker natif. + dégradés 1 clic + reset Discord. */
 function renderColorPanel(){
   const p=$('colorPanel');
+  const isBoost=!document.body.classList.contains('not-boost');
+  const ncVal=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffd83d';
   p.innerHTML=`
     <button class="cp-close" id="cpClose" aria-label="Fermer">✕</button>
     <div class="cp-title">Couleur de la carte</div>
@@ -1825,14 +1873,26 @@ function renderColorPanel(){
     </div>
     <div class="cp-sub">Dégradés en 1 clic</div>
     <div class="cp-swatches">${SWATCH_PAIRS.map(pr=>`<button data-c1="${pr[0]}" data-c2="${pr[1]}" title="${pr[0]} → ${pr[1]}" style="background:linear-gradient(180deg,${pr[0]},${pr[1]})"></button>`).join('')}</div>
-    <button class="cp-reset" id="colReset">↺ Couleur Discord</button>`;
+    <button class="cp-reset" id="colReset">↺ Couleur par défaut</button>
+    ${isBoost ? `
+    <div class="cp-div"></div>
+    <div class="cp-title">Couleur du pseudo</div>
+    <div class="uname-color" style="margin-top:2px">
+      <label class="uname-color-swatch"><input type="color" id="cpNameColor" value="${ncVal}"></label>
+      <span class="uname-color-lbl">${esc(S.username||'Pseudo')}</span>
+      <button type="button" class="uname-color-def" id="cpNameDef">Défaut</button>
+    </div>` : ''}`;
   const sync=()=>{ const g=p.querySelector('#gradVert'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
     const t=p.querySelector('.gv-top'); if(t) t.style.background=S.c1;
     const b=p.querySelector('.gv-bot'); if(b) b.style.background=S.c2; };
   p.querySelector('#colP').addEventListener('input',e=>{ applyColors(e.target.value, S.c2); sync(); });
   p.querySelector('#colS').addEventListener('input',e=>{ applyColors(S.c1, e.target.value); sync(); });
   p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); p.querySelector('#colP').value=S.c1.toLowerCase(); p.querySelector('#colS').value=S.c2.toLowerCase(); sync(); }));
-  p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#5865F2','#404EED'); p.querySelector('#colP').value='#5865f2'; p.querySelector('#colS').value='#404eed'; sync(); toast('Dégradé Discord appliqué'); });
+  p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#242429','#242429'); p.querySelector('#colP').value='#242429'; p.querySelector('#colS').value='#242429'; sync(); toast('Couleur par défaut appliquée'); });
+  const cpNC=p.querySelector('#cpNameColor');
+  if(cpNC) cpNC.addEventListener('input',e=>applyNameColorVal(e.target.value));
+  const cpND=p.querySelector('#cpNameDef');
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal(null); if(cpNC)cpNC.value='#ffd83d'; toast('Pseudo remis par défaut'); });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
@@ -2200,7 +2260,7 @@ function buildDbProfile(st){
     looking:p.looking||'game', status:'online',
     nitro:!!(u.boost&&u.fakeNitro), boost:!!u.boost,
     joinedOn:new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}),
-    bio:p.bio||'', common:{friends:0,servers:0}, c1:'#393a41', c2:'#393a41',
+    bio:p.bio||'', common:{friends:0,servers:0}, c1:'#242429', c2:'#242429',
     initial:(u.displayName||'T').charAt(0).toUpperCase(),
     avatarUrl:u.avatarUrl||null, avatarPos:u.avatarPos||null, bannerUrl:u.bannerUrl||null, bannerPos:u.bannerPos||null, decorationUrl:u.decorationUrl||null,
     profileColor:u.profileColor||'#393a41', profileColor2:u.profileColor2||'#393a41',
@@ -2381,7 +2441,7 @@ function renderPresets(){
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
     slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span><button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
     slot.querySelector('.pset-del').addEventListener('click',e=>{ e.stopPropagation(); PRESETS.splice(i,1); savePresetsLS(); renderPresets(); toast('Preset supprimé'); });
-    slot.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost'))return; applyPreset(PRESETS[i]); toast('Preset '+(i+1)+' chargé'); });
+    slot.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; } applyPreset(PRESETS[i]); toast('Preset '+(i+1)+' chargé'); });
     box.appendChild(slot);
   });
   if(PRESETS.length<PSET_MAX){
@@ -2389,7 +2449,7 @@ function renderPresets(){
     add.className='pset-slot pset-slot--empty';
     add.title='Enregistrer le profil actuel comme preset '+(PRESETS.length+1);
     add.innerHTML='<span class="pset-num">+</span>';
-    add.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost'))return; PRESETS.push(snapshotProfile()); savePresetsLS(); renderPresets(); toast('Preset '+PRESETS.length+' enregistré ✅'); });
+    add.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; } PRESETS.push(snapshotProfile()); savePresetsLS(); renderPresets(); toast('Preset '+PRESETS.length+' enregistré ✅'); });
     box.appendChild(add);
   }
 }
@@ -2420,10 +2480,15 @@ function stripBoostElements(){
   saveNow();
 }
 let _pendingLeave=null;
-function openBoostGate(proceed){ _pendingLeave=proceed; $('boostGate').classList.add('open'); }
+let _gateUpsell=false;
+function openBoostGate(proceed, upsellOnly){ _pendingLeave=proceed; _gateUpsell=!!upsellOnly; $('boostGate').classList.add('open'); }
 $('bgateBuy').addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
 $('btnBoostUpsell')?.addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
-$('bgateClose').addEventListener('click',()=>{ stripBoostElements(); $('boostGate').classList.remove('open'); _pendingLeave=null; toast('Éléments Boost retirés'); });
+$('bgateClose').addEventListener('click',()=>{
+  // Upsell (presets non-boost) : on ferme sans rien retirer.
+  if(_gateUpsell){ _gateUpsell=false; $('boostGate').classList.remove('open'); _pendingLeave=null; return; }
+  stripBoostElements(); $('boostGate').classList.remove('open'); _pendingLeave=null; toast('Éléments Boost retirés');
+});
 // si on ferme par Échap → comme « Plus tard » : retire + reste sur l'éditeur
 // Quitter l'éditeur en passant par le gate si besoin.
 function leaveEditor(go){ if(hasBoostElements()){ openBoostGate(go); return; } go(); }
