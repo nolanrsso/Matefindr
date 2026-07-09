@@ -1,0 +1,6 @@
+# Sortie de l'outil Graphify (graphe d'archi) — local uniquement, pas déployé
+graphify-out/
+
+# Fichiers OS / éditeur
+.DS_Store
+Thumbs.db
