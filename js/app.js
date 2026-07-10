@@ -3554,6 +3554,12 @@
     /* Aperçu : ouvre le swipe sur SA PROPRE carte (bulles + GIFs + fond rendus en vrai),
        en MODE APERÇU → uniquement MA carte, AUCUN swipe, un seul bouton "Quitter l'aperçu". */
     function enterPreviewMode(){
+      // Relit matefindr_state À CHAUD juste avant d'afficher l'aperçu : si cet
+      // onglet est resté ouvert un moment (ou a été rouvert), `state` en mémoire
+      // peut être périmé par rapport à ce que l'éditeur vient d'enregistrer
+      // (ex : preset actif changé) → sans ce refresh, l'aperçu pouvait montrer
+      // un ancien preset au lieu de celui qu'on vient de quitter.
+      try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
       // Nettoyage défensif : l'aperçu ne doit JAMAIS afficher un profil venu
       // d'un lien de partage (sinon on se retrouve avec l'URL /<slug> et les
       // boutons like/dislike au lieu de "Quitter l'aperçu").
