@@ -26,6 +26,27 @@
   }catch(e){}
 })();
 </script>
+<!-- Anti-flash : si l'URL est un lien de partage (/<slug>) ou un retour d'éditeur
+     (#preview/#account), on cache le body TANT QUE le JS n'a pas décidé du bon
+     écran, pour éviter de voir l'index/landing clignoter avant le bon contenu.
+     Le JS retire la classe dès que setScreen() est appelé (ou après un fallback). -->
+<script>
+(function(){
+  try{
+    var path = (location.pathname || '').replace(/^\/+|\/+$/g, '');
+    var reserved = ['editor','checkout','admin','index','v2','assets','js','css','supabase','api','favicon'];
+    var isSlug = path && !path.includes('.') && !reserved.includes(path.toLowerCase()) && /^[a-z0-9_-]{2,40}$/i.test(path);
+    var isReturnHash = location.hash === '#preview' || location.hash === '#account';
+    if (isSlug || isReturnHash) {
+      document.documentElement.classList.add('mf-boot-hidden');
+      // Filet de sécurité : si rien ne révèle la page (erreur JS, session lente...),
+      // on ne laisse jamais le site invisible plus de quelques secondes.
+      setTimeout(function(){ document.documentElement.classList.remove('mf-boot-hidden'); }, 6000);
+    }
+  }catch(e){}
+})();
+</script>
+<style>html.mf-boot-hidden body{visibility:hidden}</style>
 <!-- Police du wordmark logo (comme le design) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

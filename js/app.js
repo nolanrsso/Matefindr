@@ -24,8 +24,13 @@
       const code = (document.documentElement.lang || 'fr').toUpperCase();
       return (I18N[code] && I18N[code][k]) || (I18N.FR[k]) || k;
     }
+    function revealApp(){
+      // Retire le cache anti-flash posé par index.html (lien de partage / retour éditeur).
+      document.documentElement.classList.remove('mf-boot-hidden');
+    }
     function setScreen(name){
       document.body.setAttribute('data-screen', name);
+      revealApp();
       if (name === 'account') renderAccount();
       if (name === 'onboarding' && typeof window.__initOnboarding === 'function') window.__initOnboarding();
       if (name === 'swipe')   { deckIdx = 0; ensureDeck(); refreshMyStatusUI(); refreshSwipeTools(); }
@@ -5592,13 +5597,13 @@
     async function openSharedProfile(slug){
       // Retour d'OAuth avec une action en attente → on ne ré-affiche PAS la carte,
       // onLogin va rejouer le like/dislike puis renvoyer à l'accueil.
-      try { if (localStorage.getItem('matefindr_pending_action')) { history.replaceState(null,'','/'); return; } } catch(_){}
+      try { if (localStorage.getItem('matefindr_pending_action')) { history.replaceState(null,'','/'); return; } } catch(_){} // onLogin/setScreen révèlera
       let prof = null;
       try {
         const { data } = await window.__supa.from('profiles').select('*').eq('slug', slug).limit(1);
         if (data && data[0]) prof = rowToProfile(data[0]);
       } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
-      if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} return; } // slug inconnu → app normale
+      if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
       prof._showViews = true;
       _sharedProfile = prof;
       // Compteur de vues : +1 une seule fois par navigateur pour ce profil.
@@ -5644,7 +5649,7 @@
         if (window.__supa && typeof buildCard === 'function' && typeof setScreen === 'function') {
           clearInterval(iv);
           openSharedProfile(slug);
-        } else if (tries > 100) clearInterval(iv);
+        } else if (tries > 100) { clearInterval(iv); revealApp(); }
       }, 100);
     })();
 
@@ -5667,7 +5672,7 @@
             location.href = 'editor.html';
           }
           try { history.replaceState(null, '', location.pathname); } catch(_){}
-        } else if (tries > 80) { clearInterval(iv); }
+        } else if (tries > 80) { clearInterval(iv); revealApp(); }
       }, 150);
     })();
     /* Dirty-state tracking: snapshot of editable fields at render time.
