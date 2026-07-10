@@ -2506,7 +2506,7 @@ renderPresets();
   if(!btn||!pop) return;
   const sanit=s=>String(s||'').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);
   function currentSlug(){ try{ const st=readSite(); return (st.user&&st.user.slug)||''; }catch(_){ return ''; } }
-  function showLink(slug){ full.textContent='matefindr.com/'+slug; full.href='https://www.matefindr.com/'+slug; share.hidden=false; }
+  function showLink(slug){ full.textContent='matefindr.com/'+slug; full.href='https://matefindr.com/'+slug; share.hidden=false; }
   function openPop(){
     const cur=currentSlug(); inp.value=cur; status.textContent=''; status.className='link-status';
     if(cur) showLink(cur); else share.hidden=true;
