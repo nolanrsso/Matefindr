@@ -15,6 +15,16 @@
     const KEY = 'matefindr_state';
     let state = { user:null, profile:null };
     try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
+    /* Garde multi-onglets : si l'éditeur (dans un AUTRE onglet) vient de sauvegarder
+       pendant que cet onglet affiche l'aperçu de SON profil, l'évènement 'storage'
+       (déclenché uniquement par les écritures d'un AUTRE onglet, jamais les siennes)
+       permet de relire l'état frais et de re-rendre la carte au lieu de rester
+       figé sur une version périmée. */
+    window.addEventListener('storage', e => {
+      if (e.key !== KEY) return;
+      try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
+      if (_previewMode && typeof ensureDeckSync === 'function') ensureDeckSync();
+    });
 
     function save(){
       try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(_){}

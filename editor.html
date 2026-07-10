@@ -2620,6 +2620,15 @@ else {
   // vraiment actif.
   applyPreset(PRESETS[_activePresetIdx]);
 }
+/* Garde multi-onglets : si un AUTRE onglet (ex: cet éditeur laissé ouvert ailleurs)
+   modifie les presets ou le preset actif pendant que celui-ci est ouvert, ce tab-ci
+   travaillerait sur des données périmées puis écraserait la modif la plus récente
+   à sa prochaine sauvegarde. L'évènement 'storage' ne se déclenche QUE pour les
+   changements venant d'un AUTRE onglet (jamais pour ses propres écritures) →
+   on recharge la page pour repartir sur l'état vraiment à jour. */
+window.addEventListener('storage', e=>{
+  if(e.key===PSET_KEY || e.key===ACTIVE_PSET_KEY) location.reload();
+});
 // Sauvegarde l'état courant DANS le preset actif — appelé à chaque persist() (debounced).
 function syncActivePreset(){
   if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length) return;
