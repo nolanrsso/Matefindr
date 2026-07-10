@@ -941,10 +941,14 @@
           const wpx = (p.w / 100) * wr.width;
           const cx = wr.left + (p.x / 100) * wr.width;
           const cy = wr.top  + (p.y / 100) * wr.height;
-          el.style.left = (cx - wpx / 2) + 'px';
-          el.style.top  = (cy - wpx / 2) + 'px';
+          // Centrage par transform (comme l'éditeur, translate(-50%,-50%)) — PAS par
+          // wpx/2 sur le top : la hauteur réelle du GIF dépend de son ratio image
+          // (souvent non carré), donc un offset basé sur la largeur décale l'image
+          // verticalement d'autant que (largeur - hauteur)/2.
+          el.style.left = cx + 'px';
+          el.style.top  = cy + 'px';
           el.style.width = wpx + 'px';
-          el.style.transform = `rotate(${p.rot}deg)`;
+          el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
         });
       }
       reposition();
