@@ -169,10 +169,16 @@
           // handleEditorReturn et on retombe sur l'index (la landing).
           let wantPreview = false;
           try { wantPreview = location.hash === '#preview' || sessionStorage.getItem('mf_from_editor') === '1'; } catch(_){}
+          // Lien de partage en cours (et pas d'action en attente déjà rejouée ci-dessus) →
+          // c'est handleSharedLink()/openSharedProfile() qui décident de l'écran, pas nous
+          // (sinon ça flashe landing avant que le profil partagé s'affiche).
+          const wantShared = !_hadPendingShared && typeof getSharedSlug === 'function' && !!getSharedSlug();
           if (wantPreview && state.profile && typeof enterPreviewMode === 'function') {
             _previewFromEditor = true;
             enterPreviewMode();
             try { history.replaceState(null, '', location.pathname); } catch(_){}
+          } else if (wantShared) {
+            // no-op : laissé à handleSharedLink()/openSharedProfile()
           } else {
             setScreen(state.profile ? 'landing' : 'onboarding');
           }
@@ -5910,7 +5916,14 @@
     if (typeof checkBoostExpiry === 'function') checkBoostExpiry(); // expiration/renouvellement mensuel au chargement
     if (state.user) {
       setAuth(true);
-      setScreen(state.profile ? 'landing' : 'onboarding');
+      // Si l'URL va être reprise par un lien de partage (/<slug>) ou un retour
+      // d'éditeur (#preview/#account), on NE révèle PAS encore landing/onboarding
+      // (ça flasherait avant le bon écran) : on pose juste l'attribut en silence,
+      // handleSharedLink/handleEditorReturn appelleront setScreen (donc revealApp)
+      // eux-mêmes une fois résolus.
+      const willBeOverridden = !!getSharedSlug() || location.hash === '#preview' || location.hash === '#account';
+      if (willBeOverridden) document.body.setAttribute('data-screen', state.profile ? 'landing' : 'onboarding');
+      else setScreen(state.profile ? 'landing' : 'onboarding');
       backfillCovers();
     }
     if (typeof refreshLandingCta === 'function') refreshLandingCta();
