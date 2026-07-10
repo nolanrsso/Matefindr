@@ -1016,14 +1016,13 @@
       if (pc1 && pc2) c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
       else if (pc1)   c.style.background = pc1;
       else if (accentHex) c.style.background = accentHex;
-      // BANNER : image Discord/custom si dispo, sinon le dégradé de couleur du profil
-      // continue par-dessus la bannière (comme à la création du compte) au lieu d'un
-      // gris fixe déconnecté de la couleur choisie.
+      // BANNER : image Discord/custom si dispo, sinon TRANSPARENTE → c'est le dégradé
+      // du corps de la carte (déjà posé sur .swipe-card, pleine hauteur) qui montre au
+      // travers, sans couture ni second dégradé recalculé sur la seule bande du haut
+      // (qui donnait un rendu différent de la vraie couleur du profil).
       const bannerStyle = p.bannerUrl
         ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
-        : (pc1 && pc2) ? `background:linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`
-        : pc1 ? `background:${pc1}`
-        : (accentHex ? `background:${accentHex}` : '');
+        : 'background:transparent';
       // Auto-contrast : if the card body is too light, switch text to dark.
       const lum = (hex) => {
         const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
