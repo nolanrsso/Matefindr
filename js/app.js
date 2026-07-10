@@ -1008,18 +1008,22 @@
         c.style.opacity = '0.85';
       }
       const lookLabel = { chill:tx('look_chill'), game:tx('look_game'), talk:tx('look_talk'), sleep:tx('look_sleep') }[p.looking] || p.looking;
-      // BANNER : only the top strip — uses Discord banner image, accent color, or default gradient.
-      const accentHex = p.accentColor ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
-      const bannerStyle = p.bannerUrl
-        ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
-        : (accentHex ? `background:${accentHex}` : '');
       // PROFILE BODY COLOR : primary + optional secondary as a gradient on the card body (below banner).
       // Si pas de couleur custom → on retombe sur l'accent_color Discord (= "reset Discord").
+      const accentHex = p.accentColor ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
       const pc1 = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
       const pc2 = (p.profileColor2 && p.profileColor2 !== 'discord') ? p.profileColor2 : null;
       if (pc1 && pc2) c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
       else if (pc1)   c.style.background = pc1;
       else if (accentHex) c.style.background = accentHex;
+      // BANNER : image Discord/custom si dispo, sinon le dégradé de couleur du profil
+      // continue par-dessus la bannière (comme à la création du compte) au lieu d'un
+      // gris fixe déconnecté de la couleur choisie.
+      const bannerStyle = p.bannerUrl
+        ? `background-image:url('${p.bannerUrl}');background-size:cover;background-position:center`
+        : (pc1 && pc2) ? `background:linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`
+        : pc1 ? `background:${pc1}`
+        : (accentHex ? `background:${accentHex}` : '');
       // Auto-contrast : if the card body is too light, switch text to dark.
       const lum = (hex) => {
         const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
