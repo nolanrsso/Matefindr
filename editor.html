@@ -1192,6 +1192,15 @@ function applyUsernameBoostStyle(){
   slot.style.color = hasCustom ? S.nameColor : '';
   slot.style.webkitTextFillColor = hasCustom ? S.nameColor : '';
 }
+/* Couleur à afficher dans le picker : la vraie couleur perso si définie, sinon le
+   doré du style Boost par défaut (le picker doit refléter ce qui est réellement
+   affiché sur le pseudo, pas rester blanc alors que le rendu est doré). */
+function nameSwatchColor(){
+  const hasCustom = !!(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor));
+  if(hasCustom) return S.nameColor.toLowerCase();
+  const isBoost=!document.body.classList.contains('not-boost');
+  return (isBoost && S.boostShowName!==false) ? '#ffd83d' : '#ffffff';
+}
 /* Applique une couleur de pseudo (null = défaut : doré Boost si dispo, sinon blanc). */
 function applyNameColorVal(v){
   S.nameColor = (v && /^#[0-9a-f]{6}$/i.test(v)) ? v : null;
@@ -1218,7 +1227,7 @@ function applyTagBlur(){
     inp.value=S.username;
     const isBoost=!document.body.classList.contains('not-boost');
     colorRow.hidden=!isBoost;
-    if(isBoost) colorInp.value=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffffff';
+    if(isBoost) colorInp.value=nameSwatchColor();
     back.hidden=false; pop.hidden=false; inp.focus(); inp.select();
   };
   window.closeUnamePop=function(){ pop.hidden=true; back.hidden=true; };
@@ -1226,7 +1235,7 @@ function applyTagBlur(){
   back.addEventListener('click',closeUnamePop);
   // Couleur du pseudo directement dans le popup (Boost) — picker natif, défaut = doré.
   colorInp.addEventListener('input',e=>applyNameColorVal(e.target.value));
-  colorDef.addEventListener('click',()=>{ applyNameColorVal(null); colorInp.value='#ffffff'; toast('Pseudo remis par défaut'); });
+  colorDef.addEventListener('click',()=>{ applyNameColorVal(null); colorInp.value=nameSwatchColor(); toast('Pseudo remis par défaut'); });
   $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; slot.textContent=v; applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
@@ -1969,7 +1978,7 @@ const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','
 function renderColorPanel(){
   const p=$('colorPanel');
   const isBoost=!document.body.classList.contains('not-boost');
-  const ncVal=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffffff';
+  const ncVal=nameSwatchColor();
   p.innerHTML=`
     <button class="cp-close" id="cpClose" aria-label="Fermer">✕</button>
     <div class="cp-title">Couleur de la carte</div>
@@ -2001,7 +2010,7 @@ function renderColorPanel(){
   const cpNC=p.querySelector('#cpNameColor');
   if(cpNC) cpNC.addEventListener('input',e=>applyNameColorVal(e.target.value));
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal(null); if(cpNC)cpNC.value='#ffffff'; toast('Pseudo remis par défaut'); });
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal(null); if(cpNC)cpNC.value=nameSwatchColor(); toast('Pseudo remis par défaut'); });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
