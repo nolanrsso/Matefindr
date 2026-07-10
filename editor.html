@@ -1223,10 +1223,10 @@ function applyTagBlur(){
 /* ===== CROP (photo + bannière) ===== */
 const crop={url:null,shape:'circle',tx:0,ty:0,scale:1,nw:0,nh:0,onOk:null,maxX:0,maxY:0};
 function openCrop(url,shape,title,onOk){
-  Object.assign(crop,{url,shape,tx:0,ty:0,scale:1.15,nw:0,nh:0,onOk,maxX:0,maxY:0});
+  Object.assign(crop,{url,shape,tx:0,ty:0,scale:1,nw:0,nh:0,onOk,maxX:0,maxY:0});
   $('cropTitle').textContent=title;
   const f=$('cropFrame');f.className='crop-frame '+(shape==='circle'?'circle':'banner');
-  const img=$('cropImg');img.style.transform='translate(-50%,-50%)';$('cropZoom').value=115;
+  const img=$('cropImg');img.style.transform='translate(-50%,-50%)';$('cropZoom').value=100;
   $('cropModal').classList.add('open');
   // attendre que la frame ait ses dimensions (modale affichée) puis charger l'image
   requestAnimationFrame(()=>{
