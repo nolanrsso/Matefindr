@@ -782,7 +782,9 @@
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
       // Lien de partage : on montre UNIQUEMENT ce profil (carte + like/dislike, pas de deck).
-      if (_sharedProfile) {
+      // Jamais en mode aperçu (les deux s'excluent) : sinon la carte partagée peut
+      // rester affichée après avoir quitté l'aperçu (bug de redirection vers /<slug>).
+      if (_sharedProfile && !_previewMode) {
         document.body.removeAttribute('data-swipe-empty');
         if (typeof applyBgChoice === 'function') applyBgChoice(_sharedProfile.bg);
         try {
@@ -3530,6 +3532,10 @@
     /* Aperçu : ouvre le swipe sur SA PROPRE carte (bulles + GIFs + fond rendus en vrai),
        en MODE APERÇU → uniquement MA carte, AUCUN swipe, un seul bouton "Quitter l'aperçu". */
     function enterPreviewMode(){
+      // Nettoyage défensif : l'aperçu ne doit JAMAIS afficher un profil venu
+      // d'un lien de partage (sinon on se retrouve avec l'URL /<slug> et les
+      // boutons like/dislike au lieu de "Quitter l'aperçu").
+      _sharedProfile = null;
       _previewMode = true;
       document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
@@ -3540,6 +3546,7 @@
     document.getElementById('accPreviewFull')?.addEventListener('click', enterPreviewMode);
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
       _previewMode = false;
+      _sharedProfile = null;
       document.body.removeAttribute('data-preview');
       // Signal robuste posé par l'éditeur avant la navigation (survit aux races
       // entre onLogin/handleEditorReturn, contrairement à la variable JS seule).
@@ -5611,6 +5618,9 @@
       } catch(_) { try { localStorage.removeItem('matefindr_pending_action'); } catch(_){} return false; }
     }
     async function openSharedProfile(slug){
+      // Nettoyage défensif : un lien de partage ne doit jamais s'ouvrir en mode aperçu.
+      _previewMode = false;
+      document.body.removeAttribute('data-preview');
       // Retour d'OAuth avec une action en attente → on ne ré-affiche PAS la carte,
       // onLogin va rejouer le like/dislike puis renvoyer à l'accueil.
       if (hasFreshPendingAction()) { try { history.replaceState(null,'','/'); } catch(_){} return; } // onLogin/setScreen révèlera
