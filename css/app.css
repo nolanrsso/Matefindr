@@ -1412,6 +1412,10 @@
   .swipe-card .lookfor[data-look="sleep"]{background:linear-gradient(135deg,#9146FF,#6B2BFF)}
   .swipe-card .name-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
   .swipe-card .name{font-family:"Clash Display",sans-serif;font-weight:700;font-size:36px;letter-spacing:-.01em;line-height:1.05}
+  /* Aperçu (mon profil, depuis l'éditeur) : typographie EXACTEMENT identique à celle
+     du pseudo dans l'éditeur (32px), au lieu de la taille utilisée pour les cartes
+     des autres utilisateurs (36px). */
+  body[data-preview="true"] .swipe-card .name{font-size:32px}
   /* Boost subscribers — golden shimmering name */
   .swipe-card .name.name--boost{
     background:linear-gradient(110deg,
