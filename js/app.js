@@ -142,6 +142,20 @@
         try { if (typeof syncMyProfileToCloud === 'function') await syncMyProfileToCloud(); } catch(_){}
         try { window.__discordJoinDM && await window.__discordJoinDM(); } catch(_){}
         try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
+        // Replay d'une action venue d'un lien de partage (❤️/✖️ fait AVANT la création
+        // de compte) : on enregistre le like puis on nettoie et on renvoie à l'accueil.
+        let _hadPendingShared = false;
+        try {
+          const raw = localStorage.getItem('matefindr_pending_action');
+          if (raw) {
+            localStorage.removeItem('matefindr_pending_action');
+            _hadPendingShared = true;
+            const pa = JSON.parse(raw);
+            if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
+            _sharedProfile = null;
+            try { history.replaceState(null, '', '/'); } catch(_){}
+          }
+        } catch(_){}
         // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
         // re-événement d'auth (focus d'onglet) → sinon ça renverrait à l'accueil sans cesse.
         if (!alreadyInApp) {
@@ -488,6 +502,7 @@
     let deckIdx = 0;
     let _previewMode = false; // true = aperçu complet de SA carte (pas de swipe, bouton "Quitter")
     let _previewFromEditor = false; // true = aperçu ouvert depuis editor.html (#preview) → "Quitter" doit y retourner
+    let _sharedProfile = null; // profil ouvert via un lien de partage matefindr.com/<slug> (carte + like/dislike)
     // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
     const ENTRY_MUSIC_GAIN = 0.55;
     const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
@@ -614,7 +629,7 @@
     function rowToProfile(r){
       if (!r) return null;
       // Profil complet stocké dans data → on l'utilise tel quel
-      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; return p; }
+      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; return p; }
       // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
       if (!r.display_name && !r.avatar_url) return null;
       const subByKind = {music:'musique', game:'jeu', anime:'série', film:'film'};
@@ -645,7 +660,7 @@
         initial: (r.display_name || 'T').charAt(0).toUpperCase(),
         avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
         accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
-        orbs, socials:{}, isMe:false, uid: r.id,
+        orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null,
       };
     }
 
@@ -761,6 +776,18 @@
     function ensureDeckSync(){
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
+      // Lien de partage : on montre UNIQUEMENT ce profil (carte + like/dislike, pas de deck).
+      if (_sharedProfile) {
+        document.body.removeAttribute('data-swipe-empty');
+        if (typeof applyBgChoice === 'function') applyBgChoice(_sharedProfile.bg);
+        try {
+          wrap.appendChild(buildCard(_sharedProfile, true));
+          renderOrbs(_sharedProfile);
+          renderSwipeGifs(_sharedProfile);
+          playProfileEntryMusic(_sharedProfile);
+        } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
+        return;
+      }
       const myP = buildUserProfile();
       // Ta propre carte n'est dans le deck QU'en mode APERÇU (endroit dédié, figé).
       // En mode normal (le hub), on ne se swipe pas soi-même → deck = uniquement les autres.
@@ -1078,6 +1105,7 @@
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
+        ${p._showViews ? `<span class="card-views">👁️ ${(p.views||0).toLocaleString('fr-FR')} vue${(p.views||0)>1?'s':''}</span>` : ''}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
         <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
@@ -2111,6 +2139,15 @@
     }
     function commitSwipe(dir, cardEl){
       if (_previewMode) return; // pas de swipe en mode aperçu
+      // Lien de partage : ❤️/✖️ animent la carte puis déclenchent l'action (compte + replay).
+      if (_sharedProfile) {
+        const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
+        cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
+        cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
+        cardEl.style.opacity = '0';
+        handleSharedAction(dir === 'yes' ? 'like' : 'dislike');
+        return;
+      }
       const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
@@ -5541,6 +5578,76 @@
     /* Retour depuis l'éditeur :
        #account → écran Paramètres (le SEUL endroit où les réglages apparaissent, accessible uniquement via l'éditeur).
        #preview → aperçu direct du profil (mode aperçu sur le swipe), SANS passer par l'écran Paramètres. */
+    /* ===== Lien de partage : matefindr.com/<slug> ouvre CE profil avec ❤️/✖️ ===== */
+    function getSharedSlug(){
+      try {
+        const seg = decodeURIComponent((location.pathname || '').split('/').filter(Boolean)[0] || '');
+        if (!seg || seg.includes('.')) return null;
+        const reserved = ['editor','checkout','admin','index','v2','assets','js','css','supabase','api','favicon'];
+        if (reserved.includes(seg.toLowerCase())) return null;
+        if (!/^[a-z0-9_-]{2,40}$/i.test(seg)) return null;
+        return seg.toLowerCase();
+      } catch(_) { return null; }
+    }
+    async function openSharedProfile(slug){
+      // Retour d'OAuth avec une action en attente → on ne ré-affiche PAS la carte,
+      // onLogin va rejouer le like/dislike puis renvoyer à l'accueil.
+      try { if (localStorage.getItem('matefindr_pending_action')) { history.replaceState(null,'','/'); return; } } catch(_){}
+      let prof = null;
+      try {
+        const { data } = await window.__supa.from('profiles').select('*').eq('slug', slug).limit(1);
+        if (data && data[0]) prof = rowToProfile(data[0]);
+      } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
+      if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} return; } // slug inconnu → app normale
+      prof._showViews = true;
+      _sharedProfile = prof;
+      // Compteur de vues : +1 une seule fois par navigateur pour ce profil.
+      try {
+        const seen = 'mf_viewed_' + prof.uid;
+        if (!localStorage.getItem(seen)) {
+          localStorage.setItem(seen, '1');
+          window.__supa.rpc('bump_profile_views', { p_id: prof.uid }).then(() => {
+            if (_sharedProfile) { _sharedProfile.views = (_sharedProfile.views || 0) + 1; if (document.body.getAttribute('data-screen') === 'swipe') ensureDeckSync(); }
+          }).catch(() => {});
+        }
+      } catch(_){}
+      setScreen('swipe'); // ensureDeckSync affiche _sharedProfile
+    }
+    async function handleSharedAction(action){
+      const target = _sharedProfile;
+      let session = null;
+      try { ({ data:{ session } } = await window.__supa.auth.getSession()); } catch(_){}
+      if (session) {
+        if (action === 'like' && target && target.uid && typeof recordLike === 'function') recordLike(target);
+        finishShared();
+      } else {
+        // Pas de compte → on mémorise l'action et on lance la connexion Discord (= création de compte).
+        try { localStorage.setItem('matefindr_pending_action', JSON.stringify({ uid: target && target.uid, action, ts: Date.now() })); } catch(_){}
+        if (typeof signInWithDiscord === 'function') signInWithDiscord();
+        else if (window.signInWithDiscord) window.signInWithDiscord();
+      }
+    }
+    function finishShared(){
+      _sharedProfile = null;
+      try { history.replaceState(null,'','/'); } catch(_){}
+      if (typeof setScreen === 'function') setScreen(state.profile ? 'landing' : 'onboarding');
+    }
+    // Au chargement : si l'URL est un slug, on ouvre le profil partagé (même sans être connecté).
+    (function handleSharedLink(){
+      // Retour d'OAuth avec une action en attente → onLogin s'en charge, on ne rouvre pas la carte.
+      try { if (localStorage.getItem('matefindr_pending_action')) return; } catch(_){}
+      const slug = getSharedSlug();
+      if (!slug) return;
+      let tries = 0;
+      const iv = setInterval(() => {
+        tries++;
+        if (window.__supa && typeof buildCard === 'function' && typeof setScreen === 'function') {
+          clearInterval(iv);
+          openSharedProfile(slug);
+        } else if (tries > 100) clearInterval(iv);
+      }, 100);
+    })();
+
     (function handleEditorReturn(){
       const h = location.hash;
       if (h !== '#account' && h !== '#preview') return;

@@ -1533,6 +1533,16 @@
     background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
     letter-spacing:.06em;box-shadow:0 3px 10px rgba(145,70,255,.45);
   }
+  /* Lien de partage : nombre de vues, en bas à droite de la carte. */
+  .swipe-card .card-views{
+    position:absolute;right:12px;bottom:12px;z-index:6;
+    display:inline-flex;align-items:center;gap:5px;
+    padding:5px 11px;border-radius:999px;
+    background:rgba(8,9,14,.6);color:#fff;font-size:12px;font-weight:700;
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    box-shadow:0 4px 14px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.1) inset;
+    pointer-events:none;
+  }
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
     background:rgba(255,255,255,.08);
