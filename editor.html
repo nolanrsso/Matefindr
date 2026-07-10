@@ -123,12 +123,14 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
    positions % des bulles/GIFs sont relatives à .card-frame, qui doit rester
    exactement à la taille de la carte). width:fit-content + margin:auto = centré
    horizontalement même s'il est plus étroit/large que la carte. */
-/* Reste dans le flux normal avec la marge d'ORIGINE (14px/8px) → la carte ne bouge
-   pas d'un pixel. Le bouton est ensuite remonté visuellement via `transform`
-   (positionCanvasModes(), JS) pour venir se coller pile au-dessus de la zone de
-   bulles (~14% de la hauteur de carte, cf. orbBounds()) sans jamais affecter la
-   mise en page ni la position de la carte. */
-.canvas-modes{position:relative;z-index:31;display:flex;width:fit-content;margin:0 auto 14px;gap:3px;padding:4px;border-radius:14px;
+/* Un spacer invisible (même hauteur) garde la place dans le flux normal → la
+   carte ne bouge pas d'un pixel. Le vrai bouton, lui, est en position:fixed
+   (coordonnées calculées une seule fois par positionCanvasModes(), JS) pour
+   coller à la zone de bulles SANS jamais bouger quand on bascule Paysage/
+   Portrait (la carte change de taille et se recentre, mais le bouton reste
+   fixe à l'écran — recalculé seulement au chargement / redimensionnement). */
+.canvas-modes-spacer{height:38px;margin:0 auto 14px}
+.canvas-modes{position:fixed;z-index:31;display:flex;width:fit-content;gap:3px;padding:4px;border-radius:14px;
   border:1px solid var(--stroke-2);background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .canvas-mode-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;border:none;background:transparent;color:var(--dim);
   font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;transition:background .14s ease,color .14s ease}
@@ -136,7 +138,7 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .canvas-mode-btn:hover{color:#fff}
 .canvas-mode-btn.active{background:linear-gradient(180deg,#7a2bff,#5b1fd0);color:#fff;box-shadow:0 6px 16px rgba(122,43,255,.45)}
 @media(max-width:720px){.canvas-mode-btn .cm-word{display:none}.canvas-mode-btn{padding:8px 10px}}
-@media(max-width:600px){.canvas-modes{margin:0 auto 8px;padding:3px}.canvas-mode-btn{padding:6px 9px}.canvas-mode-btn svg{width:14px;height:14px}}
+@media(max-width:600px){.canvas-modes-spacer{margin:0 auto 8px}.canvas-modes{padding:3px}.canvas-mode-btn{padding:6px 9px}.canvas-mode-btn svg{width:14px;height:14px}}
 
 /* Reframe de la zone d'édition selon l'écran ciblé : en mode Portrait, la carte
    prend des proportions téléphone → les bulles/GIFs se disposent à la bonne
@@ -974,6 +976,7 @@ html.perf-lite *{
          debout). Le mode "paysage téléphone" séparé a été retiré : sur le vrai
          swipe, un téléphone tenu à l'horizontale retombe sur la disposition
          Paysage (elle est déjà large, comme un écran d'ordi). -->
+    <div class="canvas-modes-spacer" aria-hidden="true"></div>
     <div class="canvas-modes" role="group" aria-label="Écran à éditer">
       <button class="canvas-mode-btn active" data-mode="desktop" type="button" title="Paysage (écran d'ordinateur)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="cm-word">Paysage</span>
@@ -1779,21 +1782,22 @@ function renderOrbs(){
 let _orbRz=null;
 window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();},150);});
 /* Colle le sélecteur Paysage/Portrait juste au-dessus de la zone de bulles réelle
-   (~14% de la hauteur de carte, même formule que orbBounds()) SANS jamais bouger
-   la carte : le bloc reste dans le flux normal (marge d'origine, donc la carte ne
-   bouge pas d'un pixel) et on le remonte visuellement via transform. */
+   (~14% de la hauteur de carte, même formule que orbBounds()). Le bouton est en
+   position:fixed avec des coordonnées écran calculées ici une seule fois (charge-
+   ment / redimensionnement RÉEL de fenêtre) — JAMAIS recalculé au changement de
+   mode Paysage/Portrait, pour que le bouton ne bouge pas quand la carte change
+   de taille. Un spacer invisible garde sa place dans le flux → la carte, elle,
+   ne bouge pas non plus. */
 function positionCanvasModes(){
   const cm=document.querySelector('.canvas-modes');
   const card=document.getElementById('card');
   if(!cm||!card) return;
-  cm.style.transform='';
-  const cmRect=cm.getBoundingClientRect();
   const cardRect=card.getBoundingClientRect();
   if(!cardRect.height) return;
+  const cmRect=cm.getBoundingClientRect();
   const ext=cardRect.height*0.14;
-  const currentGap=cardRect.top-cmRect.bottom;
-  const shift=currentGap-ext; // négatif = remonte le bouton jusqu'à toucher la zone de bulles
-  if(shift<0) cm.style.transform=`translateY(${shift}px)`;
+  cm.style.top=(cardRect.top-ext-cmRect.height)+'px';
+  cm.style.left=(cardRect.left+cardRect.width/2-cmRect.width/2)+'px';
 }
 requestAnimationFrame(positionCanvasModes);
 // Le chargement asynchrone de la police (Clash Display) change la hauteur de la
@@ -1883,10 +1887,12 @@ function setCanvasMode(mode){
   toast('Mode '+lbl+' — dispose ton profil pour cette taille');
 }
 // Applique la classe de reframe + l'état actif du sélecteur (sans re-render).
+// NB : ne repositionne PAS le sélecteur Paysage/Portrait (positionCanvasModes) —
+// sa position est fixée une fois au chargement et ne doit plus bouger quand on
+// bascule de mode, même si la carte change de hauteur.
 function applyCanvasMode(){
   document.body.setAttribute('data-canvas', S.canvasMode);
   document.querySelectorAll('.canvas-mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===S.canvasMode));
-  if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes);
 }
 function makeSticker(g,idx,layer){
   if(typeof g.x!=='number')g.x=50; if(typeof g.y!=='number')g.y=28; if(typeof g.w!=='number')g.w=34; if(typeof g.rot!=='number')g.rot=0;
@@ -2468,6 +2474,7 @@ drawIdleWave();
 hydrateFromSite();
 applyCanvasMode(); // pose data-canvas + état actif du sélecteur (défaut : bureau)
 renderOrbs(); // affiche au moins la bulle "+" même sans bulle existante
+if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes); // position finale une fois le profil chargé
 
 /* ===== Volume des previews audio : câblage du slider ===== */
 (function initEdVol(){
