@@ -545,6 +545,8 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .pset-slot--empty:hover{border-color:rgba(179,128,255,.85);color:#fff;background:rgba(145,70,255,.14)}
 .pset-slot--filled{border-color:rgba(255,255,255,.2);color:#fff;overflow:visible}
 .pset-slot--filled:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.9)}
+/* Preset actif = celui dans lequel tes modifs sont sauvegardées en direct. */
+.pset-slot--active{border-color:#9146FF;box-shadow:0 0 0 3px rgba(145,70,255,.3),0 4px 14px rgba(145,70,255,.4)}
 .pset-slot .pset-swatch{position:absolute;inset:3px;border-radius:9px;opacity:.9;pointer-events:none}
 .pset-slot .pset-num{position:relative;z-index:1;font-size:13px;text-shadow:0 1px 5px rgba(0,0,0,.8)}
 .pset-slot .pset-del{position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:#E8194B;color:#fff;border:2px solid #14092e;
@@ -613,7 +615,7 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 
 /* ===================== SHEET ===================== */
 .sheet{position:fixed;left:50%;bottom:92px;transform:translate(-50%,18px);z-index:39;width:min(94vw,520px);max-height:54vh;overflow:hidden auto;border-radius:20px;padding:16px;
-  background:linear-gradient(180deg, rgba(28,22,58,.96), rgba(18,12,42,.96));border:1px solid var(--stroke-2);
+  background:linear-gradient(180deg, rgb(28,22,58), rgb(18,12,42));border:1px solid var(--stroke-2);
   backdrop-filter:blur(24px) saturate(150%);box-shadow:0 24px 70px rgba(0,0,0,.65);opacity:0;pointer-events:none;
   transition:opacity .22s ease, transform .26s cubic-bezier(.2,.8,.3,1)}
 .sheet.open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
@@ -657,7 +659,7 @@ body.color-open .card-zone{transform:translateX(158px)}
 .cp-reset:hover{background:rgba(255,255,255,.1)}
 .cp-div{height:1px;background:var(--stroke-2);margin:18px 0 14px}
 .sheet h3{margin:0 0 12px;padding:16px 16px 12px;margin-left:-16px;margin-right:-16px;margin-top:-16px;font-size:15px;display:flex;align-items:center;justify-content:space-between;font-weight:700;
-  position:sticky;top:-16px;z-index:2;background:linear-gradient(180deg, rgba(28,22,58,.98), rgba(28,22,58,.98));border-bottom:1px solid var(--stroke-2)}
+  position:sticky;top:-16px;z-index:2;background:rgb(28,22,58);border-bottom:1px solid var(--stroke-2)}
 .sheet h3 .close{width:26px;height:26px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:12px;font-family:inherit}
 .sheet h3 .close:hover{color:#fff;background:rgba(255,79,160,.18)}
 .sheet h3 .sh-title{display:inline-flex;align-items:center;gap:9px;min-width:0}
@@ -2325,6 +2327,7 @@ function writeState(){
   st.profile.connections=Object.assign({},S.connections);
   try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
   scheduleDbSync(); // ← pousse aussi vers Supabase à chaque modif
+  if(typeof syncActivePreset==='function') syncActivePreset(); // sauvegarde aussi dans le preset actif
 }
 function persist(){ clearTimeout(_persistT); _persistT=setTimeout(writeState,400); }
 function saveNow(){ clearTimeout(_persistT); writeState(); syncToDb(); }
@@ -2499,9 +2502,13 @@ if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvas
 })();
 
 /* ===== Presets de profil (Boost, 5 max) =====
-   Snapshot complet des champs personnalisables de S → chargeable en 1 clic.
-   Slot vide = enregistre l'état courant ; slot rempli = charge ; × = supprime. */
-const PSET_KEY='matefindr_presets', PSET_MAX=5;
+   Chaque preset est un snapshot complet des champs personnalisables de S.
+   Le "preset actif" (_activePresetIdx) reçoit EN DIRECT chaque modification —
+   comme le profil de base (Preset 1, créé automatiquement au 1er chargement).
+   Cliquer un slot rempli = le charge ET le rend actif (tes futures modifs s'y
+   sauvegardent). Cliquer « + » = crée un preset TOTALEMENT VIERGE, l'active,
+   et vide l'éditeur pour repartir de zéro. */
+const PSET_KEY='matefindr_presets', PSET_MAX=5, ACTIVE_PSET_KEY='matefindr_active_preset';
 // Liste COMPACTE (sans trous) : 0 à 5 presets enregistrés, dans l'ordre.
 function loadPresets(){ try{ const a=JSON.parse(localStorage.getItem(PSET_KEY)||'[]'); return (Array.isArray(a)?a:[]).filter(Boolean).slice(0,PSET_MAX); }catch(_){ return []; } }
 function savePresetsLS(){ try{ localStorage.setItem(PSET_KEY, JSON.stringify(PRESETS.slice(0,PSET_MAX))); }catch(_){} }
@@ -2511,6 +2518,27 @@ function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
   const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','connections','handleBlur','boostShowName','nameCustom','avatarCustom'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
+}
+// Snapshot vierge (mêmes valeurs par défaut que la déclaration de S plus haut).
+function blankPresetSnapshot(){
+  return { username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
+    bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
+    orbs:[], gifs:[], connections:{}, handleBlur:false, boostShowName:true,
+    nameCustom:false, avatarCustom:false };
+}
+function loadActivePresetIdx(){ try{ const v=localStorage.getItem(ACTIVE_PSET_KEY); const n=v===null?NaN:parseInt(v,10); return Number.isInteger(n)&&n>=0?n:null; }catch(_){ return null; } }
+function saveActivePresetIdx(){ try{ if(_activePresetIdx===null) localStorage.removeItem(ACTIVE_PSET_KEY); else localStorage.setItem(ACTIVE_PSET_KEY,String(_activePresetIdx)); }catch(_){} }
+let _activePresetIdx=loadActivePresetIdx();
+// 1er chargement (migration) : aucun preset encore enregistré → le profil actuel devient "Preset 1".
+if(PRESETS.length===0){ PRESETS.push(snapshotProfile()); savePresetsLS(); _activePresetIdx=0; saveActivePresetIdx(); }
+else if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length){ _activePresetIdx=0; saveActivePresetIdx(); }
+// Sauvegarde l'état courant DANS le preset actif — appelé à chaque persist() (debounced).
+function syncActivePreset(){
+  if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length) return;
+  PRESETS[_activePresetIdx]=snapshotProfile();
+  savePresetsLS();
+  const box=$('psetSlots');
+  if(box){ const sw=box.children[_activePresetIdx]?.querySelector('.pset-swatch'); if(sw) sw.style.background='linear-gradient(180deg,'+S.c1+' 0%,'+S.c2+' 100%)'; }
 }
 // Applique un snapshot en réinitialisant TOUT (hydrateFromSite n'écrase pas l'absent → inutilisable ici).
 function applyPreset(snap){
@@ -2547,20 +2575,41 @@ function renderPresets(){
   const box=$('psetSlots'); if(!box) return; box.innerHTML='';
   PRESETS.forEach((p,i)=>{
     const slot=document.createElement('div');
-    slot.className='pset-slot pset-slot--filled';
-    slot.title='Charger le preset '+(i+1);
+    slot.className='pset-slot pset-slot--filled'+(i===_activePresetIdx?' pset-slot--active':'');
+    slot.title=(i===_activePresetIdx?'Preset actif — ':'Charger ')+'le preset '+(i+1);
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
     slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span><button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
-    slot.querySelector('.pset-del').addEventListener('click',e=>{ e.stopPropagation(); PRESETS.splice(i,1); savePresetsLS(); renderPresets(); toast('Preset supprimé'); });
-    slot.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; } applyPreset(PRESETS[i]); toast('Preset '+(i+1)+' chargé'); });
+    slot.querySelector('.pset-del').addEventListener('click',e=>{
+      e.stopPropagation();
+      PRESETS.splice(i,1);
+      if(_activePresetIdx===i) _activePresetIdx=PRESETS.length?Math.min(i,PRESETS.length-1):null;
+      else if(_activePresetIdx!==null && _activePresetIdx>i) _activePresetIdx--;
+      savePresetsLS(); saveActivePresetIdx(); renderPresets(); toast('Preset supprimé');
+    });
+    slot.addEventListener('click',()=>{
+      if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
+      _activePresetIdx=i; saveActivePresetIdx();
+      applyPreset(PRESETS[i]);
+      renderPresets();
+      toast('Preset '+(i+1)+' chargé — actif');
+    });
     box.appendChild(slot);
   });
   if(PRESETS.length<PSET_MAX){
     const add=document.createElement('div');
     add.className='pset-slot pset-slot--empty';
-    add.title='Enregistrer le profil actuel comme preset '+(PRESETS.length+1);
+    add.title='Créer un preset vierge ('+(PRESETS.length+1)+')';
     add.innerHTML='<span class="pset-num">+</span>';
-    add.addEventListener('click',()=>{ if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; } PRESETS.push(snapshotProfile()); savePresetsLS(); renderPresets(); toast('Preset '+PRESETS.length+' enregistré ✅'); });
+    add.addEventListener('click',()=>{
+      if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
+      const blank=blankPresetSnapshot();
+      PRESETS.push(blank);
+      _activePresetIdx=PRESETS.length-1;
+      savePresetsLS(); saveActivePresetIdx();
+      applyPreset(blank);
+      renderPresets();
+      toast('Preset '+PRESETS.length+' créé — vierge et actif');
+    });
     box.appendChild(add);
   }
 }
