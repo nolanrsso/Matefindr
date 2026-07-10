@@ -1718,13 +1718,19 @@ function renderOrbs(){
   const cardH=(card&&card.offsetHeight)||(cardW*SWIPE_CARD_ASPECT);
   // Orbe = 115px sur une carte de 380 (ratio exact du swipe ≈ 0.302).
   const D=Math.round(cardW*0.302);
-  // ry est une fraction de la HAUTEUR de la carte de swipe → on convertit vers la hauteur réelle.
-  const refH=cardW*SWIPE_CARD_ASPECT;
-  const vScale=refH/cardH; // garde l'écart vertical à l'échelle du swipe
+  // IMPORTANT : rx/ry sont des fractions pures de la carte (largeur/hauteur RÉELLES),
+  // exactement comme relToPx() sur la vraie carte de swipe (js/app.js) -- AUCUNE
+  // correction d'échelle ici. Un vScale avait été introduit pour "recaler" l'écart
+  // vertical sur un ratio de référence (620/380), mais comme ce calcul EST la valeur
+  // sauvegardée (customY), ça faussait la fraction elle-même : la bulle atterrissait
+  // ailleurs une fois rendue sur la vraie carte (qui n'applique pas cette correction).
   const pos=orbLayout(S.orbs.length, S.canvasMode);
   const nodes=[]; // pour la passe anti-superposition (bulles + "+")
   S.orbs.forEach((o,i)=>{
-    if(typeof o.x!=='number'||typeof o.y!=='number'){const p=pos[i];o.x=50+p.rx*100;o.y=50+p.ry*vScale*100;}
+    // Recalcule TOUJOURS la position des bulles non déplacées à la main (userPlaced)
+    // depuis la disposition courante -- corrige aussi les bulles déjà sauvegardées
+    // avec l'ancien calcul faussé (vScale), pas seulement les nouvelles.
+    if(!o.userPlaced){const p=pos[i];o.x=50+p.rx*100;o.y=50+p.ry*100;}
     const wrap=document.createElement('div'); wrap.className='orb-wrap';
     wrap.style.left=o.x+'%'; wrap.style.top=o.y+'%';
     const orb=document.createElement('div'); orb.className='orb'; orb.dataset.kind=o.kind;
@@ -1772,7 +1778,7 @@ function renderOrbs(){
   if(S.orbs.length<orbMax()){
     const n=S.orbs.length;
     const p2=orbLayout(n+1)[n]; // emplacement par défaut de la prochaine bulle
-    const defAx=50+p2.rx*100, defAy=50+p2.ry*vScale*100;
+    const defAx=50+p2.rx*100, defAy=50+p2.ry*100;
     const ax=_addBubblePos?_addBubblePos.x:defAx, ay=_addBubblePos?_addBubblePos.y:defAy;
     const aw=document.createElement('div'); aw.className='orb-wrap orb-wrap--add'; aw.title='Glisse pour déplacer · clique pour ajouter une bulle';
     aw.style.left=ax+'%'; aw.style.top=ay+'%';
