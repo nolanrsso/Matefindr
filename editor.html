@@ -2556,7 +2556,16 @@ function saveActivePresetIdx(){ try{ if(_activePresetIdx===null) localStorage.re
 let _activePresetIdx=loadActivePresetIdx();
 // 1er chargement (migration) : aucun preset encore enregistré → le profil actuel devient "Preset 1".
 if(PRESETS.length===0){ PRESETS.push(snapshotProfile()); savePresetsLS(); _activePresetIdx=0; saveActivePresetIdx(); }
-else if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length){ _activePresetIdx=0; saveActivePresetIdx(); }
+else {
+  if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length){ _activePresetIdx=0; saveActivePresetIdx(); }
+  // Recharge le preset actif par-dessus ce que hydrateFromSite() a lu dans
+  // matefindr_state : ce fichier est aussi touché par index.html (aperçu,
+  // resync Discord auto...) et peut avoir dérivé du contenu du preset actif
+  // entretemps. Sans ce recalage, revenir de l'aperçu pouvait faire
+  // apparaître (et donc sauvegarder par-dessus) un autre preset que celui
+  // vraiment actif.
+  applyPreset(PRESETS[_activePresetIdx]);
+}
 // Sauvegarde l'état courant DANS le preset actif — appelé à chaque persist() (debounced).
 function syncActivePreset(){
   if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length) return;
