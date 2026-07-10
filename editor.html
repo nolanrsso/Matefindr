@@ -1235,7 +1235,7 @@ function applyTagBlur(){
   back.addEventListener('click',closeUnamePop);
   // Couleur du pseudo directement dans le popup (Boost) — picker natif, défaut = doré.
   colorInp.addEventListener('input',e=>applyNameColorVal(e.target.value));
-  colorDef.addEventListener('click',()=>{ applyNameColorVal(null); colorInp.value=nameSwatchColor(); toast('Pseudo remis par défaut'); });
+  colorDef.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); colorInp.value='#ffffff'; toast('Pseudo remis en blanc'); });
   $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; slot.textContent=v; applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
@@ -2010,7 +2010,7 @@ function renderColorPanel(){
   const cpNC=p.querySelector('#cpNameColor');
   if(cpNC) cpNC.addEventListener('input',e=>applyNameColorVal(e.target.value));
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal(null); if(cpNC)cpNC.value=nameSwatchColor(); toast('Pseudo remis par défaut'); });
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); if(cpNC)cpNC.value='#ffffff'; toast('Pseudo remis en blanc'); });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
