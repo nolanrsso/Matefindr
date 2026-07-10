@@ -2531,11 +2531,19 @@ renderPresets();
       const { data:taken }=await sb.from('profiles').select('id').eq('slug',slug).neq('id',session.user.id).limit(1);
       if(taken && taken.length){ status.className='link-status err'; status.textContent='« '+slug+' » est déjà pris, essaie autre chose.'; saveBtn.disabled=false; return; }
       const { error }=await sb.from('profiles').update({ slug }).eq('id',session.user.id);
-      if(error){ status.className='link-status err'; status.textContent=(/duplicate|unique/i.test(error.message||'')?'Déjà pris, essaie autre chose.':'Échec — réessaie.'); saveBtn.disabled=false; return; }
+      if(error){
+        console.warn('[link] update slug error', error);
+        const m=((error.message||'')+' '+(error.details||'')+' '+(error.hint||'')).toLowerCase();
+        let msg='Échec — réessaie.';
+        if(/duplicate|unique/.test(m)) msg='« '+slug+' » est déjà pris, essaie autre chose.';
+        else if(/slug|column|schema cache|does not exist/.test(m)) msg='Lien pas encore activé côté serveur (SQL à lancer).';
+        else if(error.message) msg=error.message.slice(0,90);
+        status.className='link-status err'; status.textContent=msg; saveBtn.disabled=false; return;
+      }
       try{ const st=readSite(); st.user=st.user||{}; st.user.slug=slug; localStorage.setItem(STATE_KEY,JSON.stringify(st)); }catch(_){}
       status.className='link-status ok'; status.textContent='✅ Ton lien est prêt !';
       showLink(slug);
-    }catch(e){ status.className='link-status err'; status.textContent='Erreur — réessaie.'; }
+    }catch(e){ console.warn('[link] save error', e); status.className='link-status err'; status.textContent='Erreur — '+((e&&e.message)?e.message.slice(0,80):'réessaie.'); }
     saveBtn.disabled=false;
   });
 })();
