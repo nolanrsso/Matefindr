@@ -309,6 +309,13 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .banner img,.banner .ph{position:absolute;inset:0;width:100%;height:100%}
 .banner img{object-fit:cover}
 .banner .ph{display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600;letter-spacing:.03em}
+.banner-del{
+  position:absolute;top:8px;left:8px;z-index:5;width:28px;height:28px;border-radius:50%;border:none;
+  background:rgba(10,10,14,.62);color:#fff;display:grid;place-items:center;cursor:pointer;
+  backdrop-filter:blur(4px);transition:background .15s ease,transform .15s ease;
+}
+.banner-del:hover{background:rgba(237,66,69,.9);transform:scale(1.06)}
+.banner-del svg{width:14px;height:14px}
 .avatar{
   /* Identique à la vraie carte (.swipe-card .avatar-wrap) : 140px, anneau 8px, top 74 / left 20 */
   position:absolute;left:20px;top:74px;
@@ -970,6 +977,7 @@ html.perf-lite *{
     <button class="eye-dot eye-dot--card" data-eye="card" title="Masquer la carte (aperçu)" aria-label="Masquer la carte"></button>
     <section class="card" id="card">
       <div class="banner editable" id="bannerSlot" title="Changer la bannière"><div class="ph">Clique pour ajouter une bannière (image ou GIF)</div></div>
+      <button type="button" class="banner-del" id="bannerDelBtn" title="Supprimer la bannière" aria-label="Supprimer la bannière" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
       <div class="avatar-deco" id="avatarDeco" aria-hidden="true"></div>
       <div class="body">
@@ -1038,7 +1046,7 @@ html.perf-lite *{
   <div class="conn-pop-head"><b>Ton pseudo Matefindr</b></div>
   <input id="unameInput" maxlength="32" placeholder="Ton pseudo…" autocomplete="off">
   <div class="uname-color" id="unameColorRow" hidden>
-    <label class="uname-color-swatch" title="Couleur du pseudo"><input type="color" id="unameColor" value="#ffd83d"></label>
+    <label class="uname-color-swatch" title="Couleur du pseudo"><input type="color" id="unameColor" value="#ffffff"></label>
     <span class="uname-color-lbl">Couleur du pseudo</span>
     <button type="button" class="uname-color-def" id="unameColorDef">Défaut</button>
   </div>
@@ -1126,7 +1134,7 @@ const esc = s => (s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp
 
 const S = {
   username:'Matefindr_user', bio:'',
-  avatar:null, banner:null, voice:null, music:null,
+  avatar:null, banner:null, bannerRemoved:false, voice:null, music:null,
   bg:{type:'preset', value:'default'},
   c1:'#242429', c2:'#242429', // couleur Discord par défaut
   nameColor:null,             // couleur du pseudo (null = blanc par défaut)
@@ -1194,7 +1202,7 @@ function applyTagBlur(){
     inp.value=S.username;
     const isBoost=!document.body.classList.contains('not-boost');
     colorRow.hidden=!isBoost;
-    if(isBoost) colorInp.value=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffd83d';
+    if(isBoost) colorInp.value=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffffff';
     back.hidden=false; pop.hidden=false; inp.focus(); inp.select();
   };
   window.closeUnamePop=function(){ pop.hidden=true; back.hidden=true; };
@@ -1202,7 +1210,7 @@ function applyTagBlur(){
   back.addEventListener('click',closeUnamePop);
   // Couleur du pseudo directement dans le popup (Boost) — picker natif, défaut = doré.
   colorInp.addEventListener('input',e=>applyNameColorVal(e.target.value));
-  colorDef.addEventListener('click',()=>{ applyNameColorVal(null); colorInp.value='#ffd83d'; toast('Pseudo remis par défaut'); });
+  colorDef.addEventListener('click',()=>{ applyNameColorVal(null); colorInp.value='#ffffff'; toast('Pseudo remis par défaut'); });
   $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; slot.textContent=v; applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
@@ -1249,10 +1257,21 @@ function cropPaint(){
     crop.onOk&&crop.onOk({url:crop.url,posX,posY,scale:crop.scale});
   });})();
 function setCroppedMedia(slot,data,ph){slot.innerHTML='';if(!data){slot.innerHTML=ph;return;}const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';img.style.transform='scale('+data.scale+')';slot.appendChild(img);}
+const BANNER_PH='<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>';
+function renderBanner(){
+  setCroppedMedia($('bannerSlot'),S.banner,BANNER_PH);
+  const del=$('bannerDelBtn'); if(del) del.hidden=!S.banner;
+}
 $('avatarSlot').addEventListener('click',()=>$('fileAvatar').click());
 $('fileAvatar').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'circle','Recadrer la photo de profil',async d=>{S.avatar=d;S.avatarCustom=true;setCroppedMedia($('avatarSlot'),d,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Envoi de la photo…');const url=await edUpload(f,'avatar');if(url){S.avatar={url,posX:d.posX,posY:d.posY,scale:d.scale};setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Photo de profil mise à jour');}else{toast('⚠️ Envoi échoué — photo locale seulement');}});e.target.value='';});
 $('bannerSlot').addEventListener('click',()=>$('fileBanner').click());
-$('fileBanner').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'banner','Recadrer la bannière',async d=>{S.banner=d;setCroppedMedia($('bannerSlot'),d,'<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>');persist();toast('Envoi de la bannière…');const url=await edUpload(f,'banner');if(url){S.banner={url,posX:d.posX,posY:d.posY,scale:d.scale};setCroppedMedia($('bannerSlot'),S.banner,'');persist();toast('Bannière mise à jour');}else{toast('⚠️ Envoi échoué — bannière locale seulement');}});e.target.value='';});
+$('fileBanner').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'banner','Recadrer la bannière',async d=>{S.banner=d;S.bannerRemoved=false;renderBanner();persist();toast('Envoi de la bannière…');const url=await edUpload(f,'banner');if(url){S.banner={url,posX:d.posX,posY:d.posY,scale:d.scale};renderBanner();persist();toast('Bannière mise à jour');}else{toast('⚠️ Envoi échoué — bannière locale seulement');}});e.target.value='';});
+$('bannerDelBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  S.banner=null; S.bannerRemoved=true;
+  renderBanner(); persist();
+  toast('Bannière supprimée');
+});
 
 /* ===== VOCAL ===== */
 const rec={media:null,recorder:null,chunks:[],url:null,blob:null,dur:0,t0:0,raf:null,timerI:null,audio:null,actx:null};
@@ -1893,7 +1912,7 @@ const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','
 function renderColorPanel(){
   const p=$('colorPanel');
   const isBoost=!document.body.classList.contains('not-boost');
-  const ncVal=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffd83d';
+  const ncVal=(S.nameColor && /^#[0-9a-f]{6}$/i.test(S.nameColor)) ? S.nameColor.toLowerCase() : '#ffffff';
   p.innerHTML=`
     <button class="cp-close" id="cpClose" aria-label="Fermer">✕</button>
     <div class="cp-title">Couleur de la carte</div>
@@ -1925,7 +1944,7 @@ function renderColorPanel(){
   const cpNC=p.querySelector('#cpNameColor');
   if(cpNC) cpNC.addEventListener('input',e=>applyNameColorVal(e.target.value));
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal(null); if(cpNC)cpNC.value='#ffd83d'; toast('Pseudo remis par défaut'); });
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal(null); if(cpNC)cpNC.value='#ffffff'; toast('Pseudo remis par défaut'); });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
@@ -2218,6 +2237,7 @@ function writeState(){
     if(S.avatarCustom) st.user.avatarCustom=true; // photo importée → Discord ne l'écrase plus
   }
   if(S.banner){ st.user.bannerUrl=S.banner.url; st.user.bannerCustom=true; st.user.bannerPos={posX:S.banner.posX,posY:S.banner.posY,scale:S.banner.scale}; }
+  else if(S.bannerRemoved){ st.user.bannerUrl=null; st.user.bannerCustom=true; st.user.bannerPos=null; } // bannière supprimée volontairement → Discord ne doit pas la réimporter
   st.user.profileColor=S.c1; st.user.profileColor2=S.c2;
   st.user.nameColor=(S.nameColor&&/^#[0-9a-f]{6}$/i.test(S.nameColor))?S.nameColor:null; // couleur du pseudo (null = blanc)
   if(S.bg.type==='preset'){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=false; }
@@ -2361,7 +2381,9 @@ function hydrateFromSite(){
   // Décoration d'avatar + point de statut Discord → la carte éditeur colle au vrai profil.
   _decorationUrl = u.decorationUrl || null;
   applyAvatarDeco();
-  if(u.bannerUrl){ const bp=u.bannerPos||{}; S.banner={url:u.bannerUrl,posX:(typeof bp.posX==='number'?bp.posX:50),posY:(typeof bp.posY==='number'?bp.posY:50),scale:(typeof bp.scale==='number'?bp.scale:1)}; setCroppedMedia($('bannerSlot'),S.banner,''); }
+  if(u.bannerUrl){ const bp=u.bannerPos||{}; S.banner={url:u.bannerUrl,posX:(typeof bp.posX==='number'?bp.posX:50),posY:(typeof bp.posY==='number'?bp.posY:50),scale:(typeof bp.scale==='number'?bp.scale:1)}; S.bannerRemoved=false; }
+  else { S.banner=null; S.bannerRemoved=!!u.bannerCustom; } // bannerCustom sans bannerUrl = supprimée volontairement
+  renderBanner();
   if(u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)){
     S.c1=u.profileColor; S.c2=(u.profileColor2&&/^#[0-9a-f]{6}$/i.test(u.profileColor2))?u.profileColor2:darken(S.c1,.55);
     const r=document.documentElement.style; r.setProperty('--accent',S.c1); r.setProperty('--c1',S.c1); r.setProperty('--c2',S.c2);
@@ -2440,7 +2462,7 @@ function applyPreset(snap){
   try{
     const c=JSON.parse(JSON.stringify(snap));
     S.username=c.username||S.username; S.bio=c.bio||'';
-    S.avatar=c.avatar||null; S.banner=c.banner||null;
+    S.avatar=c.avatar||null; S.banner=c.banner||null; S.bannerRemoved=!S.banner;
     S.voice=c.voice||null; S.music=c.music||null;
     S.c1=c.c1||S.c1; S.c2=c.c2||S.c2;
     S.nameColor=(c.nameColor&&/^#[0-9a-f]{6}$/i.test(c.nameColor))?c.nameColor:null;
@@ -2453,7 +2475,7 @@ function applyPreset(snap){
     applyColors(S.c1,S.c2);
     applyBg(c.bg||{type:'preset',value:'default'});
     setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+((S.username||'T').charAt(0).toUpperCase())+'</div>');
-    setCroppedMedia($('bannerSlot'),S.banner,'<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>');
+    renderBanner();
     if(typeof restoreCanvasMode==='function') restoreCanvasMode(S.canvasMode);
     renderOrbs(); renderGifs(); renderVoice(); renderMusicChip();
     if(typeof renderConnections==='function') renderConnections();

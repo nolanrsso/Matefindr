@@ -5981,6 +5981,11 @@
             const stored = localStorage.getItem('matefindr_discord_token');
             const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
             if (!stored || (Date.now() - ts) > 7 * 24 * 3600 * 1000) return;
+            // Relit le localStorage AVANT de merger : si l'éditeur (autre onglet) a modifié
+            // le pseudo/photo/bannière entre-temps, ce tab peut avoir un `state` en mémoire
+            // périmé (nameCustom/avatarCustom/bannerCustom à false) → sans ce refresh, on
+            // écraserait la modif récente avec les valeurs Discord d'origine.
+            try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
             const d = await fetchDiscordProfile(stored);
             if (!d) return;
             const u = state.user = state.user || {};
