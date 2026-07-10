@@ -2657,16 +2657,28 @@ function renderSettingsSheet(sh){
   sh.querySelector('#ssLogout').addEventListener('click',async(e)=>{
     const btn=e.currentTarget;
     try{ btn.disabled=true; btn.textContent='Déconnexion…'; }catch(_){}
+    // Annule tout écriture différée (persist()/scheduleDbSync en attente) AVANT de
+    // vider le storage : sinon un timer qui se déclenche après le removeItem
+    // réécrit l'ancien profil dans matefindr_state (race condition) et le compte
+    // suivant hérite des données de celui-ci.
+    try{ clearTimeout(_persistT); }catch(_){}
+    try{ clearTimeout(_dbSyncT); }catch(_){}
     // await : sinon la navigation coupe la requête et la session Supabase persiste
     // → index.html te reconnecte automatiquement (= "déconnexion qui ne marche pas").
     try{ const sb=edSupa(); if(sb) await sb.auth.signOut(); }catch(_){}
     // Vraie déconnexion : on efface l'état local. Le profil est restauré depuis le
     // cloud (profiles.data) à la prochaine connexion Discord.
     try{ localStorage.removeItem(STATE_KEY); }catch(_){}
+    // CRITIQUE : le token Discord (utilisé pour ré-enrichir le profil au prochain
+    // login) doit disparaître avec le compte, sinon le compte SUIVANT peut hériter
+    // de l'identité Discord de celui-ci (fuite de profil entre comptes).
+    try{ localStorage.removeItem('matefindr_discord_token'); localStorage.removeItem('matefindr_discord_token_ts'); localStorage.removeItem('matefindr_discord_token_uid'); }catch(_){}
     location.href='index.html';
   });
   sh.querySelector('#ssDelete').addEventListener('click',()=>{
     if(!confirm('Supprimer définitivement ton compte Matefindr ? Toutes tes données locales seront effacées.')) return;
+    try{ clearTimeout(_persistT); }catch(_){}
+    try{ clearTimeout(_dbSyncT); }catch(_){}
     try{ localStorage.clear(); }catch(_){}
     try{ const sb=edSupa(); if(sb) sb.auth.signOut().catch(()=>{}); }catch(_){}
     location.href='index.html';

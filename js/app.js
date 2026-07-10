@@ -66,7 +66,15 @@
         const alreadyInApp = document.body.getAttribute('data-auth') === 'in'
           && !['landing','onboarding'].includes(document.body.getAttribute('data-screen'));
         // Préserve les assets custom (Boost) avant le merge Discord
-        const prev = state.user || {};
+        // Garde-fou CRITIQUE : si un `state.user`/`state.profile` d'un AUTRE compte
+        // Discord traînait encore (localStorage pas nettoyé, race condition, onglet
+        // resté ouvert…), on ne doit JAMAIS réutiliser ses champs pour le nouveau
+        // compte (fuite de profil entre comptes : bannière/couleurs/orbes/bio de
+        // l'ancien compte qui apparaissent chez le nouveau).
+        const rawPrev = state.user || {};
+        const sameAccount = !rawPrev.discordId || !user.discordId || rawPrev.discordId === user.discordId;
+        if (!sameAccount) { state.profile = null; }
+        const prev = sameAccount ? rawPrev : {};
         const keepBanner = prev.bannerCustom && prev.bannerUrl;
         const keepDeco   = prev.decoCustom && prev.decorationUrl;
         // Photo de profil importée + son recadrage : sinon le merge Discord
@@ -5815,6 +5823,16 @@
       setAuth(false);
       setScreen('landing');
     });
+    // Nettoyage défensif : dans tous les cas, ces clés ne doivent jamais survivre
+    // à une déconnexion (sinon le compte suivant peut hériter du token Discord —
+    // donc de l'identité — du précédent).
+    function clearDiscordTokenKeys(){
+      try {
+        localStorage.removeItem('matefindr_discord_token');
+        localStorage.removeItem('matefindr_discord_token_ts');
+        localStorage.removeItem('matefindr_discord_token_uid');
+      } catch(_){}
+    }
     document.getElementById('accSaveReset')?.addEventListener('click', () => {
       // Revert fields to last snapshot
       const u = state.user || {}; const p = state.profile || {};
@@ -5868,6 +5886,7 @@
       // Invalide la session Supabase (pas juste l'état local) — sinon un reload
       // reconnecte automatiquement via la session persistée en localStorage.
       try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch {}
+      clearDiscordTokenKeys();
       state = { user:null, profile:null };
       save();
       setAuth(false);
@@ -5964,6 +5983,10 @@
             if (s.provider_token) {
               localStorage.setItem('matefindr_discord_token', s.provider_token);
               localStorage.setItem('matefindr_discord_token_ts', String(Date.now()));
+              try {
+                const m = s.user?.user_metadata || {};
+                localStorage.setItem('matefindr_discord_token_uid', m.provider_id || m.sub || s.user?.id || '');
+              } catch(_){}
             }
             const u = await userFromSupabaseSession(s);
             if (u) window.__matefindr.onLogin(u);

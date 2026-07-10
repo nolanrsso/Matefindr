@@ -116,9 +116,14 @@
     let token = session.provider_token;
     if (!token) {
       const stored = localStorage.getItem('matefindr_discord_token');
+      const storedUid = localStorage.getItem('matefindr_discord_token_uid');
       const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
       // Discord access tokens last ~7 days; we keep ours up to 24h to be safe.
-      if (stored && (Date.now() - ts) < 24 * 3600 * 1000) token = stored;
+      // CRITIQUE : un token stocké pour un AUTRE compte Supabase (session précédente,
+      // pas nettoyée à la déconnexion) ne doit JAMAIS être réutilisé ici — sinon on
+      // récupère l'identité Discord de l'ancien compte et on l'attribue au nouveau
+      // (fuite de profil entre comptes).
+      if (stored && storedUid === id && (Date.now() - ts) < 24 * 3600 * 1000) token = stored;
     }
     let guilds = [];
     if (token) {
