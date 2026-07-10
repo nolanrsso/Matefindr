@@ -5594,10 +5594,26 @@
         return seg.toLowerCase();
       } catch(_) { return null; }
     }
+    // Lit l'action en attente (like/dislike posé avant la connexion Discord) et la
+    // considère PÉRIMÉE après 2 min : si l'OAuth a été annulé/interrompu, ce flag ne
+    // doit jamais bloquer les lien de partage pour toujours (sinon plus aucun /<slug>
+    // ne s'ouvre dans ce navigateur).
+    function hasFreshPendingAction(){
+      try {
+        const raw = localStorage.getItem('matefindr_pending_action');
+        if (!raw) return false;
+        const pa = JSON.parse(raw);
+        if (!pa || !pa.ts || (Date.now() - pa.ts) > 2 * 60 * 1000) {
+          localStorage.removeItem('matefindr_pending_action');
+          return false;
+        }
+        return true;
+      } catch(_) { try { localStorage.removeItem('matefindr_pending_action'); } catch(_){} return false; }
+    }
     async function openSharedProfile(slug){
       // Retour d'OAuth avec une action en attente → on ne ré-affiche PAS la carte,
       // onLogin va rejouer le like/dislike puis renvoyer à l'accueil.
-      try { if (localStorage.getItem('matefindr_pending_action')) { history.replaceState(null,'','/'); return; } } catch(_){} // onLogin/setScreen révèlera
+      if (hasFreshPendingAction()) { try { history.replaceState(null,'','/'); } catch(_){} return; } // onLogin/setScreen révèlera
       let prof = null;
       try {
         const { data } = await window.__supa.from('profiles').select('*').eq('slug', slug).limit(1);
@@ -5639,8 +5655,8 @@
     }
     // Au chargement : si l'URL est un slug, on ouvre le profil partagé (même sans être connecté).
     (function handleSharedLink(){
-      // Retour d'OAuth avec une action en attente → onLogin s'en charge, on ne rouvre pas la carte.
-      try { if (localStorage.getItem('matefindr_pending_action')) return; } catch(_){}
+      // Retour d'OAuth avec une action en attente → onLogin s'en charge (et révèlera la page), on ne rouvre pas la carte.
+      if (hasFreshPendingAction()) return;
       const slug = getSharedSlug();
       if (!slug) return;
       let tries = 0;
