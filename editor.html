@@ -672,6 +672,11 @@ body.color-open .card-zone{transform:translateX(158px)}
 .search-row input{flex:1;padding:10px 13px;border-radius:11px;font:inherit;color:#fff;outline:none;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2)}
 .search-row input:focus{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
 
+.gif-suggests{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.gif-suggests button{padding:6px 13px;border-radius:999px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);
+  font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-transform:capitalize;transition:border-color .14s ease,color .14s ease,background .14s ease}
+.gif-suggests button:hover{color:#fff;border-color:rgba(145,70,255,.55);background:rgba(145,70,255,.14)}
+
 /* suggestions musique/jeu/film (liste avec cover) */
 .sugg-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow:auto}
 .sugg{display:flex;align-items:center;gap:10px;padding:8px;border-radius:11px;cursor:pointer;border:1.5px solid transparent;background:rgba(255,255,255,.03);transition:border-color .14s ease;font-family:inherit;color:var(--ink);text-align:left}
@@ -1406,7 +1411,6 @@ function updateOrbCount(){
 }
 function updateGifCount(){
   const c=document.getElementById('gifCount'); if(c)c.innerHTML=`<b>${S.gifs.length}</b> / ${GIF_MAX}`;
-  const h=document.getElementById('gifHint'); if(h)h.textContent=`${S.gifs.length}/${GIF_MAX} GIFs · glisse · coin vert = taille · coin bleu = rotation`;
 }
 
 /* ===================================================================
@@ -1777,11 +1781,13 @@ window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=
 /* ===== 2. GIFS = stickers sur la carte (drag + resize + rotation), comme le site ===== */
 const GIF_MAX=10;
 function renderGifsSheet(sh){
+  const GIF_SUGGESTS=['anime','happy','dance','hello'];
   sh.innerHTML=sheetHeader('GIFs sur ta carte',`<span class="sheet-count" id="gifCount"><b>${S.gifs.length}</b> / ${GIF_MAX}</span>`)+`
     <div class="search-row"><input id="gifSearch" placeholder="Rechercher un GIF (Klipy)…" autocomplete="off"></div>
-    <div class="gif-grid" id="gifResults"></div>
-    <div class="hint" id="gifHint">${S.gifs.length}/${GIF_MAX} GIFs · glisse pour déplacer · coin vert = taille · coin bleu = rotation</div>`;
+    <div class="gif-suggests" id="gifSuggests">${GIF_SUGGESTS.map(s=>`<button type="button" data-q="${s}">${s}</button>`).join('')}</div>
+    <div class="gif-grid" id="gifResults"></div>`;
   const grid=sh.querySelector('#gifResults');
+  const searchInp=sh.querySelector('#gifSearch');
   let q='', page=1, hasNext=false, loading=false, deb=null;
   function addTiles(gifs){ gifs.forEach(url=>{ const b=document.createElement('button'); b.innerHTML=`<img src="${url}" alt="" loading="lazy">`; b.addEventListener('click',()=>addGif(url)); grid.appendChild(b); }); }
   async function run(reset){
@@ -1796,7 +1802,11 @@ function renderGifsSheet(sh){
     }catch(_){ if(reset) grid.innerHTML=''; toast('Recherche GIF indisponible'); }
     loading=false;
   }
-  sh.querySelector('#gifSearch').addEventListener('input',e=>{ clearTimeout(deb); q=e.target.value.trim(); if(q.length<2){ grid.innerHTML=''; return; } deb=setTimeout(()=>run(true),350); });
+  sh.querySelector('#gifSuggests').addEventListener('click',e=>{
+    const btn=e.target.closest('button[data-q]'); if(!btn) return;
+    q=btn.dataset.q; searchInp.value=q; run(true);
+  });
+  searchInp.addEventListener('input',e=>{ clearTimeout(deb); q=e.target.value.trim(); if(q.length<2){ grid.innerHTML=''; return; } deb=setTimeout(()=>run(true),350); });
   // Scroll infini : la sheet scrolle → on charge la page suivante près du bas.
   sh.addEventListener('scroll',()=>{ if(hasNext && !loading && sh.scrollTop+sh.clientHeight >= sh.scrollHeight-140){ page++; run(false); } });
   setTimeout(()=>sh.querySelector('#gifSearch').focus(),250);
