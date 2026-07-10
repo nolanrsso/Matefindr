@@ -144,6 +144,7 @@
                 if (typeof d.boost === 'boolean') su.boost = d.boost;
                 if (Array.isArray(d.gifs)) su.gifs = d.gifs;
                 if (d.bg)         su.boostBg    = d.bg;
+                if (d.bgPos)      su.boostBgPos = d.bgPos;
                 if (d.swipeMusic) su.swipeMusic = d.swipeMusic;
                 if (d.socials && typeof d.socials === 'object') su.socials = d.socials;
                 if (typeof d.handleBlur === 'boolean') su.handleBlur = d.handleBlur;
@@ -589,6 +590,7 @@
         // Cross-user : GIFs, fond perso et musique d'entrée → visibles par les autres
         gifs: Array.isArray(u.gifs) ? u.gifs : [],
         bg: u.boostBg || null,
+        bgPos: u.boostBgPos || null,
         swipeMusic: u.swipeMusic || null,
         connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
         isMe: true,
@@ -805,7 +807,7 @@
       // rester affichée après avoir quitté l'aperçu (bug de redirection vers /<slug>).
       if (_sharedProfile && !_previewMode) {
         document.body.removeAttribute('data-swipe-empty');
-        if (typeof applyBgChoice === 'function') applyBgChoice(_sharedProfile.bg);
+        if (typeof applyBgChoice === 'function') applyBgChoice(_sharedProfile.bg, _sharedProfile.bgPos);
         try {
           wrap.appendChild(buildCard(_sharedProfile, true));
           renderOrbs(_sharedProfile);
@@ -834,7 +836,7 @@
       document.body.removeAttribute('data-swipe-empty');
       const p = inPreview ? myP : pool[deckIdx];
       // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
-      if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg);
+      if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
       // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
       // au lieu de laisser le deck vide et bloqué (cause du « on ne peut plus swiper »).
       try {
@@ -3682,18 +3684,32 @@
       if (!l) { l = document.createElement('div'); l.id = 'customBgLayer'; document.body.insertBefore(l, document.body.firstChild); }
       return l;
     }
-    function applyBgChoice(bg){
+    function applyBgChoice(bg, pos){
       const picker = document.getElementById('bgPicker');
       const layer = ensureCustomBgLayer();
       // Fond personnalisé importé (URL Storage) → couche image/vidéo dédiée.
       if (bg && /^https?:\/\//.test(bg)) {
         document.body.removeAttribute('data-bg');
+        const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg);
         if (layer._src !== bg) {
-          layer._src = bg; layer.innerHTML = ''; layer.style.backgroundImage = '';
-          if (/\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg)) {
+          layer._src = bg; layer.innerHTML = '';
+          if (isVideo) {
             const v = document.createElement('video'); v.src = bg; v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true;
             layer.appendChild(v);
-          } else { layer.style.backgroundImage = `url("${bg}")`; }
+          } else {
+            const im = document.createElement('img'); im.src = bg; layer.appendChild(im);
+          }
+        }
+        // Recadrage (posX/posY/scale, choisi dans l'éditeur) — pas de crop pour une vidéo.
+        if (!isVideo) {
+          const img = layer.querySelector('img');
+          if (img) {
+            const posX = (pos && typeof pos.posX === 'number') ? pos.posX : 50;
+            const posY = (pos && typeof pos.posY === 'number') ? pos.posY : 50;
+            const scale = (pos && typeof pos.scale === 'number') ? pos.scale : 1;
+            img.style.objectPosition = posX + '% ' + posY + '%';
+            img.style.transform = 'scale(' + scale + ')';
+          }
         }
         layer.classList.add('on');
         if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.remove('is-active'));
@@ -3723,7 +3739,7 @@
       });
     })();
     // Applique le fond sauvegardé dès le chargement
-    applyBgChoice(state.user && state.user.boostBg);
+    applyBgChoice(state.user && state.user.boostBg, state.user && state.user.boostBgPos);
 
     /* ===== Boost: Gender filter ===== */
     document.getElementById('boostGenderFilter')?.addEventListener('change', e => {
@@ -4342,7 +4358,7 @@
       if (fn) fn.checked = !!(state.user && state.user.fakeNitro);
       const _bsn = document.getElementById('boostShowName');
       if (_bsn) _bsn.checked = !(state.user && state.user.boostShowName === false);
-      if (typeof applyBgChoice === 'function') applyBgChoice(state.user && state.user.boostBg);
+      if (typeof applyBgChoice === 'function') applyBgChoice(state.user && state.user.boostBg, state.user && state.user.boostBgPos);
       const gfEl = document.getElementById('boostGenderFilter');
       if (gfEl) gfEl.value = (state.user && state.user.genderFilter) || 'all';
       if (typeof renderSwipeMusicCurrent === 'function') renderSwipeMusicCurrent();
@@ -5895,6 +5911,7 @@
               boostCancelled: u.boostCancelled || null,
               boostShowName: (u.boostShowName === false) ? false : null,
               boostBg: u.boostBg || null,
+              boostBgPos: u.boostBgPos || null,
             },
             savedAt: Date.now(),
           };

@@ -838,6 +838,7 @@ body.color-open .card-zone{transform:translateX(158px)}
 .crop-frame:active{cursor:grabbing}
 .crop-frame.circle{width:280px;height:280px;border-radius:50%}
 .crop-frame.banner{width:100%;aspect-ratio:10/3;border-radius:14px}
+.crop-frame.bg{width:100%;aspect-ratio:16/9;border-radius:14px}
 .crop-frame img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;will-change:transform}
 .zoom-row{display:flex;align-items:center;gap:11px;margin-top:16px}
 .zoom-row input[type=range]{flex:1;accent-color:#9146FF}
@@ -1256,7 +1257,7 @@ const crop={url:null,shape:'circle',tx:0,ty:0,scale:1,nw:0,nh:0,onOk:null,maxX:0
 function openCrop(url,shape,title,onOk){
   Object.assign(crop,{url,shape,tx:0,ty:0,scale:1,nw:0,nh:0,onOk,maxX:0,maxY:0});
   $('cropTitle').textContent=title;
-  const f=$('cropFrame');f.className='crop-frame '+(shape==='circle'?'circle':'banner');
+  const f=$('cropFrame');f.className='crop-frame '+(shape==='circle'?'circle':shape==='bg'?'bg':'banner');
   const img=$('cropImg');img.style.transform='translate(-50%,-50%)';$('cropZoom').value=100;
   $('cropModal').classList.add('open');
   // attendre que la frame ait ses dimensions (modale affichée) puis charger l'image
@@ -1968,8 +1969,46 @@ function renderBgSheet(sh){
   sh.querySelectorAll('[data-bg]').forEach(b=>b.addEventListener('click',()=>{applyBg({type:'preset',value:b.dataset.bg});sh.querySelectorAll('.bgp-tile').forEach(x=>x.classList.toggle('sel',x===b));}));
   sh.querySelector('[data-bg-upload]').addEventListener('click',()=>$('fileBg').click());
 }
-$('fileBg').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const isVid=f.type.startsWith('video/');applyBg({type:'custom',value:URL.createObjectURL(f),video:isVid});toast('Envoi du fond…');const url=await edUpload(f,'bg');if(url){applyBg({type:'custom',value:url,video:isVid});persist();toast('Fond personnalisé appliqué');}else{toast('⚠️ Envoi échoué — fond local seulement');}e.target.value='';});
-function applyBg(bg){S.bg=bg;const layer=$('bgLayer');layer.innerHTML='';if(bg.type==='preset'){layer.className='bg-layer bg-'+bg.value;if(bg.value==='default')layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';}else{layer.className='bg-layer';if(bg.video){const v=document.createElement('video');v.src=bg.value;v.autoplay=true;v.muted=true;v.loop=true;v.playsInline=true;layer.appendChild(v);}else{const im=document.createElement('img');im.src=bg.value;layer.appendChild(im);}}if(typeof persist==='function')persist();}
+$('fileBg').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f){return;}
+  const isVid=f.type.startsWith('video/');
+  if(isVid){
+    // Pas de recadrage pour une vidéo (comme avant) — appliquée telle quelle.
+    applyBg({type:'custom',value:URL.createObjectURL(f),video:true});
+    toast('Envoi du fond…');
+    edUpload(f,'bg').then(url=>{ if(url){ applyBg({type:'custom',value:url,video:true}); persist(); toast('Fond personnalisé appliqué'); } else { toast('⚠️ Envoi échoué — fond local seulement'); } });
+  } else {
+    // Image (ou GIF) → recadrage, comme l'avatar/la bannière, avant l'envoi.
+    openCrop(URL.createObjectURL(f),'bg','Recadrer le fond',async d=>{
+      applyBg({type:'custom',value:d.url,video:false,posX:d.posX,posY:d.posY,scale:d.scale});
+      persist();
+      toast('Envoi du fond…');
+      const url=await edUpload(f,'bg');
+      if(url){ applyBg({type:'custom',value:url,video:false,posX:d.posX,posY:d.posY,scale:d.scale}); persist(); toast('Fond personnalisé appliqué'); }
+      else{ toast('⚠️ Envoi échoué — fond local seulement'); }
+    });
+  }
+  e.target.value='';
+});
+function applyBg(bg){
+  S.bg=bg;
+  const layer=$('bgLayer'); layer.innerHTML='';
+  if(bg.type==='preset'){
+    layer.className='bg-layer bg-'+bg.value;
+    if(bg.value==='default') layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';
+  } else {
+    layer.className='bg-layer';
+    if(bg.video){
+      const v=document.createElement('video'); v.src=bg.value; v.autoplay=true; v.muted=true; v.loop=true; v.playsInline=true; layer.appendChild(v);
+    } else {
+      const im=document.createElement('img'); im.src=bg.value;
+      im.style.objectPosition=(typeof bg.posX==='number'?bg.posX:50)+'% '+(typeof bg.posY==='number'?bg.posY:50)+'%';
+      im.style.transform='scale('+(bg.scale||1)+')';
+      layer.appendChild(im);
+    }
+  }
+  if(typeof persist==='function') persist();
+}
 
 /* ===== 4. COULEURS (carte + pseudo) — sélecteur simplifié ===== */
 // 12 dégradés (Haut = c1, Bas = c2), affichés en grille 4×3. Estimés d'après tes captures.
@@ -2321,8 +2360,8 @@ function writeState(){
   else if(S.bannerRemoved){ st.user.bannerUrl=null; st.user.bannerCustom=true; st.user.bannerPos=null; } // bannière supprimée volontairement → Discord ne doit pas la réimporter
   st.user.profileColor=S.c1; st.user.profileColor2=S.c2;
   st.user.nameColor=(S.nameColor&&/^#[0-9a-f]{6}$/i.test(S.nameColor))?S.nameColor:null; // couleur du pseudo (null = blanc)
-  if(S.bg.type==='preset'){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=false; }
-  else if(S.bg.type==='custom' && /^https?:/.test(S.bg.value||'')){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=!!S.bg.video; } // URL Storage uniquement (jamais un blob:)
+  if(S.bg.type==='preset'){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=false; st.user.boostBgPos=null; }
+  else if(S.bg.type==='custom' && /^https?:/.test(S.bg.value||'')){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=!!S.bg.video; st.user.boostBgPos=(!S.bg.video&&typeof S.bg.posX==='number')?{posX:S.bg.posX,posY:S.bg.posY,scale:S.bg.scale}:null; } // URL Storage uniquement (jamais un blob:)
   // Capture les positions live du mode en cours d'édition dans posByMode.
   snapshotCanvasMode(S.canvasMode);
   // x/y = % de la carte (50=centre) pour l'éditeur ; customX/customY = fractions depuis le centre, lues par la carte de swipe.
@@ -2404,7 +2443,7 @@ function buildDbProfile(st){
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
     orbs, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
-    gifs:Array.isArray(u.gifs)?u.gifs:[], bg:u.boostBg||null, swipeMusic:null,
+    gifs:Array.isArray(u.gifs)?u.gifs:[], bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
     connections:(p.connections&&typeof p.connections==='object')?p.connections:{},
     handleBlur:!!u.handleBlur, showBoostName:(u.boostShowName===false)?false:true,
   };
@@ -2471,7 +2510,7 @@ function hydrateFromSite(){
     const r=document.documentElement.style; r.setProperty('--accent',S.c1); r.setProperty('--c1',S.c1); r.setProperty('--c2',S.c2);
   }
   S.nameColor=(u.nameColor&&/^#[0-9a-f]{6}$/i.test(u.nameColor))?u.nameColor:null; applyUsernameBoostStyle();
-  if(u.boostBg){ if(/^https?:/.test(u.boostBg)) applyBg({type:'custom',value:u.boostBg,video:!!u.boostBgVideo}); else applyBg({type:'preset',value:u.boostBg}); }
+  if(u.boostBg){ if(/^https?:/.test(u.boostBg)) applyBg({type:'custom',value:u.boostBg,video:!!u.boostBgVideo,posX:u.boostBgPos?u.boostBgPos.posX:undefined,posY:u.boostBgPos?u.boostBgPos.posY:undefined,scale:u.boostBgPos?u.boostBgPos.scale:undefined}); else applyBg({type:'preset',value:u.boostBg}); }
   if(Array.isArray(p.userOrbs)&&p.userOrbs.length){
     S.orbs=p.userOrbs.map(o=>{
         const orb={kind:(o.kind==='anime'?'film':o.kind),title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,clipUrl:o.clipUrl||null};
@@ -2744,7 +2783,7 @@ function stripBoostElements(){
   if(S.bg&&S.bg.type==='custom'){ applyBg({type:'preset',value:'default'}); }
   if(S.music){ S.music=null; renderMusicChip(); }
   // purge aussi côté état sauvegardé (fond custom + musique)
-  try{ const st=readSite(); if(st.user){ if(typeof st.user.boostBg==='string'&&/^https?:/.test(st.user.boostBg)){ st.user.boostBg='default'; st.user.boostBgVideo=false; } st.user.swipeMusic=null; st.user.gifs=[]; localStorage.setItem(STATE_KEY,JSON.stringify(st)); } }catch(_){}
+  try{ const st=readSite(); if(st.user){ if(typeof st.user.boostBg==='string'&&/^https?:/.test(st.user.boostBg)){ st.user.boostBg='default'; st.user.boostBgVideo=false; st.user.boostBgPos=null; } st.user.swipeMusic=null; st.user.gifs=[]; localStorage.setItem(STATE_KEY,JSON.stringify(st)); } }catch(_){}
   saveNow();
 }
 let _pendingLeave=null;
