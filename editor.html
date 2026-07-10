@@ -2519,12 +2519,28 @@ function snapshotProfile(){
   const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','connections','handleBlur','boostShowName','nameCustom','avatarCustom'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
 }
-// Snapshot vierge (mêmes valeurs par défaut que la déclaration de S plus haut).
-function blankPresetSnapshot(){
-  return { username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
+// Snapshot vierge : personnalisation (bio, couleurs, bulles, GIFs…) remise à zéro,
+// mais identité reprise directement de Discord (pseudo, photo, bannière — comme à
+// l'inscription) plutôt qu'un placeholder générique.
+async function blankPresetSnapshot(){
+  const base={ username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
     bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
     orbs:[], gifs:[], connections:{}, handleBlur:false, boostShowName:true,
     nameCustom:false, avatarCustom:false };
+  try{
+    const token=localStorage.getItem('matefindr_discord_token');
+    if(token){
+      const r=await fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bearer '+token}});
+      if(r.ok){
+        const d=await r.json();
+        const ext=h=>h&&h.startsWith('a_')?'gif':'png';
+        base.username=d.global_name||d.username||base.username;
+        if(d.avatar) base.avatar={url:`https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.${ext(d.avatar)}?size=256`,posX:50,posY:50,scale:1};
+        if(d.banner) base.banner={url:`https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext(d.banner)}?size=600`,posX:50,posY:50,scale:1};
+      }
+    }
+  }catch(_){ /* pas de token/réseau indispo → reste sur les valeurs par défaut */ }
+  return base;
 }
 function loadActivePresetIdx(){ try{ const v=localStorage.getItem(ACTIVE_PSET_KEY); const n=v===null?NaN:parseInt(v,10); return Number.isInteger(n)&&n>=0?n:null; }catch(_){ return null; } }
 function saveActivePresetIdx(){ try{ if(_activePresetIdx===null) localStorage.removeItem(ACTIVE_PSET_KEY); else localStorage.setItem(ACTIVE_PSET_KEY,String(_activePresetIdx)); }catch(_){} }
@@ -2582,8 +2598,15 @@ function renderPresets(){
     slot.querySelector('.pset-del').addEventListener('click',e=>{
       e.stopPropagation();
       PRESETS.splice(i,1);
-      if(_activePresetIdx===i) _activePresetIdx=PRESETS.length?Math.min(i,PRESETS.length-1):null;
-      else if(_activePresetIdx!==null && _activePresetIdx>i) _activePresetIdx--;
+      // Bascule directement sur le preset PRÉCÉDENT (celui juste avant dans la liste),
+      // ou le nouveau premier si on supprimait le tout premier.
+      if(PRESETS.length){
+        const newIdx=Math.max(0,i-1);
+        _activePresetIdx=newIdx;
+        applyPreset(PRESETS[newIdx]);
+      } else {
+        _activePresetIdx=null;
+      }
       savePresetsLS(); saveActivePresetIdx(); renderPresets(); toast('Preset supprimé');
     });
     slot.addEventListener('click',()=>{
@@ -2600,9 +2623,11 @@ function renderPresets(){
     add.className='pset-slot pset-slot--empty';
     add.title='Créer un preset vierge ('+(PRESETS.length+1)+')';
     add.innerHTML='<span class="pset-num">+</span>';
-    add.addEventListener('click',()=>{
+    add.addEventListener('click',async()=>{
       if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
-      const blank=blankPresetSnapshot();
+      if(add.dataset.busy) return; add.dataset.busy='1';
+      const blank=await blankPresetSnapshot();
+      delete add.dataset.busy;
       PRESETS.push(blank);
       _activePresetIdx=PRESETS.length-1;
       savePresetsLS(); saveActivePresetIdx();
