@@ -1697,6 +1697,9 @@ function spreadOrbs(nodes, D){
   }
   nodes.forEach(n=>{ if(n.o){n.o.x=n.x;n.o.y=n.y;} if(n.wrap){n.wrap.style.left=n.x+'%';n.wrap.style.top=n.y+'%';} });
 }
+// Position custom de la bulle "+" (Ajouter) une fois déplacée à la main — sinon
+// elle reprend l'emplacement calculé automatiquement (orbLayout).
+let _addBubblePos=null;
 function renderOrbs(){
   const layer=$('orbLayer'); layer.innerHTML='';
   const card=document.getElementById('card');
@@ -1757,9 +1760,10 @@ function renderOrbs(){
   // Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite)
   if(S.orbs.length<orbMax()){
     const n=S.orbs.length;
-    const p2=orbLayout(n+1)[n]; // emplacement de la prochaine bulle
-    const ax=50+p2.rx*100, ay=50+p2.ry*vScale*100;
-    const aw=document.createElement('div'); aw.className='orb-wrap orb-wrap--add'; aw.title='Ajouter une bulle';
+    const p2=orbLayout(n+1)[n]; // emplacement par défaut de la prochaine bulle
+    const defAx=50+p2.rx*100, defAy=50+p2.ry*vScale*100;
+    const ax=_addBubblePos?_addBubblePos.x:defAx, ay=_addBubblePos?_addBubblePos.y:defAy;
+    const aw=document.createElement('div'); aw.className='orb-wrap orb-wrap--add'; aw.title='Glisse pour déplacer · clique pour ajouter une bulle';
     aw.style.left=ax+'%'; aw.style.top=ay+'%';
     const ao=document.createElement('div'); ao.className='orb orb--add';
     ao.style.width=D+'px'; ao.style.height=D+'px';
@@ -1769,7 +1773,14 @@ function renderOrbs(){
     const acol=document.createElement('div'); acol.style.cssText='display:flex;flex-direction:column;align-items:center';
     acol.appendChild(ao); acol.appendChild(albl);
     aw.appendChild(acol);
-    aw.addEventListener('click',openBubblesSheet);
+    // === drag : même comportement que les vraies bulles (glisser pour déplacer,
+    // clic simple = ouvre l'ajout de bulle) ===
+    let adrag=null;
+    const aState={x:ax,y:ay};
+    aw.addEventListener('pointerdown',e=>{if(e.button)return;e.preventDefault();try{aw.setPointerCapture(e.pointerId);}catch(_){}const or=ao.getBoundingClientRect();adrag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};aw.classList.add('dragging');showGuide('orb');});
+    aw.addEventListener('pointermove',e=>{if(!adrag)return;if(Math.abs(e.clientX-adrag.mx)+Math.abs(e.clientY-adrag.my)>2)adrag.moved=true;const bnd=orbBounds(D/2+6);const cx=clamp(adrag.sx0+(e.clientX-adrag.mx),bnd.minX,bnd.maxX);const cy=clamp(adrag.sy0+(e.clientY-adrag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();aState.x=(cx-lr.left)/lr.width*100;aState.y=(cy-lr.top)/lr.height*100;aw.style.left=aState.x+'%';aw.style.top=aState.y+'%';});
+    const aEndDrag=e=>{if(!adrag)return;const moved=adrag.moved;adrag=null;aw.classList.remove('dragging');hideGuide();try{aw.releasePointerCapture(e.pointerId);}catch(_){}if(moved){_addBubblePos={x:aState.x,y:aState.y};renderOrbs();}else openBubblesSheet();};
+    aw.addEventListener('pointerup',aEndDrag);aw.addEventListener('pointercancel',aEndDrag);
     layer.appendChild(aw);
     nodes.push({x:ax,y:ay,wrap:aw,o:null,mob:1.4}); // le "+" cède le plus → jamais sur une bulle
   }
