@@ -53,7 +53,7 @@
         // visibles par-dessus le menu (landing) au retour.
         const _gb = document.getElementById('swipeGifsBg'); if (_gb) _gb.remove();
         const _pb = document.getElementById('swipePhotosBg'); if (_pb) _pb.remove();
-        _previewMode = false; document.body.removeAttribute('data-preview'); // sort du mode aperçu
+        _previewMode = false; _previewProfile = null; document.body.removeAttribute('data-preview'); // sort du mode aperçu
       }
     }
     function setAuth(on){
@@ -558,7 +558,8 @@
         ] },
     ];
     let deckIdx = 0;
-    let _previewMode = false; // true = aperçu complet de SA carte (pas de swipe, bouton "Quitter")
+    let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
+    let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewFromEditor = false; // true = aperçu ouvert depuis editor.html (#preview) → "Quitter" doit y retourner
     let _sharedProfile = null; // profil ouvert via un lien de partage matefindr.com/<slug> (carte + like/dislike)
     // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
@@ -854,11 +855,15 @@
         return;
       }
       const myP = buildUserProfile();
-      // Ta propre carte n'est dans le deck QU'en mode APERÇU (endroit dédié, figé).
-      // En mode normal (le hub), on ne se swipe pas soi-même → deck = uniquement les autres.
-      const inPreview = !!(_previewMode && myP);
-      // En mode APERÇU on ne montre QUE soi : jamais d'autres profils, même si ma
-      // carte manque (sinon on verrait un inconnu sans pouvoir interagir).
+      // La carte affichée en mode APERÇU (endroit dédié, figé) : SOIT un profil
+      // tiers explicite (_previewProfile, ouvert depuis un chat/qui-t'a-liké),
+      // SOIT ma propre carte par défaut (comportement historique).
+      const previewP = _previewMode ? (_previewProfile || myP) : null;
+      // Une carte n'est dans le deck QU'en mode APERÇU. En mode normal (le hub),
+      // on ne se swipe pas soi-même → deck = uniquement les autres.
+      const inPreview = !!(_previewMode && previewP);
+      // En mode APERÇU on ne montre QUE cette carte : jamais d'autres profils, même
+      // si elle manque (sinon on verrait un inconnu sans pouvoir interagir).
       const pool = _previewMode ? [] : genderFilteredProfiles();
       const offset = inPreview ? 1 : 0;
       const total = pool.length + offset;
@@ -872,7 +877,7 @@
         return;
       }
       document.body.removeAttribute('data-swipe-empty');
-      const p = inPreview ? myP : pool[deckIdx];
+      const p = inPreview ? previewP : pool[deckIdx];
       // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
       if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
       // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
@@ -2455,7 +2460,7 @@
       let p = null;
       try { if (c.uid && typeof rtProfile === 'function') p = await rtProfile(c.uid); } catch(_){}
       if (!p) p = { name:c.name, tag:c.tag, c1:c.c1, c2:c.c2, initial:c.initial, avatarUrl:c.avatarUrl, age:'', orbs:[] };
-      if (typeof openLikerProfile === 'function') openLikerProfile(p);
+      if (typeof openProfilePreview === 'function') openProfilePreview(p);
     }
     function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
@@ -3666,20 +3671,25 @@
       el.addEventListener('input',  refreshAccountPreview);
       el.addEventListener('change', refreshAccountPreview);
     });
-    /* Aperçu : ouvre le swipe sur SA PROPRE carte (bulles + GIFs + fond rendus en vrai),
-       en MODE APERÇU → uniquement MA carte, AUCUN swipe, un seul bouton "Quitter l'aperçu". */
-    function enterPreviewMode(){
+    /* Aperçu : ouvre le swipe sur UNE carte figée (bulles + GIFs + fond rendus en
+       vrai) → AUCUN swipe, un seul bouton "Quitter l'aperçu". Sans argument, montre
+       SA PROPRE carte (comportement historique, depuis les Paramètres/l'éditeur) ;
+       avec un profil, montre CE profil-là (ex: ouvert depuis un chat ou la liste
+       "qui t'a liké" — voir openProfilePreview). */
+    function enterPreviewMode(profile){
       // Relit matefindr_state À CHAUD juste avant d'afficher l'aperçu : si cet
       // onglet est resté ouvert un moment (ou a été rouvert), `state` en mémoire
       // peut être périmé par rapport à ce que l'éditeur vient d'enregistrer
       // (ex : preset actif changé) → sans ce refresh, l'aperçu pouvait montrer
-      // un ancien preset au lieu de celui qu'on vient de quitter.
-      try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
+      // un ancien preset au lieu de celui qu'on vient de quitter. Inutile pour
+      // le profil D'UN TIERS (rien à re-synchroniser depuis MON état local).
+      if (!profile) { try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){} }
       // Nettoyage défensif : l'aperçu ne doit JAMAIS afficher un profil venu
       // d'un lien de partage (sinon on se retrouve avec l'URL /<slug> et les
       // boutons like/dislike au lieu de "Quitter l'aperçu").
       _sharedProfile = null;
       _previewMode = true;
+      _previewProfile = profile || null;
       document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
       if (typeof setScreen === 'function') setScreen('swipe');
@@ -3704,6 +3714,7 @@
         return;
       }
       _previewMode = false;
+      _previewProfile = null;
       _sharedProfile = null;
       document.body.removeAttribute('data-preview');
       // Quitter l'aperçu → retour au swipe (le hub), pas aux Paramètres.
@@ -3891,11 +3902,11 @@
     /* ===== Boost: Liked-me list (mock) ===== */
     // Mocks retirés — passera par Supabase quand la fonctionnalité "Likes recus" sera branchee
     const LIKED_ME = [];
-    /* Open a liker's full profile in an overlay (Boost only) */
-    function openLikerProfile(p){
-      const overlay = document.getElementById('likerOverlay');
-      const wrap = document.getElementById('likerCardWrap');
-      if (!overlay || !wrap) return;
+    // Ouvre le VRAI aperçu plein écran (carte + bulles + GIFs/photos + fond perso,
+    // bouton "Quitter l'aperçu") sur le profil d'un tiers -- même mécanique que
+    // enterPreviewMode() pour SA propre carte (voir plus bas), généralisée pour
+    // accepter n'importe quel profil au lieu d'être câblée sur buildUserProfile().
+    function openProfilePreview(p){
       // Profil COMPLET : les entrées de la liste des likes ne portent qu'un
       // sous-ensemble + le vrai profil dans _full. On part du profil complet
       // (bio, orbes, bannière, connexions, GIFs…) si dispo, sinon des champs
@@ -3939,176 +3950,12 @@
         profileVoice: f.profileVoice || null,
         isMe: false,
       };
-      wrap.innerHTML = '';
-      const card = buildCard(profileObj, false);
-      wrap.appendChild(card);
-      overlay.setAttribute('data-show', 'true');
-      // Bulles/GIFs/photos/fond perso : la popup n'affichait QUE la carte (buildCard),
-      // sans ces couches -- rendu séparément ici (au lieu de vraiment "monter" au
-      // premier plan pendant l'animation likerPop, on recale une 2e fois une fois
-      // la carte posée à sa taille finale).
-      renderLikerDecor(profileObj);
-      requestAnimationFrame(() => renderLikerDecor(profileObj));
-      setTimeout(() => renderLikerDecor(profileObj), 380);
+      // Referme les panneaux (messages/qui t'a liké) : l'aperçu prend tout l'écran,
+      // rien ne doit traîner derrière une fois "Quitter l'aperçu" cliqué.
+      document.getElementById('msgPanel')?.setAttribute('data-open', 'false');
+      document.getElementById('likedPanel')?.setAttribute('data-open', 'false');
+      if (typeof enterPreviewMode === 'function') enterPreviewMode(profileObj);
     }
-    // Fond perso (Boost) du profil prévisualisé -- même mécanique que
-    // positionCustomBgLayer()/applyBgChoice() du vrai swipe (multiple fixe de la
-    // taille de la carte, centré dessus), mais ancrée sur .liker-card-wrap et sans
-    // toucher au fond de la vraie page derrière la popup (messages/likes intacts).
-    function positionLikerBg(p){
-      const layer = document.getElementById('likerBgLayer');
-      const wrap = document.getElementById('likerCardWrap');
-      if (!layer || !wrap) return;
-      const bg = p && p.bg;
-      if (!(bg && /^https?:\/\//.test(bg))) { layer.classList.remove('on'); layer.innerHTML = ''; layer._src = ''; return; }
-      const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg);
-      if (layer._src !== bg) {
-        layer._src = bg; layer.innerHTML = '';
-        if (isVideo) {
-          const v = document.createElement('video'); v.src = bg; v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true;
-          layer.appendChild(v);
-        } else {
-          const im = document.createElement('img'); im.src = bg; layer.appendChild(im);
-        }
-      }
-      if (!isVideo) {
-        const img = layer.querySelector('img');
-        if (img) {
-          const pos = p.bgPos || {};
-          const posX = typeof pos.posX === 'number' ? pos.posX : 50;
-          const posY = typeof pos.posY === 'number' ? pos.posY : 50;
-          const scale = typeof pos.scale === 'number' ? pos.scale : 1;
-          img.style.objectPosition = posX + '% ' + posY + '%';
-          img.style.transformOrigin = posX + '% ' + posY + '%';
-          img.style.transform = 'scale(' + scale + ')';
-        }
-      }
-      layer.classList.add('on');
-      const card = wrap.getBoundingClientRect();
-      const cx = card.left + card.width / 2, cy = card.top + card.height / 2;
-      const bw = card.width * BG_SCALE_W, bh = card.height * BG_SCALE_H;
-      layer.style.left = (cx - bw / 2) + 'px';
-      layer.style.top = (cy - bh / 2) + 'px';
-      layer.style.width = bw + 'px';
-      layer.style.height = bh + 'px';
-    }
-    // Bulles autour de la popup -- mêmes positions relatives (orbRelLayout) que le
-    // vrai swipe/éditeur, mais statiques (pas de simulation physique _orbSim,
-    // inutile pour un aperçu figé) et ancrées sur .liker-card-wrap.
-    function renderLikerOrbs(p){
-      const orbitEl = document.getElementById('likerOrbit');
-      const wrap = document.getElementById('likerCardWrap');
-      if (!orbitEl || !wrap) return;
-      orbitEl.innerHTML = '';
-      const orbs = (p && p.orbs) || [];
-      if (!orbs.length) return;
-      const cardRect = wrap.getBoundingClientRect();
-      if (!cardRect.width) return;
-      const cardCx = cardRect.left + cardRect.width / 2, cardCy = cardRect.top + cardRect.height / 2;
-      const sw = window.innerWidth, sh = window.innerHeight, orbR = 58;
-      const { rel } = orbRelLayout(orbs, false, 'desktop');
-      orbs.forEach(o => {
-        const r = rel.get(o) || { rx: ORB_LAYOUT.COL0, ry: 0 };
-        const x = Math.max(orbR + 6, Math.min(sw - orbR - 6, cardCx + r.rx * cardRect.width));
-        const y = Math.max(orbR + 6, Math.min(sh - orbR - 6, cardCy + r.ry * cardRect.height));
-        const wrapEl = document.createElement('div');
-        wrapEl.className = 'orb-wrap';
-        wrapEl.style.position = 'absolute'; wrapEl.style.left = '0'; wrapEl.style.top = '0';
-        wrapEl.style.transform = `translate(${x - orbR}px, ${y - orbR}px)`;
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'orb'; btn.dataset.kind = o.kind;
-        btn.title = `${o.title || ''}${o.sub ? ' · ' + o.sub : ''}`;
-        btn.innerHTML = orbInner(o);
-        if (o.kind === 'game' && o.rank && typeof rankVisual === 'function') {
-          const v = rankVisual(o.rank);
-          const iconUrl = typeof rankIconUrl === 'function' ? rankIconUrl(o.title, o.rank) : null;
-          const iconHtml = iconUrl
-            ? `<img class="orb-rank-img" src="${iconUrl}" alt="" loading="lazy" decoding="async">`
-            : `<span class="orb-rank-ico">${v.ico}</span>`;
-          const rk = document.createElement('span');
-          rk.className = 'orb-rank-orbit';
-          rk.innerHTML = `<span class="orb-rank-ball${iconUrl ? ' orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}">${iconHtml}</span>`;
-          btn.appendChild(rk);
-        }
-        const label = document.createElement('span');
-        label.className = 'orb-label';
-        label.textContent = (o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || '');
-        wrapEl.appendChild(btn); wrapEl.appendChild(label);
-        orbitEl.appendChild(wrapEl);
-      });
-    }
-    // GIFs/photos flottants autour de la popup -- même mécanique que
-    // renderSwipeGifs/renderSwipePhotos (positions % de la carte -> px viewport,
-    // translate(-50%,-50%)), factorisée ici pour les deux types de stickers.
-    function renderLikerStickers(items, kind, contourOn){
-      const wrap = document.getElementById('likerCardWrap');
-      const id = kind === 'gif' ? 'likerGifsBg' : 'likerPhotosBg';
-      const old = document.getElementById(id); if (old) old.remove();
-      if (!wrap || !items || !items.length) return null;
-      const layer = document.createElement('div');
-      layer.id = id;
-      // Réutilise la classe .swipe-gifs-bg (pas une classe dédiée) : le style des
-      // stickers .swipe-gif eux-mêmes est écrit en sélecteur descendant
-      // ".swipe-gifs-bg .swipe-gif{...}" -- un autre nom de classe sur le
-      // conteneur laisserait les stickers sans position:absolute (tous empilés
-      // en haut à gauche, cf. bug constaté en testant).
-      layer.className = 'swipe-gifs-bg' + (contourOn ? '' : ' no-contour');
-      const overlay = document.getElementById('likerOverlay');
-      const wraps = items.map(g => {
-        const el = document.createElement('div'); el.className = 'swipe-gif';
-        el.innerHTML = `<img src="${g.full || g.preview || g.url}" alt="">`;
-        layer.appendChild(el);
-        return { el, g };
-      });
-      overlay.appendChild(layer);
-      function pos(g){
-        const mode = activeLayoutMode();
-        const m = (mode === 'portrait' && g.portrait) ? g.portrait : (mode === 'landscape' && g.landscape) ? g.landscape : g;
-        return { x: typeof m.x === 'number' ? m.x : 50, y: typeof m.y === 'number' ? m.y : 30, w: typeof m.w === 'number' ? m.w : 32, rot: m.rot || 0 };
-      }
-      function reposition(){
-        const wr = wrap.getBoundingClientRect();
-        wraps.forEach(({ el, g }) => {
-          const p = pos(g);
-          const wpx = (p.w / 100) * wr.width;
-          const cx = wr.left + (p.x / 100) * wr.width;
-          const cy = wr.top + (p.y / 100) * wr.height;
-          el.style.left = cx + 'px'; el.style.top = cy + 'px'; el.style.width = wpx + 'px';
-          el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
-        });
-      }
-      reposition();
-      return reposition;
-    }
-    let _likerResize = null;
-    function closeLikerDecor(){
-      const orbitEl = document.getElementById('likerOrbit');
-      if (orbitEl) orbitEl.innerHTML = '';
-      const bgLayer = document.getElementById('likerBgLayer');
-      if (bgLayer) { bgLayer.classList.remove('on'); bgLayer.innerHTML = ''; bgLayer._src = ''; }
-      const gb = document.getElementById('likerGifsBg'); if (gb) gb.remove();
-      const pb = document.getElementById('likerPhotosBg'); if (pb) pb.remove();
-      if (_likerResize) { window.removeEventListener('resize', _likerResize); _likerResize = null; }
-    }
-    function renderLikerDecor(p){
-      if (_likerResize) { window.removeEventListener('resize', _likerResize); _likerResize = null; }
-      positionLikerBg(p);
-      renderLikerOrbs(p);
-      const gifReposition = renderLikerStickers(p.gifs, 'gif', p.gifContour !== false);
-      const photoReposition = renderLikerStickers(p.photos, 'photo', p.photoContour !== false);
-      _likerResize = () => { positionLikerBg(p); renderLikerOrbs(p); if (gifReposition) gifReposition(); if (photoReposition) photoReposition(); };
-      window.addEventListener('resize', _likerResize);
-    }
-    (function bindLikerOverlay(){
-      const overlay = document.getElementById('likerOverlay');
-      if (!overlay) return;
-      const close = () => { overlay.setAttribute('data-show', 'false'); closeLikerDecor(); };
-      document.getElementById('likerClose')?.addEventListener('click', close);
-      document.getElementById('likerBackdrop')?.addEventListener('click', close);
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.getAttribute('data-show') === 'true') close();
-      });
-    })();
 
     function renderLikedMe(){
       const list = document.getElementById('likedList');
@@ -4152,8 +3999,8 @@
           // Click on the avatar/info area → open the full profile overlay
           const heartBtn = it.querySelector('.li-act-heart');
           const xBtn = it.querySelector('.li-act-x');
-          it.querySelector('.lavi').addEventListener('click', (e) => { e.stopPropagation(); openLikerProfile(p); });
-          it.querySelector('.li-info').addEventListener('click', (e) => { e.stopPropagation(); openLikerProfile(p); });
+          it.querySelector('.lavi').addEventListener('click', (e) => { e.stopPropagation(); openProfilePreview(p); });
+          it.querySelector('.li-info').addEventListener('click', (e) => { e.stopPropagation(); openProfilePreview(p); });
           heartBtn.addEventListener('click', (e) => { e.stopPropagation(); createMatchFromLiker(p); });
           xBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
