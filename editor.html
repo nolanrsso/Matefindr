@@ -2648,11 +2648,17 @@ else {
 /* Garde multi-onglets : si un AUTRE onglet (ex: cet éditeur laissé ouvert ailleurs)
    modifie les presets ou le preset actif pendant que celui-ci est ouvert, ce tab-ci
    travaillerait sur des données périmées puis écraserait la modif la plus récente
-   à sa prochaine sauvegarde. L'évènement 'storage' ne se déclenche QUE pour les
-   changements venant d'un AUTRE onglet (jamais pour ses propres écritures) →
-   on recharge la page pour repartir sur l'état vraiment à jour. */
+   à sa prochaine sauvegarde. On PRÉVIENT seulement (toast) plutôt que de recharger
+   automatiquement : renderOrbs()/persist() tournent aussi au chargement de CETTE
+   page, donc un reload auto déclenchait sa propre écriture → un 2e onglet ouvert
+   la détectait à son tour et rechargeait aussi → ping-pong de rechargements en
+   boucle entre onglets (bug réel constaté). Un throttle évite le spam de toasts
+   si l'autre onglet sauvegarde en continu. */
+let _lastTabSyncToast=0;
 window.addEventListener('storage', e=>{
-  if(e.key===PSET_KEY || e.key===ACTIVE_PSET_KEY) location.reload();
+  if(e.key!==PSET_KEY && e.key!==ACTIVE_PSET_KEY) return;
+  const now=Date.now(); if(now-_lastTabSyncToast<8000) return; _lastTabSyncToast=now;
+  toast('⚠️ Profil modifié dans un autre onglet — recharge la page pour voir la dernière version');
 });
 // Sauvegarde l'état courant DANS le preset actif — appelé à chaque persist() (debounced).
 function syncActivePreset(){
