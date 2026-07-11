@@ -653,6 +653,16 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .link-share[hidden]{display:none}
 .link-full{flex:1;min-width:0;color:#8CE5B0;font-weight:700;font-size:13px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .link-full:hover{text-decoration:underline}
+.link-pset{margin-top:12px}
+.link-pset[hidden]{display:none}
+.link-pset-label{font-size:11.5px;font-weight:700;color:var(--dim);margin-bottom:7px}
+.link-pset-slots{display:flex;gap:8px;flex-wrap:wrap}
+.link-pset-slot{position:relative;width:32px;height:32px;border-radius:9px;cursor:pointer;display:grid;place-items:center;
+  border:2px solid var(--stroke-2);color:#fff;overflow:visible;transition:transform .15s ease,border-color .15s ease}
+.link-pset-slot:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.9)}
+.link-pset-slot--active{border-color:#9146FF;box-shadow:0 0 0 3px rgba(145,70,255,.3)}
+.link-pset-slot .pset-swatch{position:absolute;inset:2px;border-radius:7px;opacity:.9;pointer-events:none}
+.link-pset-slot .pset-num{position:relative;z-index:1;font-size:11px;text-shadow:0 1px 5px rgba(0,0,0,.8)}
 .conn-pop-backdrop{position:fixed;inset:0;z-index:84;background:rgba(8,9,14,.55);backdrop-filter:blur(6px)}
 .conn-pop-backdrop[hidden]{display:none}
 .hide-card #card{opacity:0;pointer-events:none}
@@ -1007,9 +1017,14 @@ html.perf-lite *{
   <p class="link-sub">Choisis ton lien perso. Les gens tombent direct sur ton profil et peuvent te <b>liker</b> — ils créent un compte au passage.</p>
   <div class="link-input-row"><span class="link-prefix">matefindr.com/</span><input id="linkSlug" maxlength="40" placeholder="ton-pseudo" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
   <div class="link-status" id="linkStatus"></div>
+  <div class="link-pset" id="linkPsetRow" hidden>
+    <div class="link-pset-label">Preset affiché par ce lien</div>
+    <div class="link-pset-slots" id="linkPsetSlots"></div>
+  </div>
   <div class="link-share" id="linkShare" hidden>
     <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener"></a>
     <button type="button" class="btn" id="linkCopy">Copier</button>
+    <button type="button" class="btn primary" id="linkOpen">Ouvrir</button>
   </div>
   <div class="conn-pop-actions"><button class="btn" id="linkCancel">Fermer</button><button class="btn primary" id="linkSave">Enregistrer</button></div>
 </div>
@@ -3049,22 +3064,51 @@ renderPresets();
 (function initShareLink(){
   const btn=$('btnShareLink'), pop=$('linkPop'), back=$('linkBackdrop');
   const inp=$('linkSlug'), status=$('linkStatus'), share=$('linkShare'), full=$('linkFull');
-  const copyBtn=$('linkCopy'), saveBtn=$('linkSave'), cancelBtn=$('linkCancel');
+  const copyBtn=$('linkCopy'), saveBtn=$('linkSave'), cancelBtn=$('linkCancel'), openBtn=$('linkOpen');
+  const psetRow=$('linkPsetRow'), psetSlots=$('linkPsetSlots');
   if(!btn||!pop) return;
   const sanit=s=>String(s||'').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);
   function currentSlug(){ try{ const st=readSite(); return (st.user&&st.user.slug)||''; }catch(_){ return ''; } }
   function showLink(slug){ full.textContent='matefindr.com/'+slug; full.href='https://matefindr.com/'+slug; share.hidden=false; }
+  // Mini sélecteur de preset DANS la modale du lien : le lien perso pointe
+  // toujours vers le MÊME compte, donc "changer le preset ici" = activer ce
+  // preset comme profil courant (même action que les slots du panneau
+  // principal) -> c'est ce que verront les gens qui visitent le lien.
+  function renderLinkPresets(){
+    if(!psetRow||!psetSlots) return;
+    if(!PRESETS.length){ psetRow.hidden=true; return; }
+    psetRow.hidden=false;
+    psetSlots.innerHTML='';
+    PRESETS.forEach((p,i)=>{
+      const slot=document.createElement('div');
+      slot.className='link-pset-slot'+(i===_activePresetIdx?' link-pset-slot--active':'');
+      slot.title=(i===_activePresetIdx?'Preset actif — ':'Activer ')+'le preset '+(i+1);
+      const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
+      slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>';
+      slot.addEventListener('click',()=>{
+        if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
+        if(i===_activePresetIdx) return;
+        _activePresetIdx=i; saveActivePresetIdx();
+        applyPreset(PRESETS[i]);
+        if(typeof renderPresets==='function') renderPresets();
+        renderLinkPresets();
+        toast('Preset '+(i+1)+' activé — visible sur ton lien');
+      });
+      psetSlots.appendChild(slot);
+    });
+  }
   function openPop(){
     const cur=currentSlug(); inp.value=cur; status.textContent=''; status.className='link-status';
-    if(cur) showLink(cur); else share.hidden=true;
+    if(cur) { showLink(cur); renderLinkPresets(); } else { share.hidden=true; if(psetRow) psetRow.hidden=true; }
     back.hidden=false; pop.hidden=false; setTimeout(()=>inp.focus(),60);
   }
   function closePop(){ pop.hidden=true; back.hidden=true; }
   btn.addEventListener('click',openPop);
   back.addEventListener('click',closePop);
   cancelBtn.addEventListener('click',closePop);
-  inp.addEventListener('input',()=>{ const v=sanit(inp.value); if(v!==inp.value) inp.value=v; status.textContent=''; status.className='link-status'; share.hidden=true; });
+  inp.addEventListener('input',()=>{ const v=sanit(inp.value); if(v!==inp.value) inp.value=v; status.textContent=''; status.className='link-status'; share.hidden=true; if(psetRow) psetRow.hidden=true; });
   copyBtn.addEventListener('click',()=>{ try{ navigator.clipboard.writeText(full.href); toast('Lien copié 📋'); }catch(_){ toast('Copie impossible'); } });
+  openBtn?.addEventListener('click',()=>{ if(full.href) window.open(full.href,'_blank','noopener'); });
   saveBtn.addEventListener('click',async()=>{
     const slug=sanit(inp.value);
     if(slug.length<2){ status.className='link-status err'; status.textContent='2 caractères minimum.'; return; }
@@ -3090,6 +3134,7 @@ renderPresets();
       try{ const st=readSite(); st.user=st.user||{}; st.user.slug=slug; localStorage.setItem(STATE_KEY,JSON.stringify(st)); }catch(_){}
       status.className='link-status ok'; status.textContent='✅ Ton lien est prêt !';
       showLink(slug);
+      renderLinkPresets();
     }catch(e){ console.warn('[link] save error', e); status.className='link-status err'; status.textContent='Erreur — '+((e&&e.message)?e.message.slice(0,80):'réessaie.'); }
     saveBtn.disabled=false;
   });
