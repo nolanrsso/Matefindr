@@ -185,7 +185,13 @@ body[data-canvas="portrait"] .card-frame::before{
 /* Petits écrans : marges réservées resserrées (topbar/toolbar plus compacts en
    mobile) → plus de place verticale pour la carte avant d'avoir besoin de scroller. */
 @media(max-width:600px){ .stage{padding:64px 12px 92px} }
-.card-zone{position:relative;margin:auto}
+/* top:8px = nudge visuel (n'affecte pas le calcul de centrage/scroll de .stage,
+   contrairement à un changement de padding) qui compense l'écart constant de 8px
+   mesuré entre la carte éditeur et .swipe-wrap du vrai site (topbar en flux réel
+   sur index.html vs topbar en position:fixed ici qui ne réserve pas d'espace) —
+   constant quelle que soit la hauteur de fenêtre (formule de centrage identique
+   des deux côtés une fois ce décalage retiré). */
+.card-zone{position:relative;margin:auto;top:8px}
 /* Boîte EXACTE de la carte : les layers de bulles/GIFs (inset:0) doivent matcher
    précisément la carte, sinon les positions % enregistrées se décalent.
    width:fit-content + margin:auto → se resserre sur la carte (240/300/380px)
