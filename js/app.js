@@ -599,6 +599,7 @@
         socials: u.socials || {},
         // Cross-user : GIFs, fond perso et musique d'entrée → visibles par les autres
         gifs: Array.isArray(u.gifs) ? u.gifs : [],
+        photos: Array.isArray(u.photos) ? u.photos : [],
         bg: u.boostBg || null,
         bgPos: u.boostBgPos || null,
         swipeMusic: u.swipeMusic || null,
@@ -822,6 +823,7 @@
           wrap.appendChild(buildCard(_sharedProfile, true));
           renderOrbs(_sharedProfile);
           renderSwipeGifs(_sharedProfile);
+          renderSwipePhotos(_sharedProfile);
           playProfileEntryMusic(_sharedProfile);
         } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
         return;
@@ -839,6 +841,7 @@
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
         renderOrbs(null);
         renderSwipeGifs(null);              // retire les GIFs (plus de carte)
+        renderSwipePhotos(null);            // retire les photos (plus de carte)
         playProfileEntryMusic(null);        // coupe la musique d'entrée
         document.body.setAttribute('data-swipe-empty', 'true'); // revert le fond perso
         return;
@@ -853,6 +856,7 @@
         wrap.appendChild(buildCard(p, true));
         renderOrbs(p);
         renderSwipeGifs(p);
+        renderSwipePhotos(p);
         // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
         // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
         playProfileEntryMusic(p);
@@ -966,6 +970,62 @@
       reposition();
       _swipeGifsResize = () => reposition();
       window.addEventListener('resize', _swipeGifsResize);
+    }
+    /* Photos perso (Boost) : même mécanique que les GIFs ci-dessus (couche fixe,
+       positions en % de la carte, translate(-50%,-50%)), mais un layer séparé pour
+       ne pas interférer avec renderSwipeGifs() (chacun vide/reconstruit le sien). */
+    let _swipePhotosResize = null;
+    function renderSwipePhotos(p){
+      const old = document.getElementById('swipePhotosBg');
+      if (old) old.remove();
+      if (_swipePhotosResize) {
+        window.removeEventListener('resize', _swipePhotosResize);
+        _swipePhotosResize = null;
+      }
+      const isMe = p && p.isMe;
+      const photos = isMe ? ((state.user && state.user.photos) || []) : ((p && p.photos) || []);
+      if (!photos.length) return;
+      const wrap = document.getElementById('swipeWrap');
+      if (!wrap) return;
+      const layer = document.createElement('div');
+      layer.id = 'swipePhotosBg';
+      layer.className = 'swipe-gifs-bg';
+      const items = photos.map(ph => {
+        const el = document.createElement('div');
+        el.className = 'swipe-gif';
+        el.innerHTML = `<img src="${ph.url}" alt="">`;
+        layer.appendChild(el);
+        return { el, g: ph };
+      });
+      document.body.appendChild(layer);
+      function photoPos(g){
+        const mode = activeLayoutMode();
+        const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
+                : (mode === 'landscape' && g.landscape) ? g.landscape
+                : g;
+        return {
+          x: (typeof m.x === 'number') ? m.x : 50,
+          y: (typeof m.y === 'number') ? m.y : 30,
+          w: (typeof m.w === 'number') ? m.w : 32,
+          rot: m.rot || 0,
+        };
+      }
+      function reposition(){
+        const wr = wrap.getBoundingClientRect();
+        items.forEach(({ el, g }) => {
+          const p2 = photoPos(g);
+          const wpx = (p2.w / 100) * wr.width;
+          const cx = wr.left + (p2.x / 100) * wr.width;
+          const cy = wr.top  + (p2.y / 100) * wr.height;
+          el.style.left = cx + 'px';
+          el.style.top  = cy + 'px';
+          el.style.width = wpx + 'px';
+          el.style.transform = `translate(-50%,-50%) rotate(${p2.rot}deg)`;
+        });
+      }
+      reposition();
+      _swipePhotosResize = () => reposition();
+      window.addEventListener('resize', _swipePhotosResize);
     }
     /* Bind the play button of the profile voice-memo widget on a card */
     function bindCardVoice(card){
@@ -3799,6 +3859,7 @@
         decorationUrl: f.decorationUrl || p.decorationUrl || null,
         orbs: f.orbs || p.orbs || [],
         gifs: f.gifs || [],
+        photos: f.photos || [],
         bg: f.bg || null,
         connections: f.connections || {},
         publicFlags: f.publicFlags || 0,

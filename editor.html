@@ -201,6 +201,7 @@ body[data-canvas="portrait"] .card-frame::before{
 .drop-guide[data-mode="orb"]{border-color:rgba(91,233,255,.55)}
 .drop-guide[data-mode="orb"]::after{content:"Zone des bulles";color:#9FE9FF}
 .drop-guide[data-mode="gif"]::after{content:"Zone des GIFs";color:#C7A5FF}
+.drop-guide[data-mode="photo"]::after{content:"Zone des photos";color:#FFD88A}
 
 /* ===================== BULLES (orbes d'intérêt, comme le site) ===================== */
 .orb-layer{position:absolute;inset:0;z-index:4;pointer-events:none}
@@ -621,6 +622,7 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .hide-card #card{opacity:0;pointer-events:none}
 .hide-orbs #orbLayer{opacity:0;pointer-events:none}
 .hide-gifs #stickerLayer{opacity:0;pointer-events:none}
+.hide-photos #photoLayer{opacity:0;pointer-events:none}
 
 /* ===================== SHEET ===================== */
 .sheet{position:fixed;left:50%;bottom:92px;transform:translate(-50%,18px);z-index:39;width:min(94vw,520px);max-height:54vh;overflow:hidden auto;border-radius:20px;padding:16px;
@@ -722,6 +724,10 @@ body.color-open .card-zone{transform:translateX(158px)}
 .pv-pink{background:radial-gradient(50px 40px at 50% 0%, #ff5fae 0%, transparent 65%),radial-gradient(50px 40px at 100% 100%, #c026d3 0%, transparent 60%),linear-gradient(165deg,#2c0a26,#11030d)}
 .bgp-tile span:not(.pv){position:absolute;left:0;right:0;bottom:0;padding:4px;font-size:10px;font-weight:800;color:#fff;background:rgba(13,11,30,.55);text-align:center}
 .bgp-up{display:grid;place-items:center;color:var(--dim);font-size:22px;background:rgba(255,255,255,.04)}
+.photo-tile{cursor:default}
+.photo-tile .pv{object-fit:cover;width:100%;height:100%}
+.photo-del{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(10,10,14,.7);color:#fff;font-size:11px;cursor:pointer;display:grid;place-items:center;z-index:2;transition:background .14s ease}
+.photo-del:hover{background:rgba(237,66,69,.9)}
 
 /* couleur (2 roues = dégradé de la carte) */
 .color-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center}
@@ -1000,6 +1006,7 @@ html.perf-lite *{
     </div>
     <div class="card-frame">
     <div class="sticker-layer" id="stickerLayer"></div>
+    <div class="sticker-layer" id="photoLayer"></div>
     <div class="orb-layer" id="orbLayer"></div>
     <button class="eye-dot eye-dot--card" data-eye="card" title="Masquer la carte (aperçu)" aria-label="Masquer la carte"></button>
     <section class="card" id="card">
@@ -1034,6 +1041,10 @@ html.perf-lite *{
   <span class="tool-wrap">
     <button class="tool tool--gif tool--boost" data-tool="gifs" title="GIFs (Matefindr Boost)" aria-label="GIFs"><span class="tool-word">GIF</span></button>
     <button class="eye-dot" data-eye="gifs" title="Masquer les GIFs (aperçu)" aria-label="Masquer les GIFs"></button>
+  </span>
+  <span class="tool-wrap">
+    <button class="tool tool--boost" data-tool="photos" title="Photos (Matefindr Boost)" aria-label="Photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="14" rx="2.5"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><circle cx="8.5" cy="12.5" r="1.5"/><path d="M17 17l-3.5-3.5L6 21"/></svg></button>
+    <button class="eye-dot" data-eye="photos" title="Masquer les photos (aperçu)" aria-label="Masquer les photos"></button>
   </span>
   <button class="tool tool--boost" data-tool="bg" title="Fond (Matefindr Boost)" aria-label="Fond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 16l-5-5L5 21"/></svg></button>
   <span class="tool-sep"></span>
@@ -1091,6 +1102,7 @@ html.perf-lite *{
   <p class="bg-sub">Ces options font partie de <b>Matefindr Boost</b>.<br>Sans abonnement, elles seront retirées de ton profil.</p>
   <div class="bg-perks">
     <div class="bg-perk"><span class="bg-perk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M7 4v16M17 4v16M2.5 9h4.5M2.5 15h4.5M17 9h4.5M17 15h4.5"/></svg></span>GIFs sur ta carte</div>
+    <div class="bg-perk"><span class="bg-perk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="14" height="14" rx="2.5"/><path d="M7 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/><circle cx="8.5" cy="12.5" r="1.5"/><path d="M17 17l-3.5-3.5L6 21"/></svg></span>Photos sur ta carte</div>
     <div class="bg-perk"><span class="bg-perk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2.5"/><circle cx="8.5" cy="9" r="1.8"/><path d="M21 16l-5-5L5 21"/></svg></span>Fond personnalisé</div>
     <div class="bg-perk"><span class="bg-perk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Musique d'entrée</div>
   </div>
@@ -1138,6 +1150,7 @@ html.perf-lite *{
 <input type="file" id="fileAvatar" accept="image/*" hidden>
 <input type="file" id="fileBanner" accept="image/*" hidden>
 <input type="file" id="fileBg" accept="image/*,video/*" hidden>
+<input type="file" id="filePhoto" accept="image/*" multiple hidden>
 
 <script>
 'use strict';
@@ -1168,6 +1181,7 @@ const S = {
   nameColor:null,             // couleur du pseudo (null = blanc par défaut)
   orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
+  photos:[],   // {url,x,y,w,rot, posByMode} — photos perso (Boost), mêmes mécaniques que les GIFs
   canvasMode:'desktop', // 'desktop' ("Paysage" à l'écran) | 'portrait' — orientation en cours d'édition
   connections:{}, // {appId: pseudo}
   handleBlur:false,   // floute le pseudo Discord (@tag) pour éviter les ajouts
@@ -1431,7 +1445,7 @@ function closeSheet(){activeTool=null;$('sheet').classList.remove('open');docume
 function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='')=>`<h3><span class="sh-title">${t}${badge}</span><button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
-function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);}
+function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);else if(tool==='photos')renderPhotosSheet(sh);}
 
 /* ===== 1. BULLES = orbes d'intérêt (Musique / Jeu / Série·Film), comme le site ===== */
 const ORB_ICON={
@@ -1916,6 +1930,7 @@ const CANVAS_MODES=['desktop','portrait'];
 function snapshotCanvasMode(mode){
   S.orbs.forEach(o=>{ o.posByMode=o.posByMode||{}; if(typeof o.x==='number'&&typeof o.y==='number') o.posByMode[mode]={x:o.x,y:o.y,userPlaced:!!o.userPlaced}; });
   S.gifs.forEach(g=>{ g.posByMode=g.posByMode||{}; g.posByMode[mode]={x:g.x,y:g.y,w:g.w,rot:g.rot}; });
+  S.photos.forEach(p=>{ p.posByMode=p.posByMode||{}; p.posByMode[mode]={x:p.x,y:p.y,w:p.w,rot:p.rot}; });
 }
 function restoreCanvasMode(mode){
   S.orbs.forEach(o=>{ const p=o.posByMode&&o.posByMode[mode];
@@ -1923,6 +1938,7 @@ function restoreCanvasMode(mode){
     else { o.x=undefined; o.y=undefined; o.userPlaced=false; } // → auto-placement propre au mode
   });
   S.gifs.forEach(g=>{ const p=g.posByMode&&g.posByMode[mode]; if(p){ g.x=p.x; g.y=p.y; g.w=p.w; g.rot=p.rot; } });
+  S.photos.forEach(p=>{ const pm=p.posByMode&&p.posByMode[mode]; if(pm){ p.x=pm.x; p.y=pm.y; p.w=pm.w; p.rot=pm.rot; } });
 }
 function setCanvasMode(mode){
   if(!CANVAS_MODES.includes(mode)||mode===S.canvasMode) return;
@@ -1967,6 +1983,85 @@ function makeSticker(g,idx,layer){
   // rotation
   const ro=el.querySelector('.sk-rot');
   ro.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{ro.setPointerCapture(e.pointerId);}catch(_){}const c=center();const a0=Math.atan2(e.clientY-c.y,e.clientX-c.x)*180/Math.PI;const r0=g.rot;const mv=ev=>{const a=Math.atan2(ev.clientY-c.y,ev.clientX-c.x)*180/Math.PI;g.rot=Math.round(r0+(a-a0));apply();};const up=ev=>{ro.removeEventListener('pointermove',mv);ro.removeEventListener('pointerup',up);try{ro.releasePointerCapture(ev.pointerId);}catch(_){}persist();};ro.addEventListener('pointermove',mv);ro.addEventListener('pointerup',up);});
+  return el;
+}
+
+/* ===== 2bis. PHOTOS = photos perso (Boost), mêmes mécaniques que les GIFs (sticker
+   déplaçable/redimensionnable/rotatif) mais importées depuis l'appareil, pas cherchées
+   en ligne. Réservé Boost à 100% (contrairement au fond, cf. bgIsPremium) : le gate
+   se déclenche dès l'ajout, pas seulement à la sortie de l'éditeur. ===== */
+const PHOTO_MAX=10, PHOTO_MAX_BYTES=5*1024*1024;
+function updatePhotoCount(){
+  const c=document.getElementById('photoCount'); if(c)c.innerHTML=`<b>${S.photos.length}</b> / ${PHOTO_MAX}`;
+}
+function renderPhotosSheet(sh){
+  const isBoost=!document.body.classList.contains('not-boost');
+  sh.innerHTML=sheetHeader('Photos',`<span class="sheet-count" id="photoCount"><b>${S.photos.length}</b> / ${PHOTO_MAX}</span>`)+
+    '<div class="bgp-grid" id="photoGrid">'+
+      S.photos.map((p,i)=>`<div class="bgp-tile photo-tile" data-i="${i}"><img class="pv" src="${p.url}" alt=""><button type="button" class="photo-del" title="Retirer" aria-label="Retirer">✕</button></div>`).join('')+
+      (S.photos.length<PHOTO_MAX?'<button class="bgp-tile bgp-up" data-photo-upload>＋<span>Importer</span></button>':'')+
+    '</div>'+
+    `<div class="hint">${isBoost?'Affichées comme des bulles déplaçables sur ta carte':'Réservé à Matefindr Boost'} · 5 Mo max par photo · ${PHOTO_MAX} max</div>`;
+  sh.querySelectorAll('.photo-del').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    const i=+b.closest('.photo-tile').dataset.i;
+    S.photos.splice(i,1); renderPhotos(); renderPhotosSheet(sh); toast('Photo retirée');
+  }));
+  const upBtn=sh.querySelector('[data-photo-upload]');
+  if(upBtn) upBtn.addEventListener('click',()=>{
+    if(!isBoost){ openBoostGate(null,true); return; }
+    $('filePhoto').click();
+  });
+}
+let _lastPhotoPlace=null;
+function addPhotoFile(f){
+  if(f.size>PHOTO_MAX_BYTES){ toast('⚠️ '+f.name+' trop lourde — 5 Mo max'); return; }
+  const last=S.photos[S.photos.length-1];
+  const base=_lastPhotoPlace||(last?{x:last.x,y:last.y,w:last.w}:{x:-18,y:58,w:30});
+  const dy=S.photos.length?6:0;
+  const p={url:URL.createObjectURL(f),x:base.x,y:base.y+dy,w:base.w,rot:0};
+  S.photos.push(p);
+  _lastPhotoPlace={x:p.x,y:p.y,w:p.w};
+  renderPhotos(); updatePhotoCount();
+  toast('Envoi de la photo…');
+  // Suffixe aléatoire : plusieurs photos importées d'un coup peuvent partager le même Date.now().
+  edUpload(f,'photo-'+Math.random().toString(36).slice(2,8)).then(url=>{
+    if(url){ p.url=url; renderPhotos(); persist(); }
+    else{ toast('⚠️ Envoi échoué pour '+f.name); }
+  });
+}
+$('filePhoto').addEventListener('change',e=>{
+  const files=[...(e.target.files||[])]; e.target.value='';
+  if(!files.length) return;
+  const remaining=PHOTO_MAX-S.photos.length;
+  if(remaining<=0){ toast('Limite : '+PHOTO_MAX+' photos'); return; }
+  const toAdd=files.slice(0,remaining);
+  if(files.length>toAdd.length) toast('Seules les '+toAdd.length+' premières ont été gardées (limite '+PHOTO_MAX+')');
+  toAdd.forEach(addPhotoFile);
+  if($('sheet').classList.contains('open') && activeTool==='photos') renderPhotosSheet($('sheet'));
+});
+function renderPhotos(){const layer=$('photoLayer');layer.innerHTML='';S.photos.forEach((p,i)=>layer.appendChild(makePhotoSticker(p,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
+function makePhotoSticker(p,idx,layer){
+  if(typeof p.x!=='number')p.x=50; if(typeof p.y!=='number')p.y=28; if(typeof p.w!=='number')p.w=34; if(typeof p.rot!=='number')p.rot=0;
+  const el=document.createElement('div'); el.className='sticker';
+  const apply=()=>{el.style.left=p.x+'%';el.style.top=p.y+'%';el.style.width=p.w+'%';el.style.transform=`translate(-50%,-50%) rotate(${p.rot}deg)`;};
+  apply();
+  el.innerHTML=`<div class="sticker-inner"><img src="${p.url}" alt="" draggable="false"></div>
+    <button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
+    <div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>`;
+  const center=()=>{const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
+  el.querySelector('.sk-del').addEventListener('pointerdown',e=>e.stopPropagation());
+  el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.photos.splice(idx,1);renderPhotos();toast('Photo retirée');updatePhotoCount();});
+  let drag=null;
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('photo');});
+  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();p.x=(cx-lr.left)/lr.width*100;p.y=(cy-lr.top)/lr.height*100;apply();});
+  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastPhotoPlace={x:p.x,y:p.y,w:p.w};persist();};
+  el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
+  const rz=el.querySelector('.sk-size');
+  rz.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{rz.setPointerCapture(e.pointerId);}catch(_){}const c=center();const d0=Math.max(8,Math.hypot(e.clientX-c.x,e.clientY-c.y));const w0=p.w;const mv=ev=>{p.w=clamp(w0*(Math.hypot(ev.clientX-c.x,ev.clientY-c.y)/d0),12,75);apply();};const up=ev=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up);try{rz.releasePointerCapture(ev.pointerId);}catch(_){}_lastPhotoPlace={x:p.x,y:p.y,w:p.w};persist();};rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);});
+  const ro=el.querySelector('.sk-rot');
+  ro.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{ro.setPointerCapture(e.pointerId);}catch(_){}const c=center();const a0=Math.atan2(e.clientY-c.y,e.clientX-c.x)*180/Math.PI;const r0=p.rot;const mv=ev=>{const a=Math.atan2(ev.clientY-c.y,ev.clientX-c.x)*180/Math.PI;p.rot=Math.round(r0+(a-a0));apply();};const up=ev=>{ro.removeEventListener('pointermove',mv);ro.removeEventListener('pointerup',up);try{ro.releasePointerCapture(ev.pointerId);}catch(_){}persist();};ro.addEventListener('pointermove',mv);ro.addEventListener('pointerup',up);});
   return el;
 }
 
@@ -2157,8 +2252,10 @@ document.querySelectorAll('.eye-dot').forEach(btn=>{
 function updateEyeVisibility(){
   const ov=document.querySelector('.eye-dot[data-eye="orbs"]');
   const gv=document.querySelector('.eye-dot[data-eye="gifs"]');
+  const pv=document.querySelector('.eye-dot[data-eye="photos"]');
   if(ov) ov.style.display=(S.orbs&&S.orbs.length)?'':'none';
   if(gv) gv.style.display=(S.gifs&&S.gifs.length)?'':'none';
+  if(pv) pv.style.display=(S.photos&&S.photos.length)?'':'none';
 }
 updateEyeVisibility();
 
@@ -2408,6 +2505,14 @@ function writeState(){
     if(pm.landscape) out.landscape={x:pm.landscape.x,y:pm.landscape.y,w:pm.landscape.w,rot:pm.landscape.rot};
     return out;
   });
+  st.user.photos=S.photos.map(p=>{
+    const pm=p.posByMode||{};
+    const d=pm.desktop||{x:p.x,y:p.y,w:p.w,rot:p.rot};
+    const out={url:p.url,x:d.x,y:d.y,w:d.w,rot:d.rot};
+    if(pm.portrait)  out.portrait ={x:pm.portrait.x, y:pm.portrait.y, w:pm.portrait.w, rot:pm.portrait.rot};
+    if(pm.landscape) out.landscape={x:pm.landscape.x,y:pm.landscape.y,w:pm.landscape.w,rot:pm.landscape.rot};
+    return out;
+  });
   st.user.swipeMusic=null; // musique d'intro de profil retirée du site
   // Toujours écrire le champ (même à null) : sinon supprimer un vocal laisse
   // l'ancienne URL dans l'état → repoussée en DB → toujours visible par les autres.
@@ -2468,7 +2573,7 @@ function buildDbProfile(st){
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
     orbs, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
-    gifs:Array.isArray(u.gifs)?u.gifs:[], bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
+    gifs:Array.isArray(u.gifs)?u.gifs:[], photos:Array.isArray(u.photos)?u.photos:[], bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
     connections:(p.connections&&typeof p.connections==='object')?p.connections:{},
     handleBlur:!!u.handleBlur, showBoostName:(u.boostShowName===false)?false:true,
   };
@@ -2566,6 +2671,18 @@ function hydrateFromSite(){
     });
     renderGifs();
   }
+  if(Array.isArray(u.photos)&&u.photos.length){
+    S.photos=u.photos.slice(0,PHOTO_MAX).map(ph=>{
+      const photo={url:ph.url,x:typeof ph.x==='number'?ph.x:50,y:typeof ph.y==='number'?ph.y:28,w:ph.w||34,rot:ph.rot||0};
+      const pm={desktop:{x:photo.x,y:photo.y,w:photo.w,rot:photo.rot}};
+      if(ph.portrait) pm.portrait={x:ph.portrait.x,y:ph.portrait.y,w:ph.portrait.w,rot:ph.portrait.rot};
+      if(ph.landscape) pm.landscape={x:ph.landscape.x,y:ph.landscape.y,w:ph.landscape.w,rot:ph.landscape.rot};
+      photo.posByMode=pm;
+      const act=pm[S.canvasMode]; if(act){photo.x=act.x;photo.y=act.y;photo.w=act.w;photo.rot=act.rot;}
+      return photo;
+    });
+    renderPhotos();
+  }
   if(u.profileVoice){ S.voice={url:u.profileVoice,dur:5}; renderVoice(); }
   if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); if(typeof renderConnections==='function') renderConnections(); }
 }
@@ -2604,7 +2721,7 @@ let PRESETS=loadPresets();
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
-  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','connections','handleBlur','boostShowName','nameCustom','avatarCustom'];
+  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','photos','connections','handleBlur','boostShowName','nameCustom','avatarCustom'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
 }
 // Snapshot vierge : personnalisation (bio, couleurs, bulles, GIFs…) remise à zéro,
@@ -2613,7 +2730,7 @@ function snapshotProfile(){
 async function blankPresetSnapshot(){
   const base={ username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
     bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
-    orbs:[], gifs:[], connections:{}, handleBlur:false, boostShowName:true,
+    orbs:[], gifs:[], photos:[], connections:{}, handleBlur:false, boostShowName:true,
     nameCustom:false, avatarCustom:false };
   try{
     const token=localStorage.getItem('matefindr_discord_token');
@@ -2679,6 +2796,7 @@ function applyPreset(snap){
     S.c1=c.c1||S.c1; S.c2=c.c2||S.c2;
     S.nameColor=(c.nameColor&&/^#[0-9a-f]{6}$/i.test(c.nameColor))?c.nameColor:null;
     S.orbs=Array.isArray(c.orbs)?c.orbs:[]; S.gifs=Array.isArray(c.gifs)?c.gifs:[];
+    S.photos=Array.isArray(c.photos)?c.photos:[];
     S.connections=c.connections||{};
     S.handleBlur=!!c.handleBlur; S.boostShowName=(c.boostShowName!==false);
     S.nameCustom=!!c.nameCustom; S.avatarCustom=!!c.avatarCustom;
@@ -2689,10 +2807,11 @@ function applyPreset(snap){
     setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+((S.username||'T').charAt(0).toUpperCase())+'</div>');
     renderBanner();
     if(typeof restoreCanvasMode==='function') restoreCanvasMode(S.canvasMode);
-    renderOrbs(); renderGifs(); renderVoice(); renderMusicChip();
+    renderOrbs(); renderGifs(); renderPhotos(); renderVoice(); renderMusicChip();
     if(typeof renderConnections==='function') renderConnections();
     if(typeof updateOrbCount==='function') updateOrbCount();
     if(typeof updateGifCount==='function') updateGifCount();
+    updatePhotoCount();
     persist();
   }catch(e){ console.warn('[editor] applyPreset', e); }
 }
@@ -2812,18 +2931,19 @@ renderPresets();
   });
 })();
 
-/* ===== Gate Matefindr Boost : GIFs / Fond perso / Musique d'entrée sont réservés au Boost. ===== */
+/* ===== Gate Matefindr Boost : GIFs / Photos / Fond perso (GIF ou vidéo) / Musique d'entrée sont réservés au Boost. ===== */
 function userHasBoost(){ try{ const st=readSite(); return !!(st.user&&st.user.boost); }catch(_){ return false; } }
 function hasBoostElements(){
   if(userHasBoost()) return false;
-  return (S.gifs&&S.gifs.length>0) || bgIsPremium() || !!S.music;
+  return (S.gifs&&S.gifs.length>0) || (S.photos&&S.photos.length>0) || bgIsPremium() || !!S.music;
 }
 function stripBoostElements(){
   if(S.gifs&&S.gifs.length){ S.gifs=[]; renderGifs(); }
+  if(S.photos&&S.photos.length){ S.photos=[]; renderPhotos(); }
   if(bgIsPremium()){ applyBg({type:'preset',value:'default'}); }
   if(S.music){ S.music=null; renderMusicChip(); }
   // purge aussi côté état sauvegardé (fond custom + musique)
-  try{ const st=readSite(); if(st.user){ if(typeof st.user.boostBg==='string'&&/^https?:/.test(st.user.boostBg)){ st.user.boostBg='default'; st.user.boostBgVideo=false; st.user.boostBgPos=null; } st.user.swipeMusic=null; st.user.gifs=[]; localStorage.setItem(STATE_KEY,JSON.stringify(st)); } }catch(_){}
+  try{ const st=readSite(); if(st.user){ if(typeof st.user.boostBg==='string'&&/^https?:/.test(st.user.boostBg)){ st.user.boostBg='default'; st.user.boostBgVideo=false; st.user.boostBgPos=null; } st.user.swipeMusic=null; st.user.gifs=[]; st.user.photos=[]; localStorage.setItem(STATE_KEY,JSON.stringify(st)); } }catch(_){}
   saveNow();
 }
 let _pendingLeave=null;
