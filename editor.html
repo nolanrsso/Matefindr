@@ -3171,11 +3171,11 @@ function leaveEditor(go){ if(hasBoostElements()){ openBoostGate(go); return; } g
 
 /* ===== Bas de l'écran : Retour (gauche). Aperçu est collé à la barre d'outils. ===== */
 /* Retour (bas-gauche) : tes modifs sont déjà enregistrées en continu → on revient à l'app. */
-$('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('✅ Profil enregistré'); setTimeout(()=>{location.href='index.html';},500); }));
+$('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('✅ Profil enregistré'); setTimeout(()=>{location.href='/';},500); }));
 /* Logo Matefindr → retour à l'accueil (en sauvegardant). */
-$('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='index.html'; }));
+$('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='/'; }));
 /* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
-$('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); try{sessionStorage.setItem('mf_from_editor','1');}catch(_){}; location.href='index.html#preview'; }));
+$('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); try{sessionStorage.setItem('mf_from_editor','1');}catch(_){}; location.href='/#preview'; }));
 /* Paramètres (haut-droite) : ouvre un panneau (sheet) DANS l'éditeur — ne prend
    pas tout l'écran, contrairement à l'ancienne page compte d'index.html. */
 $('btnSettings').addEventListener('click',openSettingsSheet);
@@ -3251,7 +3251,7 @@ function renderSettingsSheet(sh){
     // bulles, GIFs, fond…) du compte précédent, jusqu'à écraser le profil Supabase du
     // nouveau compte avec ces données périmées.
     try{ localStorage.removeItem('matefindr_presets'); localStorage.removeItem('matefindr_active_preset'); }catch(_){}
-    location.href='index.html';
+    location.href='/';
   });
   sh.querySelector('#ssDelete').addEventListener('click',()=>{
     if(!confirm('Supprimer définitivement ton compte Matefindr ? Toutes tes données locales seront effacées.')) return;
@@ -3259,7 +3259,7 @@ function renderSettingsSheet(sh){
     try{ clearTimeout(_dbSyncT); }catch(_){}
     try{ localStorage.clear(); }catch(_){}
     try{ const sb=edSupa(); if(sb) sb.auth.signOut().catch(()=>{}); }catch(_){}
-    location.href='index.html';
+    location.href='/';
   });
 }
 

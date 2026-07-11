@@ -85,7 +85,15 @@
       async onLogin(user){
         // Déjà connecté et déjà dans l'app ? (ex : onAuthStateChange qui refire quand on
         // revient sur l'onglet) → on met à jour les données SANS changer l'écran courant.
-        const alreadyInApp = document.body.getAttribute('data-auth') === 'in'
+        // Fonction (pas une const figée ici) : ce onLogin() traverse plusieurs `await`
+        // réseau (syncMyProfileToCloud, discordJoinDM, fetchOtherProfiles) qui peuvent
+        // prendre plusieurs secondes -- si on la calculait UNE FOIS ici, la valeur serait
+        // périmée au moment de l'utiliser plus bas : un utilisateur qui clique "Commencer
+        // à swiper" PENDANT ces awaits (data-screen passe à 'swipe' entre-temps) se
+        // faisait renvoyer de force vers le menu une fois les awaits terminés, alors
+        // même qu'il était déjà en train de swiper. Il faut relire l'écran ACTUEL au
+        // moment du if (!alreadyInApp()), pas celui du tout début de la fonction.
+        const alreadyInApp = () => document.body.getAttribute('data-auth') === 'in'
           && !['landing','onboarding'].includes(document.body.getAttribute('data-screen'));
         // Préserve les assets custom (Boost) avant le merge Discord
         // Garde-fou CRITIQUE : si un `state.user`/`state.profile` d'un AUTRE compte
@@ -202,7 +210,7 @@
         } catch(_){}
         // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
         // re-événement d'auth (focus d'onglet) → sinon ça renverrait à l'accueil sans cesse.
-        if (!alreadyInApp) {
+        if (!alreadyInApp()) {
           // Aperçu ouvert depuis l'éditeur : on entre DIRECTEMENT en aperçu ici (dernier
           // setScreen après les awaits) → sinon ce setScreen écrase l'enterPreviewMode de
           // handleEditorReturn et on retombe sur l'index (la landing).
