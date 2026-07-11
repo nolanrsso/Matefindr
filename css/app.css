@@ -532,7 +532,7 @@
   }
   .liker-close:hover{transform:scale(1.08);background:rgba(255,79,160,.18);border-color:rgba(255,79,160,.45)}
   .liker-card-wrap{
-    position:relative;z-index:1;
+    position:relative;z-index:3;
     width:min(96vw,420px);height:min(90vh,640px);
     border-radius:20px;overflow:hidden;
     box-shadow:0 30px 80px rgba(0,0,0,.7);
@@ -541,6 +541,19 @@
   @keyframes likerPop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
   .liker-card-wrap .swipe-card{position:absolute !important;inset:0 !important;transform:none !important;cursor:default !important}
   .liker-card-wrap .swipe-card .badge-stamp{display:none !important}
+  /* Fond perso (Boost) du profil prévisualisé -- même mécanique que #customBgLayer
+     du vrai swipe (multiple fixe de la taille de la carte), mais scopé à la popup
+     seule : ne change pas le fond de la page derrière (messages/likes restent tels quels). */
+  .liker-bg{position:fixed;z-index:0;display:none;pointer-events:none;overflow:hidden;border-radius:20px}
+  .liker-bg.on{display:block}
+  .liker-bg img,.liker-bg video{width:100%;height:100%;object-fit:cover;display:block}
+  /* Bulles + GIFs/photos flottants, positionnés en pixels viewport autour de
+     .liker-card-wrap -- même calcul que le vrai swipe (relToPx / reposition),
+     juste ancré sur cette carte-ci au lieu de #swipeWrap. */
+  .liker-orbit{position:fixed;inset:0;pointer-events:none;z-index:2}
+  .liker-orbit .orb-wrap{pointer-events:auto}
+  /* Les stickers eux-mêmes réutilisent .swipe-gifs-bg (même classe que le vrai
+     swipe) -- .swipe-gif est stylé en sélecteur descendant de cette classe. */
 
   /* Match celebration overlay */
   .match-overlay{

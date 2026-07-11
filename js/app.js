@@ -3943,11 +3943,166 @@
       const card = buildCard(profileObj, false);
       wrap.appendChild(card);
       overlay.setAttribute('data-show', 'true');
+      // Bulles/GIFs/photos/fond perso : la popup n'affichait QUE la carte (buildCard),
+      // sans ces couches -- rendu séparément ici (au lieu de vraiment "monter" au
+      // premier plan pendant l'animation likerPop, on recale une 2e fois une fois
+      // la carte posée à sa taille finale).
+      renderLikerDecor(profileObj);
+      requestAnimationFrame(() => renderLikerDecor(profileObj));
+      setTimeout(() => renderLikerDecor(profileObj), 380);
+    }
+    // Fond perso (Boost) du profil prévisualisé -- même mécanique que
+    // positionCustomBgLayer()/applyBgChoice() du vrai swipe (multiple fixe de la
+    // taille de la carte, centré dessus), mais ancrée sur .liker-card-wrap et sans
+    // toucher au fond de la vraie page derrière la popup (messages/likes intacts).
+    function positionLikerBg(p){
+      const layer = document.getElementById('likerBgLayer');
+      const wrap = document.getElementById('likerCardWrap');
+      if (!layer || !wrap) return;
+      const bg = p && p.bg;
+      if (!(bg && /^https?:\/\//.test(bg))) { layer.classList.remove('on'); layer.innerHTML = ''; layer._src = ''; return; }
+      const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg);
+      if (layer._src !== bg) {
+        layer._src = bg; layer.innerHTML = '';
+        if (isVideo) {
+          const v = document.createElement('video'); v.src = bg; v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true;
+          layer.appendChild(v);
+        } else {
+          const im = document.createElement('img'); im.src = bg; layer.appendChild(im);
+        }
+      }
+      if (!isVideo) {
+        const img = layer.querySelector('img');
+        if (img) {
+          const pos = p.bgPos || {};
+          const posX = typeof pos.posX === 'number' ? pos.posX : 50;
+          const posY = typeof pos.posY === 'number' ? pos.posY : 50;
+          const scale = typeof pos.scale === 'number' ? pos.scale : 1;
+          img.style.objectPosition = posX + '% ' + posY + '%';
+          img.style.transformOrigin = posX + '% ' + posY + '%';
+          img.style.transform = 'scale(' + scale + ')';
+        }
+      }
+      layer.classList.add('on');
+      const card = wrap.getBoundingClientRect();
+      const cx = card.left + card.width / 2, cy = card.top + card.height / 2;
+      const bw = card.width * BG_SCALE_W, bh = card.height * BG_SCALE_H;
+      layer.style.left = (cx - bw / 2) + 'px';
+      layer.style.top = (cy - bh / 2) + 'px';
+      layer.style.width = bw + 'px';
+      layer.style.height = bh + 'px';
+    }
+    // Bulles autour de la popup -- mêmes positions relatives (orbRelLayout) que le
+    // vrai swipe/éditeur, mais statiques (pas de simulation physique _orbSim,
+    // inutile pour un aperçu figé) et ancrées sur .liker-card-wrap.
+    function renderLikerOrbs(p){
+      const orbitEl = document.getElementById('likerOrbit');
+      const wrap = document.getElementById('likerCardWrap');
+      if (!orbitEl || !wrap) return;
+      orbitEl.innerHTML = '';
+      const orbs = (p && p.orbs) || [];
+      if (!orbs.length) return;
+      const cardRect = wrap.getBoundingClientRect();
+      if (!cardRect.width) return;
+      const cardCx = cardRect.left + cardRect.width / 2, cardCy = cardRect.top + cardRect.height / 2;
+      const sw = window.innerWidth, sh = window.innerHeight, orbR = 58;
+      const { rel } = orbRelLayout(orbs, false, 'desktop');
+      orbs.forEach(o => {
+        const r = rel.get(o) || { rx: ORB_LAYOUT.COL0, ry: 0 };
+        const x = Math.max(orbR + 6, Math.min(sw - orbR - 6, cardCx + r.rx * cardRect.width));
+        const y = Math.max(orbR + 6, Math.min(sh - orbR - 6, cardCy + r.ry * cardRect.height));
+        const wrapEl = document.createElement('div');
+        wrapEl.className = 'orb-wrap';
+        wrapEl.style.position = 'absolute'; wrapEl.style.left = '0'; wrapEl.style.top = '0';
+        wrapEl.style.transform = `translate(${x - orbR}px, ${y - orbR}px)`;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'orb'; btn.dataset.kind = o.kind;
+        btn.title = `${o.title || ''}${o.sub ? ' · ' + o.sub : ''}`;
+        btn.innerHTML = orbInner(o);
+        if (o.kind === 'game' && o.rank && typeof rankVisual === 'function') {
+          const v = rankVisual(o.rank);
+          const iconUrl = typeof rankIconUrl === 'function' ? rankIconUrl(o.title, o.rank) : null;
+          const iconHtml = iconUrl
+            ? `<img class="orb-rank-img" src="${iconUrl}" alt="" loading="lazy" decoding="async">`
+            : `<span class="orb-rank-ico">${v.ico}</span>`;
+          const rk = document.createElement('span');
+          rk.className = 'orb-rank-orbit';
+          rk.innerHTML = `<span class="orb-rank-ball${iconUrl ? ' orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}">${iconHtml}</span>`;
+          btn.appendChild(rk);
+        }
+        const label = document.createElement('span');
+        label.className = 'orb-label';
+        label.textContent = (o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || '');
+        wrapEl.appendChild(btn); wrapEl.appendChild(label);
+        orbitEl.appendChild(wrapEl);
+      });
+    }
+    // GIFs/photos flottants autour de la popup -- même mécanique que
+    // renderSwipeGifs/renderSwipePhotos (positions % de la carte -> px viewport,
+    // translate(-50%,-50%)), factorisée ici pour les deux types de stickers.
+    function renderLikerStickers(items, kind, contourOn){
+      const wrap = document.getElementById('likerCardWrap');
+      const id = kind === 'gif' ? 'likerGifsBg' : 'likerPhotosBg';
+      const old = document.getElementById(id); if (old) old.remove();
+      if (!wrap || !items || !items.length) return null;
+      const layer = document.createElement('div');
+      layer.id = id;
+      // Réutilise la classe .swipe-gifs-bg (pas une classe dédiée) : le style des
+      // stickers .swipe-gif eux-mêmes est écrit en sélecteur descendant
+      // ".swipe-gifs-bg .swipe-gif{...}" -- un autre nom de classe sur le
+      // conteneur laisserait les stickers sans position:absolute (tous empilés
+      // en haut à gauche, cf. bug constaté en testant).
+      layer.className = 'swipe-gifs-bg' + (contourOn ? '' : ' no-contour');
+      const overlay = document.getElementById('likerOverlay');
+      const wraps = items.map(g => {
+        const el = document.createElement('div'); el.className = 'swipe-gif';
+        el.innerHTML = `<img src="${g.full || g.preview || g.url}" alt="">`;
+        layer.appendChild(el);
+        return { el, g };
+      });
+      overlay.appendChild(layer);
+      function pos(g){
+        const mode = activeLayoutMode();
+        const m = (mode === 'portrait' && g.portrait) ? g.portrait : (mode === 'landscape' && g.landscape) ? g.landscape : g;
+        return { x: typeof m.x === 'number' ? m.x : 50, y: typeof m.y === 'number' ? m.y : 30, w: typeof m.w === 'number' ? m.w : 32, rot: m.rot || 0 };
+      }
+      function reposition(){
+        const wr = wrap.getBoundingClientRect();
+        wraps.forEach(({ el, g }) => {
+          const p = pos(g);
+          const wpx = (p.w / 100) * wr.width;
+          const cx = wr.left + (p.x / 100) * wr.width;
+          const cy = wr.top + (p.y / 100) * wr.height;
+          el.style.left = cx + 'px'; el.style.top = cy + 'px'; el.style.width = wpx + 'px';
+          el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
+        });
+      }
+      reposition();
+      return reposition;
+    }
+    let _likerResize = null;
+    function closeLikerDecor(){
+      const orbitEl = document.getElementById('likerOrbit');
+      if (orbitEl) orbitEl.innerHTML = '';
+      const bgLayer = document.getElementById('likerBgLayer');
+      if (bgLayer) { bgLayer.classList.remove('on'); bgLayer.innerHTML = ''; bgLayer._src = ''; }
+      const gb = document.getElementById('likerGifsBg'); if (gb) gb.remove();
+      const pb = document.getElementById('likerPhotosBg'); if (pb) pb.remove();
+      if (_likerResize) { window.removeEventListener('resize', _likerResize); _likerResize = null; }
+    }
+    function renderLikerDecor(p){
+      if (_likerResize) { window.removeEventListener('resize', _likerResize); _likerResize = null; }
+      positionLikerBg(p);
+      renderLikerOrbs(p);
+      const gifReposition = renderLikerStickers(p.gifs, 'gif', p.gifContour !== false);
+      const photoReposition = renderLikerStickers(p.photos, 'photo', p.photoContour !== false);
+      _likerResize = () => { positionLikerBg(p); renderLikerOrbs(p); if (gifReposition) gifReposition(); if (photoReposition) photoReposition(); };
+      window.addEventListener('resize', _likerResize);
     }
     (function bindLikerOverlay(){
       const overlay = document.getElementById('likerOverlay');
       if (!overlay) return;
-      const close = () => overlay.setAttribute('data-show', 'false');
+      const close = () => { overlay.setAttribute('data-show', 'false'); closeLikerDecor(); };
       document.getElementById('likerClose')?.addEventListener('click', close);
       document.getElementById('likerBackdrop')?.addEventListener('click', close);
       document.addEventListener('keydown', (e) => {
