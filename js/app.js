@@ -2212,19 +2212,6 @@
         resolveAndPlay(false);
       }
     }
-    // GIFs/photos/bulles sont positionnés en pixels ABSOLUS (via wrap.getBoundingClientRect(),
-    // stable — cf. renderSwipeGifs/renderSwipePhotos/renderOrbs), PAS comme enfants de
-    // .swipe-card → sans ça ils ne suivaient pas la carte pendant le swipe (glisser/tourner) ni
-    // pendant l'animation de sortie : ils restaient plantés à leur place pendant que la carte
-    // s'envolait dessous, donnant l'impression que GIFs/photos/bulles ne sont "pas au bon
-    // endroit" par rapport à l'éditeur. On applique la même translation (pas la rotation : ces
-    // couches couvrent tout le viewport, une rotation tournerait autour du mauvais centre) aux
-    // 3 couches en même temps que .swipe-card.
-    function overlayLayers(){
-      return ['swipeOrbit','swipeGifsBg','swipePhotosBg'].map(id => document.getElementById(id)).filter(Boolean);
-    }
-    function setOverlayTransform(t){ overlayLayers().forEach(el => { el.style.transform = t; }); }
-    function setOverlayTransition(t){ overlayLayers().forEach(el => { el.style.transition = t; }); }
     function attachDrag(card){
       let sx=0, sy=0, dx=0, dy=0, dragging=false;
       const like = card.querySelector('.badge-stamp.like');
@@ -2237,7 +2224,6 @@
         const p = e.touches ? e.touches[0] : e;
         sx = p.clientX; sy = p.clientY; dx = 0; dy = 0;
         card.style.transition = 'none';
-        setOverlayTransition('none');
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
         document.addEventListener('touchmove', onMove, { passive:false });
@@ -2255,7 +2241,6 @@
         const p = e.touches ? e.touches[0] : e;
         dx = p.clientX - sx; dy = p.clientY - sy;
         card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
-        setOverlayTransform(`translate(${dx}px, ${dy}px)`);
         // Aperçu : on déplace librement la carte, sans stamps LIKE/NOPE ni boutons de swipe.
         if (_previewMode) return;
         like.style.opacity = Math.max(0, Math.min(1, dx / 120));
@@ -2274,11 +2259,9 @@
         // En mode aperçu : la carte rebondit toujours au centre (pas de swipe possible).
         if (!_previewMode && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
         else {
-          // Retour au centre avec un léger ressort — GIFs/photos/bulles suivent pareil.
+          // Retour au centre avec un léger ressort.
           card.style.transition = 'transform .55s cubic-bezier(.34,1.4,.5,1)';
           card.style.transform = '';
-          setOverlayTransition('transform .55s cubic-bezier(.34,1.4,.5,1)');
-          setOverlayTransform('');
           like.style.opacity = 0; nope.style.opacity = 0; setDir(null);
         }
       }
@@ -2293,9 +2276,6 @@
         cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
         cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
         cardEl.style.opacity = '0';
-        setOverlayTransition('transform .35s ease-out, opacity .35s');
-        setOverlayTransform(`translate(${off}px, ${dir === 'yes' ? -80 : 80}px)`);
-        overlayLayers().forEach(el => { el.style.opacity = '0'; });
         handleSharedAction(dir === 'yes' ? 'like' : 'dislike');
         return;
       }
@@ -2303,9 +2283,6 @@
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
       cardEl.style.opacity = '0';
-      setOverlayTransition('transform .35s ease-out, opacity .35s');
-      setOverlayTransform(`translate(${off}px, ${dir === 'yes' ? -80 : 80}px)`);
-      overlayLayers().forEach(el => { el.style.opacity = '0'; });
       const actions = document.querySelector('#screen-swipe .swipe-actions');
       if (actions) actions.classList.remove('dir-right', 'dir-left');
       state.user = state.user || {};
