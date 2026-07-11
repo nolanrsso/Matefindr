@@ -47,7 +47,12 @@
       if (name !== 'swipe')   {
         stopSwipeMusic();
         if (typeof orbSimStop === 'function') orbSimStop();
+        // swipeGifsBg ET swipePhotosBg sont ajoutés en enfants directs de <body>
+        // (pas dans #screen-swipe) -> pas cachés par le changement d'écran, il
+        // faut les retirer explicitement en quittant le swipe, sinon ils restent
+        // visibles par-dessus le menu (landing) au retour.
         const _gb = document.getElementById('swipeGifsBg'); if (_gb) _gb.remove();
+        const _pb = document.getElementById('swipePhotosBg'); if (_pb) _pb.remove();
         _previewMode = false; document.body.removeAttribute('data-preview'); // sort du mode aperçu
       }
     }
