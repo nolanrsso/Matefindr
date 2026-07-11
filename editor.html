@@ -840,6 +840,7 @@ body.color-open .card-zone{transform:translateX(158px)}
 .crop-frame.banner{width:100%;aspect-ratio:10/3;border-radius:14px}
 .crop-frame.bg{width:100%;aspect-ratio:16/9;border-radius:14px}
 .crop-frame img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;will-change:transform}
+.crop-warn{margin-top:12px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.4;color:#FFD88A;background:rgba(255,184,60,.12);border:1px solid rgba(255,184,60,.35)}
 .zoom-row{display:flex;align-items:center;gap:11px;margin-top:16px}
 .zoom-row input[type=range]{flex:1;accent-color:#9146FF}
 .zoom-row span{font-size:16px;color:var(--dim)}
@@ -1106,6 +1107,7 @@ html.perf-lite *{
 <div class="modal" id="cropModal"><div class="box">
   <h3 id="cropTitle">Recadrer</h3>
   <div class="crop-frame circle" id="cropFrame"><img id="cropImg" alt=""></div>
+  <div class="crop-warn" id="cropWarn" hidden></div>
   <div class="zoom-row"><span>－</span><input type="range" id="cropZoom" min="100" max="300" value="100"><span>＋</span></div>
   <div class="row-end"><button class="btn" id="cropCancel">Annuler</button><button class="btn primary" id="cropOk">Confirmer</button></div>
 </div></div>
@@ -1254,16 +1256,27 @@ function applyTagBlur(){
 
 /* ===== CROP (photo + bannière) ===== */
 const crop={url:null,shape:'circle',tx:0,ty:0,scale:1,nw:0,nh:0,onOk:null,maxX:0,maxY:0};
+// HD = 1920×1080 : en dessous, l'image agrandie en plein écran (fond) manque de détail → prévenir.
+function checkCropResolution(shape){
+  const warn=$('cropWarn'); if(!warn) return;
+  if(shape==='bg' && (crop.nw<1920 || crop.nh<1080)){
+    warn.hidden=false;
+    warn.textContent='⚠️ Image en dessous de la HD (1920×1080) — risque de flou une fois affichée en plein écran.';
+  } else {
+    warn.hidden=true;
+  }
+}
 function openCrop(url,shape,title,onOk){
   Object.assign(crop,{url,shape,tx:0,ty:0,scale:1,nw:0,nh:0,onOk,maxX:0,maxY:0});
   $('cropTitle').textContent=title;
   const f=$('cropFrame');f.className='crop-frame '+(shape==='circle'?'circle':shape==='bg'?'bg':'banner');
   const img=$('cropImg');img.style.transform='translate(-50%,-50%)';$('cropZoom').value=100;
+  const warn=$('cropWarn'); if(warn) warn.hidden=true;
   $('cropModal').classList.add('open');
   // attendre que la frame ait ses dimensions (modale affichée) puis charger l'image
   requestAnimationFrame(()=>{
-    img.onload=()=>{crop.nw=img.naturalWidth||1;crop.nh=img.naturalHeight||1;cropPaint();};
-    img.src=url; if(img.complete&&img.naturalWidth){crop.nw=img.naturalWidth;crop.nh=img.naturalHeight;cropPaint();}
+    img.onload=()=>{crop.nw=img.naturalWidth||1;crop.nh=img.naturalHeight||1;cropPaint();checkCropResolution(shape);};
+    img.src=url; if(img.complete&&img.naturalWidth){crop.nw=img.naturalWidth;crop.nh=img.naturalHeight;cropPaint();checkCropResolution(shape);}
   });
 }
 /* Pan = vraie translation (marche dans les 2 axes, contrairement à object-position). */
@@ -1431,7 +1444,6 @@ function orbMax(){ return document.body.classList.contains('not-boost')?ORBCAP_F
 let orbKind='music';
 function updateOrbCount(){
   const c=document.getElementById('orbCount'); if(c)c.innerHTML=`<b>${S.orbs.length}</b> / ${orbMax()}`;
-  const h=document.getElementById('orbHint'); if(h)h.textContent=`${S.orbs.length}/${orbMax()} bulles · glisse-les pour les placer · clique pour retirer`;
   if(window.updateBubbleWarning)window.updateBubbleWarning();
 }
 function updateGifCount(){
@@ -1534,8 +1546,7 @@ function renderBubblesSheet(sh){
       <button data-k="film" class="${orbKind==='film'?'active':''}">Série·Film</button>
     </div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
-    <div class="sugg-list" id="orbSugg"></div>
-    <div class="hint" id="orbHint">${S.orbs.length}/${orbMax()} bulles · glisse-les pour les placer · clique une bulle pour la retirer</div>`;
+    <div class="sugg-list" id="orbSugg"></div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.focus();runOrbSearch(input.value.trim());}));
@@ -1961,17 +1972,31 @@ function makeSticker(g,idx,layer){
 
 /* ===== 3. FOND ===== */
 const BG_PRESETS=[{id:'default',nm:'Défaut'},{id:'stars',nm:'Nuit étoilée'},{id:'pink',nm:'Rose'}];
+const BG_MAX_BYTES=5*1024*1024; // 5 Mo max, tous formats confondus
+// Une image fixe est libre pour tout le monde ; GIF/vidéo restent réservés au Boost.
+function bgIsPremium(){ return !!(S.bg && S.bg.type==='custom' && (S.bg.video || /\.gif(\?|#|$)/i.test(S.bg.value||''))); }
 function renderBgSheet(sh){
+  const isBoost=!document.body.classList.contains('not-boost');
+  const kindLabel=isBoost?'Image, GIF ou vidéo':'Image';
   sh.innerHTML=sheetHeader('Fond personnel')+'<div class="bgp-grid">'+
     BG_PRESETS.map(p=>`<button class="bgp-tile ${S.bg.type==='preset'&&S.bg.value===p.id?'sel':''}" data-bg="${p.id}"><span class="pv pv-${p.id}"></span><span>${p.nm}</span></button>`).join('')+
     `<button class="bgp-tile bgp-up ${S.bg.type==='custom'?'sel':''}" data-bg-upload>＋<span>Importer</span></button></div>
-    <div class="hint">Image, GIF ou vidéo — affiché derrière ta carte</div>`;
+    <div class="hint">${kindLabel} — affiché derrière ta carte · 5 Mo max · idéal HD (1920×1080)</div>`;
   sh.querySelectorAll('[data-bg]').forEach(b=>b.addEventListener('click',()=>{applyBg({type:'preset',value:b.dataset.bg});sh.querySelectorAll('.bgp-tile').forEach(x=>x.classList.toggle('sel',x===b));}));
-  sh.querySelector('[data-bg-upload]').addEventListener('click',()=>$('fileBg').click());
+  sh.querySelector('[data-bg-upload]').addEventListener('click',()=>{ $('fileBg').setAttribute('accept', isBoost?'image/*,video/*':'image/*'); $('fileBg').click(); });
 }
 $('fileBg').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0]; if(!f){return;}
+  if(f.size>BG_MAX_BYTES){ toast('⚠️ Fichier trop lourd — 5 Mo max'); e.target.value=''; return; }
   const isVid=f.type.startsWith('video/');
+  const isGif=f.type==='image/gif';
+  const isBoost=!document.body.classList.contains('not-boost');
+  if((isVid||isGif) && !isBoost){
+    // GIF/vidéo réservés au Boost — image fixe reste libre.
+    e.target.value='';
+    openBoostGate(null,true);
+    return;
+  }
   if(isVid){
     // Pas de recadrage pour une vidéo (comme avant) — appliquée telle quelle.
     applyBg({type:'custom',value:URL.createObjectURL(f),video:true});
@@ -2785,11 +2810,11 @@ renderPresets();
 function userHasBoost(){ try{ const st=readSite(); return !!(st.user&&st.user.boost); }catch(_){ return false; } }
 function hasBoostElements(){
   if(userHasBoost()) return false;
-  return (S.gifs&&S.gifs.length>0) || (S.bg&&S.bg.type==='custom') || !!S.music;
+  return (S.gifs&&S.gifs.length>0) || bgIsPremium() || !!S.music;
 }
 function stripBoostElements(){
   if(S.gifs&&S.gifs.length){ S.gifs=[]; renderGifs(); }
-  if(S.bg&&S.bg.type==='custom'){ applyBg({type:'preset',value:'default'}); }
+  if(bgIsPremium()){ applyBg({type:'preset',value:'default'}); }
   if(S.music){ S.music=null; renderMusicChip(); }
   // purge aussi côté état sauvegardé (fond custom + musique)
   try{ const st=readSite(); if(st.user){ if(typeof st.user.boostBg==='string'&&/^https?:/.test(st.user.boostBg)){ st.user.boostBg='default'; st.user.boostBgVideo=false; st.user.boostBgPos=null; } st.user.swipeMusic=null; st.user.gifs=[]; localStorage.setItem(STATE_KEY,JSON.stringify(st)); } }catch(_){}
