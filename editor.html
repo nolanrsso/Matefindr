@@ -370,8 +370,31 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .tag--clickable{cursor:pointer;border-radius:7px;transition:background .15s ease,filter .2s ease;padding:1px 4px;margin-left:-4px;display:inline-block}
 .tag--clickable:hover{background:rgba(255,255,255,.08)}
 .tag.tag--blur{filter:blur(5px);user-select:none}
-.profile-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
-.profile-badges .pbadge{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.14)}
+/* Âge / pays / genre — badge flottant IDENTIQUE à .card-age-badge de la vraie
+   carte de swipe (index.html), posé par-dessus la bannière/l'avatar (pas dans
+   le flux du corps de carte). Copié 1:1 depuis css/app.css (.swipe-card ...). */
+.card-age-badge{
+  position:absolute;top:128px;right:16px;z-index:6;
+  display:flex;align-items:center;gap:8px;
+  padding:8px 16px;border-radius:999px;
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 6px 18px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.14) inset;
+  color:#fff;font-family:"Clash Display",sans-serif;font-weight:800;
+}
+.card-age-badge .cab-age{font-size:24px;line-height:1;letter-spacing:.02em}
+.card-age-badge .cab-flag{font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.card-age-badge .cab-flag img{width:28px;height:20px;object-fit:cover;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.35), 0 0 0 2px rgba(255,255,255,.85);display:block}
+.card-age-badge .cab-gender{font-size:20px;line-height:1;width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.card-age-badge .cab-gender[data-g="male"],.card-age-badge .cab-gender[data-g="il"]{background:#2287F7;color:#fff;font-weight:900}
+.card-age-badge .cab-gender[data-g="female"],.card-age-badge .cab-gender[data-g="elle"]{background:#FF4FA0;color:#fff;font-weight:900}
+.card-age-badge .cab-gender[data-g="nonbinary"],.card-age-badge .cab-gender[data-g="other"],.card-age-badge .cab-gender[data-g="autre"]{background:rgba(255,255,255,.08);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.30) inset}
+.card-age-badge .cab-gender svg{display:block}
+body[data-canvas="portrait"] .card-age-badge{top:90px;right:12px;padding:5px 11px;gap:6px}
+body[data-canvas="portrait"] .card-age-badge .cab-age{font-size:17px}
+body[data-canvas="portrait"] .card-age-badge .cab-flag{font-size:15px}
+body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14px}
+body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
 /* Style doré Boost sur le pseudo Matefindr (carte éditeur) */
 .username--boost{
   background:linear-gradient(110deg,#FFE17A 0%,#F5C040 20%,#FFFAE6 35%,#F5C040 50%,#B27B14 65%,#F5C040 80%,#FFE17A 100%);
@@ -1039,10 +1062,10 @@ html.perf-lite *{
       <button type="button" class="banner-del" id="bannerDelBtn" title="Supprimer la bannière" aria-label="Supprimer la bannière" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
       <div class="avatar-deco" id="avatarDeco" aria-hidden="true"></div>
+      <div class="card-age-badge" id="ageBadge" hidden></div>
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
         <div class="tag">@matefindr · en ligne sur Matefindr</div>
-        <div class="profile-badges" id="profileBadges"></div>
         <div class="divider"></div>
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
@@ -2690,15 +2713,27 @@ function hydrateFromSite(){
   if(u.displayName){ S.username=u.displayName; $('usernameSlot').textContent=u.displayName; }
   S.nameCustom=!!u.nameCustom;
   if(u.discordTag){ document.querySelector('.tag').textContent='@'+u.discordTag+' · en ligne sur Matefindr'; }
-  // Âge / genre / pays — posés à l'onboarding (site), affichés en lecture seule ici.
+  // Âge / genre / pays — posés à l'onboarding (site), affichés en lecture seule ici,
+  // sous la forme EXACTE du badge flottant de la vraie carte (.card-age-badge,
+  // cf. buildCard() dans js/app.js) : drapeau flagcdn (pas un emoji, invisible sur
+  // Windows) + pastille de genre colorée, pas des chips de texte génériques.
   (function(){
-    const box=$('profileBadges'); if(!box) return;
-    const genderLbl={il:'Il',male:'Il',homme:'Il',elle:'Elle',female:'Elle',femme:'Elle'}[(p.gender||'').toLowerCase()]||p.gender||'';
-    const chips=[];
-    if(p.age) chips.push('<span class="pbadge">'+esc(String(p.age))+' ans</span>');
-    if(genderLbl) chips.push('<span class="pbadge">'+esc(genderLbl)+'</span>');
-    if(p.country) chips.push('<span class="pbadge">'+(p.countryFlag?esc(p.countryFlag)+' ':'')+esc(p.country)+'</span>');
-    box.innerHTML=chips.join('');
+    const box=$('ageBadge'); if(!box) return;
+    const GENDER_SYM={
+      male:'♂', il:'♂',
+      female:'♀', elle:'♀',
+      nonbinary:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
+      other:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
+      autre:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3 14.7 9.2 21 9.7l-4.8 4.2 1.5 6.6L12 17l-5.7 3.5 1.5-6.6L3 9.7l6.3-.5L12 3Z"/></svg>',
+    };
+    const gSym=GENDER_SYM[p.gender]||'';
+    const countryCode=(p.country&&typeof p.country==='string'&&/^[A-Z]{2}$/i.test(p.country))?p.country.toUpperCase():null;
+    const flagImg=countryCode?`<img src="https://flagcdn.com/${countryCode.toLowerCase()}.svg" alt="${countryCode}" loading="lazy">`:(p.countryFlag||'');
+    if(!p.age && !gSym && !flagImg){ box.hidden=true; box.innerHTML=''; return; }
+    box.hidden=false;
+    box.innerHTML=(p.age?`<span class="cab-age">${esc(String(p.age))}</span>`:'')+
+      (flagImg?`<span class="cab-flag" title="${countryCode||''}">${flagImg}</span>`:'')+
+      (gSym?`<span class="cab-gender" data-g="${esc(p.gender||'')}">${gSym}</span>`:'');
   })();
   document.body.classList.toggle('not-boost', !u.boost); // outils Boost en or pour les non-Boost
   S.handleBlur=!!u.handleBlur; S.boostShowName=(u.boostShowName!==false);
