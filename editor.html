@@ -1788,8 +1788,12 @@ function renderOrbs(){
   const card=document.getElementById('card');
   const cardW=(card&&card.offsetWidth)||380;
   const cardH=(card&&card.offsetHeight)||(cardW*SWIPE_CARD_ASPECT);
-  // Orbe = 115px sur une carte de 380 (ratio exact du swipe ≈ 0.302).
-  const D=Math.round(cardW*0.302);
+  // Taille de bulle FIXE par mode (comme le vrai site : .orbit.orbit--dynamic .orb
+  // passe de 115px à 64px sous @media max-width:600px — PAS une taille proportionnelle
+  // à la largeur de carte). Utiliser cardW*0.302 dans les deux modes donnait 72px en
+  // portrait (240*0.302) au lieu des 64px réels du site → bulles visiblement plus
+  // grosses/décalées d'environ 8-10px par rapport à l'aperçu réel.
+  const D=(S.canvasMode==='portrait')?64:115;
   // IMPORTANT : rx/ry sont des fractions pures de la carte (largeur/hauteur RÉELLES),
   // exactement comme relToPx() sur la vraie carte de swipe (js/app.js) -- AUCUNE
   // correction d'échelle ici. Un vScale avait été introduit pour "recaler" l'écart
