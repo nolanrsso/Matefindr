@@ -3784,6 +3784,30 @@
       if (!l) { l = document.createElement('div'); l.id = 'customBgLayer'; document.body.insertBefore(l, document.body.firstChild); }
       return l;
     }
+    // Fond perso = un multiple FIXE de la taille de LA CARTE, centré dessus (pas le viewport
+    // entier) -> il scale avec la carte, donc avec tout le reste (bulles/gifs/photos déjà en
+    // % de la carte) : fond + carte + bulles + GIFs/photos bougent ENSEMBLE, comme un seul
+    // bloc, à n'importe quelle résolution/ratio de fenêtre — bandes vides sur les côtés plutôt
+    // qu'un fond qui se recadre différemment tout seul (object-fit:cover plein viewport).
+    const BG_SCALE_W = 5.5, BG_SCALE_H = 2.0;
+    function positionCustomBgLayer(){
+      const layer = document.getElementById('customBgLayer');
+      if (!layer || !layer.classList.contains('on')) return;
+      const wrap = document.getElementById('swipeWrap');
+      if (!wrap) return;
+      const card = wrap.getBoundingClientRect();
+      const cx = card.left + card.width / 2, cy = card.top + card.height / 2;
+      const bw = card.width * BG_SCALE_W, bh = card.height * BG_SCALE_H;
+      layer.style.left = (cx - bw / 2) + 'px';
+      layer.style.top = (cy - bh / 2) + 'px';
+      layer.style.width = bw + 'px';
+      layer.style.height = bh + 'px';
+    }
+    let _customBgResize = null;
+    if (!_customBgResize) {
+      _customBgResize = () => positionCustomBgLayer();
+      window.addEventListener('resize', _customBgResize);
+    }
     function applyBgChoice(bg, pos){
       const picker = document.getElementById('bgPicker');
       const layer = ensureCustomBgLayer();
@@ -3813,6 +3837,7 @@
           }
         }
         layer.classList.add('on');
+        positionCustomBgLayer();
         if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.remove('is-active'));
         return;
       }

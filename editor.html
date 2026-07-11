@@ -1916,7 +1916,7 @@ function renderOrbs(){
 }
 // Re-render des bulles au resize (garde l'échelle proportionnelle à la carte)
 let _orbRz=null;
-window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();},150);});
+window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();if(typeof positionEditorBg==='function')positionEditorBg();},150);});
 /* Colle le sélecteur Paysage/Portrait juste au-dessus de la zone de bulles réelle
    (~14% de la hauteur de carte, même formule que orbBounds()). Le bouton est en
    position:fixed avec des coordonnées écran calculées ici une seule fois (charge-
@@ -2027,7 +2027,8 @@ function setCanvasMode(mode){
   S.canvasMode=mode;
   restoreCanvasMode(mode);
   applyCanvasMode();
-  renderOrbs(); renderGifs();
+  renderOrbs(); renderGifs(); renderPhotos();
+  if(typeof positionEditorBg==='function') positionEditorBg();
   persist();
   const lbl={desktop:'Paysage',portrait:'Portrait'}[mode];
   toast('Mode '+lbl+' — dispose ton profil pour cette taille');
@@ -2225,11 +2226,27 @@ $('fileBg').addEventListener('change',e=>{
   }
   e.target.value='';
 });
+// Même multiplicateur que js/app.js (positionCustomBgLayer) : le fond perso est un multiple
+// FIXE de la taille de LA CARTE, centré dessus, pas plein viewport -> il scale AVEC la carte
+// (donc avec bulles/GIFs/photos, déjà en % de la carte) comme un seul bloc, à toute
+// résolution/ratio de fenêtre (bandes vides sur les côtés plutôt qu'un recadrage différent).
+const BG_SCALE_W=5.5, BG_SCALE_H=2.0;
+function positionEditorBg(){
+  const layer=$('bgLayer');
+  if(!layer||!layer.querySelector('img, video'))return; // preset (dégradé) : reste plein viewport (CSS inset:0)
+  const card=document.getElementById('card'); if(!card)return;
+  const c=card.getBoundingClientRect();
+  const cx=c.left+c.width/2, cy=c.top+c.height/2;
+  const bw=c.width*BG_SCALE_W, bh=c.height*BG_SCALE_H;
+  layer.style.left=(cx-bw/2)+'px'; layer.style.top=(cy-bh/2)+'px';
+  layer.style.width=bw+'px'; layer.style.height=bh+'px';
+}
 function applyBg(bg){
   S.bg=bg;
   const layer=$('bgLayer'); layer.innerHTML='';
   if(bg.type==='preset'){
     layer.className='bg-layer bg-'+bg.value;
+    layer.style.left=''; layer.style.top=''; layer.style.width=''; layer.style.height=''; // repli plein viewport (CSS)
     if(bg.value==='default') layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';
   } else {
     layer.className='bg-layer';
@@ -2243,6 +2260,7 @@ function applyBg(bg){
       im.style.transform='scale('+(bg.scale||1)+')';
       layer.appendChild(im);
     }
+    positionEditorBg();
   }
   if(typeof persist==='function') persist();
 }
