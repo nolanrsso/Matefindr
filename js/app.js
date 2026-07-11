@@ -3653,20 +3653,24 @@
     // l'éditeur avec #preview (géré dans handleEditorReturn plus bas).
     document.getElementById('accPreviewFull')?.addEventListener('click', enterPreviewMode);
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
-      _previewMode = false;
-      _sharedProfile = null;
-      document.body.removeAttribute('data-preview');
       // Signal robuste posé par l'éditeur avant la navigation (survit aux races
       // entre onLogin/handleEditorReturn, contrairement à la variable JS seule).
       let fromEditor = _previewFromEditor;
       try { if (sessionStorage.getItem('mf_from_editor') === '1') fromEditor = true; } catch(_){}
       if (fromEditor) {
         // Aperçu ouvert depuis l'éditeur → "Quitter" doit y retourner, pas au hub.
+        // On navigue IMMÉDIATEMENT, SANS toucher à _previewMode/data-preview : les
+        // retirer ici ré-affiche pour quelques frames le vrai deck de swipe (les
+        // autres profils, boutons like/dislike) pendant que la page se décharge —
+        // un flash visible avant d'atterrir sur editor.html.
         _previewFromEditor = false;
         try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
         location.href = 'editor.html';
         return;
       }
+      _previewMode = false;
+      _sharedProfile = null;
+      document.body.removeAttribute('data-preview');
       // Quitter l'aperçu → retour au swipe (le hub), pas aux Paramètres.
       if (typeof setScreen === 'function') setScreen('swipe');
     });
