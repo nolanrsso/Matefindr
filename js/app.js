@@ -919,32 +919,9 @@
     }
     _bindAudioUnlock();
 
-    /* Boîte de référence pour positionner GIFs/photos/bulles : le FOND perso (Boost),
-       pas la carte — un objet collé "sur" le décor (ex: sur des personnages du fond)
-       doit rester au même endroit du décor quelle que soit la résolution/le ratio de
-       la fenêtre de chaque visiteur, pas dériver avec la carte (qui reste centrée dans
-       le viewport indépendamment du fond). #customBgLayer utilise object-fit:cover
-       (remplit tout le viewport, recadré) → on recalcule ici la boîte RÉELLEMENT
-       visible de l'image (compense ce recadrage), pour que rx/ry en % de CETTE boîte
-       retombent exactement sur le même pixel de l'image peu importe l'écran.
-       Repli sur la carte (swipeWrap) si pas de fond perso (les fonds par défaut sont
-       des dégradés abstraits, sans contenu précis à ancrer). */
-    function bgAnchorRect(){
-      const layer = document.getElementById('customBgLayer');
-      const img = layer && layer.classList.contains('on') ? layer.querySelector('img') : null;
-      if (img && img.naturalWidth && img.naturalHeight) {
-        const vw = window.innerWidth, vh = window.innerHeight;
-        const scale = Math.max(vw / img.naturalWidth, vh / img.naturalHeight);
-        const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
-        return { left: (vw - dw) / 2, top: (vh - dh) / 2, width: dw, height: dh };
-      }
-      const wrap = document.getElementById('swipeWrap');
-      return wrap ? wrap.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-    }
     /* GIFs en couche d'arrière-plan (body > .swipe-gifs-bg, z:1) :
        - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
-       - positions calculées en pixels viewport à partir des % du fond perso (ou de la
-         carte si pas de fond perso, cf. bgAnchorRect())
+       - positions calculées en pixels viewport à partir des % de la carte
        - se mettent à jour à chaque resize */
     let _swipeGifsResize = null;
     function renderSwipeGifs(p){
@@ -987,7 +964,7 @@
         };
       }
       function reposition(){
-        const wr = bgAnchorRect();
+        const wr = wrap.getBoundingClientRect();
         items.forEach(({ el, g }) => {
           const p = gifPos(g);
           const wpx = (p.w / 100) * wr.width;
@@ -1004,11 +981,6 @@
         });
       }
       reposition();
-      // Le fond perso peut encore charger (naturalWidth pas dispo tout de suite) →
-      // bgAnchorRect() serait retombé sur la carte pour ce 1er appel ; on recale une
-      // fois l'image chargée.
-      const _bgImgForGifs = document.getElementById('customBgLayer')?.querySelector('img');
-      if (_bgImgForGifs && !_bgImgForGifs.complete) _bgImgForGifs.addEventListener('load', reposition, { once:true });
       _swipeGifsResize = () => reposition();
       window.addEventListener('resize', _swipeGifsResize);
     }
@@ -1053,7 +1025,7 @@
         };
       }
       function reposition(){
-        const wr = bgAnchorRect();
+        const wr = wrap.getBoundingClientRect();
         items.forEach(({ el, g }) => {
           const p2 = photoPos(g);
           const wpx = (p2.w / 100) * wr.width;
@@ -1066,8 +1038,6 @@
         });
       }
       reposition();
-      const _bgImgForPhotos = document.getElementById('customBgLayer')?.querySelector('img');
-      if (_bgImgForPhotos && !_bgImgForPhotos.complete) _bgImgForPhotos.addEventListener('load', reposition, { once:true });
       _swipePhotosResize = () => reposition();
       window.addEventListener('resize', _swipePhotosResize);
     }
