@@ -5962,13 +5962,19 @@
       setScreen('landing');
     });
     // Nettoyage défensif : dans tous les cas, ces clés ne doivent jamais survivre
-    // à une déconnexion (sinon le compte suivant peut hériter du token Discord —
-    // donc de l'identité — du précédent).
+    // à une déconnexion (sinon le compte suivant peut hériter du token Discord — donc
+    // de l'identité — du précédent, ET des presets de l'éditeur (matefindr_presets /
+    // matefindr_active_preset ne sont PAS scopés par compte Discord contrairement à
+    // matefindr_state) → se déconnecter puis créer un nouveau compte sur le même
+    // navigateur appliquait encore la couleur/bulles/GIFs/fond du compte précédent au
+    // nouveau, jusqu'à écraser son profil Supabase avec ces presets périmés).
     function clearDiscordTokenKeys(){
       try {
         localStorage.removeItem('matefindr_discord_token');
         localStorage.removeItem('matefindr_discord_token_ts');
         localStorage.removeItem('matefindr_discord_token_uid');
+        localStorage.removeItem('matefindr_presets');
+        localStorage.removeItem('matefindr_active_preset');
       } catch(_){}
     }
     document.getElementById('accSaveReset')?.addEventListener('click', () => {

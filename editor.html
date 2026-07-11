@@ -3174,6 +3174,13 @@ function renderSettingsSheet(sh){
     // login) doit disparaître avec le compte, sinon le compte SUIVANT peut hériter
     // de l'identité Discord de celui-ci (fuite de profil entre comptes).
     try{ localStorage.removeItem('matefindr_discord_token'); localStorage.removeItem('matefindr_discord_token_ts'); localStorage.removeItem('matefindr_discord_token_uid'); }catch(_){}
+    // MÊME CHOSE pour les presets de l'éditeur : matefindr_presets/matefindr_active_preset
+    // ne sont PAS scopés par compte Discord (contrairement à matefindr_state, effacé
+    // juste au-dessus) → sans ce nettoyage, se déconnecter puis créer/reconnecter un
+    // AUTRE compte sur le même navigateur rouvrait l'éditeur avec les presets (couleurs,
+    // bulles, GIFs, fond…) du compte précédent, jusqu'à écraser le profil Supabase du
+    // nouveau compte avec ces données périmées.
+    try{ localStorage.removeItem('matefindr_presets'); localStorage.removeItem('matefindr_active_preset'); }catch(_){}
     location.href='index.html';
   });
   sh.querySelector('#ssDelete').addEventListener('click',()=>{
