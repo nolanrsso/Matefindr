@@ -1336,7 +1336,18 @@ function cropPaint(){
     const posY=crop.maxY?clamp(50*(1-crop.ty/crop.maxY),0,100):50;
     crop.onOk&&crop.onOk({url:crop.url,posX,posY,scale:crop.scale});
   });})();
-function setCroppedMedia(slot,data,ph){slot.innerHTML='';if(!data){slot.innerHTML=ph;return;}const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';img.style.transform='scale('+data.scale+')';slot.appendChild(img);}
+/* .avatar/.banner ont un dégradé de placeholder posé en CSS (visible tant qu'aucune
+   image n'est choisie) — mais ce fond restait actif MÊME avec une image posée par-dessus,
+   donc un PNG transparent (avatar/bannière) laissait voir ce dégradé au lieu d'un vrai
+   fond transparent. On neutralise le fond du slot dès qu'une image est posée : #1c1d22
+   pour l'avatar (même anneau que la vraie carte, .swipe-card .avatar-wrap), transparent
+   pour la bannière (laisse voir le dégradé de LA CARTE elle-même, comme sur le vrai site). */
+function setCroppedMedia(slot,data,ph){
+  slot.innerHTML='';
+  if(!data){slot.innerHTML=ph;slot.style.background='';return;}
+  const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';img.style.transform='scale('+data.scale+')';slot.appendChild(img);
+  slot.style.background=(slot.id==='avatarSlot')?'#1c1d22':'transparent';
+}
 const BANNER_PH='<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>';
 function renderBanner(){
   setCroppedMedia($('bannerSlot'),S.banner,BANNER_PH);
