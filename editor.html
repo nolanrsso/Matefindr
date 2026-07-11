@@ -1841,6 +1841,12 @@ function renderOrbs(){
     if(!o.userPlaced){const p=pos[i];o.x=50+p.rx*100;o.y=50+p.ry*100;}
     const wrap=document.createElement('div'); wrap.className='orb-wrap';
     wrap.style.left=o.x+'%'; wrap.style.top=o.y+'%';
+    // Ancre verticale sur le CENTRE DE LA BULLE, pas sur le bloc bulle+étiquette
+    // (le CSS .orb-wrap{transform:translate(-50%,-50%)} centrerait toute la pile,
+    // décalant la bulle vers le haut d'environ la moitié de la hauteur de l'étiquette
+    // -> ~12px de trop haut dans l'éditeur vs le vrai site, qui centre sur la bulle
+    // seule (translate(x-r,y-r) dans js/app.js). Même ancrage ici = même position.
+    wrap.style.transform='translate(-50%, -'+(D/2)+'px)';
     const orb=document.createElement('div'); orb.className='orb'; orb.dataset.kind=o.kind;
     orb.style.width=D+'px'; orb.style.height=D+'px';
     orb.innerHTML = o.cover?`<img src="${o.cover}" alt="">`:ORB_ICON[o.kind];
@@ -1890,6 +1896,7 @@ function renderOrbs(){
     const ax=S.addBubblePos?S.addBubblePos.x:defAx, ay=S.addBubblePos?S.addBubblePos.y:defAy;
     const aw=document.createElement('div'); aw.className='orb-wrap orb-wrap--add'; aw.title='Glisse pour déplacer · clique pour ajouter une bulle';
     aw.style.left=ax+'%'; aw.style.top=ay+'%';
+    aw.style.transform='translate(-50%, -'+(D/2)+'px)'; // même ancrage que les bulles (voir renderOrbs)
     const ao=document.createElement('div'); ao.className='orb orb--add';
     ao.style.width=D+'px'; ao.style.height=D+'px';
     ao.innerHTML=`<span class="orb-add-plus" style="font-size:${Math.round(D*0.52)}px">+</span>`;
