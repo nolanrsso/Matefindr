@@ -291,8 +291,12 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
   pointer-events:none;
 }
 
-/* ===================== GIFS (stickers sur la carte, comme le site) ===================== */
-.sticker-layer{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
+/* ===================== GIFS (stickers "collés" au FOND perso, comme le site) =====================
+   position:fixed (pas absolute dans .card-frame) : un GIF/photo collé sur le décor (ex: sur un
+   personnage du fond) doit rester au même endroit du décor peu importe l'écran, pas dériver avec
+   la carte (centrée dans le viewport indépendamment du fond) — cf. bgBox() plus bas, qui calcule
+   la vraie boîte visible du fond (recadrée en object-fit:cover) et sert de référence aux %. */
+.sticker-layer{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:visible}
 .sticker{position:absolute;transform-origin:center center;pointer-events:auto;touch-action:none;cursor:grab}
 .sticker.dragging{cursor:grabbing}
 .sticker-inner{width:100%;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 0 2px rgba(145,70,255,.35)}
@@ -991,6 +995,12 @@ html.perf-lite *{
 <div class="bg-layer bg-default" id="bgLayer">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
 </div>
+<!-- GIFs/photos "collés" au fond perso (pas à la carte) → hors de .card-frame, en position:fixed
+     plein viewport comme #bgLayer, pour que leurs % soient calculés par rapport à la même boîte
+     (voir bgBox() en JS). Déplacés ici (au lieu de rester dans .card-frame) : un ancêtre transformé
+     (.card-zone quand le panneau couleur est ouvert) casserait sinon leur containing block fixed. -->
+<div class="sticker-layer" id="stickerLayer"></div>
+<div class="sticker-layer" id="photoLayer"></div>
 <div class="grain" aria-hidden="true"></div>
 
 <header class="topbar">
@@ -1055,8 +1065,6 @@ html.perf-lite *{
       </button>
     </div>
     <div class="card-frame">
-    <div class="sticker-layer" id="stickerLayer"></div>
-    <div class="sticker-layer" id="photoLayer"></div>
     <div class="orb-layer" id="orbLayer"></div>
     <button class="eye-dot eye-dot--card" data-eye="card" title="Masquer la carte (aperçu)" aria-label="Masquer la carte"></button>
     <section class="card" id="card">
@@ -1713,6 +1721,40 @@ function stageBounds(margin){
   const minY=Math.max(vTop, cy-halfH), maxY=Math.min(vBottom, cy+halfH);
   return {minX:Math.min(minX,maxX), maxX:Math.max(minX,maxX), minY:Math.min(minY,maxY), maxY:Math.max(minY,maxY)};
 }
+/* Boîte de référence pour positionner GIFs/photos : le FOND perso (Boost), pas la carte —
+   un GIF/photo "collé" sur le décor (ex: sur un personnage du fond) doit rester au même
+   endroit du décor peu importe l'écran, pas dériver avec la carte (centrée dans le viewport
+   indépendamment du fond). #bgLayer utilise object-fit:cover (remplit tout le viewport,
+   recadré) → on recalcule ici la boîte RÉELLEMENT visible de l'image (compense ce recadrage),
+   pour que x/y en % de CETTE boîte retombent exactement sur le même pixel de l'image peu
+   importe l'écran. Repli sur la carte si pas de fond perso (fonds par défaut = dégradés
+   abstraits, sans contenu précis à ancrer) — même comportement qu'avant cette fonctionnalité. */
+function bgBox(){
+  const layer=$('bgLayer');
+  // Les presets (bg-default/bg-stars/bg-pink) n'ont jamais de <img> (juste des blobs CSS) ;
+  // seul un fond perso custom (image) en pose un → détection naturelle, pas besoin de
+  // lire les classes. Une vidéo custom (pas de naturalWidth exploitable ici) retombe
+  // sur la carte, comme si pas de fond perso (limite acceptée).
+  const img=layer?layer.querySelector('img'):null;
+  if(img&&img.naturalWidth&&img.naturalHeight){
+    const vw=window.innerWidth, vh=window.innerHeight;
+    const scale=Math.max(vw/img.naturalWidth, vh/img.naturalHeight);
+    const dw=img.naturalWidth*scale, dh=img.naturalHeight*scale;
+    return {left:(vw-dw)/2, top:(vh-dh)/2, width:dw, height:dh};
+  }
+  const card=document.getElementById('card');
+  return card?card.getBoundingClientRect():{left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+}
+/* Bornes de glisser pour GIFs/photos : tout le viewport visible (moins la topbar/toolbar),
+   PAS la zone resserrée autour de la carte (stageBounds, utilisée par les bulles) — un
+   sticker collé au fond doit pouvoir aller n'importe où sur le décor. */
+function bgDragBounds(margin){
+  const tb=document.querySelector('.toolbar');
+  const topbar=document.querySelector('.topbar');
+  const vTop=(topbar?topbar.getBoundingClientRect().bottom:56)+margin;
+  const vBottom=(tb?tb.getBoundingClientRect().top:window.innerHeight)-margin;
+  return {minX:margin, maxX:window.innerWidth-margin, minY:vTop, maxY:Math.max(vTop,vBottom)};
+}
 /* Zone des BULLES = sur les côtés de la carte, JAMAIS au-dessus ni en dessous → Y borné à la hauteur de la carte. */
 function orbBounds(margin){
   const s=stageBounds(margin);
@@ -1916,7 +1958,7 @@ function renderOrbs(){
 }
 // Re-render des bulles au resize (garde l'échelle proportionnelle à la carte)
 let _orbRz=null;
-window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();},150);});
+window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();renderGifs();renderPhotos();positionCanvasModes();},150);});
 /* Colle le sélecteur Paysage/Portrait juste au-dessus de la zone de bulles réelle
    (~14% de la hauteur de carte, même formule que orbBounds()). Le bouton est en
    position:fixed avec des coordonnées écran calculées ici une seule fois (charge-
@@ -2063,7 +2105,11 @@ function selectSticker(el){ if(!el||el.classList.contains('selected'))return; de
 function makeSticker(g,idx,layer){
   if(typeof g.x!=='number')g.x=50; if(typeof g.y!=='number')g.y=28; if(typeof g.w!=='number')g.w=34; if(typeof g.rot!=='number')g.rot=0;
   const el=document.createElement('div'); el.className='sticker';
-  const apply=()=>{el.style.left=g.x+'%';el.style.top=g.y+'%';el.style.width=g.w+'%';el.style.transform=`translate(-50%,-50%) rotate(${g.rot}deg)`;};
+  // x/y/w en % de bgBox() (le fond perso, pas la carte) — px absolus, pas des % CSS natifs,
+  // car .sticker-layer est maintenant plein viewport (position:fixed) : un % CSS natif de
+  // left/top serait relatif au viewport entier, pas à la boîte réellement visible du fond
+  // (recadrée en object-fit:cover).
+  const apply=()=>{const bb=bgBox();el.style.left=(bb.left+(g.x/100)*bb.width)+'px';el.style.top=(bb.top+(g.y/100)*bb.height)+'px';el.style.width=((g.w/100)*bb.width)+'px';el.style.transform=`translate(-50%,-50%) rotate(${g.rot}deg)`;};
   apply();
   el.innerHTML=`<div class="sticker-inner"><img src="${g.url}" alt="" draggable="false"></div>
     <button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
@@ -2075,7 +2121,7 @@ function makeSticker(g,idx,layer){
   // déplacer
   let drag=null;
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();selectSticker(el);try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
-  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();g.x=(cx-lr.left)/lr.width*100;g.y=(cy-lr.top)/lr.height*100;apply();});
+  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=bgDragBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const bb=bgBox();g.x=(cx-bb.left)/bb.width*100;g.y=(cy-bb.top)/bb.height*100;apply();});
   const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastGifPlace={x:g.x,y:g.y,w:g.w};persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   // taille
@@ -2159,7 +2205,8 @@ function renderPhotos(){const layer=$('photoLayer');layer.innerHTML='';layer.cla
 function makePhotoSticker(p,idx,layer){
   if(typeof p.x!=='number')p.x=50; if(typeof p.y!=='number')p.y=28; if(typeof p.w!=='number')p.w=34; if(typeof p.rot!=='number')p.rot=0;
   const el=document.createElement('div'); el.className='sticker'; el.dataset.photoIdx=idx;
-  const apply=()=>{el.style.left=p.x+'%';el.style.top=p.y+'%';el.style.width=p.w+'%';el.style.transform=`translate(-50%,-50%) rotate(${p.rot}deg)`;};
+  // x/y/w en % de bgBox() (le fond perso, pas la carte) — voir makeSticker() pour le détail.
+  const apply=()=>{const bb=bgBox();el.style.left=(bb.left+(p.x/100)*bb.width)+'px';el.style.top=(bb.top+(p.y/100)*bb.height)+'px';el.style.width=((p.w/100)*bb.width)+'px';el.style.transform=`translate(-50%,-50%) rotate(${p.rot}deg)`;};
   apply();
   el.innerHTML=`<div class="sticker-inner"><img src="${p.url}" alt="" draggable="false"></div>
     <button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
@@ -2170,7 +2217,7 @@ function makePhotoSticker(p,idx,layer){
   el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.photos.splice(idx,1);renderPhotos();toast('Photo retirée');updatePhotoCount();});
   let drag=null;
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();selectSticker(el);try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('photo');});
-  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();p.x=(cx-lr.left)/lr.width*100;p.y=(cy-lr.top)/lr.height*100;apply();});
+  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=bgDragBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const bb=bgBox();p.x=(cx-bb.left)/bb.width*100;p.y=(cy-bb.top)/bb.height*100;apply();});
   const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastPhotoPlace={x:p.x,y:p.y,w:p.w};persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   const rz=el.querySelector('.sk-size');
@@ -2231,6 +2278,9 @@ function applyBg(bg){
   if(bg.type==='preset'){
     layer.className='bg-layer bg-'+bg.value;
     if(bg.value==='default') layer.innerHTML='<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>';
+    // Dégradé abstrait, pas d'image à ancrer : recale GIFs/photos sur la carte
+    // (bgBox() retombe dessus quand $('bgLayer') n'a pas de <img>).
+    renderGifs(); renderPhotos();
   } else {
     layer.className='bg-layer';
     if(bg.video){
@@ -2242,6 +2292,11 @@ function applyBg(bg){
       im.style.transformOrigin=bgPosX+'% '+bgPosY+'%'; // cf. setCroppedMedia : doit matcher object-position
       im.style.transform='scale('+(bg.scale||1)+')';
       layer.appendChild(im);
+      // GIFs/photos sont ancrés à CETTE image (bgBox()) — tant qu'elle n'a pas fini de
+      // charger, naturalWidth vaut 0 et bgBox() retombe sur la carte : on recale une
+      // fois l'image prête (sinon les stickers restent visuellement décalés du fond
+      // jusqu'au prochain drag/resize).
+      if(!im.complete) im.addEventListener('load',()=>{ renderGifs(); renderPhotos(); },{once:true});
     }
   }
   if(typeof persist==='function') persist();
