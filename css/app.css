@@ -2834,8 +2834,10 @@
     transform-origin:center center;
   }
   .swipe-gifs-bg .swipe-gif img{width:100%;height:auto;display:block}
-  /* Contour désactivable sur les PHOTOS perso (pas les GIFs) — cf. renderSwipePhotos. */
-  .swipe-gifs-bg.no-contour .swipe-gif{border:none;box-shadow:0 10px 28px rgba(0,0,0,.5)}
+  /* Contour désactivable sur les PHOTOS perso (pas les GIFs) — cf. renderSwipePhotos.
+     Retire aussi l'ombre portée : sans ça le rectangle d'ombre trahit encore "une
+     image collée" même sans bordure visible. */
+  .swipe-gifs-bg.no-contour .swipe-gif{border:none;box-shadow:none}
 
   /* ===== GIF edit overlay (preview carte plein écran, comme l'éditeur de bulles) ===== */
   .gef{position:fixed;inset:0;z-index:332;display:none;align-items:center;justify-content:center}

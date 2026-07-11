@@ -297,7 +297,14 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .sticker.dragging{cursor:grabbing}
 .sticker-inner{width:100%;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 0 2px rgba(145,70,255,.35)}
 .sticker-inner img{width:100%;height:auto;display:block;pointer-events:none}
-.sk-handle{position:absolute;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);z-index:6}
+/* Poignées (retirer/pivoter/redimensionner) masquées tant que le sticker n'est
+   pas sélectionné (cliqué) — sinon elles restaient affichées en permanence sur
+   TOUS les GIFs/photos, ce qui encombrait la carte. Un clic sur le sticker le
+   sélectionne (voir selectSticker()) ; un clic ailleurs désélectionne tout. */
+.sk-handle{position:absolute;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);z-index:6;
+  opacity:0;pointer-events:none;transition:opacity .12s ease}
+.sticker.selected .sk-handle{opacity:1;pointer-events:auto}
+.sticker.selected .sticker-inner{outline:2px dashed rgba(145,70,255,.65);outline-offset:3px}
 .sk-handle svg{width:13px;height:13px;pointer-events:none}
 .sk-del{top:-13px;left:-13px;background:#2f3136;color:#fff;cursor:pointer}
 .sk-del:hover{background:#FF4FA0}
@@ -691,8 +698,10 @@ body.color-open .card-zone{transform:translateX(158px)}
 .sh-contour-tgl.on{color:#fff;border-color:rgba(145,70,255,.45)}
 .sh-contour-tgl.on .sw{background:#9146FF}
 .sh-contour-tgl.on .sw::after{transform:translateX(12px)}
-/* Contour désactivable sur les PHOTOS (pas les GIFs) : retire le liseré blanc + halo violet. */
-#photoLayer.no-contour .sticker-inner{border:none;box-shadow:0 10px 28px rgba(0,0,0,.55)}
+/* Contour désactivable sur les PHOTOS (pas les GIFs) : retire le liseré blanc + halo violet
+   ET l'ombre portée — sinon l'ombre rectangulaire trahit encore "une image collée"
+   même sans bordure visible. */
+#photoLayer.no-contour .sticker-inner{border:none;box-shadow:none}
 
 /* catégories de bulles (onglets, comme le site) */
 .cats{display:flex;gap:8px;margin-bottom:10px}
@@ -2001,6 +2010,12 @@ function syncCanvasModeToRealDevice(){
     if(S.canvasMode!==want) setCanvasMode(want);
   }catch(_){}
 }
+/* Sélection des stickers (GIFs + Photos) : un seul à la fois affiche ses poignées.
+   selectSticker() au pointerdown du sticker, désélection globale au clic ailleurs
+   (voir écouteur document tout en bas du fichier) ou en cliquant sa vignette dans
+   le panneau Photos (voir renderPhotosSheet). */
+function deselectAllStickers(){ document.querySelectorAll('.sticker.selected').forEach(x=>x.classList.remove('selected')); }
+function selectSticker(el){ if(!el||el.classList.contains('selected'))return; deselectAllStickers(); el.classList.add('selected'); }
 function makeSticker(g,idx,layer){
   if(typeof g.x!=='number')g.x=50; if(typeof g.y!=='number')g.y=28; if(typeof g.w!=='number')g.w=34; if(typeof g.rot!=='number')g.rot=0;
   const el=document.createElement('div'); el.className='sticker';
@@ -2015,7 +2030,7 @@ function makeSticker(g,idx,layer){
   el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.gifs.splice(idx,1);renderGifs();toast('GIF retiré');updateGifCount();});
   // déplacer
   let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();selectSticker(el);try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
   el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();g.x=(cx-lr.left)/lr.width*100;g.y=(cy-lr.top)/lr.height*100;apply();});
   const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastGifPlace={x:g.x,y:g.y,w:g.w};persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
@@ -2050,6 +2065,12 @@ function renderPhotosSheet(sh){
     e.stopPropagation();
     const i=+b.closest('.photo-tile').dataset.i;
     S.photos.splice(i,1); renderPhotos(); renderPhotosSheet(sh); toast('Photo retirée');
+  }));
+  // Cliquer une vignette affiche ses poignées (déplacer/pivoter/redimensionner) sur la carte.
+  sh.querySelectorAll('.photo-tile').forEach(t=>t.addEventListener('click',()=>{
+    const i=+t.dataset.i;
+    const el=document.querySelector(`#photoLayer .sticker[data-photo-idx="${i}"]`);
+    if(el) selectSticker(el);
   }));
   const upBtn=sh.querySelector('[data-photo-upload]');
   if(upBtn) upBtn.addEventListener('click',()=>{
@@ -2093,7 +2114,7 @@ $('filePhoto').addEventListener('change',e=>{
 function renderPhotos(){const layer=$('photoLayer');layer.innerHTML='';layer.classList.toggle('no-contour',S.photoContour===false);S.photos.forEach((p,i)=>layer.appendChild(makePhotoSticker(p,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
 function makePhotoSticker(p,idx,layer){
   if(typeof p.x!=='number')p.x=50; if(typeof p.y!=='number')p.y=28; if(typeof p.w!=='number')p.w=34; if(typeof p.rot!=='number')p.rot=0;
-  const el=document.createElement('div'); el.className='sticker';
+  const el=document.createElement('div'); el.className='sticker'; el.dataset.photoIdx=idx;
   const apply=()=>{el.style.left=p.x+'%';el.style.top=p.y+'%';el.style.width=p.w+'%';el.style.transform=`translate(-50%,-50%) rotate(${p.rot}deg)`;};
   apply();
   el.innerHTML=`<div class="sticker-inner"><img src="${p.url}" alt="" draggable="false"></div>
@@ -2104,7 +2125,7 @@ function makePhotoSticker(p,idx,layer){
   el.querySelector('.sk-del').addEventListener('pointerdown',e=>e.stopPropagation());
   el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.photos.splice(idx,1);renderPhotos();toast('Photo retirée');updatePhotoCount();});
   let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('photo');});
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();selectSticker(el);try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('photo');});
   el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();p.x=(cx-lr.left)/lr.width*100;p.y=(cy-lr.top)/lr.height*100;apply();});
   const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastPhotoPlace={x:p.x,y:p.y,w:p.w};persist();};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
@@ -2749,6 +2770,8 @@ renderOrbs(); // affiche au moins la bulle "+" même sans bulle existante
 if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes); // position finale une fois le profil chargé
 let _canvasSyncResize=null;
 window.addEventListener('resize',()=>{ clearTimeout(_canvasSyncResize); _canvasSyncResize=setTimeout(syncCanvasModeToRealDevice,150); });
+// Désélectionne le sticker (GIF/photo) sélectionné dès qu'on clique ailleurs sur la page.
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile')) deselectAllStickers(); });
 
 /* ===== Volume des previews audio : câblage du slider ===== */
 (function initEdVol(){
