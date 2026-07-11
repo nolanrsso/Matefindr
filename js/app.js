@@ -153,6 +153,7 @@
                 if (typeof d.showBoostName === 'boolean') su.boostShowName = d.showBoostName;
                 if (typeof d.boost === 'boolean') su.boost = d.boost;
                 if (Array.isArray(d.gifs)) su.gifs = d.gifs;
+                if (typeof d.gifContour === 'boolean') su.gifContour = d.gifContour;
                 if (Array.isArray(d.photos)) su.photos = d.photos;
                 if (typeof d.photoContour === 'boolean') su.photoContour = d.photoContour;
                 if (d.bg)         su.boostBg    = d.bg;
@@ -601,6 +602,7 @@
         socials: u.socials || {},
         // Cross-user : GIFs, fond perso et musique d'entrée → visibles par les autres
         gifs: Array.isArray(u.gifs) ? u.gifs : [],
+        gifContour: (u.gifContour !== false),
         photos: Array.isArray(u.photos) ? u.photos : [],
         photoContour: (u.photoContour !== false),
         bg: u.boostBg || null,
@@ -927,11 +929,12 @@
       const isMe = p && p.isMe;
       const gifs = isMe ? ((state.user && state.user.gifs) || []) : ((p && p.gifs) || []);
       if (!gifs.length) return;
+      const contourOn = isMe ? ((state.user && state.user.gifContour) !== false) : (p && p.gifContour !== false);
       const wrap = document.getElementById('swipeWrap');
       if (!wrap) return;
       const layer = document.createElement('div');
       layer.id = 'swipeGifsBg';
-      layer.className = 'swipe-gifs-bg';
+      layer.className = 'swipe-gifs-bg' + (contourOn ? '' : ' no-contour');
       const items = gifs.map(g => {
         const el = document.createElement('div');
         el.className = 'swipe-gif';
@@ -1433,9 +1436,15 @@
       // === Verrouillage des bulles (comptes SANS Boost) ===
       // L'utilisateur voit, sur le profil des autres, autant de bulles qu'il en a
       // sur le SIEN : 0→aucune (toutes « ? »), 1→1, 2→2, 3→3, 4+→toutes. Boost = tout.
+      // EXCEPTION : un lien de partage perso (matefindr.com/<slug>) doit toujours
+      // montrer le profil complet, déverrouillé, à N'IMPORTE QUI qui clique dessus
+      // (c'est tout le but d'un lien à partager) — pas de comparaison "combien de
+      // bulles as-tu toi-même" comme dans le deck de swipe. p._showViews n'est posé
+      // QUE par openSharedProfile() → marqueur fiable "c'est un lien perso".
+      const isSharedLink = !!p._showViews;
       const viewerBoost = !!(state.user && state.user.boost);
       const ownCount = myOrbs.length;
-      const unlimited = p.isMe || viewerBoost || ownCount >= 4;
+      const unlimited = p.isMe || isSharedLink || viewerBoost || ownCount >= 4;
       const unlockCount = unlimited ? Infinity : ownCount;
 
       // Sur les autres profils on affiche TOUTES leurs bulles (max 14) ; certaines
@@ -1491,7 +1500,10 @@
 
       list.forEach((o, i) => {
         const locked = unlockedSet ? !unlockedSet.has(i) : false;
-        const isCommon = !p.isMe && !locked && mineSet.has(`${o.kind}::${norm(o.title)}`);
+        // Pas de highlight "en commun" (halo doré) sur un lien perso : comparer les
+        // bulles du visiteur à celles du propriétaire n'a de sens que dans le deck
+        // de swipe (deux vrais profils qui se matchent), pas sur un lien à partager.
+        const isCommon = !p.isMe && !isSharedLink && !locked && mineSet.has(`${o.kind}::${norm(o.title)}`);
         const wrap = document.createElement('div');
         wrap.className = 'orb-wrap' + (isCommon ? ' orb-wrap--common' : '') + (locked ? ' orb-wrap--locked' : '');
         const btn = document.createElement('button');
@@ -3867,6 +3879,7 @@
         decorationUrl: f.decorationUrl || p.decorationUrl || null,
         orbs: f.orbs || p.orbs || [],
         gifs: f.gifs || [],
+        gifContour: f.gifContour !== false,
         photos: f.photos || [],
         photoContour: f.photoContour !== false,
         bg: f.bg || null,

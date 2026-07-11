@@ -721,10 +721,12 @@ body.color-open .card-zone{transform:translateX(158px)}
 .sh-contour-tgl.on{color:#fff;border-color:rgba(145,70,255,.45)}
 .sh-contour-tgl.on .sw{background:#9146FF}
 .sh-contour-tgl.on .sw::after{transform:translateX(12px)}
-/* Contour désactivable sur les PHOTOS (pas les GIFs) : retire le liseré blanc + halo violet
-   ET l'ombre portée — sinon l'ombre rectangulaire trahit encore "une image collée"
+/* Contour désactivable sur les PHOTOS et les GIFs (indépendamment l'un de l'autre,
+   cf. S.photoContour/S.gifContour) : retire le liseré blanc + halo violet ET
+   l'ombre portée — sinon l'ombre rectangulaire trahit encore "une image collée"
    même sans bordure visible. */
-#photoLayer.no-contour .sticker-inner{border:none;box-shadow:none}
+#photoLayer.no-contour .sticker-inner,
+#stickerLayer.no-contour .sticker-inner{border:none;box-shadow:none}
 
 /* catégories de bulles (onglets, comme le site) */
 .cats{display:flex;gap:8px;margin-bottom:10px}
@@ -1229,6 +1231,7 @@ const S = {
   nameColor:null,             // couleur du pseudo (null = blanc par défaut)
   orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
+  gifContour:true,   // contour blanc autour des GIFs (désactivable) — n'affecte pas les photos
   photos:[],   // {url,x,y,w,rot, posByMode} — photos perso (Boost), mêmes mécaniques que les GIFs
   photoContour:true, // contour blanc autour des photos (désactivable) — n'affecte pas les GIFs
   canvasMode:'desktop', // 'desktop' ("Paysage" à l'écran) | 'portrait' — orientation en cours d'édition
@@ -1935,10 +1938,18 @@ if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>positionC
 const GIF_MAX=10;
 function renderGifsSheet(sh){
   const GIF_SUGGESTS=['anime','happy','dance','hello'];
-  sh.innerHTML=sheetHeader('GIFs sur ta carte',`<span class="sheet-count" id="gifCount"><b>${S.gifs.length}</b> / ${GIF_MAX}</span>`)+`
+  const contourOn=S.gifContour!==false;
+  const contourTgl=`<button type="button" class="sh-contour-tgl${contourOn?' on':''}" id="gifContourTgl" title="Afficher/retirer le contour des GIFs"><span>Contour</span><span class="sw"></span></button>`;
+  sh.innerHTML=sheetHeader('GIFs sur ta carte',`<span class="sheet-count" id="gifCount"><b>${S.gifs.length}</b> / ${GIF_MAX}</span>`,contourTgl)+`
     <div class="search-row"><input id="gifSearch" placeholder="Rechercher un GIF (Klipy)…" autocomplete="off"></div>
     <div class="gif-suggests" id="gifSuggests">${GIF_SUGGESTS.map(s=>`<button type="button" data-q="${s}">${s}</button>`).join('')}</div>
     <div class="gif-grid" id="gifResults"></div>`;
+  const ctBtn=sh.querySelector('#gifContourTgl');
+  if(ctBtn) ctBtn.addEventListener('click',()=>{
+    S.gifContour=!(S.gifContour!==false);
+    renderGifs(); renderGifsSheet(sh); persist();
+    toast(S.gifContour!==false?'Contour affiché':'Contour retiré');
+  });
   const grid=sh.querySelector('#gifResults');
   const searchInp=sh.querySelector('#gifSearch');
   let q='', page=1, hasNext=false, loading=false, deb=null;
@@ -1980,7 +1991,7 @@ function addGif(url){
   updateGifCount();
   toast('GIF ajouté');
 }
-function renderGifs(){const layer=$('stickerLayer');layer.innerHTML='';S.gifs.forEach((g,i)=>layer.appendChild(makeSticker(g,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
+function renderGifs(){const layer=$('stickerLayer');layer.innerHTML='';layer.classList.toggle('no-contour',S.gifContour===false);S.gifs.forEach((g,i)=>layer.appendChild(makeSticker(g,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
 
 /* ===== Modes d'orientation (Paysage / Portrait) =====
    Chaque bulle/GIF garde une position PAR MODE (posByMode). En basculant, on
@@ -2612,6 +2623,7 @@ function writeState(){
     return out;
   });
   st.user.photoContour=(S.photoContour!==false);
+  st.user.gifContour=(S.gifContour!==false);
   st.user.swipeMusic=null; // musique d'intro de profil retirée du site
   // Toujours écrire le champ (même à null) : sinon supprimer un vocal laisse
   // l'ancienne URL dans l'état → repoussée en DB → toujours visible par les autres.
@@ -2672,7 +2684,7 @@ function buildDbProfile(st){
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
     orbs, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
-    gifs:Array.isArray(u.gifs)?u.gifs:[], photos:Array.isArray(u.photos)?u.photos:[], photoContour:(u.photoContour!==false), bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
+    gifs:Array.isArray(u.gifs)?u.gifs:[], gifContour:(u.gifContour!==false), photos:Array.isArray(u.photos)?u.photos:[], photoContour:(u.photoContour!==false), bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
     connections:(p.connections&&typeof p.connections==='object')?p.connections:{},
     handleBlur:!!u.handleBlur, showBoostName:(u.boostShowName===false)?false:true,
   };
@@ -2770,6 +2782,7 @@ function hydrateFromSite(){
       .filter(o=>['music','game','film'].includes(o.kind)).slice(0,orbMax());
     renderOrbs();
   }
+  S.gifContour=(u.gifContour!==false);
   if(Array.isArray(u.gifs)&&u.gifs.length){
     S.gifs=u.gifs.slice(0,GIF_MAX).map(g=>{
       const gif={url:g.full||g.preview,x:typeof g.x==='number'?g.x:50,y:typeof g.y==='number'?g.y:28,w:g.w||34,rot:g.rot||0};
@@ -2838,7 +2851,7 @@ let PRESETS=loadPresets();
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
-  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
 }
 // Snapshot vierge : personnalisation (bio, couleurs, bulles, GIFs…) remise à zéro,
@@ -2847,7 +2860,7 @@ function snapshotProfile(){
 async function blankPresetSnapshot(){
   const base={ username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
     bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
-    orbs:[], gifs:[], photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
+    orbs:[], gifs:[], gifContour:true, photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
     nameCustom:false, avatarCustom:false, addBubblePos:null };
   try{
     const token=localStorage.getItem('matefindr_discord_token');
@@ -2912,7 +2925,7 @@ function applyPreset(snap){
     S.voice=c.voice||null; S.music=c.music||null;
     S.c1=c.c1||S.c1; S.c2=c.c2||S.c2;
     S.nameColor=(c.nameColor&&/^#[0-9a-f]{6}$/i.test(c.nameColor))?c.nameColor:null;
-    S.orbs=Array.isArray(c.orbs)?c.orbs:[]; S.gifs=Array.isArray(c.gifs)?c.gifs:[];
+    S.orbs=Array.isArray(c.orbs)?c.orbs:[]; S.gifs=Array.isArray(c.gifs)?c.gifs:[]; S.gifContour=(c.gifContour!==false);
     S.photos=Array.isArray(c.photos)?c.photos:[]; S.photoContour=(c.photoContour!==false);
     S.connections=c.connections||{};
     S.handleBlur=!!c.handleBlur; S.boostShowName=(c.boostShowName!==false);
