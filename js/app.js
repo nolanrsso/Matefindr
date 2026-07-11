@@ -153,6 +153,8 @@
                 if (typeof d.showBoostName === 'boolean') su.boostShowName = d.showBoostName;
                 if (typeof d.boost === 'boolean') su.boost = d.boost;
                 if (Array.isArray(d.gifs)) su.gifs = d.gifs;
+                if (Array.isArray(d.photos)) su.photos = d.photos;
+                if (typeof d.photoContour === 'boolean') su.photoContour = d.photoContour;
                 if (d.bg)         su.boostBg    = d.bg;
                 if (d.bgPos)      su.boostBgPos = d.bgPos;
                 if (d.swipeMusic) su.swipeMusic = d.swipeMusic;
@@ -600,6 +602,7 @@
         // Cross-user : GIFs, fond perso et musique d'entrée → visibles par les autres
         gifs: Array.isArray(u.gifs) ? u.gifs : [],
         photos: Array.isArray(u.photos) ? u.photos : [],
+        photoContour: (u.photoContour !== false),
         bg: u.boostBg || null,
         bgPos: u.boostBgPos || null,
         swipeMusic: u.swipeMusic || null,
@@ -985,11 +988,12 @@
       const isMe = p && p.isMe;
       const photos = isMe ? ((state.user && state.user.photos) || []) : ((p && p.photos) || []);
       if (!photos.length) return;
+      const contourOn = isMe ? ((state.user && state.user.photoContour) !== false) : (p && p.photoContour !== false);
       const wrap = document.getElementById('swipeWrap');
       if (!wrap) return;
       const layer = document.createElement('div');
       layer.id = 'swipePhotosBg';
-      layer.className = 'swipe-gifs-bg';
+      layer.className = 'swipe-gifs-bg' + (contourOn ? '' : ' no-contour');
       const items = photos.map(ph => {
         const el = document.createElement('div');
         el.className = 'swipe-gif';
@@ -3860,6 +3864,7 @@
         orbs: f.orbs || p.orbs || [],
         gifs: f.gifs || [],
         photos: f.photos || [],
+        photoContour: f.photoContour !== false,
         bg: f.bg || null,
         connections: f.connections || {},
         publicFlags: f.publicFlags || 0,
