@@ -1380,7 +1380,13 @@ function cropPaint(){
 function setCroppedMedia(slot,data,ph){
   slot.innerHTML='';
   if(!data){slot.innerHTML=ph;slot.style.background='';return;}
-  const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';img.style.transform='scale('+data.scale+')';slot.appendChild(img);
+  const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';
+  // transform-origin DOIT matcher object-position : object-fit:cover positionne déjà le
+  // contenu (posX/posY), donc si scale() zoome autour du centre de la BOÎTE (par défaut)
+  // au lieu du point de pan, le zoom dérive vers une autre zone que celle prévisualisée
+  // dans le recadrage dès que scale≠1 ET posX/posY≠50 (donc presque toujours en pratique).
+  img.style.transformOrigin=data.posX+'% '+data.posY+'%';
+  img.style.transform='scale('+data.scale+')';slot.appendChild(img);
   slot.style.background=(slot.id==='avatarSlot')?'#1c1d22':'transparent';
 }
 const BANNER_PH='<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>';
@@ -2231,7 +2237,9 @@ function applyBg(bg){
       const v=document.createElement('video'); v.src=bg.value; v.autoplay=true; v.muted=true; v.loop=true; v.playsInline=true; layer.appendChild(v);
     } else {
       const im=document.createElement('img'); im.src=bg.value;
-      im.style.objectPosition=(typeof bg.posX==='number'?bg.posX:50)+'% '+(typeof bg.posY==='number'?bg.posY:50)+'%';
+      const bgPosX=(typeof bg.posX==='number'?bg.posX:50), bgPosY=(typeof bg.posY==='number'?bg.posY:50);
+      im.style.objectPosition=bgPosX+'% '+bgPosY+'%';
+      im.style.transformOrigin=bgPosX+'% '+bgPosY+'%'; // cf. setCroppedMedia : doit matcher object-position
       im.style.transform='scale('+(bg.scale||1)+')';
       layer.appendChild(im);
     }

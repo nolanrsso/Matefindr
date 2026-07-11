@@ -60,7 +60,14 @@
       const u = state.user || {};
       const avi = document.getElementById('accountChipAvatar');
       if (u.avatarUrl) {
-        avi.innerHTML = `<img src="${u.avatarUrl}" alt="${escapeHtmlMini(u.displayName || '')}">`;
+        // Respecte le recadrage choisi dans l'éditeur (posX/posY/scale) — sans ça la
+        // pastille "Mon profil" montrait toujours le cover par défaut de l'image brute,
+        // qui ne correspond pas forcément au recadrage voulu par l'utilisateur.
+        const ap = (u.avatarPos && typeof u.avatarPos === 'object') ? u.avatarPos : null;
+        const posX = (ap && typeof ap.posX === 'number') ? ap.posX : 50;
+        const posY = (ap && typeof ap.posY === 'number') ? ap.posY : 50;
+        const scale = (ap && typeof ap.scale === 'number') ? ap.scale : 1;
+        avi.innerHTML = `<img src="${u.avatarUrl}" alt="${escapeHtmlMini(u.displayName || '')}" style="width:100%;height:100%;object-fit:cover;object-position:${posX}% ${posY}%;transform-origin:${posX}% ${posY}%;transform:scale(${scale})">`;
         avi.style.background = 'none';
       } else {
         avi.textContent = (u.displayName || u.email || 'U').charAt(0).toUpperCase();
@@ -1120,9 +1127,12 @@
       // Avatar wrap background follows the card body so the circle blends in
       const aviBg = pc1 || '#1c1d22';
       // Recadrage de la photo (depuis l'éditeur) : object-position + zoom appliqués à la carte.
+      // transform-origin DOIT matcher object-position (voir editor.html/setCroppedMedia) :
+      // sinon scale() zoome autour du centre de la boîte au lieu du point de pan choisi
+      // dans le recadrage, et l'image atterrit ailleurs que prévisualisé dès que scale≠1.
       const ap = (p.avatarPos && typeof p.avatarPos === 'object') ? p.avatarPos : null;
       const apStyle = ap
-        ? `${(typeof ap.posX === 'number' && typeof ap.posY === 'number') ? `object-position:${ap.posX}% ${ap.posY}%;` : ''}${(typeof ap.scale === 'number' && ap.scale !== 1) ? `transform:scale(${ap.scale});` : ''}`
+        ? `${(typeof ap.posX === 'number' && typeof ap.posY === 'number') ? `object-position:${ap.posX}% ${ap.posY}%;transform-origin:${ap.posX}% ${ap.posY}%;` : ''}${(typeof ap.scale === 'number' && ap.scale !== 1) ? `transform:scale(${ap.scale});` : ''}`
         : '';
       const aviInner = p.avatarUrl
         ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;${apStyle}" alt="${p.name}">`
@@ -3821,6 +3831,7 @@
             const posY = (pos && typeof pos.posY === 'number') ? pos.posY : 50;
             const scale = (pos && typeof pos.scale === 'number') ? pos.scale : 1;
             img.style.objectPosition = posX + '% ' + posY + '%';
+            img.style.transformOrigin = posX + '% ' + posY + '%'; // doit matcher object-position (cf. avatar)
             img.style.transform = 'scale(' + scale + ')';
           }
         }

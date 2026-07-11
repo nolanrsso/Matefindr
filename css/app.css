@@ -807,6 +807,7 @@
   .account-chip:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
   .account-chip .avatar{
     width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+    overflow:hidden; /* sans ça une photo de profil zoomée (recadrage) dépasse du rond */
     font-family:"Clash Display",sans-serif;font-weight:700;font-size:14px;
     background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
     box-shadow:0 0 0 1.5px rgba(255,255,255,.18) inset;
