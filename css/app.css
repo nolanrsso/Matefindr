@@ -21,16 +21,9 @@
   ::-webkit-scrollbar-corner{background:transparent}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-family:"Inter",system-ui,sans-serif}
   html,body{height:100%;overflow:hidden}
-  /* Fond personnalisé importé (image/vidéo) — couche derrière la carte, swipe seulement.
-     object-fit:CONTAIN (pas cover) : avec cover, le cadrage visible change selon le ratio
-     largeur/hauteur de la fenêtre de chaque visiteur (une fenêtre plus large affiche une
-     tranche différente de l'image) → la carte/bulles/GIFs (positionnés indépendamment,
-     centrés dans le viewport) semblaient "décalés" par rapport au fond d'un visiteur à
-     l'autre, alors que RIEN n'avait bougé — c'est le fond qui recadrait différemment.
-     contain affiche toujours l'image ENTIÈRE, au même cadrage relatif, quelle que soit
-     la fenêtre (bandes vides sur l'axe qui déborde, comblées par --bg). */
-  #customBgLayer{position:fixed;inset:0;z-index:1;display:none;pointer-events:none;overflow:hidden;background:var(--bg,#0D0B1E)}
-  #customBgLayer img,#customBgLayer video{width:100%;height:100%;object-fit:contain;display:block}
+  /* Fond personnalisé importé (image/vidéo) — couche derrière la carte, swipe seulement */
+  #customBgLayer{position:fixed;inset:0;z-index:1;display:none;pointer-events:none;overflow:hidden}
+  #customBgLayer img,#customBgLayer video{width:100%;height:100%;object-fit:cover;display:block}
   body[data-screen="swipe"] #customBgLayer.on{display:block}
 
   /* ------------- Background mesh ------------- */
