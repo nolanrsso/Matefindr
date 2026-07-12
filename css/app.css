@@ -1520,7 +1520,7 @@
   .swipe-card .card-views{
     position:absolute;right:14px;bottom:14px;z-index:6;
     display:inline-flex;align-items:center;gap:7px;
-    color:#fff;font-size:18px;font-weight:800;
+    color:#fff;font-size:18px;font-weight:400;
     text-shadow:0 2px 8px rgba(0,0,0,.6);
     pointer-events:none;
   }
