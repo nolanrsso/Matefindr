@@ -560,6 +560,7 @@
     let deckIdx = 0;
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
+    let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
     let _previewFromEditor = false; // true = aperçu ouvert depuis editor.html (#preview) → "Quitter" doit y retourner
     let _sharedProfile = null; // profil ouvert via un lien de partage matefindr.com/<slug> (carte + like/dislike)
     // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
@@ -3690,6 +3691,11 @@
       _sharedProfile = null;
       _previewMode = true;
       _previewProfile = profile || null;
+      // Aperçu D'UN TIERS (chat/qui-t'a-liké) : "Quitter" doit revenir là où on
+      // était (menu, ou swipe au même profil), PAS toujours au hub -- contrairement
+      // à l'aperçu de SA PROPRE carte (depuis les Paramètres), dont "Quitter" a
+      // toujours renvoyé au hub volontairement (voir plus bas).
+      _previewReturn = profile ? { screen: document.body.getAttribute('data-screen'), deckIdx } : null;
       document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
       if (typeof setScreen === 'function') setScreen('swipe');
@@ -3717,8 +3723,21 @@
       _previewProfile = null;
       _sharedProfile = null;
       document.body.removeAttribute('data-preview');
-      // Quitter l'aperçu → retour au swipe (le hub), pas aux Paramètres.
-      if (typeof setScreen === 'function') setScreen('swipe');
+      const ret = _previewReturn; _previewReturn = null;
+      if (ret && ret.screen && ret.screen !== 'swipe') {
+        // Aperçu d'un profil tiers ouvert depuis un autre écran (menu…) → on y revient.
+        if (typeof setScreen === 'function') setScreen(ret.screen);
+      } else {
+        // Pas d'info de retour (aperçu de SA PROPRE carte, depuis les Paramètres) →
+        // comportement historique : toujours le hub, jamais les Paramètres. Aperçu
+        // d'un tiers ouvert DEPUIS le hub → même hub, mais reposé sur le MÊME profil
+        // qu'avant (pas remis à zéro sur le premier de la liste).
+        if (typeof setScreen === 'function') setScreen('swipe');
+        if (ret && typeof ret.deckIdx === 'number') {
+          deckIdx = ret.deckIdx;
+          if (typeof ensureDeckSync === 'function') ensureDeckSync();
+        }
+      }
     });
     // Pseudo → met à jour le titre du header en live
     document.getElementById('accPseudo')?.addEventListener('input', (e) => {
