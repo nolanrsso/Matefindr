@@ -2131,7 +2131,7 @@ function makeSticker(g,idx,layer){
    déplaçable/redimensionnable/rotatif) mais importées depuis l'appareil, pas cherchées
    en ligne. Réservé Boost à 100% (contrairement au fond, cf. bgIsPremium) : le gate
    se déclenche dès l'ajout, pas seulement à la sortie de l'éditeur. ===== */
-const PHOTO_MAX=10, PHOTO_MAX_BYTES=5*1024*1024;
+const PHOTO_MAX=15, PHOTO_MAX_BYTES=5*1024*1024;
 function updatePhotoCount(){
   const c=document.getElementById('photoCount'); if(c)c.innerHTML=`<b>${S.photos.length}</b> / ${PHOTO_MAX}`;
 }
