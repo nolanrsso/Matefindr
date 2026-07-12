@@ -3725,8 +3725,12 @@
       if (!profile) { try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){} }
       // Nettoyage défensif : l'aperçu ne doit JAMAIS afficher un profil venu
       // d'un lien de partage (sinon on se retrouve avec l'URL /<slug> et les
-      // boutons like/dislike au lieu de "Quitter l'aperçu").
+      // boutons like/dislike au lieu de "Quitter l'aperçu"). Idem pour l'attribut
+      // data-shared : s'il restait posé (lien perso visité plus tôt dans la même
+      // session, jamais nettoyé car finishShared() n'a pas été appelé), le cœur du
+      // lien perso (sharedHeartBtn) apparaissait par-dessus l'aperçu "Mon profil".
       _sharedProfile = null;
+      document.body.removeAttribute('data-shared');
       _previewMode = true;
       _previewProfile = profile || null;
       // Aperçu D'UN TIERS (chat/qui-t'a-liké) : "Quitter" doit revenir là où on
