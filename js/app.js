@@ -1246,7 +1246,7 @@
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
-        ${p._showViews ? `<span class="card-views"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg> ${(p.views||0).toLocaleString('fr-FR')} vue${(p.views||0)>1?'s':''}</span>` : ''}
+        ${p._showViews ? `<span class="card-views"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>${(p.views||0).toLocaleString('fr-FR')}</span>` : ''}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
         <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">

@@ -1518,14 +1518,13 @@
   }
   /* Lien de partage : nombre de vues, en bas à droite de la carte. */
   .swipe-card .card-views{
-    position:absolute;right:12px;bottom:12px;z-index:6;
-    display:inline-flex;align-items:center;gap:5px;
-    padding:5px 11px;border-radius:999px;
-    background:rgba(8,9,14,.6);color:#fff;font-size:12px;font-weight:700;
-    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
-    box-shadow:0 4px 14px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.1) inset;
+    position:absolute;right:14px;bottom:14px;z-index:6;
+    display:inline-flex;align-items:center;gap:7px;
+    color:#fff;font-size:18px;font-weight:800;
+    text-shadow:0 2px 8px rgba(0,0,0,.6);
     pointer-events:none;
   }
+  .swipe-card .card-views svg{width:20px;height:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
     background:rgba(255,255,255,.08);
