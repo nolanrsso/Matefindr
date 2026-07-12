@@ -1281,7 +1281,7 @@ function hexToRgba(hex,a){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)retur
 // sont bloqués côté site (cf. js/app.js) tant que non réactivé.
 function showDisabledBanner(reason){
   let el=document.getElementById('disabledBanner');
-  if(reason==null){ if(el) el.remove(); return; }
+  if(reason==null){ if(el){ el.remove(); syncBannerPadding(); } return; }
   if(!el){
     el=document.createElement('div'); el.id='disabledBanner';
     el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#3a1a12;border-bottom:1px solid rgba(255,193,84,.4);color:#ffcf6b;font:600 13px/1.5 inherit;padding:10px 16px;text-align:center';
@@ -1290,9 +1290,9 @@ function showDisabledBanner(reason){
       +'<div style="color:#fff;font-weight:800;margin-top:3px">À toi de changer ton profil pour qu\'il rentre dans les règles, ensuite fais un ticket sur Discord.</div>'
       +'<a href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" style="color:#fff;font-weight:800;text-decoration:underline">Ouvrir un ticket sur le Discord pour demander une réactivation</a>';
     document.body.prepend(el);
-    document.body.style.paddingTop='64px';
   }
   document.getElementById('disabledBannerReason').textContent = reason ? ('Raison : '+reason) : '';
+  syncBannerPadding();
 }
 const $ = id => document.getElementById(id);
 const fmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
@@ -2844,6 +2844,7 @@ function buildDbProfile(st){
     // lu par admin.html pour trier/notifier, distinct de profiles.updated_at (vues, likes,
     // matchs, messages ne doivent pas déclencher de notif "modification du profil").
     lastEditedAt:p.lastEditedAt||null,
+    staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
   };
 }
 let _dbSyncT=null, _dbSyncing=false;
@@ -2919,13 +2920,41 @@ async function refreshDisabledStatus(){
     const disabled=!!(dRaw&&dRaw.disabled===true);
     const reason=disabled?(dRaw.disabledReason||''):null;
     const count=(dRaw&&typeof dRaw.disabledCount==='number')?dRaw.disabledCount:0;
+    const staffMsg=(dRaw&&dRaw.staffMessage&&typeof dRaw.staffMessage==='object'&&dRaw.staffMessage.text)?dRaw.staffMessage:null;
     const st=readSite(); st.user=st.user||{};
-    st.user.disabled=disabled; st.user.disabledReason=reason; st.user.disabledCount=count;
+    st.user.disabled=disabled; st.user.disabledReason=reason; st.user.disabledCount=count; st.user.staffMessage=staffMsg;
     try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
     showDisabledBanner(disabled?reason:null);
+    showStaffBanner(staffMsg);
   }catch(e){ console.warn('[editor] refresh disabled status', e); }
 }
 refreshDisabledStatus();
+/* Message du staff (admin.html) : bannière fermable, empilée sous celle de désactivation
+   si les deux sont présentes. Reste fermée jusqu'à un nouveau message (ts différent). */
+function showStaffBanner(msg){
+  const prev=document.getElementById('staffBanner');
+  if(prev) prev.remove();
+  syncBannerPadding();
+  if(!msg||!msg.text) return;
+  let dismissedTs=null; try{ dismissedTs=localStorage.getItem('matefindr_staffmsg_dismissed_ts'); }catch(_){}
+  if(msg.ts && dismissedTs===msg.ts) return;
+  const el=document.createElement('div'); el.id='staffBanner';
+  const top=(document.getElementById('disabledBanner')||{offsetHeight:0}).offsetHeight;
+  el.style.cssText='position:fixed;top:'+top+'px;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#6B2BFF,#9146FF);color:#fff;font:600 13px/1.5 inherit;padding:9px 40px 9px 16px;text-align:center';
+  el.innerHTML='📢 <b>Message du staff :</b> '+esc(msg.text)
+    +'<button type="button" id="staffBannerClose" aria-label="Fermer" style="position:absolute;top:5px;right:8px;width:24px;height:24px;border-radius:7px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:15px;line-height:1;cursor:pointer">×</button>';
+  document.body.appendChild(el);
+  syncBannerPadding();
+  document.getElementById('staffBannerClose').addEventListener('click',()=>{
+    try{ localStorage.setItem('matefindr_staffmsg_dismissed_ts', msg.ts||'1'); }catch(_){}
+    el.remove(); syncBannerPadding();
+  });
+}
+function syncBannerPadding(){
+  const a=document.getElementById('disabledBanner'), b=document.getElementById('staffBanner');
+  if(b) b.style.top=(a?a.offsetHeight:0)+'px';
+  document.body.style.paddingTop=((a?a.offsetHeight:0)+(b?b.offsetHeight:0))+'px';
+}
 /* Décoration d'avatar Discord + point de statut, déposés par-dessus l'avatar (réappliqués après tout setCroppedMedia). */
 let _decorationUrl=null;
 function applyAvatarDeco(){

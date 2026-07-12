@@ -127,6 +127,52 @@
       if (btn) btn.addEventListener('click', () => { location.href = '/'; });
     }
 
+    // Bannière fermable en haut du site -- posée par un admin via admin.html ("Message
+    // du staff"). Reste fermée une fois la croix cliquée, sauf si un NOUVEAU message
+    // (ts différent) arrive ensuite -- comparé à un marqueur local par appareil.
+    function showStaffMessageBanner(msg){
+      const prev = document.getElementById('mfStaffBanner');
+      if (prev) { prev.remove(); document.body.style.paddingTop = ''; }
+      if (!msg || !msg.text) return;
+      let dismissedTs = null;
+      try { dismissedTs = localStorage.getItem('matefindr_staffmsg_dismissed_ts'); } catch(_){}
+      if (msg.ts && dismissedTs === msg.ts) return;
+      const el = document.createElement('div');
+      el.id = 'mfStaffBanner';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9998;background:linear-gradient(90deg,#6B2BFF,#9146FF);'
+        + 'color:#fff;font:600 13.5px/1.5 Inter,system-ui,-apple-system,sans-serif;padding:10px 44px 10px 16px;text-align:center;box-shadow:0 4px 18px rgba(0,0,0,.35)';
+      el.innerHTML = '📢 <b>Message du staff :</b> ' + escapeHtmlMini(msg.text)
+        + '<button id="mfStaffBannerClose" type="button" aria-label="Fermer" style="position:absolute;top:6px;right:10px;width:26px;height:26px;'
+        +   'border-radius:8px;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:16px;line-height:1;cursor:pointer">×</button>';
+      document.body.prepend(el);
+      requestAnimationFrame(() => { document.body.style.paddingTop = el.offsetHeight + 'px'; });
+      document.getElementById('mfStaffBannerClose').addEventListener('click', () => {
+        try { localStorage.setItem('matefindr_staffmsg_dismissed_ts', msg.ts || '1'); } catch(_){}
+        el.remove();
+        document.body.style.paddingTop = '';
+      });
+    }
+
+    // "Dernier vu sur le site" (admin.html) -- posé au login puis rafraîchi au retour sur
+    // l'onglet (throttlé), pas juste au login initial (une session peut durer des heures).
+    async function pingLastSeen(){
+      try{
+        if (!window.__supa) return;
+        const { data:{ session } } = await window.__supa.auth.getSession();
+        if (!session) return;
+        const { data: row } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
+        const nowIso = new Date().toISOString();
+        const dataPatch = Object.assign({}, (row && row.data) || {}, { lastSeenAt: nowIso });
+        const { error } = await window.__supa.from('profiles').update({ data: dataPatch }).eq('id', session.user.id);
+        if (!error) { state.user = state.user || {}; state.user.lastSeenAt = nowIso; }
+      }catch(_){}
+    }
+    let _lastPingAt = 0;
+    window.addEventListener('focus', () => {
+      const now = Date.now();
+      if (now - _lastPingAt > 5 * 60 * 1000) { _lastPingAt = now; pingLastSeen(); }
+    });
+
     // Hand-off used by login/signup handlers
     window.__matefindr = {
       async onLogin(user){
@@ -235,11 +281,17 @@
               state.user.disabled = (dRaw && dRaw.disabled === true);
               state.user.disabledReason = state.user.disabled ? (dRaw.disabledReason || '') : null;
               state.user.disabledCount = (dRaw && typeof dRaw.disabledCount === 'number') ? dRaw.disabledCount : (state.user.disabledCount || 0);
+              // Message du staff (admin.html) : posé dans state.user quoi qu'il arrive
+              // (editor.html le lit aussi si le compte est désactivé), affiché ici seulement
+              // si on reste sur ce site (sinon inutile juste avant la redirection éditeur).
+              state.user.staffMessage = (dRaw && dRaw.staffMessage && typeof dRaw.staffMessage === 'object' && dRaw.staffMessage.text) ? dRaw.staffMessage : null;
               if (state.user.disabled) {
                 save();
                 location.href = 'editor.html';
                 return;
               }
+              if (typeof showStaffMessageBanner === 'function') showStaffMessageBanner(state.user.staffMessage);
+              if (typeof pingLastSeen === 'function') { pingLastSeen(); _lastPingAt = Date.now(); }
               if (dRaw && dRaw.boost === true && !state.user.boost) {
                 state.user.boost = true;
                 if (dRaw.boostPlan) state.user.boostPlan = dRaw.boostPlan;
@@ -720,6 +772,11 @@
         guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => g.id) : []),
         orbs,
         orbColors: (p.orbColors && typeof p.orbColors === 'object') ? p.orbColors : null,
+        // Champs posés par admin.html -- jamais modifiés depuis ce site, mais buildUserProfile()
+        // remplace TOUTE la colonne data à chaque sync : sans ce passthrough, se reconnecter
+        // effacerait silencieusement le message du staff / le flag disabled / le compteur.
+        disabled: !!u.disabled, disabledReason: u.disabledReason || null, disabledCount: u.disabledCount || 0,
+        staffMessage: u.staffMessage || null, lastSeenAt: u.lastSeenAt || null,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
         socials: u.socials || {},

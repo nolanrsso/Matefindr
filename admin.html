@@ -203,6 +203,7 @@
   const esc=s=>(s==null?'':String(s)).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
   const initial=n=>((n||'?').trim().charAt(0)||'?').toUpperCase();
   function fmtDate(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return '—'; } }
+  function fmtDateTime(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})+' à '+new Date(d).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(_){ return '—'; } }
 
   /* ---- Login gate ---- */
   $('connectBtn').addEventListener('click',connect);
@@ -325,7 +326,7 @@
       html.push('<td><span class="email" title="'+esc(a.email)+'">'+esc(a.email)+'</span></td>');
       html.push('<td>'+((dd.countryFlag||'')+' '+esc(dd.country||''))+(dd.country?'':'<span class="muted">—</span>')+'</td>');
       html.push('<td><span class="pill">'+esc(dd.looking||p.look_for||'—')+'</span></td>');
-      html.push('<td class="muted">'+fmtDate(lastMod(a))+'</td>');
+      html.push('<td class="muted">'+fmtDateTime(lastMod(a))+'</td>');
       html.push('<td><div class="row-actions"><button class="a-btn" data-view="'+ACCOUNTS.indexOf(a)+'">Voir</button>'
         + (FULL ? ('<button class="a-btn '+(banned?'unban':'ban')+'" data-ban="'+ACCOUNTS.indexOf(a)+'">'+(banned?'Débannir':'Bannir')+'</button>') : '')
         +'</div></td>');
@@ -419,6 +420,31 @@
     const ok=await patchProfileData(a, { disabled:false, disabledReason:null }, '✅ Profil réactivé');
     if(btn) btn.disabled=false;
     if(ok && $('modal').classList.contains('on')) openProfile(a);
+  }
+
+  /* ---- Message du staff : bannière fermable en haut du site, affichée jusqu'à ce que
+     l'utilisateur clique la croix (cf. showStaffMessageBanner dans js/app.js). Un nouveau
+     message (ts différent) reste affiché même si un ancien avait déjà été fermé. ---- */
+  function startStaffMessage(a){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const infoEl=document.querySelector('#modalBox .info'); if(!infoEl) return;
+    const dd=d(a);
+    infoEl.innerHTML='<div style="display:grid;gap:12px">'
+      +'<div class="sec" style="border-top:none;padding-top:0">Message du staff</div>'
+      +'<div class="muted" style="font-size:12.5px;line-height:1.5">S\'affiche en haut du site de l\'utilisateur avec une croix pour le fermer. Laisse vide pour retirer le message actuel.</div>'
+      +fieldRow('Message','eStaffMsg', (dd.staffMessage&&dd.staffMessage.text)||'', true)
+      +'<div style="display:flex;gap:10px;margin-top:4px">'
+      +  '<button class="a-btn unban" id="eStaffMsgSave" style="flex:1">💬 Envoyer</button>'
+      +  '<button class="a-btn" id="eStaffMsgCancel" style="flex:1">Annuler</button>'
+      +'</div></div>';
+    $('eStaffMsgCancel').addEventListener('click', ()=>openProfile(a));
+    $('eStaffMsgSave').addEventListener('click', async ()=>{
+      const text=$('eStaffMsg').value.trim();
+      $('eStaffMsgSave').disabled=true;
+      const patch = text ? { staffMessage:{ text, ts:new Date().toISOString() } } : { staffMessage:null };
+      const ok=await patchProfileData(a, patch, text?'💬 Message envoyé':'Message retiré');
+      if(ok) openProfile(a); else $('eStaffMsgSave').disabled=false;
+    });
   }
 
   /* ---- Se connecter en tant que (lien magique généré côté service_role, ouvert
@@ -627,17 +653,20 @@
       +'<dt>User ID</dt><dd style="font-size:12px">'+esc(a.id)+'</dd>'
       +'<dt>Inscrit le</dt><dd>'+fmtDate(a.created_at)+'</dd>'
       +'<dt>Dernière connexion</dt><dd>'+(a.last_sign_in?fmtDate(a.last_sign_in):'—')+'</dd>'
+      +'<dt>Dernier vu sur le site</dt><dd>'+(dd.lastSeenAt?fmtDateTime(dd.lastSeenAt):'<span class="muted">—</span>')+'</dd>'
       +'<dt>Statut</dt><dd>'+(banned?'<span class="pill ban">Banni jusqu’au '+fmtDate(a.banned_until)+'</span>':'<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Actif</span>')+'</dd>'
       +'<dt>Profil visible</dt><dd>'+(disabled
           ? ('<span class="pill off">Désactivé</span><div class="disreason">Raison donnée à l\'utilisateur : '+esc(dd.disabledReason||'—')+'</div>')
           : '<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Visible par les autres</span>')+'</dd>'
       +'<dt>Déjà désactivé</dt><dd>'+(dd.disabledCount?('<span class="pill '+(dd.disabledCount>1?'ban':'off')+'">'+dd.disabledCount+' fois</span>'):'<span class="muted">Jamais</span>')+'</dd>'
+      +'<dt>Message du staff</dt><dd>'+(dd.staffMessage&&dd.staffMessage.text?esc(dd.staffMessage.text):'<span class="muted">Aucun</span>')+'</dd>'
       + (FULL ? ('<div class="m-actions">'
           +'<button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button>'
           +'<button class="a-btn" id="modalEdit">✏️ Modifier</button>'
           +'<button class="a-btn gold" id="modalBoost">'+(dd.boost?'✦ Retirer Boost':'✦ Mettre Boost')+'</button>'
           +'<button class="a-btn '+(disabled?'unban':'ban')+'" id="modalDisable">'+(disabled?'✅ Réactiver le profil':'🚫 Désactiver le profil')+'</button>'
           +'<button class="a-btn" id="modalLogout">🔌 Déconnecter</button>'
+          +'<button class="a-btn" id="modalStaffMsg">💬 Message du staff</button>'
           +'<button class="a-btn" id="modalImpersonate" '+((!a.email||a.email==='—'||a.email==='(profil seul)')?'disabled':'')+'>🔑 Se connecter en tant que</button>'
           +'<button class="a-btn ban" id="modalDelete">🗑️ Supprimer</button></div>') : '')
       +'<details class="raw"><summary>Données brutes (JSON)</summary><pre>'+esc(JSON.stringify(a.prof||{},null,2))+'</pre></details>'
@@ -654,6 +683,7 @@
     const mDis=$('modalDisable'); if(mDis) mDis.addEventListener('click',()=>{ disabled ? reactivateProfile(a,mDis) : startDisableProfile(a); });
     const mLogout=$('modalLogout'); if(mLogout) mLogout.addEventListener('click',()=>forceLogout(a,mLogout));
     const mImp=$('modalImpersonate'); if(mImp) mImp.addEventListener('click',()=>impersonate(a,mImp));
+    const mStaff=$('modalStaffMsg'); if(mStaff) mStaff.addEventListener('click',()=>startStaffMessage(a));
     const cl=$('copyLink'); if(cl) cl.addEventListener('click',()=>{ navigator.clipboard.writeText(link).then(()=>toast('🔗 Lien copié')).catch(()=>toast('Échec de la copie')); });
   }
   function closeModal(){ $('modal').classList.remove('on'); }
