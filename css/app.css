@@ -1525,6 +1525,7 @@
     pointer-events:none;
   }
   .swipe-card .card-views svg{width:20px;height:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+  .swipe-card .card-views b{font-weight:inherit}
 
   /* Réactions : badge en bas à droite de la carte. Tant que JE n'ai pas réagi,
      juste une icône + 5 points blancs identiques (teaser, aucune donnée révélée).

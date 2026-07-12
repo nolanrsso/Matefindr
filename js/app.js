@@ -674,6 +674,7 @@
         swipeMusic: u.swipeMusic || null,
         connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
         isMe: true,
+        views: _myViewsCache,
       };
     }
 
@@ -684,8 +685,8 @@
        mis une note -- avant ça, le badge reste un simple teaser (5 barres identiques,
        étiquetées 1-5, aucune donnée affichée). */
     const _reactionsCache = {}; // uid -> { ratings:number[], mine:number|null, total }
-    function reactionBadgeInnerHtml(rec){
-      const reacted = !!(rec && rec.mine != null);
+    function reactionBadgeInnerHtml(rec, forceReveal){
+      const reacted = !!forceReveal || !!(rec && rec.mine != null);
       const ratings = (rec && rec.ratings) || [];
       const total = ratings.length;
       const counts = [0,0,0,0,0]; // bucket i = note arrondie à l'entier i+1 (1 à 5 étoiles)
@@ -704,16 +705,44 @@
       return `${avgHtml}<span class="cr-dots">${cols}</span>`;
     }
     function reactionBadgeHtml(p){
-      if (!p || !p.uid || p.isMe) return '';
+      if (!p) return '';
+      // Ma propre carte (aperçu) : mes stats reçues, toujours révélées (comme dans
+      // l'éditeur) -- pas de teaser, on ne réagit jamais à soi-même. uid pas encore
+      // connu au tout premier rendu -> refreshMyViewsAndReactions() le complète après coup.
+      if (p.isMe) {
+        const uid = _myUidCache || '';
+        const rec = uid ? _reactionsCache[uid] : null;
+        return `<span class="card-reactions" data-uid="${uid}" data-mine="true" data-reacted="true">${reactionBadgeInnerHtml(rec, true)}</span>`;
+      }
+      if (!p.uid) return '';
       const rec = _reactionsCache[p.uid];
       return `<span class="card-reactions" data-uid="${p.uid}" data-reacted="${!!(rec && rec.mine != null)}">${reactionBadgeInnerHtml(rec)}</span>`;
     }
     function renderReactionBadges(uid){
       const rec = _reactionsCache[uid];
       document.querySelectorAll(`.card-reactions[data-uid="${uid}"]`).forEach(el => {
-        el.setAttribute('data-reacted', String(!!(rec && rec.mine != null)));
-        el.innerHTML = reactionBadgeInnerHtml(rec);
+        const forceReveal = el.getAttribute('data-mine') === 'true';
+        el.setAttribute('data-reacted', String(forceReveal || !!(rec && rec.mine != null)));
+        el.innerHTML = reactionBadgeInnerHtml(rec, forceReveal);
       });
+    }
+    /* Mes propres stats (vues + notes reçues) affichées quand ma carte est en aperçu.
+       uid pas connu synchroniquement (buildUserProfile() n'a pas la session) -- on le
+       résout une fois, on met en cache, et on met à jour les badges déjà rendus. */
+    let _myUidCache = null;
+    let _myViewsCache = 0;
+    async function refreshMyViewsAndReactions(){
+      if (!window.__supa) return;
+      try {
+        const { data: { session } } = await window.__supa.auth.getSession();
+        if (!session) return;
+        _myUidCache = session.user.id;
+        const { data } = await window.__supa.from('profiles').select('views').eq('id', _myUidCache).maybeSingle();
+        _myViewsCache = (data && data.views) || 0;
+        document.querySelectorAll('.card-views[data-mine="true"] b').forEach(b => { b.textContent = _myViewsCache.toLocaleString('fr-FR'); });
+        document.querySelectorAll('.card-reactions[data-mine="true"]').forEach(el => el.setAttribute('data-uid', _myUidCache));
+        if (typeof loadReactions === 'function') loadReactions(_myUidCache);
+      } catch (e) { console.warn('[Matefindr] refresh my stats', e); }
     }
     /* Identité du votant : le vrai compte si connecté, sinon un id anonyme persisté en
        localStorage (généré une fois, réutilisé partout) -- pas besoin d'être connecté pour
@@ -1508,7 +1537,7 @@
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
-        ${p._showViews ? `<span class="card-views"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>${(p.views||0).toLocaleString('fr-FR')}</span>` : ''}
+        ${(p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : ''}
         ${reactionBadgeHtml(p)}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
@@ -1562,6 +1591,9 @@
       // Réactions : chargées à la demande (pas encore en cache) puis mises à jour en
       // direct dans le(s) badge(s) déjà affichés via renderReactionBadges().
       if (p.uid && !p.isMe && !_reactionsCache[p.uid] && typeof loadReactions === 'function') loadReactions(p.uid);
+      // Ma propre carte (aperçu) : vues + notes reçues, résolues après coup (uid pas
+      // connu au moment du rendu synchrone) puis injectées dans les badges déjà affichés.
+      if (p.isMe && typeof refreshMyViewsAndReactions === 'function') refreshMyViewsAndReactions();
       // En mode APERÇU on peut aussi traîner la carte : attachDrag détecte le
       // preview et la fait rebondir au centre au relâchement (aucun swipe).
       if (isTop) attachDrag(c);

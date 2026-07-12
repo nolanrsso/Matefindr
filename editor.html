@@ -395,6 +395,16 @@ body[data-canvas="portrait"] .card-age-badge .cab-age{font-size:17px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag{font-size:15px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14px}
 body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
+/* Vues du profil : identique à .swipe-card .card-views (css/app.css). */
+.card .card-views{
+  position:absolute;left:14px;bottom:14px;z-index:6;
+  display:inline-flex;align-items:center;gap:7px;
+  color:#fff;font-size:18px;font-weight:400;font-family:"Clash Display",sans-serif;
+  text-shadow:0 2px 8px rgba(0,0,0,.6);
+  pointer-events:none;
+}
+.card .card-views svg{width:20px;height:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.card .card-views b{font-weight:inherit}
 /* Notes reçues (slider à étoiles) : identique à .swipe-card .card-reactions (css/app.css),
    mais TOUJOURS révélé (jamais de teaser) -- ici c'est TON profil, la logique "caché
    tant que je n'ai pas noté" ne s'applique pas puisqu'on ne se note pas soi-même. */
@@ -1106,6 +1116,7 @@ html.perf-lite *{
       <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
       <div class="avatar-deco" id="avatarDeco" aria-hidden="true"></div>
       <div class="card-age-badge" id="ageBadge" hidden></div>
+      <span class="card-views" id="edCardViews" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b></b></span>
       <span class="card-reactions" id="edCardReactions" hidden></span>
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
@@ -2794,6 +2805,20 @@ async function syncToDb(){
   finally{ _dbSyncing=false; }
 }
 function scheduleDbSync(){ clearTimeout(_dbSyncT); _dbSyncT=setTimeout(syncToDb,1000); }
+/* Vues du profil : nombre de fois que ton profil a été vu (lien perso + deck de
+   swipe des autres). Lecture seule ici, comme les notes reçues juste en dessous. */
+async function loadOwnViews(){
+  const sb=edSupa(); const badge=$('edCardViews'); if(!sb||!badge) return;
+  try{
+    const { data:{ session } }=await sb.auth.getSession();
+    if(!session){ badge.hidden=true; return; }
+    const { data }=await sb.from('profiles').select('views').eq('id',session.user.id).maybeSingle();
+    const views=(data&&data.views)||0;
+    badge.querySelector('b').textContent=views.toLocaleString('fr-FR');
+    badge.hidden=false;
+  }catch(e){ console.warn('[editor] load views', e); }
+}
+loadOwnViews();
 /* Notes reçues (slider à étoiles, 1.0-5.0) sur TON profil : affichées ici TOUJOURS
    révélées (pas de teaser -- cf. .card-reactions plus haut) puisqu'on ne se note
    jamais soi-même. Même format d'aggrégation que js/app.js (loadReactions), en
