@@ -145,13 +145,35 @@
         // Reconnexion sur un AUTRE appareil / cache vidé : aucun profil local, mais il
         // existe peut-être en base (profiles.data). On le restaure, sinon l'utilisateur
         // repasse par l'onboarding et "doit tout recommencer" alors que son profil existe.
-        if (!state.profile && window.__supa) {
+        // Requête toujours exécutée (pas seulement si `!state.profile`) : le flag Boost doit
+        // remonter du cloud même pour un compte déjà connu localement (ex: cadeau de Boost
+        // accordé en masse côté base à des comptes déjà actifs).
+        if (window.__supa) {
           try {
             const { data: { session } } = await window.__supa.auth.getSession();
             if (session) {
               const { data: row } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
-              const d = (row && row.data && typeof row.data === 'object' && row.data.name) ? row.data : null;
-              if (d) {
+              if (!row) {
+                // Tout premier login de ce compte (aucune ligne en base) → offre de lancement :
+                // Boost offert tant qu'il reste de la place sur les 100 premiers comptes.
+                try {
+                  const { count } = await window.__supa.from('profiles').select('id', { count: 'exact', head: true });
+                  if (typeof count === 'number' && count < 100) {
+                    state.user.boost = true;
+                    state.user.boostPlan = 'launch';
+                    state.user.boostSince = new Date().toISOString();
+                  }
+                } catch (e) { console.warn('[Matefindr] launch boost check failed', e); }
+              }
+              const dRaw = (row && row.data && typeof row.data === 'object') ? row.data : null;
+              if (dRaw && dRaw.boost === true && !state.user.boost) {
+                state.user.boost = true;
+                if (dRaw.boostPlan) state.user.boostPlan = dRaw.boostPlan;
+                if (dRaw.boostSince) state.user.boostSince = dRaw.boostSince;
+                if (dRaw.boostNextPayment) state.user.boostNextPayment = dRaw.boostNextPayment;
+              }
+              const d = (dRaw && dRaw.name) ? dRaw : null;
+              if (!state.profile && d) {
                 const su = state.user;
                 state.profile = {
                   age: d.age || null, gender: d.gender || '', country: d.country || '', countryFlag: d.countryFlag || '',
@@ -597,6 +619,8 @@
         nitro: !!(u.boost && u.fakeNitro),
         fakeDeco: (u.boost && u.fakeNitro) ? (u.fakeDeco || null) : null,
         boost: !!u.boost,
+        boostPlan: u.boostPlan || null,
+        boostSince: u.boostSince || null,
         showBoostName: u.boostShowName !== false,
         nameColor: u.nameColor || null,
         handleBlur: !!u.handleBlur,
@@ -4514,7 +4538,7 @@
         const cta   = document.getElementById('boostBannerCta');
         banner.classList.toggle('is-active', active);
         if (active) {
-          const plan = state.user.boostPlan === 'lifetime' ? 'À vie' : 'Mensuel';
+          const plan = state.user.boostPlan === 'lifetime' ? 'À vie' : state.user.boostPlan === 'launch' ? 'Offert' : 'Mensuel';
           if (title) title.textContent = 'Matefindr Boost actif';
           if (sub)   sub.textContent   = plan + ' · 16 bulles, Fake Nitro, filtre H/F…';
           if (cta)   cta.textContent   = 'Gérer';
@@ -4529,7 +4553,7 @@
         document.querySelectorAll('.bm-plan').forEach(b => b.style.opacity = active ? '.45' : '1');
         bmActive.hidden = !active;
         const bmp = document.getElementById('bmActivePlan');
-        if (active && bmp) bmp.textContent = '· ' + (state.user.boostPlan === 'lifetime' ? '14,99€ à vie' : '3,79€/mois');
+        if (active && bmp) bmp.textContent = '· ' + (state.user.boostPlan === 'lifetime' ? '14,99€ à vie' : state.user.boostPlan === 'launch' ? 'offert' : '3,79€/mois');
       }
       const fn = document.getElementById('boostFakeNitro');
       if (fn) fn.checked = !!(state.user && state.user.fakeNitro);
@@ -4581,18 +4605,20 @@
         return;
       }
       const lifetime = u.boostPlan === 'lifetime';
-      const cancelled = !lifetime && !!u.boostCancelled;
+      const launch = u.boostPlan === 'launch';
+      const permanent = lifetime || launch;
+      const cancelled = !permanent && !!u.boostCancelled;
       box.innerHTML =
-        `<div class="bill-row"><span class="bill-k">Formule</span><span class="bill-v">${lifetime ? 'Boost à vie' : 'Boost mensuel'}</span></div>` +
-        `<div class="bill-row"><span class="bill-k">Prix</span><span class="bill-v">${lifetime ? '14,99€ · paiement unique' : '3,79€ / mois'}</span></div>` +
+        `<div class="bill-row"><span class="bill-k">Formule</span><span class="bill-v">${launch ? 'Boost offert (lancement)' : lifetime ? 'Boost à vie' : 'Boost mensuel'}</span></div>` +
+        `<div class="bill-row"><span class="bill-k">Prix</span><span class="bill-v">${launch ? 'Offert' : lifetime ? '14,99€ · paiement unique' : '3,79€ / mois'}</span></div>` +
         `<div class="bill-row"><span class="bill-k">Abonné depuis</span><span class="bill-v">${u.boostSince ? fmt(u.boostSince) : '—'}</span></div>` +
-        (lifetime
+        (permanent
           ? `<div class="bill-row"><span class="bill-k">Renouvellement</span><span class="bill-v">Aucun — accès à vie</span></div>`
           : cancelled
             ? `<div class="bill-row"><span class="bill-k">Statut</span><span class="bill-v" style="color:#FFB66E">Résilié</span></div>
                <div class="bill-row"><span class="bill-k">Actif jusqu'au</span><span class="bill-v" style="color:#9CF0BD">${u.boostNextPayment ? fmt(u.boostNextPayment) : '—'}</span></div>`
             : `<div class="bill-row"><span class="bill-k">Prochain paiement</span><span class="bill-v" style="color:#9CF0BD">${u.boostNextPayment ? fmt(u.boostNextPayment) : '—'}</span></div>`);
-      if (!lifetime) {
+      if (!permanent) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.style.cssText = 'width:100%;margin-top:11px';
