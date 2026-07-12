@@ -692,7 +692,7 @@
       const dots = counts.map((n, i) => {
         const pct = reacted && total > 0 ? (n / total) : 0;
         const h = reacted ? Math.round(6 + pct * 18) : 6; // 6px repos, jusqu'à 24px révélé
-        return `<i class="${i === topIdx ? 'top' : ''}" style="height:${h}px" title="${REACTIONS[i]}"></i>`;
+        return `<span class="cr-col"><i class="${i === topIdx ? 'top' : ''}" style="height:${h}px"></i><b>${REACTIONS[i]}</b></span>`;
       }).join('');
       return `
         <svg class="cr-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V13M10 20V6M16 20v-9M22 20v-4"/></svg>

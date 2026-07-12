@@ -1537,13 +1537,15 @@
     pointer-events:none;
   }
   .swipe-card .card-reactions .cr-icon{width:18px;height:18px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));opacity:.85}
-  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:4px;height:16px}
-  .swipe-card .card-reactions .cr-dots i{
+  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:5px}
+  .swipe-card .card-reactions .cr-col{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .swipe-card .card-reactions .cr-col i{
     display:block;width:6px;border-radius:3px;background:rgba(255,255,255,.55);
     height:6px;transition:height .25s cubic-bezier(.2,.7,.3,1), background .2s ease, box-shadow .2s ease;
   }
-  .swipe-card .card-reactions[data-reacted="true"] .cr-dots i.top{
-    background:#fff;box-shadow:0 0 0 2px rgba(255,126,182,.7), 0 0 10px rgba(255,126,182,.6);
+  .swipe-card .card-reactions .cr-col b{font-size:8px;line-height:1;font-weight:400;font-style:normal;opacity:.9}
+  .swipe-card .card-reactions[data-reacted="true"] .cr-col i.top{
+    background:#fff;box-shadow:0 0 0 1px rgba(255,126,182,.6), 0 0 6px rgba(255,126,182,.5);
   }
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
@@ -1829,7 +1831,7 @@
   .stool-stats{display:none}
 
   /* Action buttons — blended with the "draggable gradient icon" aesthetic */
-  .swipe-actions{display:flex;gap:22px;align-items:center;justify-content:center}
+  .swipe-actions{display:flex;gap:14px;align-items:center;justify-content:center}
   /* Mode APERÇU complet : on cache like/nope et on montre "Quitter l'aperçu" */
   .preview-exit-btn{display:none}
   body[data-preview="true"] .swipe-btn--no,
@@ -1847,7 +1849,8 @@
   body[data-preview="true"] #msgFab{display:none !important}
 
   /* Lien perso (matefindr.com/<slug>) : plus de like/dislike/swipe ni de FABs
-     messages/likes -- 5 boutons de réaction (.shared-reactions) à la place. */
+     messages/likes -- 5 boutons de réaction (.shared-reactions) à la place, dans une
+     barre sombre à faible opacité (les emojis, eux, ressortent en pleine opacité). */
   .shared-reactions{display:none}
   body[data-shared="true"] .swipe-btn--no,
   body[data-shared="true"] .swipe-btn--yes,
@@ -1856,16 +1859,28 @@
   body[data-shared="true"] .my-status,
   body[data-shared="true"] #heartFab,
   body[data-shared="true"] #msgFab{display:none !important}
-  body[data-shared="true"] .shared-reactions{display:flex;gap:14px;align-items:center}
+  body[data-shared="true"] .shared-reactions{
+    display:flex;gap:12px;align-items:center;
+    padding:12px 18px;border-radius:999px;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+    box-shadow:0 14px 40px rgba(0,0,0,.5);
+  }
 
   /* Bouton "react" (entre Passer et Liker) : révèle un popup de 5 emojis au-dessus,
-     ne swipe/dismiss JAMAIS la carte -- ne modifie que le graphique de réactions. */
+     ne swipe/dismiss JAMAIS la carte -- ne modifie que le graphique de réactions.
+     Volontairement discret (petit, opacité réduite) pour ne pas concurrencer Passer/Liker. */
   .react-wrap{position:relative;display:flex;align-items:center}
   body[data-preview="true"] .react-wrap{display:none !important}
-  .swipe-btn--react{
-    width:44px;height:44px;padding:0;border-radius:16px;
+  /* Spécificité (0,2,0) via .react-wrap : .swipe-btn{width:68px...} plus bas dans ce
+     fichier a la même spécificité (0,1,0) qu'un simple .swipe-btn--react{width:22px}
+     et gagnerait la cascade (déclaré après) -- même piège déjà rencontré avec
+     .swipe-btn--shared-heart, cf. plus haut. */
+  .react-wrap .swipe-btn--react{
+    width:22px;height:22px;padding:0;border-radius:9px;
     background:rgba(255,255,255,.08);box-shadow:none;opacity:.65;
   }
+  .swipe-btn--react svg{width:9px;height:9px}
   .swipe-btn--react::before{display:none}
   .swipe-btn--react:hover{opacity:1;background:rgba(255,255,255,.14)}
   .react-popup{
@@ -1877,14 +1892,21 @@
     opacity:0;pointer-events:none;transition:opacity .16s ease, transform .16s ease;
   }
   .react-popup[data-open="true"]{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+  /* Fond des emojis : dégradé rouge → vert (sombre, faible opacité) selon la position
+     0 (🫩, "moche") → 4 (🤩, "beau") -- même logique dans le popup de swipe et le lien perso. */
   .react-emoji{
     width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;font-size:21px;
-    display:grid;place-items:center;background:rgba(255,255,255,.06);
-    transition:transform .14s cubic-bezier(.34,1.4,.5,1), background .14s ease;
+    display:grid;place-items:center;
+    transition:transform .14s cubic-bezier(.34,1.4,.5,1), filter .14s ease;
   }
-  .react-emoji:hover{transform:translateY(-3px) scale(1.12);background:rgba(255,255,255,.14)}
+  .react-emoji[data-idx="0"]{background:rgba(120,35,45,.55)}
+  .react-emoji[data-idx="1"]{background:rgba(120,75,35,.55)}
+  .react-emoji[data-idx="2"]{background:rgba(105,105,35,.55)}
+  .react-emoji[data-idx="3"]{background:rgba(70,105,45,.55)}
+  .react-emoji[data-idx="4"]{background:rgba(35,95,60,.55)}
+  .react-emoji:hover{transform:translateY(-3px) scale(1.12);filter:brightness(1.35)}
   .react-emoji:active{transform:scale(.92)}
-  .shared-reactions .react-emoji{width:52px;height:52px;font-size:26px;box-shadow:0 10px 26px rgba(0,0,0,.4)}
+  .shared-reactions .react-emoji{width:60px;height:60px;font-size:30px;box-shadow:0 10px 26px rgba(0,0,0,.4)}
 
   .swipe-btn{
     position:relative;width:68px;height:68px;border-radius:22px;border:none;cursor:pointer;
