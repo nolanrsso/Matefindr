@@ -96,6 +96,43 @@
       }
     }
 
+    // Plein écran par-dessus tout le reste (même mécanique que l'écran "Compte banni" du
+    // ban Supabase natif) -- posé quand un admin a désactivé ce profil (data.disabled) via
+    // admin.html : le compte reste connectable mais bloqué ici tant qu'un admin ne le
+    // réactive pas. Explique pourquoi et propose un ticket Discord pour demander la levée.
+    function showDisabledOverlay(reason){
+      if (document.getElementById('mfDisabledOverlay')) return;
+      document.documentElement.style.overflow = 'hidden';
+      const ov = document.createElement('div');
+      ov.id = 'mfDisabledOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;'
+        + 'background:radial-gradient(1100px 700px at 15% -10%,#201642 0%,transparent 55%),radial-gradient(900px 700px at 95% 0%,#2a1636 0%,transparent 50%),#0D0B1E;';
+      ov.innerHTML = ''
+        + '<div style="width:min(440px,100%);text-align:center;background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));'
+        +   'border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px);'
+        +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
+        +   '<div style="font-size:44px;margin-bottom:10px">🔒</div>'
+        +   '<h1 style="margin:0 0 10px;font-size:22px">Profil désactivé</h1>'
+        +   '<p style="color:#b9bbbe;font-size:14.5px;line-height:1.55;margin:0 0 14px">'
+        +     'Ton profil a été temporairement masqué par un modérateur et n\'est plus visible par les autres.'
+        +   '</p>'
+        + (reason ? ('<p style="color:#ffcf6b;font-size:13.5px;line-height:1.5;margin:0 0 22px;background:rgba(255,193,84,.08);border:1px solid rgba(255,193,84,.3);border-radius:11px;padding:10px 12px;text-align:left"><b>Raison :</b> ' + escapeHtmlMini(reason) + '</p>') : '<div style="margin-bottom:22px"></div>')
+        +   '<a href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" '
+        +     'style="display:inline-block;width:100%;padding:13px;border-radius:13px;font-weight:800;font-size:15px;color:#fff;'
+        +     'background:linear-gradient(180deg,#9146FF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.4);text-decoration:none;box-sizing:border-box;margin-bottom:10px">'
+        +     'Ouvrir un ticket sur le Discord'
+        +   '</a>'
+        +   '<button id="mfDisabledLogout" type="button" style="display:inline-block;width:100%;padding:13px;border-radius:13px;font-weight:700;font-size:14px;color:#fff;'
+        +     'background:rgba(255,255,255,.06);border:none;cursor:pointer;box-sizing:border-box">Se déconnecter</button>'
+        + '</div>';
+      document.body.appendChild(ov);
+      const btn = document.getElementById('mfDisabledLogout');
+      if (btn) btn.addEventListener('click', async () => {
+        try { await window.__supa.auth.signOut(); } catch(_){}
+        location.href = '/';
+      });
+    }
+
     // Hand-off used by login/signup handlers
     window.__matefindr = {
       async onLogin(user){
@@ -182,6 +219,29 @@
                 } catch (e) { console.warn('[Matefindr] launch boost check failed', e); }
               }
               const dRaw = (row && row.data && typeof row.data === 'object') ? row.data : null;
+              // Déconnexion forcée par un admin (admin.html "Déconnecter") : comparée au
+              // timestamp de notre dernier login mémorisé localement. Pas de kick temps réel
+              // (session déjà ouverte dans un onglet) -- effectif au prochain login/reload.
+              if (dRaw && dRaw.forceLogoutAt) {
+                const lastLoginAt = parseInt(localStorage.getItem('matefindr_login_at') || '0', 10);
+                const kickAt = new Date(dRaw.forceLogoutAt).getTime();
+                if (kickAt > lastLoginAt) {
+                  try { await window.__supa.auth.signOut(); } catch(_){}
+                  try { localStorage.removeItem(KEY); localStorage.removeItem('matefindr_login_at'); } catch(_){}
+                  alert('Tu as été déconnecté par un administrateur. Reconnecte-toi si besoin.');
+                  location.href = '/';
+                  return;
+                }
+              }
+              try { localStorage.setItem('matefindr_login_at', String(Date.now())); } catch(_){}
+              // Profil désactivé (contenu signalé) par un admin : invisible pour les autres
+              // (fetchOtherProfiles/openSharedProfile le filtrent) -- on bloque ici l'accès
+              // au reste de l'app et on explique pourquoi, avec un lien vers un ticket Discord.
+              if (dRaw && dRaw.disabled === true) {
+                save(); setAuth(true);
+                if (typeof showDisabledOverlay === 'function') showDisabledOverlay(dRaw.disabledReason || '');
+                return;
+              }
               if (dRaw && dRaw.boost === true && !state.user.boost) {
                 state.user.boost = true;
                 if (dRaw.boostPlan) state.user.boostPlan = dRaw.boostPlan;
@@ -1035,7 +1095,7 @@
           // photos+GIFs, plus tôt il apparaît. .sort() est stable → l'ordre updated_at
           // DESC de la requête sert de départage naturel à nombre de médias égal.
           const mediaCount = (p) => (Array.isArray(p.photos) ? p.photos.length : 0) + (Array.isArray(p.gifs) ? p.gifs.length : 0);
-          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).sort((a, b) => mediaCount(b) - mediaCount(a));
+          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).filter(p => p.disabled !== true).sort((a, b) => mediaCount(b) - mediaCount(a));
           _remoteFetchedAt = Date.now();
           return _remoteProfiles;
         } catch (e) { console.warn('[Matefindr] fetch profiles error', e); return _remoteProfiles; }
@@ -6188,7 +6248,7 @@
         const { data } = await window.__supa.from('profiles').select('*').eq('slug', slug).limit(1);
         if (data && data[0]) prof = rowToProfile(data[0]);
       } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
-      if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
+      if (!prof || prof.disabled === true) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu ou profil désactivé → app normale
       prof._showViews = true;
       _sharedProfile = prof;
       document.body.setAttribute('data-shared', 'true'); // masque like/dislike/swipe/FABs, montre cœur + commentaires

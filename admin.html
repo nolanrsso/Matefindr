@@ -71,12 +71,15 @@
   .pill.g-il{background:rgba(34,135,247,.2);color:#7db8ff}
   .pill.g-elle{background:rgba(255,79,160,.2);color:#ff9ecb}
   .pill.ban{background:rgba(232,25,75,.2);color:#ff8098}
+  .pill.off{background:rgba(255,193,84,.16);color:#ffcf6b}
   .row-actions{display:flex;gap:6px;justify-content:flex-end}
   .a-btn{padding:5px 10px;border-radius:8px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:12px}
   .a-btn:hover{background:rgba(255,255,255,.12)}
   .a-btn.ban{border-color:rgba(232,25,75,.5);color:#ff8098;background:rgba(232,25,75,.1)}
   .a-btn.ban:hover{background:rgba(232,25,75,.22)}
   .a-btn.unban{border-color:rgba(59,209,124,.5);color:#77e6a8;background:rgba(59,209,124,.1)}
+  .a-btn.gold{border-color:rgba(255,209,92,.5);color:#ffd15c;background:rgba(255,209,92,.1)}
+  .a-btn.gold:hover{background:rgba(255,209,92,.22)}
   .a-btn:disabled{opacity:.5;cursor:default}
   .muted{color:var(--mute)}
   .empty{text-align:center;color:var(--dim);padding:40px}
@@ -112,8 +115,15 @@
   .info dt{color:var(--mute);font-weight:700}
   .info dd{margin:0;word-break:break-word}
   .info .sec{margin:6px 0 4px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);grid-column:1/-1;border-top:1px solid var(--stroke);padding-top:12px}
-  .info .m-actions{grid-column:1/-1;display:flex;gap:10px;margin-top:16px}
-  .info .m-actions .a-btn{padding:11px 18px;font-size:14px}
+  .info .m-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .info .m-actions .a-btn{padding:10px 14px;font-size:13px}
+  .linkval{color:#d7bbff;word-break:break-all}
+  .copybtn{padding:2px 9px;font-size:11px;margin-left:7px;vertical-align:middle}
+  .disreason{margin-top:5px;font-size:12px;color:#ffcf6b;background:rgba(255,193,84,.08);border:1px solid rgba(255,193,84,.3);border-radius:9px;padding:7px 9px}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+  .g-item{display:flex;flex-direction:column;align-items:center;gap:4px;text-decoration:none;color:var(--dim)}
+  .g-item img,.g-item video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--stroke2);background:#2a2740}
+  .g-item span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   details.raw{grid-column:1/-1;margin-top:12px}
   details.raw summary{cursor:pointer;color:var(--dim);font-size:12.5px}
   details.raw pre{background:#0f0d1e;border:1px solid var(--stroke);border-radius:10px;padding:12px;font-size:11.5px;overflow:auto;max-height:280px;color:#c9ccda}
@@ -151,6 +161,7 @@
     <span class="spacer"></span>
     <input type="search" id="search" placeholder="Rechercher pseudo, email, discord…" />
     <label class="chk"><input type="checkbox" id="onlyBanned" /> Bannis seulement</label>
+    <label class="chk"><input type="checkbox" id="onlyDisabled" /> Désactivés seulement</label>
     <button class="tbtn" id="migrateBtn" style="display:none">🧹 Migrer images → Storage</button>
     <button class="tbtn" id="refreshBtn">↻ Actualiser</button>
     <button class="tbtn" id="logoutBtn">Déconnexion</button>
@@ -203,6 +214,7 @@
   $('refreshBtn').addEventListener('click',loadAll);
   $('search').addEventListener('input',renderTable);
   $('onlyBanned').addEventListener('change',renderTable);
+  $('onlyDisabled').addEventListener('change',renderTable);
 
   /* ---- Chargement des comptes ---- */
   async function loadAll(){
@@ -250,8 +262,10 @@
   function renderTable(){
     const q=($('search').value||'').toLowerCase().trim();
     const onlyBan=$('onlyBanned').checked;
+    const onlyDis=$('onlyDisabled').checked;
     let rows=ACCOUNTS.filter(a=>{
       if(onlyBan && !isBanned(a)) return false;
+      if(onlyDis && !d(a).disabled) return false;
       if(!q) return true;
       const dd=d(a); const hay=[a.prof&&a.prof.display_name, dd.name, a.email, a.prof&&a.prof.discord_id, dd.country].join(' ').toLowerCase();
       return hay.includes(q);
@@ -271,7 +285,7 @@
       const banned=isBanned(a);
       html.push('<tr class="'+(banned?'banned':'')+'" data-i="'+ACCOUNTS.indexOf(a)+'">');
       html.push('<td><div class="u-cell"><div class="u-av">'+(av?'<img src="'+esc(av)+'" alt="">':esc(initial(name)))+'</div>'
-        +'<div style="min-width:0"><div class="u-name">'+esc(name)+(dd.boost?' <span class="pill boost">Boost</span>':'')+(banned?' <span class="pill ban">Banni</span>':'')+'</div>'
+        +'<div style="min-width:0"><div class="u-name">'+esc(name)+(dd.boost?' <span class="pill boost">Boost</span>':'')+(banned?' <span class="pill ban">Banni</span>':'')+(dd.disabled?' <span class="pill off">Désactivé</span>':'')+'</div>'
         +'<div class="u-tag">'+(p.discord_id?('id '+esc(p.discord_id)):'')+'</div></div></div></td>');
       html.push('<td>'+(dd.age?esc(dd.age):'<span class="muted">—</span>')+'</td>');
       html.push('<td>'+genderPill(dd.gender)+'</td>');
@@ -307,6 +321,104 @@
       renderTable();
       if($('modal').classList.contains('on')) openProfile(a); // refresh modal si ouvert
     }catch(e){ toast('Échec : '+e.message); if(btn) btn.disabled=false; }
+  }
+
+  /* ---- Patch générique du JSONB profiles.data (service_role) ---- */
+  async function patchProfileData(a, patch, successMsg){
+    if(!FULL){ toast('Nécessite la clé service_role (mode lecture seule)'); return false; }
+    try{
+      const dataPatch=Object.assign({}, (a.prof&&a.prof.data)||{}, patch);
+      const { error }=await sb.from('profiles').update({ data:dataPatch }).eq('id', a.id);
+      if(error) throw error;
+      a.prof=Object.assign({}, a.prof, { data:dataPatch });
+      if(successMsg) toast(successMsg);
+      renderTable();
+      return true;
+    }catch(e){ toast('Échec : '+e.message); return false; }
+  }
+
+  /* ---- Matefindr Boost (offert/retiré par un admin) ---- */
+  async function toggleBoost(a, btn){
+    if(btn) btn.disabled=true;
+    const has=!!d(a).boost;
+    const patch = has ? { boost:false } : { boost:true, boostPlan:'admin_gift', boostSince:new Date().toISOString() };
+    const ok=await patchProfileData(a, patch, has?'Boost retiré':'✦ Boost Matefindr accordé');
+    if(btn) btn.disabled=false;
+    if(ok && $('modal').classList.contains('on')) openProfile(a);
+  }
+
+  /* ---- Déconnexion forcée : posé côté data, lu par js/app.js à la prochaine
+     connexion/reload de l'utilisateur (pas de kick temps réel d'un onglet déjà ouvert). ---- */
+  async function forceLogout(a, btn){
+    const name=(a.prof&&a.prof.display_name)||d(a).name||a.email;
+    if(!confirm('Déconnecter « '+name+' » ?\nEffectif à sa prochaine connexion ou au prochain rechargement de sa page.')) return;
+    if(btn) btn.disabled=true;
+    await patchProfileData(a, { forceLogoutAt:new Date().toISOString() }, '🔌 Déconnexion programmée pour '+name);
+    if(btn) btn.disabled=false;
+  }
+
+  /* ---- Désactiver / réactiver un profil (masqué des autres + du lien perso,
+     raison affichée à l'utilisateur à sa prochaine connexion) ---- */
+  function startDisableProfile(a){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const infoEl=document.querySelector('#modalBox .info'); if(!infoEl) return;
+    const dd=d(a);
+    infoEl.innerHTML='<div style="display:grid;gap:12px">'
+      +'<div class="sec" style="border-top:none;padding-top:0">Désactiver ce profil</div>'
+      +'<div class="muted" style="font-size:12.5px;line-height:1.5">Le profil disparaît du deck des autres et de son lien perso. L\'utilisateur voit cette raison à sa prochaine connexion et peut ouvrir un ticket Discord pour demander une réactivation.</div>'
+      +fieldRow('Raison (visible par l\'utilisateur)','eReason', dd.disabledReason||'', true)
+      +'<div style="display:flex;gap:10px;margin-top:4px">'
+      +  '<button class="a-btn ban" id="eDisableSave" style="flex:1">🚫 Désactiver</button>'
+      +  '<button class="a-btn" id="eDisableCancel" style="flex:1">Annuler</button>'
+      +'</div></div>';
+    $('eDisableCancel').addEventListener('click', ()=>openProfile(a));
+    $('eDisableSave').addEventListener('click', async ()=>{
+      const reason=$('eReason').value.trim();
+      if(!reason){ toast('Écris une raison'); return; }
+      $('eDisableSave').disabled=true;
+      const ok=await patchProfileData(a, { disabled:true, disabledReason:reason }, '🚫 Profil désactivé');
+      if(ok) openProfile(a); else $('eDisableSave').disabled=false;
+    });
+  }
+  async function reactivateProfile(a, btn){
+    if(!confirm('Réactiver ce profil ? Il redeviendra visible par les autres.')) return;
+    if(btn) btn.disabled=true;
+    const ok=await patchProfileData(a, { disabled:false, disabledReason:null }, '✅ Profil réactivé');
+    if(btn) btn.disabled=false;
+    if(ok && $('modal').classList.contains('on')) openProfile(a);
+  }
+
+  /* ---- Se connecter en tant que (lien magique généré côté service_role, ouvert
+     dans un nouvel onglet -- ne révèle jamais le mot de passe du compte) ---- */
+  async function impersonate(a, btn){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    if(!a.email || a.email==='—' || a.email==='(profil seul)'){ toast('Pas d\'email pour ce compte'); return; }
+    if(btn) btn.disabled=true;
+    try{
+      const { data, error }=await sb.auth.admin.generateLink({ type:'magiclink', email:a.email });
+      if(error) throw error;
+      const link=data && data.properties && data.properties.action_link;
+      if(!link) throw new Error('Pas de lien généré');
+      window.open(link,'_blank');
+      toast('🔑 Lien de connexion ouvert dans un nouvel onglet');
+    }catch(e){ toast('Échec : '+e.message); }
+    if(btn) btn.disabled=false;
+  }
+
+  /* ---- Galerie médias (avatar, bannière, fond perso, photos, GIFs) ---- */
+  function mediaGallery(dd){
+    const items=[];
+    if(dd.avatarUrl) items.push({label:'Avatar', url:dd.avatarUrl});
+    if(dd.bannerUrl) items.push({label:'Bannière', url:dd.bannerUrl});
+    if(dd.bg) items.push({label:'Fond perso', url:dd.bg, video:!!dd.bgVideo||/\.(mp4|webm)(\?|$)/i.test(dd.bg)});
+    (dd.photos||[]).forEach((p,i)=>{ const u=p&&(p.url||p.full||p.preview); if(u) items.push({label:'Photo '+(i+1), url:u}); });
+    (dd.gifs||[]).forEach((g,i)=>{ const u=g&&(g.full||g.preview||g.url); if(u) items.push({label:'GIF '+(i+1), url:u}); });
+    if(!items.length) return '<div class="muted" style="font-size:12.5px">Aucun média.</div>';
+    return '<div class="gallery">'+items.map(it=>
+      '<a class="g-item" href="'+esc(it.url)+'" target="_blank" rel="noopener" title="'+esc(it.label)+'">'
+      +(it.video?'<video src="'+esc(it.url)+'" muted loop playsinline></video>':'<img src="'+esc(it.url)+'" alt="" loading="lazy">')
+      +'<span>'+esc(it.label)+'</span></a>'
+    ).join('')+'</div>';
   }
 
   /* ---- Modifier un profil (service_role) ---- */
@@ -460,6 +572,9 @@
       +(conns?('<div class="cconn">'+conns+'</div>'):'')
       +'</div></div>';
 
+    const link = p.slug ? ('https://matefindr.com/'+p.slug) : null;
+    const disabled = !!dd.disabled;
+
     const info='<div class="info"><dl>'
       +'<dt>Pseudo</dt><dd>'+esc(name)+'</dd>'
       +'<dt>Email</dt><dd>'+esc(a.email)+'</dd>'
@@ -468,16 +583,27 @@
       +'<dt>Pays</dt><dd>'+((dd.countryFlag||'')+' '+esc(dd.country||'—'))+'</dd>'
       +'<dt>Recherche</dt><dd>'+esc(dd.looking||p.look_for||'—')+'</dd>'
       +'<dt>Discord ID</dt><dd>'+esc(p.discord_id||'—')+'</dd>'
+      +'<dt>Lien perso</dt><dd>'+(link?('<a class="linkval" href="'+esc(link)+'" target="_blank" rel="noopener">'+esc(link)+'</a><button type="button" class="a-btn copybtn" id="copyLink">Copier</button>'):'<span class="muted">—</span>')+'</dd>'
       +'<dt>Boost</dt><dd>'+(dd.boost?'Oui ✦':'Non')+'</dd>'
       +'<dt>Bulles / GIFs</dt><dd>'+((dd.orbs||[]).length)+' bulles · '+gifs+' GIFs</dd>'
       +'<dt>Vocal</dt><dd>'+(dd.profileVoice?'Oui':'Non')+'</dd>'
+      +'<div class="sec">Médias</div>'
+      +'<dd style="grid-column:1/-1">'+mediaGallery(dd)+'</dd>'
       +'<div class="sec">Compte</div>'
       +'<dt>User ID</dt><dd style="font-size:12px">'+esc(a.id)+'</dd>'
       +'<dt>Inscrit le</dt><dd>'+fmtDate(a.created_at)+'</dd>'
       +'<dt>Dernière connexion</dt><dd>'+(a.last_sign_in?fmtDate(a.last_sign_in):'—')+'</dd>'
       +'<dt>Statut</dt><dd>'+(banned?'<span class="pill ban">Banni jusqu’au '+fmtDate(a.banned_until)+'</span>':'<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Actif</span>')+'</dd>'
-      + (FULL ? ('<div class="m-actions"><button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button>'
+      +'<dt>Profil visible</dt><dd>'+(disabled
+          ? ('<span class="pill off">Désactivé</span><div class="disreason">Raison donnée à l\'utilisateur : '+esc(dd.disabledReason||'—')+'</div>')
+          : '<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Visible par les autres</span>')+'</dd>'
+      + (FULL ? ('<div class="m-actions">'
+          +'<button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button>'
           +'<button class="a-btn" id="modalEdit">✏️ Modifier</button>'
+          +'<button class="a-btn gold" id="modalBoost">'+(dd.boost?'✦ Retirer Boost':'✦ Mettre Boost')+'</button>'
+          +'<button class="a-btn '+(disabled?'unban':'ban')+'" id="modalDisable">'+(disabled?'✅ Réactiver le profil':'🚫 Désactiver le profil')+'</button>'
+          +'<button class="a-btn" id="modalLogout">🔌 Déconnecter</button>'
+          +'<button class="a-btn" id="modalImpersonate" '+((!a.email||a.email==='—'||a.email==='(profil seul)')?'disabled':'')+'>🔑 Se connecter en tant que</button>'
           +'<button class="a-btn ban" id="modalDelete">🗑️ Supprimer</button></div>') : '')
       +'<details class="raw"><summary>Données brutes (JSON)</summary><pre>'+esc(JSON.stringify(a.prof||{},null,2))+'</pre></details>'
       +'</dl></div>';
@@ -489,6 +615,11 @@
     const mb=$('modalBan'); if(mb) mb.addEventListener('click',()=>toggleBan(a,mb));
     const me=$('modalEdit'); if(me) me.addEventListener('click',()=>startEditProfile(a));
     const md=$('modalDelete'); if(md) md.addEventListener('click',()=>deleteAccount(a,md));
+    const mBoost=$('modalBoost'); if(mBoost) mBoost.addEventListener('click',()=>toggleBoost(a,mBoost));
+    const mDis=$('modalDisable'); if(mDis) mDis.addEventListener('click',()=>{ disabled ? reactivateProfile(a,mDis) : startDisableProfile(a); });
+    const mLogout=$('modalLogout'); if(mLogout) mLogout.addEventListener('click',()=>forceLogout(a,mLogout));
+    const mImp=$('modalImpersonate'); if(mImp) mImp.addEventListener('click',()=>impersonate(a,mImp));
+    const cl=$('copyLink'); if(cl) cl.addEventListener('click',()=>{ navigator.clipboard.writeText(link).then(()=>toast('🔗 Lien copié')).catch(()=>toast('Échec de la copie')); });
   }
   function closeModal(){ $('modal').classList.remove('on'); }
   $('modal').addEventListener('click',e=>{ if(e.target===$('modal')) closeModal(); });
