@@ -1827,8 +1827,13 @@
   body[data-preview="true"] #msgFab{display:none !important}
 
   /* Lien perso (matefindr.com/<slug>) : plus de like/dislike/swipe ni de FABs
-     messages/likes -- juste un cœur unique (like direct) + les commentaires. */
-  .swipe-btn--shared-heart{display:none}
+     messages/likes -- juste un cœur unique (like direct) + les commentaires.
+     Spécificité (0,2,0) via .swipe-actions : la règle .swipe-btn{display:grid}
+     plus bas dans ce fichier a la MÊME spécificité (0,1,0) qu'un simple
+     .swipe-btn--shared-heart{display:none} et gagnait la cascade (dernière
+     déclarée) -- le bouton restait donc visible EN PERMANENCE, partout, même
+     hors lien perso (d'où le bouton blanc/sans fond vu dans l'aperçu). */
+  .swipe-actions .swipe-btn--shared-heart{display:none}
   body[data-shared="true"] .swipe-btn--no,
   body[data-shared="true"] .swipe-btn--yes,
   body[data-shared="true"] .swipe-tools,
