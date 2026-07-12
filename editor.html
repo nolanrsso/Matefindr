@@ -295,7 +295,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .sticker-layer{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
 .sticker{position:absolute;transform-origin:center center;pointer-events:auto;touch-action:none;cursor:grab}
 .sticker.dragging{cursor:grabbing}
-.sticker-inner{width:100%;border-radius:12px;overflow:hidden;border:2px solid rgba(255,255,255,.7);box-shadow:0 10px 28px rgba(0,0,0,.55),0 0 0 2px rgba(145,70,255,.35)}
+.sticker-inner{width:100%;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.55)}
 .sticker-inner img{width:100%;height:auto;display:block;pointer-events:none}
 /* Poignées (retirer/pivoter/redimensionner) masquées tant que le sticker n'est
    pas sélectionné (cliqué) — sinon elles restaient affichées en permanence sur
@@ -1940,7 +1940,19 @@ function renderOrbs(){
 }
 // Re-render des bulles au resize (garde l'échelle proportionnelle à la carte)
 let _orbRz=null;
-window.addEventListener('resize',()=>{clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();if(typeof positionEditorBg==='function')positionEditorBg();},150);});
+function _syncOnCardResize(){clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();if(typeof positionEditorBg==='function')positionEditorBg();},150);}
+window.addEventListener('resize',_syncOnCardResize);
+// Le zoom navigateur (Ctrl +/-) change la taille réelle de la carte (ses dimensions
+// dépendent de vw/vh) mais ne déclenche pas TOUJOURS un window 'resize' de façon
+// fiable selon le navigateur -> ResizeObserver sur la carte elle-même est la SOURCE
+// DE VÉRITÉ (se déclenche pour toute cause de changement de taille, zoom inclus),
+// sinon le fond perso (positionné en px, recalculé seulement sur resize) dérive de
+// la carte au zoom alors que bulles/GIFs (positionnés en %, purement CSS) restent
+// eux bien calés -- symptôme : fond qui "part" par rapport aux bulles/GIFs au zoom.
+if(typeof ResizeObserver!=='undefined'){
+  const card=document.getElementById('card');
+  if(card) new ResizeObserver(_syncOnCardResize).observe(card);
+}
 /* Colle le sélecteur Paysage/Portrait juste au-dessus de la zone de bulles réelle
    (~14% de la hauteur de carte, même formule que orbBounds()). Le bouton est en
    position:fixed avec des coordonnées écran calculées ici une seule fois (charge-

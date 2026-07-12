@@ -1616,7 +1616,7 @@
     }
     // Recompute anchors on viewport resize from each orb's stored relative position
     // (rx, ry) — keeps bubbles locked to the same spot relative to the card.
-    window.addEventListener('resize', () => {
+    function _swipeOrbsOnResize(){
       // Changement d'orientation (portrait <-> paysage <-> bureau) → re-rendu complet
       // des bulles pour lire la disposition ET la taille du nouveau mode.
       if (activeLayoutMode() !== _swipeRenderedMode) {
@@ -1635,7 +1635,19 @@
         it.ax = Math.max(it.r + 6, Math.min(sw - it.r - 6, cardCx + r.rx * cardRect.width));
         it.ay = Math.max(it.r + 6, Math.min(sh - it.r - 6, cardCy + r.ry * cardRect.height));
       }
-    });
+    }
+    window.addEventListener('resize', _swipeOrbsOnResize);
+    // Le zoom navigateur (Ctrl +/-) change la taille réelle de la carte mais ne
+    // déclenche pas TOUJOURS un window 'resize' de façon fiable selon le navigateur
+    // -> ResizeObserver sur #swipeWrap est la SOURCE DE VÉRITÉ (se déclenche pour
+    // toute cause de changement de taille, zoom inclus). On simule un vrai 'resize'
+    // pour que TOUS les listeners déjà branchés dessus (bulles ci-dessus, GIFs/photos
+    // dans renderSwipeGifs/renderSwipePhotos, fond perso dans positionCustomBgLayer)
+    // se recalent ensemble, sans dupliquer leur logique ici.
+    if (typeof ResizeObserver !== 'undefined') {
+      const _swipeWrapEl = document.getElementById('swipeWrap');
+      if (_swipeWrapEl) new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(_swipeWrapEl);
+    }
     // La rotation du téléphone ne déclenche pas toujours 'resize' → on force le re-rendu.
     window.addEventListener('orientationchange', () => {
       setTimeout(() => { if (_swipeCurrentP && activeLayoutMode() !== _swipeRenderedMode) renderOrbs(_swipeCurrentP); }, 120);
