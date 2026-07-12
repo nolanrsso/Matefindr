@@ -1536,7 +1536,7 @@
     color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);
     pointer-events:none;
   }
-  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:4px}
+  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:2px}
   .swipe-card .card-reactions .cr-col{display:flex;flex-direction:column;align-items:center;gap:5px}
   .swipe-card .card-reactions .cr-col i{
     display:block;width:9px;border-radius:4px;background:rgba(255,255,255,.55);
