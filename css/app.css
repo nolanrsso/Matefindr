@@ -1871,6 +1871,7 @@
     background:rgba(0,0,0,.5);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:0 14px 40px rgba(0,0,0,.5);
+    position:relative;z-index:400; /* calque le plus haut (hors #gate) -- rien ne doit passer devant */
   }
 
   /* Bouton "react" (entre Passer et Liker) : révèle un popup de 5 emojis au-dessus,
@@ -1900,6 +1901,7 @@
   .swipe-btn--react:hover{opacity:1;background:rgba(255,255,255,.14)}
   .react-popup{
     position:absolute;left:50%;bottom:calc(100% + 14px);transform:translateX(-50%) translateY(6px);
+    z-index:400; /* calque le plus haut (hors #gate) -- rien ne doit passer devant */
     display:flex;gap:8px;padding:9px 11px;border-radius:999px;
     background:rgba(14,15,20,.9);border:1px solid rgba(255,255,255,.12);
     backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
