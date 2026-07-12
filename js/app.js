@@ -691,7 +691,7 @@
       const topIdx = reacted && total > 0 ? counts.indexOf(Math.max(...counts)) : -1;
       const dots = counts.map((n, i) => {
         const pct = reacted && total > 0 ? (n / total) : 0;
-        const h = reacted ? Math.round(6 + pct * 18) : 6; // 6px repos, jusqu'à 24px révélé
+        const h = reacted ? Math.round(9 + pct * 27) : 9; // 9px repos, jusqu'à 36px révélé (+50%)
         return `<span class="cr-col"><i class="${i === topIdx ? 'top' : ''}" style="height:${h}px"></i><b>${REACTIONS[i]}</b></span>`;
       }).join('');
       return `
