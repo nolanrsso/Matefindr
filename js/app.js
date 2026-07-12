@@ -733,16 +733,20 @@
     async function loadReactions(profileId){
       if (!window.__supa || !profileId) return null;
       try {
-        const { data } = await window.__supa.from('profile_reactions').select('reactor_id, rating').eq('profile_id', profileId).limit(5000);
-        const myId = await getReactorId();
+        const { data } = await window.__supa.from('profile_reactions').select('rating').eq('profile_id', profileId).limit(5000);
         const ratings = [];
-        let mine = null;
         (data || []).forEach(r => {
           const v = Number(r.rating);
           if (!Number.isNaN(v)) ratings.push(v);
-          if (r.reactor_id === myId) mine = v;
         });
-        const rec = { ratings, mine, total: ratings.length };
+        // On ne restaure JAMAIS "mine" depuis la base : si on retombe sur un profil
+        // (rechargement de page, ou plus tard dans le deck), on repart comme si on
+        // n'avait jamais noté -- pas de graphique révélé tant qu'on n'a pas revoté
+        // PENDANT cette visite (sendReaction met "mine" à jour lui-même). Le vieux
+        // vote reste bien compté dans la moyenne/les jauges, juste plus marqué "moi"
+        // après coup -- et si on revote, il est remplacé (upsert) comme avant.
+        const existingMine = (_reactionsCache[profileId] && _reactionsCache[profileId].mine != null) ? _reactionsCache[profileId].mine : null;
+        const rec = { ratings, mine: existingMine, total: ratings.length };
         _reactionsCache[profileId] = rec;
         renderReactionBadges(profileId);
         if (typeof updateSlidersFor === 'function') updateSlidersFor(profileId);
@@ -1458,7 +1462,7 @@
         ${spUrl ? `<a href="${spUrl}" target="_blank" rel="noopener" class="card-social" data-kind="spotify" title="Voir le profil Spotify"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Z"/></svg><span>${escapeHtmlMini(spH)}</span></a>` : ''}
       </div>` : '';
       // Connexions (éditeur) : logos d'apps + pseudo, cliquables quand l'app a une page profil.
-      const CONN_COLOR = {spotify:'1DB954',steam:'ffffff',twitch:'9146FF',youtube:'FF0000',x:'ffffff',instagram:'E4405F',tiktok:'ffffff',riotgames:'EB0029',epicgames:'ffffff'};
+      const CONN_COLOR = {spotify:'1DB954',steam:'ffffff',twitch:'9146FF',youtube:'FF0000',x:'ffffff',instagram:'E4405F',tiktok:'ffffff',riotgames:'EB0029',epicgames:'ffffff',roblox:'ffffff'};
       const CONN_URL = {
         spotify:u=>`https://open.spotify.com/search/${encodeURIComponent(u)}`,
         steam:u=>`https://steamcommunity.com/id/${encodeURIComponent(u)}`,
@@ -1467,6 +1471,7 @@
         x:u=>`https://x.com/${encodeURIComponent(u.replace(/^@/,''))}`,
         instagram:u=>`https://instagram.com/${encodeURIComponent(u.replace(/^@/,''))}`,
         tiktok:u=>`https://www.tiktok.com/@${encodeURIComponent(u.replace(/^@/,''))}`,
+        roblox:u=>`https://www.roblox.com/users/profile?username=${encodeURIComponent(u)}`,
       };
       const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
       const connKeys = Object.keys(conns).filter(k => conns[k]);

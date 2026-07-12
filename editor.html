@@ -404,10 +404,10 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
   color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);
   pointer-events:none;
 }
-.card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:1px}
+.card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:2px}
 .card .card-reactions .cr-col{display:flex;flex-direction:column;align-items:center;gap:5px}
 .card .card-reactions .cr-col i{
-  display:block;width:9px;border-radius:4px;background:rgba(255,255,255,.55);
+  display:block;width:9px;border-radius:999px;background:rgba(255,255,255,.55);
   height:9px;transition:height .25s cubic-bezier(.2,.7,.3,1), background .2s ease, box-shadow .2s ease;
 }
 .card .card-reactions .cr-col b{font-size:16px;line-height:1;font-weight:400;font-style:normal;opacity:.9;font-family:"Clash Display",sans-serif}
@@ -2466,6 +2466,7 @@ const CONN_APPS=[
   {id:'tiktok',name:'TikTok',color:'ffffff'},
   {id:'riotgames',name:'Riot Games',color:'EB0029'},
   {id:'epicgames',name:'Epic Games',color:'ffffff'},
+  {id:'roblox',name:'Roblox',color:'ffffff'},
 ];
 const connLogo=a=>`https://cdn.simpleicons.org/${a.id}/${a.color}`;
 const CONN_DEL='<span class="conn-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>';
