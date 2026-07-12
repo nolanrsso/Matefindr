@@ -2973,9 +2973,24 @@ window.addEventListener('storage', e=>{
   toast('⚠️ Profil modifié dans un autre onglet — recharge la page pour voir la dernière version');
 });
 // Sauvegarde l'état courant DANS le preset actif — appelé à chaque persist() (debounced).
+// Le preset qu'on vient de modifier passe en 1re position (règle simple pour l'instant,
+// amenée à changer plus tard) : dès qu'on édite un preset qui n'est pas déjà le premier,
+// on le fait remonter en tête (une seule fois -- pas à chaque frappe, puisqu'il est déjà
+// en position 0 ensuite et cette branche ne se redéclenche plus tant qu'on ne switch pas
+// de preset). Sûr car rien d'autre ne référence les presets par index figé ailleurs
+// (le lien perso, cf. renderLinkPresets, lit toujours PRESETS + _activePresetIdx en direct).
 function syncActivePreset(){
   if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length) return;
   PRESETS[_activePresetIdx]=snapshotProfile();
+  if(_activePresetIdx!==0){
+    const [moved]=PRESETS.splice(_activePresetIdx,1);
+    PRESETS.unshift(moved);
+    _activePresetIdx=0;
+    saveActivePresetIdx();
+    savePresetsLS();
+    if(typeof renderPresets==='function') renderPresets();
+    return;
+  }
   savePresetsLS();
   const box=$('psetSlots');
   if(box){ const sw=box.children[_activePresetIdx]?.querySelector('.pset-swatch'); if(sw) sw.style.background='linear-gradient(180deg,'+S.c1+' 0%,'+S.c2+' 100%)'; }

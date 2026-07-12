@@ -3582,6 +3582,18 @@
     background:linear-gradient(180deg,#A65BFF 0%,#6B2BFF 100%);box-shadow:0 8px 24px rgba(107,43,255,.45);transition:transform .16s ease}
   #gate button:hover{transform:translateY(-1px)}
   #gate .gate-err{color:#FF7EB6;font-size:13px;min-height:16px;font-weight:600}
+  /* CTA Discord (rejoindre la bêta sans le code) : couleur Discord franche + fond
+     plein, sinon un simple <a> texte se fondait dans le fond sombre du gate. */
+  #gate .gate-discord-btn{
+    margin-top:10px;display:inline-flex;align-items:center;gap:10px;
+    padding:13px 22px;border-radius:13px;
+    background:#5865F2;color:#fff;text-decoration:none;
+    font-family:inherit;font-weight:700;font-size:14.5px;
+    box-shadow:0 8px 24px rgba(88,101,242,.5);
+    transition:transform .16s ease, background .16s ease;
+  }
+  #gate .gate-discord-btn:hover{background:#4752C4;transform:translateY(-1px)}
+  #gate .gate-discord-btn svg{flex:0 0 auto}
 
   /* ============================================================
      PARAMÈTRES — refonte placement & esthétisme (fond transparent)
