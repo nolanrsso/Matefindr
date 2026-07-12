@@ -1536,7 +1536,7 @@
     color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);
     pointer-events:none;
   }
-  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:8px}
+  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:4px}
   .swipe-card .card-reactions .cr-col{display:flex;flex-direction:column;align-items:center;gap:5px}
   .swipe-card .card-reactions .cr-col i{
     display:block;width:9px;border-radius:4px;background:rgba(255,255,255,.55);
@@ -1830,7 +1830,7 @@
   .stool-stats{display:none}
 
   /* Action buttons — blended with the "draggable gradient icon" aesthetic */
-  .swipe-actions{display:flex;gap:14px;align-items:center;justify-content:center}
+  .swipe-actions{display:flex;gap:8px;align-items:center;justify-content:center}
   /* Mode APERÇU complet : on cache like/nope et on montre "Quitter l'aperçu" */
   .preview-exit-btn{display:none}
   body[data-preview="true"] .swipe-btn--no,
@@ -1882,11 +1882,12 @@
   }
   .swipe-btn--react svg{width:18px;height:18px}
   .swipe-btn--react::before{display:none}
-  /* Badge "+" incrusté en haut à gauche du smiley (invite à ajouter une réaction). */
+  /* Badge "+" incrusté en haut à gauche du smiley (invite à ajouter une réaction) --
+     même couleur que le bouton lui-même (pas d'accent rose/violet qui détonne). */
   .swipe-btn--react::after{
-    content:"+";position:absolute;top:-3px;left:-3px;width:13px;height:13px;border-radius:50%;
-    background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
-    font-size:11px;font-weight:800;line-height:13px;text-align:center;
+    content:"+";position:absolute;top:-4px;left:-4px;width:18px;height:18px;border-radius:50%;
+    background:#2f3136;color:#fff;
+    font-size:13px;font-weight:800;line-height:18px;text-align:center;
     box-shadow:0 2px 6px rgba(0,0,0,.45);
   }
   .swipe-btn--react:hover{opacity:1;background:rgba(255,255,255,.14)}
