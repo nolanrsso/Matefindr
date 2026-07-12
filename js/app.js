@@ -911,7 +911,11 @@
           const result = await Promise.race([q, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]);
           const { data, error } = result;
           if (error) { console.warn('[Matefindr] fetch profiles failed', error.message || error); return _remoteProfiles; }
-          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean);
+          // Tri temporaire (règle appliquée une fois, pas figée) : plus un profil a de
+          // photos+GIFs, plus tôt il apparaît. .sort() est stable → l'ordre updated_at
+          // DESC de la requête sert de départage naturel à nombre de médias égal.
+          const mediaCount = (p) => (Array.isArray(p.photos) ? p.photos.length : 0) + (Array.isArray(p.gifs) ? p.gifs.length : 0);
+          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).sort((a, b) => mediaCount(b) - mediaCount(a));
           _remoteFetchedAt = Date.now();
           return _remoteProfiles;
         } catch (e) { console.warn('[Matefindr] fetch profiles error', e); return _remoteProfiles; }
