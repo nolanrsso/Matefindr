@@ -61,6 +61,22 @@
       if (on) updateChip();
       if (typeof refreshLandingCta === 'function') refreshLandingCta();
     }
+    /* Ouvre le VRAI reste de l'app (landing/onboarding) -- avec un garde-fou : un
+       visiteur arrivé via un lien perso (matefindr.com/<slug>, consultable SANS le
+       mot de passe) ne doit jamais atterrir ici sans avoir saisi le code, même s'il
+       s'est connecté via Discord (like/réaction) depuis ce lien. window.__mfIsSlugPath
+       et window.__mfShowGate sont posés par le script du gate dans index.html. */
+    function enterFullApp(){
+      const target = state.profile ? 'landing' : 'onboarding';
+      let gateOk = true;
+      try { gateOk = localStorage.getItem('matefindr_gate_ok') === '1'; } catch(_){}
+      if (window.__mfIsSlugPath && !gateOk && typeof window.__mfShowGate === 'function') {
+        window.__mfOnGatePassed = () => setScreen(target);
+        window.__mfShowGate();
+      } else {
+        setScreen(target);
+      }
+    }
     function updateChip(){
       const u = state.user || {};
       const avi = document.getElementById('accountChipAvatar');
@@ -216,30 +232,20 @@
         try { if (typeof syncMyProfileToCloud === 'function') await syncMyProfileToCloud(); } catch(_){}
         try { window.__discordJoinDM && await window.__discordJoinDM(); } catch(_){}
         try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
-        // Replay d'une action venue d'un lien de partage (fait AVANT la création de compte,
-        // ex : Discord OAuth déclenché en cliquant ❤️/une réaction alors qu'on n'était pas
-        // connecté). Le ❤️/✖️ (like) renvoie à l'accueil comme avant. Une RÉACTION, elle, ne
-        // doit jamais faire quitter la vue du profil -- on rejoue juste sendReaction() et on
-        // laisse l'URL (toujours /<slug>, préservée par le redirectTo Discord) rouvrir le même
-        // profil partagé via le flux normal (wantShared plus bas).
+        // Replay d'une action venue d'un lien de partage (❤️/✖️ fait AVANT la création
+        // de compte) : on enregistre le like puis on nettoie et on renvoie à l'accueil.
+        // (Les réactions, elles, ne nécessitent plus de compte -- cf. sendReaction/getReactorId --
+        // donc plus aucun replay post-login n'est nécessaire pour elles.)
         let _hadPendingShared = false;
         try {
           const raw = localStorage.getItem('matefindr_pending_action');
           if (raw) {
             localStorage.removeItem('matefindr_pending_action');
+            _hadPendingShared = true;
             const pa = JSON.parse(raw);
-            if (pa && pa.action === 'react' && pa.uid && typeof sendReaction === 'function') {
-              sendReaction(pa.uid, pa.emoji);
-              // handleSharedLink() a déjà tourné (et n'a rien fait, hasFreshPendingAction()
-              // était vrai à ce moment, et openSharedProfile() a déjà remis l'URL à '/') --
-              // on rouvre nous-mêmes le même profil partagé via le slug mémorisé au clic.
-              try { if (pa.slug && typeof openSharedProfile === 'function') openSharedProfile(pa.slug); } catch(_){}
-            } else {
-              _hadPendingShared = true;
-              if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
-              _sharedProfile = null;
-              try { history.replaceState(null, '', '/'); } catch(_){}
-            }
+            if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
+            _sharedProfile = null;
+            try { history.replaceState(null, '', '/'); } catch(_){}
           }
         } catch(_){}
         // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
@@ -261,7 +267,7 @@
           } else if (wantShared) {
             // no-op : laissé à handleSharedLink()/openSharedProfile()
           } else {
-            setScreen(state.profile ? 'landing' : 'onboarding');
+            enterFullApp();
           }
         }
       },
@@ -705,17 +711,31 @@
         el.innerHTML = reactionBadgeInnerHtml(rec);
       });
     }
+    /* Identité du votant : le vrai compte si connecté, sinon un id anonyme persisté en
+       localStorage (généré une fois, réutilisé partout) -- pas besoin d'être connecté pour
+       réagir, mais une seule réaction par personne et par profil quoi qu'il arrive, connecté
+       ou non : upsert sur (profile_id, reactor_id), l'ancienne réaction est remplacée par la
+       nouvelle. Aucune indication visuelle "déjà réagi" au-delà du graphique révélé. */
+    async function getReactorId(){
+      try { const { data:{ session } } = await window.__supa.auth.getSession(); if (session) return session.user.id; } catch(_){}
+      let id = null;
+      try { id = localStorage.getItem('matefindr_reactor_id'); } catch(_){}
+      if (!id) {
+        id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('r-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+        try { localStorage.setItem('matefindr_reactor_id', id); } catch(_){}
+      }
+      return id;
+    }
     async function loadReactions(profileId){
       if (!window.__supa || !profileId) return null;
       try {
         const { data } = await window.__supa.from('profile_reactions').select('reactor_id, emoji').eq('profile_id', profileId).limit(5000);
-        let myId = null;
-        try { const { data:{ session } } = await window.__supa.auth.getSession(); myId = session && session.user.id; } catch(_){}
+        const myId = await getReactorId();
         const counts = [0,0,0,0,0];
         let mine = null;
         (data || []).forEach(r => {
           if (r.emoji >= 0 && r.emoji <= 4) counts[r.emoji]++;
-          if (myId && r.reactor_id === myId) mine = r.emoji;
+          if (r.reactor_id === myId) mine = r.emoji;
         });
         const rec = { counts, mine, total: counts.reduce((a,b) => a+b, 0) };
         _reactionsCache[profileId] = rec;
@@ -724,19 +744,8 @@
       } catch(e){ console.warn('[Matefindr] load reactions', e); return null; }
     }
     async function sendReaction(profileId, emojiIdx){
-      if (!profileId || emojiIdx == null) return;
-      if (!window.__supa) return;
-      let session = null;
-      try { ({ data:{ session } } = await window.__supa.auth.getSession()); } catch(_){}
-      if (!session) {
-        // Le slug est mémorisé ici (pas relu depuis l'URL après coup) : openSharedProfile()
-        // remet l'URL à '/' dès le retour d'OAuth (avant même que onLogin ne rejoue quoi que
-        // ce soit), donc getSharedSlug() renverrait null trop tard pour rouvrir le profil.
-        try { localStorage.setItem('matefindr_pending_action', JSON.stringify({ uid: profileId, action:'react', emoji: emojiIdx, slug: (_sharedProfile && _sharedProfile.slug) || null, ts: Date.now() })); } catch(_){}
-        if (typeof signInWithDiscord === 'function') signInWithDiscord();
-        else if (window.signInWithDiscord) window.signInWithDiscord();
-        return;
-      }
+      if (!profileId || emojiIdx == null || !window.__supa) return;
+      const reactorId = await getReactorId();
       // Mise à jour optimiste locale (réactive immédiatement, avant la confirmation réseau).
       const rec = _reactionsCache[profileId] || { counts:[0,0,0,0,0], mine:null, total:0 };
       if (rec.mine != null) { rec.counts[rec.mine] = Math.max(0, rec.counts[rec.mine] - 1); } else { rec.total++; }
@@ -746,7 +755,7 @@
       renderReactionBadges(profileId);
       try {
         const { error } = await window.__supa.from('profile_reactions')
-          .upsert({ profile_id: profileId, reactor_id: session.user.id, emoji: emojiIdx }, { onConflict: 'profile_id,reactor_id' });
+          .upsert({ profile_id: profileId, reactor_id: reactorId, emoji: emojiIdx }, { onConflict: 'profile_id,reactor_id' });
         if (error) console.warn('[Matefindr] send reaction', error.message || error);
       } catch(e){ console.warn('[Matefindr] send reaction error', e); }
     }
@@ -6061,7 +6070,7 @@
       _sharedProfile = null;
       document.body.removeAttribute('data-shared');
       try { history.replaceState(null,'','/'); } catch(_){}
-      if (typeof setScreen === 'function') setScreen(state.profile ? 'landing' : 'onboarding');
+      if (typeof enterFullApp === 'function') enterFullApp();
     }
     // Au chargement : si l'URL est un slug, on ouvre le profil partagé (même sans être connecté).
     (function handleSharedLink(){
