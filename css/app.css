@@ -1550,9 +1550,9 @@
      (qui restent toutes visibles, étiquetées 1-5). Icône étoile (pas un emoji). */
   .swipe-card .card-reactions .cr-avg{
     display:flex;align-items:center;gap:4px;
-    font-size:13px;font-weight:800;color:#FFD84D;
+    font-size:18px;font-weight:800;color:#fff;
   }
-  .swipe-card .card-reactions .cr-avg svg{width:14px;height:14px;flex:0 0 auto}
+  .swipe-card .card-reactions .cr-avg svg{width:18px;height:18px;flex:0 0 auto;color:#FFD84D}
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
     background:rgba(255,255,255,.08);

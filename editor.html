@@ -414,8 +414,8 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 .card .card-reactions .cr-col i.top{
   background:#fff;box-shadow:0 0 0 1px rgba(255,126,182,.6), 0 0 6px rgba(255,126,182,.5);
 }
-.card .card-reactions .cr-avg{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#FFD84D}
-.card .card-reactions .cr-avg svg{width:14px;height:14px;flex:0 0 auto}
+.card .card-reactions .cr-avg{display:flex;align-items:center;gap:4px;font-size:18px;font-weight:800;color:#fff}
+.card .card-reactions .cr-avg svg{width:18px;height:18px;flex:0 0 auto;color:#FFD84D}
 /* Style doré Boost sur le pseudo Matefindr (carte éditeur) */
 .username--boost{
   background:linear-gradient(110deg,#FFE17A 0%,#F5C040 20%,#FFFAE6 35%,#F5C040 50%,#B27B14 65%,#F5C040 80%,#FFE17A 100%);
@@ -2814,7 +2814,7 @@ async function loadOwnReactions(){
       const h=Math.round(9+(n/total)*27);
       return '<span class="cr-col"><i class="'+(i===top?'top':'')+'" style="height:'+h+'px"></i><b>'+(i+1)+'</b></span>';
     }).join('')+'</span>';
-    const avgHtml='<span class="cr-avg">moy : '+avg.toFixed(1)+'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg></span>';
+    const avgHtml='<span class="cr-avg">'+avg.toFixed(1)+'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg></span>';
     badge.innerHTML=avgHtml+dots;
     badge.hidden=false;
   }catch(e){ console.warn('[editor] load reactions', e); }
