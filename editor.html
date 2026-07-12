@@ -597,7 +597,10 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .pset-slot .pset-num{position:relative;z-index:1;font-size:13px;text-shadow:0 1px 5px rgba(0,0,0,.8)}
 .pset-slot .pset-del{position:absolute;top:-7px;right:-7px;width:19px;height:19px;border-radius:50%;background:#E8194B;color:#fff;border:2px solid #14092e;
   display:none;place-items:center;font-size:12px;line-height:1;cursor:pointer;z-index:3;padding:0}
-.pset-slot--filled:hover .pset-del{display:grid}
+.pset-slot .pset-dup{position:absolute;top:-7px;left:-7px;width:19px;height:19px;border-radius:50%;background:#3B82F6;color:#fff;border:2px solid #14092e;
+  display:none;place-items:center;cursor:pointer;z-index:3;padding:0}
+.pset-slot .pset-dup svg{width:11px;height:11px}
+.pset-slot--filled:hover .pset-del,.pset-slot--filled:hover .pset-dup{display:grid}
 /* Bouton toggle — visible seulement sur mobile (desktop = panneau toujours ouvert). */
 .pset-toggle{display:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;place-items:center}
 .pset-toggle svg{width:20px;height:20px}
@@ -3018,7 +3021,21 @@ function renderPresets(){
     slot.className='pset-slot pset-slot--filled'+(i===_activePresetIdx?' pset-slot--active':'');
     slot.title=(i===_activePresetIdx?'Preset actif — ':'Charger ')+'le preset '+(i+1);
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
-    slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span><button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
+    slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>'
+      +'<button class="pset-dup" type="button" title="Dupliquer ce preset" aria-label="Dupliquer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg></button>'
+      +'<button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
+    slot.querySelector('.pset-dup').addEventListener('click',e=>{
+      e.stopPropagation();
+      if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
+      if(PRESETS.length>=PSET_MAX){ toast('Maximum '+PSET_MAX+' presets'); return; }
+      const dup=JSON.parse(JSON.stringify(p));
+      PRESETS.push(dup);
+      _activePresetIdx=PRESETS.length-1;
+      savePresetsLS(); saveActivePresetIdx();
+      applyPreset(dup);
+      renderPresets();
+      toast('Preset '+PRESETS.length+' créé — copie du preset '+(i+1));
+    });
     slot.querySelector('.pset-del').addEventListener('click',e=>{
       e.stopPropagation();
       PRESETS.splice(i,1);
