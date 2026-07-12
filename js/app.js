@@ -39,6 +39,10 @@
       document.documentElement.classList.remove('mf-boot-hidden');
     }
     function setScreen(name){
+      // Profil désactivé par un admin (admin.html) : garde-fou -- même si quelque chose
+      // tente de rouvrir le swipe (onglet déjà ouvert, retour navigateur…), on renvoie
+      // systématiquement vers l'éditeur, seul endroit accessible tant que non réactivé.
+      if (name === 'swipe' && state.user && state.user.disabled) { location.href = 'editor.html'; return; }
       document.body.setAttribute('data-screen', name);
       revealApp();
       if (name === 'account') renderAccount();
@@ -96,11 +100,11 @@
       }
     }
 
-    // Plein écran par-dessus tout le reste (même mécanique que l'écran "Compte banni" du
-    // ban Supabase natif) -- posé quand un admin a désactivé ce profil (data.disabled) via
-    // admin.html : le compte reste connectable mais bloqué ici tant qu'un admin ne le
-    // réactive pas. Explique pourquoi et propose un ticket Discord pour demander la levée.
-    function showDisabledOverlay(reason){
+    // Plein écran simple pour un VISITEUR qui force l'accès à un profil désactivé (lien
+    // perso partagé) -- pas de raison exposée (c'est une info de modération interne, pas
+    // pour un inconnu), juste le constat. Le propriétaire, lui, est redirigé vers l'éditeur
+    // (cf. onLogin) et ne voit jamais cet écran.
+    function showAccountDisabledMessage(){
       if (document.getElementById('mfDisabledOverlay')) return;
       document.documentElement.style.overflow = 'hidden';
       const ov = document.createElement('div');
@@ -108,29 +112,19 @@
       ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;'
         + 'background:radial-gradient(1100px 700px at 15% -10%,#201642 0%,transparent 55%),radial-gradient(900px 700px at 95% 0%,#2a1636 0%,transparent 50%),#0D0B1E;';
       ov.innerHTML = ''
-        + '<div style="width:min(440px,100%);text-align:center;background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));'
+        + '<div style="width:min(400px,100%);text-align:center;background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));'
         +   'border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px);'
         +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
-        +   '<div style="font-size:44px;margin-bottom:10px">🔒</div>'
-        +   '<h1 style="margin:0 0 10px;font-size:22px">Profil désactivé</h1>'
-        +   '<p style="color:#b9bbbe;font-size:14.5px;line-height:1.55;margin:0 0 14px">'
-        +     'Ton profil a été temporairement masqué par un modérateur et n\'est plus visible par les autres.'
-        +   '</p>'
-        + (reason ? ('<p style="color:#ffcf6b;font-size:13.5px;line-height:1.5;margin:0 0 22px;background:rgba(255,193,84,.08);border:1px solid rgba(255,193,84,.3);border-radius:11px;padding:10px 12px;text-align:left"><b>Raison :</b> ' + escapeHtmlMini(reason) + '</p>') : '<div style="margin-bottom:22px"></div>')
-        +   '<a href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" '
-        +     'style="display:inline-block;width:100%;padding:13px;border-radius:13px;font-weight:800;font-size:15px;color:#fff;'
-        +     'background:linear-gradient(180deg,#9146FF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.4);text-decoration:none;box-sizing:border-box;margin-bottom:10px">'
-        +     'Ouvrir un ticket sur le Discord'
-        +   '</a>'
-        +   '<button id="mfDisabledLogout" type="button" style="display:inline-block;width:100%;padding:13px;border-radius:13px;font-weight:700;font-size:14px;color:#fff;'
-        +     'background:rgba(255,255,255,.06);border:none;cursor:pointer;box-sizing:border-box">Se déconnecter</button>'
+        +   '<div style="font-size:44px;margin-bottom:10px">🚫</div>'
+        +   '<h1 style="margin:0 0 18px;font-size:19px">Ce compte a été désactivé</h1>'
+        +   '<button id="mfDisabledBack" type="button" style="display:inline-block;width:100%;padding:13px;border-radius:13px;font-weight:800;font-size:15px;color:#fff;'
+        +     'background:linear-gradient(180deg,#9146FF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.4);border:none;cursor:pointer;box-sizing:border-box">'
+        +     'Retour à l\'accueil'
+        +   '</button>'
         + '</div>';
       document.body.appendChild(ov);
-      const btn = document.getElementById('mfDisabledLogout');
-      if (btn) btn.addEventListener('click', async () => {
-        try { await window.__supa.auth.signOut(); } catch(_){}
-        location.href = '/';
-      });
+      const btn = document.getElementById('mfDisabledBack');
+      if (btn) btn.addEventListener('click', () => { location.href = '/'; });
     }
 
     // Hand-off used by login/signup handlers
@@ -235,11 +229,14 @@
               }
               try { localStorage.setItem('matefindr_login_at', String(Date.now())); } catch(_){}
               // Profil désactivé (contenu signalé) par un admin : invisible pour les autres
-              // (fetchOtherProfiles/openSharedProfile le filtrent) -- on bloque ici l'accès
-              // au reste de l'app et on explique pourquoi, avec un lien vers un ticket Discord.
-              if (dRaw && dRaw.disabled === true) {
-                save(); setAuth(true);
-                if (typeof showDisabledOverlay === 'function') showDisabledOverlay(dRaw.disabledReason || '');
+              // (fetchOtherProfiles/openSharedProfile le filtrent). Le propriétaire, lui, reste
+              // connectable mais n'a accès qu'à l'éditeur (pour corriger son profil) -- swipe et
+              // messagerie sont bloqués (cf. garde-fous dans setScreen() et l'envoi de messages).
+              state.user.disabled = (dRaw && dRaw.disabled === true);
+              state.user.disabledReason = state.user.disabled ? (dRaw.disabledReason || '') : null;
+              if (state.user.disabled) {
+                save();
+                location.href = 'editor.html';
                 return;
               }
               if (dRaw && dRaw.boost === true && !state.user.boost) {
@@ -1108,6 +1105,7 @@
     /* ===== Likes / Match (table public.likes) ===== */
     async function recordLike(profile){
       try {
+        if (state.user && state.user.disabled) return; // profil désactivé → pas de like/match
         if (!window.__supa || !profile || !profile.uid) return;
         const { data:{ session } } = await window.__supa.auth.getSession();
         if (!session) return;
@@ -2865,6 +2863,8 @@
     function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
     fab.addEventListener('click', () => {
+      // Profil désactivé par un admin : messagerie bloquée -- seul l'éditeur reste accessible.
+      if (state.user && state.user.disabled) { location.href = 'editor.html'; return; }
       panel.setAttribute('data-open', 'true');
       panel.setAttribute('data-view', 'list');
       renderMsgList();
@@ -2880,6 +2880,7 @@
     });
     msgInput.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (state.user && state.user.disabled) return; // profil désactivé → pas d'envoi de message
       const v = msgInputField.value.trim();
       if (!v || !activeConvo) return;
       const t = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
@@ -6248,7 +6249,8 @@
         const { data } = await window.__supa.from('profiles').select('*').eq('slug', slug).limit(1);
         if (data && data[0]) prof = rowToProfile(data[0]);
       } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
-      if (!prof || prof.disabled === true) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu ou profil désactivé → app normale
+      if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
+      if (prof.disabled === true) { try { history.replaceState(null,'','/'); } catch(_){} showAccountDisabledMessage(); return; }
       prof._showViews = true;
       _sharedProfile = prof;
       document.body.setAttribute('data-shared', 'true'); // masque like/dislike/swipe/FABs, montre cœur + commentaires

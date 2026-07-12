@@ -72,6 +72,7 @@
   .pill.g-elle{background:rgba(255,79,160,.2);color:#ff9ecb}
   .pill.ban{background:rgba(232,25,75,.2);color:#ff8098}
   .pill.off{background:rgba(255,193,84,.16);color:#ffcf6b}
+  .unseen-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px rgba(232,25,75,.25);flex:none;margin-right:2px}
   .row-actions{display:flex;gap:6px;justify-content:flex-end}
   .a-btn{padding:5px 10px;border-radius:8px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:12px}
   .a-btn:hover{background:rgba(255,255,255,.12)}
@@ -180,6 +181,15 @@
 (function(){
   const $=id=>document.getElementById(id);
   const LS_URL='mf_admin_url', LS_KEY='mf_admin_key';
+  // Dernière modif de profil "vue" par CET admin (navigateur local) → pastille de
+  // notif façon Discord tant qu'un compte a été modifié depuis la dernière visite.
+  const SEEN_KEY='mf_admin_seen';
+  function loadSeen(){ try{ return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); }catch(_){ return {}; } }
+  function saveSeen(map){ try{ localStorage.setItem(SEEN_KEY, JSON.stringify(map)); }catch(_){} }
+  let SEEN=loadSeen();
+  function lastMod(a){ return (a.prof&&a.prof.updated_at) || a.created_at || 0; }
+  function isUnseen(a){ const lm=lastMod(a); if(!lm) return false; const seenAt=SEEN[a.id]||0; return new Date(lm).getTime() > seenAt; }
+  function markSeen(a){ SEEN[a.id]=Date.now(); saveSeen(SEEN); }
   // Clé anon (publique — déjà en clair dans index.html du site) : permet la lecture seule
   // de tous les profils sans le dashboard. NE donne PAS les emails ni le ban (service_role only).
   const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaGZmcHhzc2FnY2xleHR0Zm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzA4NjgsImV4cCI6MjA5NjI0Njg2OH0.wqnVvxAcjMGfl6QgeUfgEs4EEJAQDjVLMOwy676sccg';
@@ -251,7 +261,9 @@
       ACCOUNTS=profiles.map(p=>({ id:p.id, email:'—', created_at:p.created_at, banned_until:null, prof:p }));
       $('roleBadge').className='rolebadge ro'; $('roleBadge').textContent='Lecture seule (pas d’email/ban)';
     }
-    ACCOUNTS.sort((a,b)=> new Date(b.created_at||0)-new Date(a.created_at||0));
+    // Le compte dont le profil a été modifié le plus récemment remonte en haut
+    // (plutôt que trié par date d'inscription) -- c'est ce qu'un admin veut surveiller.
+    ACCOUNTS.sort((a,b)=> new Date(lastMod(b))-new Date(lastMod(a)));
     $('migrateBtn').style.display = FULL ? '' : 'none';
     renderTable();
   }
@@ -276,15 +288,16 @@
     const genderPill=g=>{ g=(g||'').toLowerCase(); if(g==='il'||g==='male'||g==='homme')return '<span class="pill g-il">Il</span>'; if(g==='elle'||g==='female'||g==='femme')return '<span class="pill g-elle">Elle</span>'; return g?('<span class="pill">'+esc(g)+'</span>'):'<span class="muted">—</span>'; };
 
     const html=['<table><thead><tr>',
-      '<th>Compte</th><th>Âge</th><th>Sexe</th><th>Email</th><th>Pays</th><th>Recherche</th><th>Inscrit</th><th></th>',
+      '<th>Compte</th><th>Âge</th><th>Sexe</th><th>Email</th><th>Pays</th><th>Recherche</th><th>Modifié</th><th></th>',
       '</tr></thead><tbody>'];
     rows.forEach((a,idx)=>{
       const dd=d(a); const p=a.prof||{};
       const name=p.display_name||dd.name||'—';
       const av=p.avatar_url||dd.avatarUrl;
       const banned=isBanned(a);
+      const unseen=isUnseen(a);
       html.push('<tr class="'+(banned?'banned':'')+'" data-i="'+ACCOUNTS.indexOf(a)+'">');
-      html.push('<td><div class="u-cell"><div class="u-av">'+(av?'<img src="'+esc(av)+'" alt="">':esc(initial(name)))+'</div>'
+      html.push('<td><div class="u-cell">'+(unseen?'<span class="unseen-dot" title="Modifié depuis ta dernière visite"></span>':'')+'<div class="u-av">'+(av?'<img src="'+esc(av)+'" alt="">':esc(initial(name)))+'</div>'
         +'<div style="min-width:0"><div class="u-name">'+esc(name)+(dd.boost?' <span class="pill boost">Boost</span>':'')+(banned?' <span class="pill ban">Banni</span>':'')+(dd.disabled?' <span class="pill off">Désactivé</span>':'')+'</div>'
         +'<div class="u-tag">'+(p.discord_id?('id '+esc(p.discord_id)):'')+'</div></div></div></td>');
       html.push('<td>'+(dd.age?esc(dd.age):'<span class="muted">—</span>')+'</td>');
@@ -292,7 +305,7 @@
       html.push('<td><span class="email" title="'+esc(a.email)+'">'+esc(a.email)+'</span></td>');
       html.push('<td>'+((dd.countryFlag||'')+' '+esc(dd.country||''))+(dd.country?'':'<span class="muted">—</span>')+'</td>');
       html.push('<td><span class="pill">'+esc(dd.looking||p.look_for||'—')+'</span></td>');
-      html.push('<td class="muted">'+fmtDate(a.created_at)+'</td>');
+      html.push('<td class="muted">'+fmtDate(lastMod(a))+'</td>');
       html.push('<td><div class="row-actions"><button class="a-btn" data-view="'+ACCOUNTS.indexOf(a)+'">Voir</button>'
         + (FULL ? ('<button class="a-btn '+(banned?'unban':'ban')+'" data-ban="'+ACCOUNTS.indexOf(a)+'">'+(banned?'Débannir':'Bannir')+'</button>') : '')
         +'</div></td>');
@@ -549,6 +562,7 @@
 
   /* ---- Modal : profil complet ---- */
   function openProfile(a){
+    if(isUnseen(a)){ markSeen(a); renderTable(); } // ouvrir la fiche = "vu", comme un ping Discord qu'on consulte
     const dd=d(a); const p=a.prof||{}; const banned=isBanned(a);
     const c1=dd.profileColor||dd.c1||'#393a41', c2=dd.profileColor2||dd.c2||'#1a1a1d';
     const name=p.display_name||dd.name||'—';
