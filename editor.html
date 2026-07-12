@@ -395,9 +395,9 @@ body[data-canvas="portrait"] .card-age-badge .cab-age{font-size:17px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag{font-size:15px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14px}
 body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
-/* Réactions reçues (🫩🙄😐😳🤩) : identique à .swipe-card .card-reactions (css/app.css),
+/* Notes reçues (slider à étoiles) : identique à .swipe-card .card-reactions (css/app.css),
    mais TOUJOURS révélé (jamais de teaser) -- ici c'est TON profil, la logique "caché
-   tant que je n'ai pas réagi" ne s'applique pas puisqu'on ne réagit pas à soi-même. */
+   tant que je n'ai pas noté" ne s'applique pas puisqu'on ne se note pas soi-même. */
 .card .card-reactions{
   position:absolute;right:7px;bottom:14px;z-index:6;
   display:flex;flex-direction:column;align-items:center;gap:8px;
@@ -414,6 +414,8 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 .card .card-reactions .cr-col i.top{
   background:#fff;box-shadow:0 0 0 1px rgba(255,126,182,.6), 0 0 6px rgba(255,126,182,.5);
 }
+.card .card-reactions .cr-avg{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#FFD84D}
+.card .card-reactions .cr-avg svg{width:14px;height:14px;flex:0 0 auto}
 /* Style doré Boost sur le pseudo Matefindr (carte éditeur) */
 .username--boost{
   background:linear-gradient(110deg,#FFE17A 0%,#F5C040 20%,#FFFAE6 35%,#F5C040 50%,#B27B14 65%,#F5C040 80%,#FFE17A 100%);
@@ -2791,7 +2793,7 @@ async function syncToDb(){
   finally{ _dbSyncing=false; }
 }
 function scheduleDbSync(){ clearTimeout(_dbSyncT); _dbSyncT=setTimeout(syncToDb,1000); }
-/* Notes reçues (slider à étoiles, 0.0-5.0) sur TON profil : affichées ici TOUJOURS
+/* Notes reçues (slider à étoiles, 1.0-5.0) sur TON profil : affichées ici TOUJOURS
    révélées (pas de teaser -- cf. .card-reactions plus haut) puisqu'on ne se note
    jamais soi-même. Même format d'aggrégation que js/app.js (loadReactions), en
    lecture seule ici (l'éditeur n'envoie jamais de note). */
@@ -2808,12 +2810,12 @@ async function loadOwnReactions(){
     ratings.forEach(r=>{ const b=Math.min(5,Math.max(1,Math.round(r))); counts[b-1]++; });
     const top=counts.indexOf(Math.max(...counts));
     const avg=ratings.reduce((a,b)=>a+b,0)/total;
-    badge.innerHTML='<span class="cr-dots">'+counts.map((n,i)=>{
+    const dots='<span class="cr-dots">'+counts.map((n,i)=>{
       const h=Math.round(9+(n/total)*27);
-      const isTop=i===top;
-      const label=isTop?('moy : '+avg.toFixed(1)+' ⭐'):String(i+1);
-      return '<span class="cr-col"><i class="'+(isTop?'top':'')+'" style="height:'+h+'px"></i><b class="'+(isTop?'cr-avg':'')+'">'+label+'</b></span>';
+      return '<span class="cr-col"><i class="'+(i===top?'top':'')+'" style="height:'+h+'px"></i><b>'+(i+1)+'</b></span>';
     }).join('')+'</span>';
+    const avgHtml='<span class="cr-avg"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg>moy : '+avg.toFixed(1)+'</span>';
+    badge.innerHTML=avgHtml+dots;
     badge.hidden=false;
   }catch(e){ console.warn('[editor] load reactions', e); }
 }

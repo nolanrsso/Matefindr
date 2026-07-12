@@ -1546,6 +1546,13 @@
   .swipe-card .card-reactions[data-reacted="true"] .cr-col i.top{
     background:#fff;box-shadow:0 0 0 1px rgba(255,126,182,.6), 0 0 6px rgba(255,126,182,.5);
   }
+  /* Moyenne : uniquement une fois QUE J'AI noté (jamais avant), au-dessus des 5 jauges
+     (qui restent toutes visibles, étiquetées 1-5). Icône étoile (pas un emoji). */
+  .swipe-card .card-reactions .cr-avg{
+    display:flex;align-items:center;gap:4px;
+    font-size:13px;font-weight:800;color:#FFD84D;
+  }
+  .swipe-card .card-reactions .cr-avg svg{width:14px;height:14px;flex:0 0 auto}
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
     background:rgba(255,255,255,.08);
@@ -1861,7 +1868,7 @@
   body[data-shared="true"] .shared-reactions{
     display:flex;gap:12px;align-items:center;
     padding:12px 18px;border-radius:999px;
-    background:rgba(0,0,0,.3);
+    background:rgba(0,0,0,.5);
     backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
     box-shadow:0 14px 40px rgba(0,0,0,.5);
   }
@@ -1901,15 +1908,18 @@
   }
   .react-popup[data-open="true"]{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
 
-  /* Slider à étoiles (note 0.0-5.0, pas de 0.1) : on glisse la poignée bleue vers la
+  /* Slider à étoiles (note 1.0-5.0, pas de 0.1) : on glisse la poignée bleue vers la
      droite par-dessus les étoiles (elles passent en jaune au fur et à mesure), la note
      en cours s'affiche au-dessus de la poignée pendant le glissé. Au relâchement : la
      note est envoyée, la poignée revient tout à gauche ("retour de force") et affiche
      la note envoyée à la place de la flèche. */
   .rate-slider{position:relative;width:220px;height:38px;touch-action:none;--rs-handle:38px}
   .rate-slider[data-size="lg"]{width:320px;height:52px;--rs-handle:52px}
+  /* Les 5 étoiles occupent la zone ENTRE les deux positions extrêmes de la poignée
+     (left:var(--rs-handle) à droite:var(--rs-handle), pas juste la moitié) : sinon la
+     poignée au repos (tout à gauche) recouvre la 1re étoile -- une seule visible sur 5. */
   .rate-stars{
-    position:absolute;top:0;bottom:0;left:calc(var(--rs-handle) / 2);right:calc(var(--rs-handle) / 2);
+    position:absolute;top:0;bottom:0;left:var(--rs-handle);right:var(--rs-handle);
     display:flex;align-items:center;justify-content:space-between;pointer-events:none;
   }
   .rate-star{width:20px;height:20px;color:rgba(255,255,255,.18);transition:color .12s ease}

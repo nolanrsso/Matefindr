@@ -696,10 +696,12 @@
         const pct = reacted && total > 0 ? (n / total) : 0;
         const h = reacted ? Math.round(9 + pct * 27) : 9; // 9px repos, jusqu'à 36px révélé
         const isTop = i === topIdx;
-        const label = isTop ? `moy : ${avg.toFixed(1)} ⭐` : String(i + 1);
-        return `<span class="cr-col"><i class="${isTop ? 'top' : ''}" style="height:${h}px"></i><b class="${isTop ? 'cr-avg' : ''}">${label}</b></span>`;
+        return `<span class="cr-col"><i class="${isTop ? 'top' : ''}" style="height:${h}px"></i><b>${i + 1}</b></span>`;
       }).join('');
-      return `<span class="cr-dots">${cols}</span>`;
+      // Moyenne : uniquement une fois QUE J'AI noté (jamais avant), au-dessus des 5
+      // jauges (qui restent toutes visibles, étiquetées 1-5) -- icône étoile, pas un emoji.
+      const avgHtml = reacted ? `<span class="cr-avg"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg>moy : ${avg.toFixed(1)}</span>` : '';
+      return `${avgHtml}<span class="cr-dots">${cols}</span>`;
     }
     function reactionBadgeHtml(p){
       if (!p || !p.uid || p.isMe) return '';
@@ -823,7 +825,7 @@
         const half = handle.offsetWidth / 2;
         let left = clientX - rect.left - half;
         left = Math.max(0, Math.min(maxLeft(), left));
-        const rating = Math.round((left / maxLeft()) * 5 * 10) / 10;
+        const rating = Math.round((1 + (left / maxLeft()) * 4) * 10) / 10; // note mini = 1.0
         pending = rating;
         handle.style.left = left + 'px';
         valueLbl.textContent = rating.toFixed(1);
