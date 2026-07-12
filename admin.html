@@ -298,7 +298,7 @@
       const unseen=isUnseen(a);
       html.push('<tr class="'+(banned?'banned':'')+'" data-i="'+ACCOUNTS.indexOf(a)+'">');
       html.push('<td><div class="u-cell">'+(unseen?'<span class="unseen-dot" title="Modifié depuis ta dernière visite"></span>':'')+'<div class="u-av">'+(av?'<img src="'+esc(av)+'" alt="">':esc(initial(name)))+'</div>'
-        +'<div style="min-width:0"><div class="u-name">'+esc(name)+(dd.boost?' <span class="pill boost">Boost</span>':'')+(banned?' <span class="pill ban">Banni</span>':'')+(dd.disabled?' <span class="pill off">Désactivé</span>':'')+'</div>'
+        +'<div style="min-width:0"><div class="u-name">'+esc(name)+(dd.boost?' <span class="pill boost">Boost</span>':'')+(banned?' <span class="pill ban">Banni</span>':'')+(dd.disabled?' <span class="pill off">Désactivé</span>':'')+(dd.disabledCount?' <span class="pill" title="Nombre de désactivations">⚠️×'+dd.disabledCount+'</span>':'')+'</div>'
         +'<div class="u-tag">'+(p.discord_id?('id '+esc(p.discord_id)):'')+'</div></div></div></td>');
       html.push('<td>'+(dd.age?esc(dd.age):'<span class="muted">—</span>')+'</td>');
       html.push('<td>'+genderPill(dd.gender)+'</td>');
@@ -389,7 +389,7 @@
       const reason=$('eReason').value.trim();
       if(!reason){ toast('Écris une raison'); return; }
       $('eDisableSave').disabled=true;
-      const ok=await patchProfileData(a, { disabled:true, disabledReason:reason }, '🚫 Profil désactivé');
+      const ok=await patchProfileData(a, { disabled:true, disabledReason:reason, disabledCount:(dd.disabledCount||0)+1 }, '🚫 Profil désactivé');
       if(ok) openProfile(a); else $('eDisableSave').disabled=false;
     });
   }
@@ -611,6 +611,7 @@
       +'<dt>Profil visible</dt><dd>'+(disabled
           ? ('<span class="pill off">Désactivé</span><div class="disreason">Raison donnée à l\'utilisateur : '+esc(dd.disabledReason||'—')+'</div>')
           : '<span class="pill" style="background:rgba(59,209,124,.18);color:#77e6a8">Visible par les autres</span>')+'</dd>'
+      +'<dt>Déjà désactivé</dt><dd>'+(dd.disabledCount?('<span class="pill '+(dd.disabledCount>1?'ban':'off')+'">'+dd.disabledCount+' fois</span>'):'<span class="muted">Jamais</span>')+'</dd>'
       + (FULL ? ('<div class="m-actions">'
           +'<button class="a-btn '+(banned?'unban':'ban')+'" id="modalBan">'+(banned?'Débannir ce compte':'Bannir ce compte')+'</button>'
           +'<button class="a-btn" id="modalEdit">✏️ Modifier</button>'

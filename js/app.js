@@ -234,6 +234,7 @@
               // messagerie sont bloqués (cf. garde-fous dans setScreen() et l'envoi de messages).
               state.user.disabled = (dRaw && dRaw.disabled === true);
               state.user.disabledReason = state.user.disabled ? (dRaw.disabledReason || '') : null;
+              state.user.disabledCount = (dRaw && typeof dRaw.disabledCount === 'number') ? dRaw.disabledCount : (state.user.disabledCount || 0);
               if (state.user.disabled) {
                 save();
                 location.href = 'editor.html';

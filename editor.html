@@ -1287,6 +1287,7 @@ function showDisabledBanner(reason){
     el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#3a1a12;border-bottom:1px solid rgba(255,193,84,.4);color:#ffcf6b;font:600 13px/1.5 inherit;padding:10px 16px;text-align:center';
     el.innerHTML='🚫 Ton profil a été désactivé par un modérateur — le swipe et la messagerie sont bloqués tant qu\'il n\'est pas réactivé.'
       +'<div id="disabledBannerReason" style="color:#fff;font-weight:400;margin-top:3px"></div>'
+      +'<div style="color:#fff;font-weight:800;margin-top:3px">À toi de changer ton profil pour qu\'il rentre dans les règles, ensuite fais un ticket sur Discord.</div>'
       +'<a href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" style="color:#fff;font-weight:800;text-decoration:underline">Ouvrir un ticket sur le Discord pour demander une réactivation</a>';
     document.body.prepend(el);
     document.body.style.paddingTop='64px';
@@ -2826,7 +2827,7 @@ function buildDbProfile(st){
     // remplace TOUTE la colonne data à chaque sync : sans ce passthrough, éditer son profil
     // (justement ce qu'on demande à un compte désactivé de faire) effacerait silencieusement
     // le flag "disabled" côté base.
-    disabled:!!u.disabled, disabledReason:u.disabledReason||null,
+    disabled:!!u.disabled, disabledReason:u.disabledReason||null, disabledCount:u.disabledCount||0,
   };
 }
 let _dbSyncT=null, _dbSyncing=false;
