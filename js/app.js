@@ -677,24 +677,29 @@
       };
     }
 
-    /* ===== Réactions emoji sur les profils (🫩🙄😐😳🤩, du plus "moche" au plus "beau") =====
-       Une réaction par (profil, votant). Cliquer une réaction ne swipe/dismiss JAMAIS la carte
-       -- ça met juste à jour le badge en direct. Le graphique (répartition réelle) ne se
-       révèle QUE pour un profil auquel JE (le votant courant) ai déjà réagi -- avant ça, le
-       badge reste un simple teaser (icône + 5 points identiques, aucune donnée affichée). */
-    const REACTIONS = ['🫩','🙄','😐','😳','🤩'];
-    const _reactionsCache = {}; // uid -> { counts:[n0..n4], mine:number|null, total }
+    /* ===== Notes des profils (slider à étoiles, 0.0 à 5.0, pas de 0.1) =====
+       Une note par (profil, votant), remplaçable. Noter ne swipe/dismiss JAMAIS la
+       carte -- ça met juste à jour le badge en direct. Le graphique (répartition
+       réelle) ne se révèle QUE pour un profil auquel JE (le votant courant) ai déjà
+       mis une note -- avant ça, le badge reste un simple teaser (5 barres identiques,
+       étiquetées 1-5, aucune donnée affichée). */
+    const _reactionsCache = {}; // uid -> { ratings:number[], mine:number|null, total }
     function reactionBadgeInnerHtml(rec){
       const reacted = !!(rec && rec.mine != null);
-      const counts = (rec && rec.counts) || [0,0,0,0,0];
-      const total = (rec && rec.total) || 0;
+      const ratings = (rec && rec.ratings) || [];
+      const total = ratings.length;
+      const counts = [0,0,0,0,0]; // bucket i = note arrondie à l'entier i+1 (1 à 5 étoiles)
+      ratings.forEach(r => { const b = Math.min(5, Math.max(1, Math.round(r))); counts[b - 1]++; });
       const topIdx = reacted && total > 0 ? counts.indexOf(Math.max(...counts)) : -1;
-      const dots = counts.map((n, i) => {
+      const avg = total > 0 ? (ratings.reduce((a, b) => a + b, 0) / total) : 0;
+      const cols = counts.map((n, i) => {
         const pct = reacted && total > 0 ? (n / total) : 0;
-        const h = reacted ? Math.round(9 + pct * 27) : 9; // 9px repos, jusqu'à 36px révélé (+50%)
-        return `<span class="cr-col"><i class="${i === topIdx ? 'top' : ''}" style="height:${h}px"></i><b>${REACTIONS[i]}</b></span>`;
+        const h = reacted ? Math.round(9 + pct * 27) : 9; // 9px repos, jusqu'à 36px révélé
+        const isTop = i === topIdx;
+        const label = isTop ? `moy : ${avg.toFixed(1)} ⭐` : String(i + 1);
+        return `<span class="cr-col"><i class="${isTop ? 'top' : ''}" style="height:${h}px"></i><b class="${isTop ? 'cr-avg' : ''}">${label}</b></span>`;
       }).join('');
-      return `<span class="cr-dots">${dots}</span>`;
+      return `<span class="cr-dots">${cols}</span>`;
     }
     function reactionBadgeHtml(p){
       if (!p || !p.uid || p.isMe) return '';
@@ -710,9 +715,9 @@
     }
     /* Identité du votant : le vrai compte si connecté, sinon un id anonyme persisté en
        localStorage (généré une fois, réutilisé partout) -- pas besoin d'être connecté pour
-       réagir, mais une seule réaction par personne et par profil quoi qu'il arrive, connecté
-       ou non : upsert sur (profile_id, reactor_id), l'ancienne réaction est remplacée par la
-       nouvelle. Aucune indication visuelle "déjà réagi" au-delà du graphique révélé. */
+       noter, mais une seule note par personne et par profil quoi qu'il arrive, connecté
+       ou non : upsert sur (profile_id, reactor_id), l'ancienne note est remplacée par la
+       nouvelle. */
     async function getReactorId(){
       try { const { data:{ session } } = await window.__supa.auth.getSession(); if (session) return session.user.id; } catch(_){}
       let id = null;
@@ -726,33 +731,37 @@
     async function loadReactions(profileId){
       if (!window.__supa || !profileId) return null;
       try {
-        const { data } = await window.__supa.from('profile_reactions').select('reactor_id, emoji').eq('profile_id', profileId).limit(5000);
+        const { data } = await window.__supa.from('profile_reactions').select('reactor_id, rating').eq('profile_id', profileId).limit(5000);
         const myId = await getReactorId();
-        const counts = [0,0,0,0,0];
+        const ratings = [];
         let mine = null;
         (data || []).forEach(r => {
-          if (r.emoji >= 0 && r.emoji <= 4) counts[r.emoji]++;
-          if (r.reactor_id === myId) mine = r.emoji;
+          const v = Number(r.rating);
+          if (!Number.isNaN(v)) ratings.push(v);
+          if (r.reactor_id === myId) mine = v;
         });
-        const rec = { counts, mine, total: counts.reduce((a,b) => a+b, 0) };
+        const rec = { ratings, mine, total: ratings.length };
         _reactionsCache[profileId] = rec;
         renderReactionBadges(profileId);
+        if (typeof updateSlidersFor === 'function') updateSlidersFor(profileId);
         return rec;
       } catch(e){ console.warn('[Matefindr] load reactions', e); return null; }
     }
-    async function sendReaction(profileId, emojiIdx){
-      if (!profileId || emojiIdx == null || !window.__supa) return;
+    async function sendReaction(profileId, rating){
+      if (!profileId || rating == null || !window.__supa) return;
       const reactorId = await getReactorId();
       // Mise à jour optimiste locale (réactive immédiatement, avant la confirmation réseau).
-      const rec = _reactionsCache[profileId] || { counts:[0,0,0,0,0], mine:null, total:0 };
-      if (rec.mine != null) { rec.counts[rec.mine] = Math.max(0, rec.counts[rec.mine] - 1); } else { rec.total++; }
-      rec.counts[emojiIdx]++;
-      rec.mine = emojiIdx;
+      const rec = _reactionsCache[profileId] || { ratings: [], mine: null, total: 0 };
+      if (rec.mine != null) { const idx = rec.ratings.indexOf(rec.mine); if (idx !== -1) rec.ratings.splice(idx, 1); }
+      rec.ratings.push(rating);
+      rec.mine = rating;
+      rec.total = rec.ratings.length;
       _reactionsCache[profileId] = rec;
       renderReactionBadges(profileId);
+      if (typeof updateSlidersFor === 'function') updateSlidersFor(profileId);
       try {
         const { error } = await window.__supa.from('profile_reactions')
-          .upsert({ profile_id: profileId, reactor_id: reactorId, emoji: emojiIdx }, { onConflict: 'profile_id,reactor_id' });
+          .upsert({ profile_id: profileId, reactor_id: reactorId, rating }, { onConflict: 'profile_id,reactor_id' });
         if (error) console.warn('[Matefindr] send reaction', error.message || error);
       } catch(e){ console.warn('[Matefindr] send reaction error', e); }
     }
@@ -775,31 +784,97 @@
       const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
       return pool[deckIdx] || null;
     }
+    /* ===== Slider à étoiles : glisser la poignée bleue vers la droite par-dessus les
+       étoiles (jaunes au fur et à mesure). Note affichée au-dessus pendant le glissé.
+       Au relâchement : envoi de la note, la poignée revient tout à gauche ("retour de
+       force") et affiche la note envoyée à la place de la flèche. */
+    function setSliderRestState(root, mine){
+      if (!root) return;
+      const handle = root.querySelector('.rate-handle');
+      const stars = [...root.querySelectorAll('.rate-star')];
+      handle.style.left = '0px';
+      stars.forEach(s => s.classList.remove('active'));
+      handle.setAttribute('aria-valuenow', '0');
+      if (mine != null) {
+        handle.classList.add('has-submitted');
+        handle.querySelector('.rate-submitted').textContent = Number(mine).toFixed(1);
+      } else {
+        handle.classList.remove('has-submitted');
+      }
+    }
+    function updateSlidersFor(profileId){
+      const rec = _reactionsCache[profileId];
+      const mine = rec ? rec.mine : null;
+      const reactRoot = document.getElementById('reactSlider');
+      const target = currentReactTarget();
+      if (reactRoot && target && target.uid === profileId) setSliderRestState(reactRoot, mine);
+      const sharedRoot = document.getElementById('sharedSlider');
+      if (sharedRoot && _sharedProfile && _sharedProfile.uid === profileId) setSliderRestState(sharedRoot, mine);
+    }
+    function initRatingSlider(root, getTarget, onSubmitted){
+      if (!root) return;
+      const stars = [...root.querySelectorAll('.rate-star')];
+      const handle = root.querySelector('.rate-handle');
+      const valueLbl = handle.querySelector('.rate-value');
+      let dragging = false, pending = 0;
+      function maxLeft(){ return Math.max(1, root.clientWidth - handle.offsetWidth); }
+      function applyFromClientX(clientX){
+        const rect = root.getBoundingClientRect();
+        const half = handle.offsetWidth / 2;
+        let left = clientX - rect.left - half;
+        left = Math.max(0, Math.min(maxLeft(), left));
+        const rating = Math.round((left / maxLeft()) * 5 * 10) / 10;
+        pending = rating;
+        handle.style.left = left + 'px';
+        valueLbl.textContent = rating.toFixed(1);
+        stars.forEach(s => s.classList.toggle('active', rating >= Number(s.dataset.i)));
+        handle.setAttribute('aria-valuenow', String(rating));
+      }
+      function onMove(e){ if (dragging) applyFromClientX(e.clientX); }
+      function onUp(){
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('dragging');
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        const target = getTarget && getTarget();
+        if (target && target.uid) sendReaction(target.uid, pending);
+        // Retour de force : la poignée revient tout à gauche (setSliderRestState via
+        // sendReaction -> updateSlidersFor s'occupe d'afficher la note envoyée).
+        if (typeof onSubmitted === 'function') onSubmitted();
+      }
+      handle.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        dragging = true;
+        handle.classList.add('dragging');
+        applyFromClientX(e.clientX);
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    }
+    initRatingSlider(document.getElementById('reactSlider'), currentReactTarget, () => {
+      document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
+    });
+    initRatingSlider(document.getElementById('sharedSlider'), () => _sharedProfile);
     document.getElementById('reactToggleBtn')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const pop = document.getElementById('reactPopup');
       if (!pop) return;
-      pop.setAttribute('data-open', pop.getAttribute('data-open') === 'true' ? 'false' : 'true');
+      const opening = pop.getAttribute('data-open') !== 'true';
+      pop.setAttribute('data-open', opening ? 'true' : 'false');
+      if (opening) {
+        const target = currentReactTarget();
+        if (target && target.uid) {
+          setSliderRestState(document.getElementById('reactSlider'), (_reactionsCache[target.uid] || {}).mine ?? null);
+          if (!_reactionsCache[target.uid]) loadReactions(target.uid);
+        }
+      }
     });
     document.addEventListener('click', (e) => {
       const pop = document.getElementById('reactPopup');
       if (!pop || pop.getAttribute('data-open') !== 'true') return;
       if (e.target.closest('#reactPopup') || e.target.closest('#reactToggleBtn')) return;
       pop.setAttribute('data-open', 'false');
-    });
-    document.getElementById('reactPopup')?.addEventListener('click', (e) => {
-      const b = e.target.closest('.react-emoji'); if (!b) return;
-      e.stopPropagation();
-      const idx = Number(b.dataset.idx);
-      const target = currentReactTarget();
-      if (target && target.uid) sendReaction(target.uid, idx);
-      document.getElementById('reactPopup').setAttribute('data-open', 'false');
-    });
-    document.getElementById('sharedReactions')?.addEventListener('click', (e) => {
-      const b = e.target.closest('.react-emoji'); if (!b) return;
-      e.stopPropagation();
-      const idx = Number(b.dataset.idx);
-      if (_sharedProfile && _sharedProfile.uid) sendReaction(_sharedProfile.uid, idx);
     });
 
     /* ===== Cloud sync (Supabase) — la liste de profils provient des vrais utilisateurs ===== */

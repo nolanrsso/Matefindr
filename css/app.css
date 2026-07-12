@@ -1848,8 +1848,8 @@
   body[data-preview="true"] #msgFab{display:none !important}
 
   /* Lien perso (matefindr.com/<slug>) : plus de like/dislike/swipe ni de FABs
-     messages/likes -- 5 boutons de réaction (.shared-reactions) à la place, dans une
-     barre sombre à faible opacité (les emojis, eux, ressortent en pleine opacité). */
+     messages/likes -- le slider à étoiles (.shared-reactions) à la place, dans une
+     barre sombre à faible opacité (les étoiles, elles, ressortent en pleine opacité). */
   .shared-reactions{display:none}
   body[data-shared="true"] .swipe-btn--no,
   body[data-shared="true"] .swipe-btn--yes,
@@ -1900,24 +1900,40 @@
     opacity:0;pointer-events:none;transition:opacity .16s ease, transform .16s ease;
   }
   .react-popup[data-open="true"]{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
-  /* Fond des emojis : dégradé rouge → vert (sombre mais bien saturé) selon la position
-     0 (🫩, "moche") → 4 (🤩, "beau") -- même logique dans le popup de swipe et le lien perso.
-     line-height:1 + padding:0 : l'emoji (contenu inline) était décalé du centre du bouton
-     à cause du line-height par défaut du navigateur, qui ajoute de la hauteur invisible. */
-  .react-emoji{
-    width:38px;height:38px;padding:0;border-radius:50%;border:none;cursor:pointer;
-    font-size:21px;line-height:1;
-    display:grid;place-items:center;
-    transition:transform .14s cubic-bezier(.34,1.4,.5,1), filter .14s ease;
+
+  /* Slider à étoiles (note 0.0-5.0, pas de 0.1) : on glisse la poignée bleue vers la
+     droite par-dessus les étoiles (elles passent en jaune au fur et à mesure), la note
+     en cours s'affiche au-dessus de la poignée pendant le glissé. Au relâchement : la
+     note est envoyée, la poignée revient tout à gauche ("retour de force") et affiche
+     la note envoyée à la place de la flèche. */
+  .rate-slider{position:relative;width:220px;height:38px;touch-action:none;--rs-handle:38px}
+  .rate-slider[data-size="lg"]{width:320px;height:52px;--rs-handle:52px}
+  .rate-stars{
+    position:absolute;top:0;bottom:0;left:calc(var(--rs-handle) / 2);right:calc(var(--rs-handle) / 2);
+    display:flex;align-items:center;justify-content:space-between;pointer-events:none;
   }
-  .react-emoji[data-idx="0"]{background:rgba(140,30,42,.8)}
-  .react-emoji[data-idx="1"]{background:rgba(140,82,30,.8)}
-  .react-emoji[data-idx="2"]{background:rgba(122,122,30,.8)}
-  .react-emoji[data-idx="3"]{background:rgba(70,122,42,.8)}
-  .react-emoji[data-idx="4"]{background:rgba(30,110,68,.8)}
-  .react-emoji:hover{transform:translateY(-3px) scale(1.12);filter:brightness(1.35)}
-  .react-emoji:active{transform:scale(.92)}
-  .shared-reactions .react-emoji{width:60px;height:60px;font-size:30px;box-shadow:0 10px 26px rgba(0,0,0,.4)}
+  .rate-star{width:20px;height:20px;color:rgba(255,255,255,.18);transition:color .12s ease}
+  .rate-slider[data-size="lg"] .rate-star{width:28px;height:28px}
+  .rate-star.active{color:#FFD84D}
+  .rate-handle{
+    position:absolute;top:0;left:0;width:var(--rs-handle);height:var(--rs-handle);
+    border-radius:50%;background:#3B6FE0;color:#fff;cursor:grab;
+    display:grid;place-items:center;box-shadow:0 8px 22px rgba(59,111,224,.55);
+    transition:left .35s cubic-bezier(.2,.8,.3,1);
+    -webkit-user-select:none;user-select:none;
+  }
+  .rate-handle.dragging{transition:none;cursor:grabbing}
+  .rate-handle .rate-value{
+    position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);
+    font-size:13px;font-weight:800;color:#fff;background:rgba(0,0,0,.65);
+    padding:3px 9px;border-radius:8px;white-space:nowrap;
+    opacity:0;pointer-events:none;transition:opacity .15s ease;
+  }
+  .rate-handle.dragging .rate-value{opacity:1}
+  .rate-handle .rate-submitted{display:none;font-size:12px;font-weight:800}
+  .rate-slider[data-size="lg"] .rate-handle .rate-submitted{font-size:15px}
+  .rate-handle.has-submitted .rate-arrow{display:none}
+  .rate-handle.has-submitted .rate-submitted{display:block}
 
   .swipe-btn{
     position:relative;width:68px;height:68px;border-radius:22px;border:none;cursor:pointer;
