@@ -1525,6 +1525,26 @@
     pointer-events:none;
   }
   .swipe-card .card-views svg{width:20px;height:20px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+
+  /* Réactions : badge en bas à droite de la carte. Tant que JE n'ai pas réagi,
+     juste une icône + 5 points blancs identiques (teaser, aucune donnée révélée).
+     Dès que je réagis, les points prennent la taille de leur part de vote (le
+     plus voté est mis en valeur) -- jamais avant, et jamais un swipe/dismiss. */
+  .swipe-card .card-reactions{
+    position:absolute;right:14px;bottom:14px;z-index:6;
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+    color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);
+    pointer-events:none;
+  }
+  .swipe-card .card-reactions .cr-icon{width:18px;height:18px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6));opacity:.85}
+  .swipe-card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:4px;height:16px}
+  .swipe-card .card-reactions .cr-dots i{
+    display:block;width:6px;border-radius:3px;background:rgba(255,255,255,.55);
+    height:6px;transition:height .25s cubic-bezier(.2,.7,.3,1), background .2s ease, box-shadow .2s ease;
+  }
+  .swipe-card .card-reactions[data-reacted="true"] .cr-dots i.top{
+    background:#fff;box-shadow:0 0 0 2px rgba(255,126,182,.7), 0 0 10px rgba(255,126,182,.6);
+  }
   .swipe-card .bio{
     font-size:13px;color:#b9bbbe;line-height:1.5;
     background:rgba(255,255,255,.08);
@@ -1827,26 +1847,44 @@
   body[data-preview="true"] #msgFab{display:none !important}
 
   /* Lien perso (matefindr.com/<slug>) : plus de like/dislike/swipe ni de FABs
-     messages/likes -- juste un cœur unique (like direct) + les commentaires.
-     Spécificité (0,2,0) via .swipe-actions : la règle .swipe-btn{display:grid}
-     plus bas dans ce fichier a la MÊME spécificité (0,1,0) qu'un simple
-     .swipe-btn--shared-heart{display:none} et gagnait la cascade (dernière
-     déclarée) -- le bouton restait donc visible EN PERMANENCE, partout, même
-     hors lien perso (d'où le bouton blanc/sans fond vu dans l'aperçu). */
-  .swipe-actions .swipe-btn--shared-heart{display:none}
+     messages/likes -- 5 boutons de réaction (.shared-reactions) à la place. */
+  .shared-reactions{display:none}
   body[data-shared="true"] .swipe-btn--no,
   body[data-shared="true"] .swipe-btn--yes,
+  body[data-shared="true"] .react-wrap,
   body[data-shared="true"] .swipe-tools,
   body[data-shared="true"] .my-status,
   body[data-shared="true"] #heartFab,
   body[data-shared="true"] #msgFab{display:none !important}
-  body[data-shared="true"] .swipe-btn--shared-heart{
-    display:grid;
-    background:linear-gradient(180deg,#FF7EB6 0%, #FF4FA0 100%);
+  body[data-shared="true"] .shared-reactions{display:flex;gap:14px;align-items:center}
+
+  /* Bouton "react" (entre Passer et Liker) : révèle un popup de 5 emojis au-dessus,
+     ne swipe/dismiss JAMAIS la carte -- ne modifie que le graphique de réactions. */
+  .react-wrap{position:relative;display:flex;align-items:center}
+  body[data-preview="true"] .react-wrap{display:none !important}
+  .swipe-btn--react{
+    width:44px;height:44px;padding:0;border-radius:16px;
+    background:rgba(255,255,255,.08);box-shadow:none;opacity:.65;
   }
-  body[data-shared="true"] .swipe-btn--shared-heart::before{background:linear-gradient(180deg,#FF7EB6 0%, #FF4FA0 100%)}
-  body[data-shared="true"] .swipe-btn--shared-heart:active svg{transform:scale(.85)}
-  body[data-shared="true"] .swipe-btn--shared-heart svg{transition:transform .15s cubic-bezier(.34,1.4,.5,1)}
+  .swipe-btn--react::before{display:none}
+  .swipe-btn--react:hover{opacity:1;background:rgba(255,255,255,.14)}
+  .react-popup{
+    position:absolute;left:50%;bottom:calc(100% + 14px);transform:translateX(-50%) translateY(6px);
+    display:flex;gap:8px;padding:9px 11px;border-radius:999px;
+    background:rgba(14,15,20,.9);border:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:0 14px 36px rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;transition:opacity .16s ease, transform .16s ease;
+  }
+  .react-popup[data-open="true"]{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+  .react-emoji{
+    width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;font-size:21px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);
+    transition:transform .14s cubic-bezier(.34,1.4,.5,1), background .14s ease;
+  }
+  .react-emoji:hover{transform:translateY(-3px) scale(1.12);background:rgba(255,255,255,.14)}
+  .react-emoji:active{transform:scale(.92)}
+  .shared-reactions .react-emoji{width:52px;height:52px;font-size:26px;box-shadow:0 10px 26px rgba(0,0,0,.4)}
 
   .swipe-btn{
     position:relative;width:68px;height:68px;border-radius:22px;border:none;cursor:pointer;

@@ -216,18 +216,30 @@
         try { if (typeof syncMyProfileToCloud === 'function') await syncMyProfileToCloud(); } catch(_){}
         try { window.__discordJoinDM && await window.__discordJoinDM(); } catch(_){}
         try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
-        // Replay d'une action venue d'un lien de partage (❤️/✖️ fait AVANT la création
-        // de compte) : on enregistre le like puis on nettoie et on renvoie à l'accueil.
+        // Replay d'une action venue d'un lien de partage (fait AVANT la création de compte,
+        // ex : Discord OAuth déclenché en cliquant ❤️/une réaction alors qu'on n'était pas
+        // connecté). Le ❤️/✖️ (like) renvoie à l'accueil comme avant. Une RÉACTION, elle, ne
+        // doit jamais faire quitter la vue du profil -- on rejoue juste sendReaction() et on
+        // laisse l'URL (toujours /<slug>, préservée par le redirectTo Discord) rouvrir le même
+        // profil partagé via le flux normal (wantShared plus bas).
         let _hadPendingShared = false;
         try {
           const raw = localStorage.getItem('matefindr_pending_action');
           if (raw) {
             localStorage.removeItem('matefindr_pending_action');
-            _hadPendingShared = true;
             const pa = JSON.parse(raw);
-            if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
-            _sharedProfile = null;
-            try { history.replaceState(null, '', '/'); } catch(_){}
+            if (pa && pa.action === 'react' && pa.uid && typeof sendReaction === 'function') {
+              sendReaction(pa.uid, pa.emoji);
+              // handleSharedLink() a déjà tourné (et n'a rien fait, hasFreshPendingAction()
+              // était vrai à ce moment, et openSharedProfile() a déjà remis l'URL à '/') --
+              // on rouvre nous-mêmes le même profil partagé via le slug mémorisé au clic.
+              try { if (pa.slug && typeof openSharedProfile === 'function') openSharedProfile(pa.slug); } catch(_){}
+            } else {
+              _hadPendingShared = true;
+              if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
+              _sharedProfile = null;
+              try { history.replaceState(null, '', '/'); } catch(_){}
+            }
           }
         } catch(_){}
         // On ne (re)définit l'écran QUE lors de la vraie connexion initiale, jamais sur un
@@ -659,6 +671,131 @@
       };
     }
 
+    /* ===== Réactions emoji sur les profils (🫩🙄😐😳🤩, du plus "moche" au plus "beau") =====
+       Une réaction par (profil, votant). Cliquer une réaction ne swipe/dismiss JAMAIS la carte
+       -- ça met juste à jour le badge en direct. Le graphique (répartition réelle) ne se
+       révèle QUE pour un profil auquel JE (le votant courant) ai déjà réagi -- avant ça, le
+       badge reste un simple teaser (icône + 5 points identiques, aucune donnée affichée). */
+    const REACTIONS = ['🫩','🙄','😐','😳','🤩'];
+    const _reactionsCache = {}; // uid -> { counts:[n0..n4], mine:number|null, total }
+    function reactionBadgeInnerHtml(rec){
+      const reacted = !!(rec && rec.mine != null);
+      const counts = (rec && rec.counts) || [0,0,0,0,0];
+      const total = (rec && rec.total) || 0;
+      const topIdx = reacted && total > 0 ? counts.indexOf(Math.max(...counts)) : -1;
+      const dots = counts.map((n, i) => {
+        const pct = reacted && total > 0 ? (n / total) : 0;
+        const h = reacted ? Math.round(6 + pct * 18) : 6; // 6px repos, jusqu'à 24px révélé
+        return `<i class="${i === topIdx ? 'top' : ''}" style="height:${h}px" title="${REACTIONS[i]}"></i>`;
+      }).join('');
+      return `
+        <svg class="cr-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V13M10 20V6M16 20v-9M22 20v-4"/></svg>
+        <span class="cr-dots">${dots}</span>
+      `;
+    }
+    function reactionBadgeHtml(p){
+      if (!p || !p.uid || p.isMe) return '';
+      const rec = _reactionsCache[p.uid];
+      return `<span class="card-reactions" data-uid="${p.uid}" data-reacted="${!!(rec && rec.mine != null)}">${reactionBadgeInnerHtml(rec)}</span>`;
+    }
+    function renderReactionBadges(uid){
+      const rec = _reactionsCache[uid];
+      document.querySelectorAll(`.card-reactions[data-uid="${uid}"]`).forEach(el => {
+        el.setAttribute('data-reacted', String(!!(rec && rec.mine != null)));
+        el.innerHTML = reactionBadgeInnerHtml(rec);
+      });
+    }
+    async function loadReactions(profileId){
+      if (!window.__supa || !profileId) return null;
+      try {
+        const { data } = await window.__supa.from('profile_reactions').select('reactor_id, emoji').eq('profile_id', profileId).limit(5000);
+        let myId = null;
+        try { const { data:{ session } } = await window.__supa.auth.getSession(); myId = session && session.user.id; } catch(_){}
+        const counts = [0,0,0,0,0];
+        let mine = null;
+        (data || []).forEach(r => {
+          if (r.emoji >= 0 && r.emoji <= 4) counts[r.emoji]++;
+          if (myId && r.reactor_id === myId) mine = r.emoji;
+        });
+        const rec = { counts, mine, total: counts.reduce((a,b) => a+b, 0) };
+        _reactionsCache[profileId] = rec;
+        renderReactionBadges(profileId);
+        return rec;
+      } catch(e){ console.warn('[Matefindr] load reactions', e); return null; }
+    }
+    async function sendReaction(profileId, emojiIdx){
+      if (!profileId || emojiIdx == null) return;
+      if (!window.__supa) return;
+      let session = null;
+      try { ({ data:{ session } } = await window.__supa.auth.getSession()); } catch(_){}
+      if (!session) {
+        // Le slug est mémorisé ici (pas relu depuis l'URL après coup) : openSharedProfile()
+        // remet l'URL à '/' dès le retour d'OAuth (avant même que onLogin ne rejoue quoi que
+        // ce soit), donc getSharedSlug() renverrait null trop tard pour rouvrir le profil.
+        try { localStorage.setItem('matefindr_pending_action', JSON.stringify({ uid: profileId, action:'react', emoji: emojiIdx, slug: (_sharedProfile && _sharedProfile.slug) || null, ts: Date.now() })); } catch(_){}
+        if (typeof signInWithDiscord === 'function') signInWithDiscord();
+        else if (window.signInWithDiscord) window.signInWithDiscord();
+        return;
+      }
+      // Mise à jour optimiste locale (réactive immédiatement, avant la confirmation réseau).
+      const rec = _reactionsCache[profileId] || { counts:[0,0,0,0,0], mine:null, total:0 };
+      if (rec.mine != null) { rec.counts[rec.mine] = Math.max(0, rec.counts[rec.mine] - 1); } else { rec.total++; }
+      rec.counts[emojiIdx]++;
+      rec.mine = emojiIdx;
+      _reactionsCache[profileId] = rec;
+      renderReactionBadges(profileId);
+      try {
+        const { error } = await window.__supa.from('profile_reactions')
+          .upsert({ profile_id: profileId, reactor_id: session.user.id, emoji: emojiIdx }, { onConflict: 'profile_id,reactor_id' });
+        if (error) console.warn('[Matefindr] send reaction', error.message || error);
+      } catch(e){ console.warn('[Matefindr] send reaction error', e); }
+    }
+    /* Compteur de vues : +1 une seule fois par navigateur pour ce profil (même mécanique
+       que sur les liens perso -- swiper un profil dans le deck normal compte aussi comme
+       une vue, pas seulement le visiter via son lien). */
+    function bumpProfileViewOnce(profile){
+      if (!profile || !profile.uid || !window.__supa) return;
+      try {
+        const seen = 'mf_viewed_' + profile.uid;
+        if (localStorage.getItem(seen)) return;
+        localStorage.setItem(seen, '1');
+        window.__supa.rpc('bump_profile_views', { p_id: profile.uid }).then(() => {
+          profile.views = (profile.views || 0) + 1;
+        }).catch(() => {});
+      } catch(_){}
+    }
+    function currentReactTarget(){
+      if (_sharedProfile) return _sharedProfile;
+      const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
+      return pool[deckIdx] || null;
+    }
+    document.getElementById('reactToggleBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const pop = document.getElementById('reactPopup');
+      if (!pop) return;
+      pop.setAttribute('data-open', pop.getAttribute('data-open') === 'true' ? 'false' : 'true');
+    });
+    document.addEventListener('click', (e) => {
+      const pop = document.getElementById('reactPopup');
+      if (!pop || pop.getAttribute('data-open') !== 'true') return;
+      if (e.target.closest('#reactPopup') || e.target.closest('#reactToggleBtn')) return;
+      pop.setAttribute('data-open', 'false');
+    });
+    document.getElementById('reactPopup')?.addEventListener('click', (e) => {
+      const b = e.target.closest('.react-emoji'); if (!b) return;
+      e.stopPropagation();
+      const idx = Number(b.dataset.idx);
+      const target = currentReactTarget();
+      if (target && target.uid) sendReaction(target.uid, idx);
+      document.getElementById('reactPopup').setAttribute('data-open', 'false');
+    });
+    document.getElementById('sharedReactions')?.addEventListener('click', (e) => {
+      const b = e.target.closest('.react-emoji'); if (!b) return;
+      e.stopPropagation();
+      const idx = Number(b.dataset.idx);
+      if (_sharedProfile && _sharedProfile.uid) sendReaction(_sharedProfile.uid, idx);
+    });
+
     /* ===== Cloud sync (Supabase) — la liste de profils provient des vrais utilisateurs ===== */
     let _remoteProfiles = []; // hydraté depuis Supabase
     let _remoteFetchedAt = 0;
@@ -717,7 +854,7 @@
     function rowToProfile(r){
       if (!r) return null;
       // Profil complet stocké dans data → on l'utilise tel quel
-      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; return p; }
+      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; p._showViews = true; return p; }
       // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
       if (!r.display_name && !r.avatar_url) return null;
       const subByKind = {music:'musique', game:'jeu', anime:'série', film:'film'};
@@ -748,7 +885,7 @@
         initial: (r.display_name || 'T').charAt(0).toUpperCase(),
         avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
         accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
-        orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null,
+        orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null, _showViews: true,
       };
     }
 
@@ -1271,6 +1408,7 @@
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
         ${p._showViews ? `<span class="card-views"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>${(p.views||0).toLocaleString('fr-FR')}</span>` : ''}
+        ${reactionBadgeHtml(p)}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
         <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
@@ -1320,6 +1458,9 @@
           ${guildsHtml}
         </div>
       `;
+      // Réactions : chargées à la demande (pas encore en cache) puis mises à jour en
+      // direct dans le(s) badge(s) déjà affichés via renderReactionBadges().
+      if (p.uid && !p.isMe && !_reactionsCache[p.uid] && typeof loadReactions === 'function') loadReactions(p.uid);
       // En mode APERÇU on peut aussi traîner la carte : attachDrag détecte le
       // preview et la fait rebondir au centre au relâchement (aucun swipe).
       if (isTop) attachDrag(c);
@@ -2345,11 +2486,12 @@
       state.user = state.user || {};
       state.user.stats = state.user.stats || { viewed:0, liked:0 };
       state.user.stats.viewed++;
+      const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
+      const swiped = pool[deckIdx]; // mode normal : le deck ne contient que les autres
+      if (swiped && !swiped.isMe && swiped.uid && typeof bumpProfileViewOnce === 'function') bumpProfileViewOnce(swiped);
       // LIKE → enregistre un vrai like dans Supabase (match auto si l'autre m'a déjà liké)
       if (dir === 'yes') {
         state.user.stats.liked++;
-        const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
-        const swiped = pool[deckIdx]; // mode normal : le deck ne contient que les autres
         if (swiped && !swiped.isMe && swiped.uid && typeof recordLike === 'function') {
           recordLike(swiped);
         }
@@ -5876,8 +6018,9 @@
       // Nettoyage défensif : un lien de partage ne doit jamais s'ouvrir en mode aperçu.
       _previewMode = false;
       document.body.removeAttribute('data-preview');
-      // Retour d'OAuth avec une action en attente → on ne ré-affiche PAS la carte,
-      // onLogin va rejouer le like/dislike puis renvoyer à l'accueil.
+      // Retour d'OAuth avec une action en attente → on ne ré-affiche PAS la carte ici ;
+      // onLogin va rejouer l'action (like → renvoie à l'accueil ; réaction → rouvre ce
+      // même profil en rappelant openSharedProfile() une fois l'action nettoyée).
       if (hasFreshPendingAction()) { try { history.replaceState(null,'','/'); } catch(_){} return; } // onLogin/setScreen révèlera
       let prof = null;
       try {
@@ -5920,11 +6063,6 @@
       try { history.replaceState(null,'','/'); } catch(_){}
       if (typeof setScreen === 'function') setScreen(state.profile ? 'landing' : 'onboarding');
     }
-    document.getElementById('sharedHeartBtn')?.addEventListener('click', () => {
-      const card = document.querySelector('#swipeWrap .swipe-card');
-      if (card && typeof commitSwipe === 'function') commitSwipe('yes', card);
-      else if (typeof handleSharedAction === 'function') handleSharedAction('like');
-    });
     // Au chargement : si l'URL est un slug, on ouvre le profil partagé (même sans être connecté).
     (function handleSharedLink(){
       // Retour d'OAuth avec une action en attente → onLogin s'en charge (et révèlera la page), on ne rouvre pas la carte.
