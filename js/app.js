@@ -700,7 +700,7 @@
       }).join('');
       // Moyenne : uniquement une fois QUE J'AI noté (jamais avant), au-dessus des 5
       // jauges (qui restent toutes visibles, étiquetées 1-5) -- icône étoile, pas un emoji.
-      const avgHtml = reacted ? `<span class="cr-avg"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg>moy : ${avg.toFixed(1)}</span>` : '';
+      const avgHtml = reacted ? `<span class="cr-avg">moy : ${avg.toFixed(1)}<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg></span>` : '';
       return `${avgHtml}<span class="cr-dots">${cols}</span>`;
     }
     function reactionBadgeHtml(p){
@@ -828,7 +828,7 @@
         const rating = Math.round((left / maxLeft()) * 5 * 10) / 10; // 0.0 à 5.0 -- mais il faut atteindre 1.0 (fin de la 1re étoile) pour valider, cf. onUp()
         pending = rating;
         handle.style.left = left + 'px';
-        valueLbl.textContent = rating.toFixed(1);
+        valueLbl.textContent = rating >= 1 ? rating.toFixed(1) : ''; // pas de 0.1..0.9 affiché, seulement à partir de 1
         stars.forEach(s => s.classList.toggle('active', rating >= Number(s.dataset.i)));
         handle.setAttribute('aria-valuenow', String(rating));
       }

@@ -2814,7 +2814,7 @@ async function loadOwnReactions(){
       const h=Math.round(9+(n/total)*27);
       return '<span class="cr-col"><i class="'+(i===top?'top':'')+'" style="height:'+h+'px"></i><b>'+(i+1)+'</b></span>';
     }).join('')+'</span>';
-    const avgHtml='<span class="cr-avg"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg>moy : '+avg.toFixed(1)+'</span>';
+    const avgHtml='<span class="cr-avg">moy : '+avg.toFixed(1)+'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg></span>';
     badge.innerHTML=avgHtml+dots;
     badge.hidden=false;
   }catch(e){ console.warn('[editor] load reactions', e); }
