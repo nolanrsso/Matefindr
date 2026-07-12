@@ -853,7 +853,6 @@
           renderSwipePhotos(_sharedProfile);
           playProfileEntryMusic(_sharedProfile);
         } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
-        if (typeof positionSharedComments === 'function') requestAnimationFrame(positionSharedComments);
         return;
       }
       const myP = buildUserProfile();
@@ -1247,7 +1246,7 @@
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
-        ${p._showViews ? `<span class="card-views">👁️ ${(p.views||0).toLocaleString('fr-FR')} vue${(p.views||0)>1?'s':''}</span>` : ''}
+        ${p._showViews ? `<span class="card-views"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg> ${(p.views||0).toLocaleString('fr-FR')} vue${(p.views||0)>1?'s':''}</span>` : ''}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
         <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
@@ -5870,7 +5869,6 @@
         }
       } catch(_){}
       setScreen('swipe'); // ensureDeckSync affiche _sharedProfile
-      if (typeof loadSharedComments === 'function') loadSharedComments(prof.uid);
     }
     async function handleSharedAction(action){
       const target = _sharedProfile;
@@ -5889,94 +5887,9 @@
     function finishShared(){
       _sharedProfile = null;
       document.body.removeAttribute('data-shared');
-      if (typeof clearSharedComments === 'function') clearSharedComments();
       try { history.replaceState(null,'','/'); } catch(_){}
       if (typeof setScreen === 'function') setScreen(state.profile ? 'landing' : 'onboarding');
     }
-
-    /* ===== Lien perso : commentaires du profil (bas-gauche de la carte) ===== */
-    let _sharedCommentsProfileId = null, _sharedCommentsResize = null;
-    function clearSharedComments(){
-      _sharedCommentsProfileId = null;
-      const list = document.getElementById('scList'); if (list) list.innerHTML = '';
-      const cnt = document.getElementById('scCount'); if (cnt) cnt.textContent = '0';
-      if (_sharedCommentsResize) { window.removeEventListener('resize', _sharedCommentsResize); _sharedCommentsResize = null; }
-    }
-    function escapeHtmlSc(s){ return String(s||'').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
-    function renderSharedComments(rows){
-      const list = document.getElementById('scList'), cnt = document.getElementById('scCount');
-      if (!list) return;
-      const n = rows.length;
-      if (cnt) cnt.textContent = String(n);
-      if (!n) { list.innerHTML = '<p class="sc-empty">Aucun commentaire pour l\'instant — sois le premier !</p>'; return; }
-      list.innerHTML = rows.map(r => {
-        const avi = r.author_avatar
-          ? `<img class="sc-avi" src="${r.author_avatar}" alt="">`
-          : `<span class="sc-avi">${escapeHtmlSc((r.author_name||'?').charAt(0).toUpperCase())}</span>`;
-        return `<div class="sc-item">${avi}<div class="sc-body"><b>${escapeHtmlSc(r.author_name||'Anonyme')}</b>${escapeHtmlSc(r.body)}</div></div>`;
-      }).join('');
-    }
-    async function loadSharedComments(profileId){
-      _sharedCommentsProfileId = profileId;
-      if (typeof positionSharedComments === 'function') {
-        positionSharedComments();
-        if (!_sharedCommentsResize) {
-          _sharedCommentsResize = () => positionSharedComments();
-          window.addEventListener('resize', _sharedCommentsResize);
-        }
-      }
-      if (!window.__supa) return;
-      try {
-        const { data, error } = await window.__supa.from('profile_comments')
-          .select('*').eq('profile_id', profileId)
-          .order('created_at', { ascending: false }).limit(100);
-        if (error) { console.warn('[Matefindr] load comments', error.message || error); return; }
-        if (_sharedCommentsProfileId === profileId) renderSharedComments(data || []);
-      } catch(e){ console.warn('[Matefindr] load comments', e); }
-    }
-    // Ancré en bas-gauche de la carte (comme les GIFs/photos) ; bascule sous la
-    // carte si pas assez de place à gauche (mobile/écran étroit).
-    function positionSharedComments(){
-      const panel = document.getElementById('sharedComments');
-      const wrap = document.getElementById('swipeWrap');
-      if (!panel || !wrap || panel.hidden) return;
-      const r = wrap.getBoundingClientRect();
-      const pw = panel.offsetWidth || 280, ph = panel.offsetHeight || 200;
-      if (r.left - pw - 24 > 8) {
-        panel.style.left = (r.left - pw - 16) + 'px';
-        panel.style.top = Math.max(70, r.bottom - ph) + 'px';
-      } else {
-        panel.style.left = Math.max(8, r.left) + 'px';
-        panel.style.top = Math.min(window.innerHeight - ph - 12, r.bottom + 12) + 'px';
-      }
-    }
-    document.getElementById('scForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const inp = document.getElementById('scInput');
-      const body = (inp.value || '').trim();
-      if (!body || !_sharedCommentsProfileId) return;
-      let session = null;
-      try { ({ data:{ session } } = await window.__supa.auth.getSession()); } catch(_){}
-      if (!session) {
-        showToast && showToast('🔒', 'Connecte-toi', 'Il faut un compte pour commenter');
-        if (typeof signInWithDiscord === 'function') signInWithDiscord();
-        else if (window.signInWithDiscord) window.signInWithDiscord();
-        return;
-      }
-      const u = session.user.user_metadata || {};
-      const authorName = (state.user && state.user.displayName) || u.full_name || u.name || 'Matefindr_user';
-      const authorAvatar = (state.user && state.user.avatarUrl) || null;
-      inp.disabled = true;
-      try {
-        const { error } = await window.__supa.from('profile_comments').insert({
-          profile_id: _sharedCommentsProfileId, author_id: session.user.id,
-          author_name: authorName, author_avatar: authorAvatar, body: body.slice(0, 500),
-        });
-        if (error) { console.warn('[Matefindr] post comment', error.message || error); showToast && showToast('⚠️','Échec','Réessaie dans un instant'); }
-        else { inp.value = ''; loadSharedComments(_sharedCommentsProfileId); }
-      } catch(e){ console.warn('[Matefindr] post comment', e); }
-      inp.disabled = false;
-    });
     document.getElementById('sharedHeartBtn')?.addEventListener('click', () => {
       const card = document.querySelector('#swipeWrap .swipe-card');
       if (card && typeof commitSwipe === 'function') commitSwipe('yes', card);
