@@ -825,7 +825,7 @@
         const half = handle.offsetWidth / 2;
         let left = clientX - rect.left - half;
         left = Math.max(0, Math.min(maxLeft(), left));
-        const rating = Math.round((1 + (left / maxLeft()) * 4) * 10) / 10; // note mini = 1.0
+        const rating = Math.round((left / maxLeft()) * 5 * 10) / 10; // 0.0 à 5.0 -- mais il faut atteindre 1.0 (fin de la 1re étoile) pour valider, cf. onUp()
         pending = rating;
         handle.style.left = left + 'px';
         valueLbl.textContent = rating.toFixed(1);
@@ -840,7 +840,16 @@
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         const target = getTarget && getTarget();
-        if (target && target.uid) sendReaction(target.uid, pending);
+        // Il faut avoir glissé au moins jusqu'à la fin de la 1re étoile (note >= 1.0)
+        // pour valider -- en dessous, on relâche sans rien envoyer (retour de force
+        // "à vide" : la poignée revient à gauche, l'ancien état -- flèche ou note déjà
+        // envoyée -- est restauré tel quel, cf. setSliderRestState).
+        if (target && target.uid && pending >= 1) {
+          sendReaction(target.uid, pending);
+        } else {
+          const rec = target && target.uid ? _reactionsCache[target.uid] : null;
+          setSliderRestState(root, rec ? rec.mine : null);
+        }
         // Retour de force : la poignée revient tout à gauche (setSliderRestState via
         // sendReaction -> updateSlidersFor s'occupe d'afficher la note envoyée).
         if (typeof onSubmitted === 'function') onSubmitted();
