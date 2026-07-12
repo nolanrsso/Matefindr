@@ -661,6 +661,7 @@
         // IDs des serveurs Discord → calcul des serveurs en commun chez les autres.
         guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => g.id) : []),
         orbs,
+        orbColors: (p.orbColors && typeof p.orbColors === 'object') ? p.orbColors : null,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
         socials: u.socials || {},
@@ -1746,6 +1747,30 @@
 
     let _swipeCurrentP = null;      // profil actuellement affiché (pour re-render à la rotation)
     let _swipeRenderedMode = null;  // orientation utilisée au dernier rendu des bulles
+    // Couleur perso choisie dans l'éditeur pour un type de bulle (music/game/film) →
+    // dérive les 3 stops du dégradé + les couleurs de bordure/halo en CSS custom
+    // properties, lues par les règles .orb[data-kind] de css/app.css (fallback = couleur par défaut).
+    function shadeHex(hex, amt){
+      const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return hex;
+      const r = parseInt(m[1].substr(0,2),16), g = parseInt(m[1].substr(2,2),16), b = parseInt(m[1].substr(4,2),16);
+      const f = v => amt >= 0 ? Math.round(v + (255 - v) * amt) : Math.round(v * (1 + amt));
+      return '#' + [f(r),f(g),f(b)].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0')).join('');
+    }
+    function hexToRgbaOrb(hex, a){
+      const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
+      const r = parseInt(m[1].substr(0,2),16), g = parseInt(m[1].substr(2,2),16), b = parseInt(m[1].substr(4,2),16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+    function applyOrbCustomColor(el, hex){
+      if (!el || !hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
+      el.style.setProperty('--orb-c1', shadeHex(hex, .35));
+      el.style.setProperty('--orb-c2', hex);
+      el.style.setProperty('--orb-c3', shadeHex(hex, -.55));
+      el.style.setProperty('--orb-bc', hexToRgbaOrb(hex, .85));
+      el.style.setProperty('--orb-rc', hexToRgbaOrb(hex, .45));
+      el.style.setProperty('--orb-gc', hexToRgbaOrb(hex, .8));
+      el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
+    }
     function renderOrbs(p){
       _swipeCurrentP = p;
       _swipeRenderedMode = activeLayoutMode();
@@ -1837,6 +1862,7 @@
         btn.type = 'button';
         btn.className = 'orb' + (isCommon ? ' orb--common' : '') + (locked ? ' orb--locked' : '');
         btn.dataset.kind = o.kind;
+        if (!locked && p.orbColors) applyOrbCustomColor(btn, p.orbColors[o.kind]);
         if (locked) {
           btn.title = 'Bulle verrouillée';
           btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
@@ -3205,6 +3231,7 @@
         const circle = document.createElement('div');
         circle.className = 'acc-orb-circle';
         circle.dataset.kind = o.kind;
+        if (p.orbColors) applyOrbCustomColor(circle, p.orbColors[o.kind]);
         circle.innerHTML = orbInner(o);
         if (o.kind === 'game' && o.rank) {
           const rb = document.createElement('span');
@@ -4274,6 +4301,7 @@
         bannerUrl: f.bannerUrl || p.bannerUrl || null,
         decorationUrl: f.decorationUrl || p.decorationUrl || null,
         orbs: f.orbs || p.orbs || [],
+        orbColors: f.orbColors || p.orbColors || null,
         gifs: f.gifs || [],
         gifContour: f.gifContour !== false,
         photos: f.photos || [],

@@ -225,15 +225,15 @@ body[data-canvas="portrait"] .card-frame::before{
 .orb:hover{transform:scale(1.08)}
 .orb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .orb svg{width:32px;height:32px;position:relative;z-index:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-.orb[data-kind="music"]{border-color:rgba(80,255,150,.85);box-shadow:0 0 0 2px rgba(29,185,84,.4),0 0 22px 4px rgba(30,215,96,.7),0 12px 30px rgba(0,0,0,.5)}
+.orb[data-kind="music"]{border-color:var(--orb-bc,rgba(80,255,150,.85));box-shadow:0 0 0 2px var(--orb-rc,rgba(29,185,84,.4)),0 0 22px 4px var(--orb-gc,rgba(30,215,96,.7)),0 12px 30px rgba(0,0,0,.5)}
 /* Pochette qui tourne comme un vinyle → identifie une bulle de son au premier
    coup d'œil. Suspendue pendant le drag (suit le geste, ne tourne pas dans le vide). */
 .orb[data-kind="music"] img{animation:orbVinylSpin 6s linear infinite}
 @keyframes orbVinylSpin{to{transform:rotate(360deg)}}
 .orb-wrap.dragging .orb[data-kind="music"] img{animation-play-state:paused}
 html.perf-lite .orb[data-kind="music"] img{animation:none}
-.orb[data-kind="game"]{border-color:rgba(141,203,255,.9);box-shadow:0 0 0 2px rgba(47,123,216,.5),0 0 22px 4px rgba(141,203,255,.7),0 12px 30px rgba(0,0,0,.5)}
-.orb[data-kind="film"]{border-color:rgba(199,165,255,.85);box-shadow:0 0 0 2px rgba(139,92,246,.5),0 0 22px 4px rgba(199,165,255,.7),0 12px 30px rgba(0,0,0,.5)}
+.orb[data-kind="game"]{border-color:var(--orb-bc,rgba(141,203,255,.9));box-shadow:0 0 0 2px var(--orb-rc,rgba(47,123,216,.5)),0 0 22px 4px var(--orb-gc,rgba(141,203,255,.7)),0 12px 30px rgba(0,0,0,.5)}
+.orb[data-kind="film"]{border-color:var(--orb-bc,rgba(199,165,255,.85));box-shadow:0 0 0 2px var(--orb-rc,rgba(139,92,246,.5)),0 0 22px 4px var(--orb-gc,rgba(199,165,255,.7)),0 12px 30px rgba(0,0,0,.5)}
 /* Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite) */
 .orb-wrap--add{cursor:pointer}
 .orb--add{cursor:pointer;background:rgba(145,70,255,.10);border:2.5px dashed rgba(145,70,255,.6);
@@ -778,6 +778,13 @@ body.color-open .card-zone{transform:translateX(158px)}
 .cats button{flex:1;padding:9px;border-radius:11px;border:1.5px solid var(--stroke);background:rgba(255,255,255,.03);color:var(--dim);font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;transition:.14s ease}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
+.orb-color-row{display:flex;gap:8px;margin-bottom:12px}
+.orb-color-swatch{flex:1;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:11px;border:1.5px solid var(--stroke);background:rgba(255,255,255,.03);cursor:pointer}
+.orb-color-swatch .sw{position:relative;width:20px;height:20px;border-radius:50%;flex:0 0 auto;border:1.5px solid rgba(255,255,255,.35);overflow:hidden}
+.orb-color-swatch .sw input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer}
+.orb-color-swatch .sw input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+.orb-color-swatch .sw input[type=color]::-webkit-color-swatch{border:none}
+.orb-color-swatch span{font-size:11.5px;font-weight:700;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .search-row{display:flex;gap:8px;margin-bottom:10px}
 .search-row input{flex:1;padding:10px 13px;border-radius:11px;font:inherit;color:#fff;outline:none;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2)}
@@ -1271,6 +1278,7 @@ async function klipySearchGifs(q, page){
   const gifs=items.map(it=>{ const f=it.file||{}; const t=f.md||f.sm||f.hd||f.xs||{}; return (t.gif&&t.gif.url)||''; }).filter(Boolean);
   return { gifs, hasNext:!!box.has_next };
 }
+function hexToRgba(hex,a){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return null;const r=parseInt(m[1].substr(0,2),16),g=parseInt(m[1].substr(2,2),16),b=parseInt(m[1].substr(4,2),16);return `rgba(${r},${g},${b},${a})`;}
 const $ = id => document.getElementById(id);
 const fmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
@@ -1283,6 +1291,7 @@ const S = {
   c1:'#242429', c2:'#242429', // couleur Discord par défaut
   nameColor:null,             // couleur du pseudo (null = blanc par défaut)
   orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
+  orbColors:{music:null,game:null,film:null}, // couleur perso par type de bulle (null = couleur par défaut)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
   gifContour:true,   // contour blanc autour des GIFs (désactivable) — n'affecte pas les photos
   photos:[],   // {url,x,y,w,rot, posByMode} — photos perso (Boost), mêmes mécaniques que les GIFs
@@ -1675,18 +1684,28 @@ function curatedMatches(query,kind,limit){
   return starts.concat(contains).slice(0,limit);
 }
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
+const ORB_DEFAULT_COLOR={music:'#1ed760',game:'#8dcbff',film:'#c7a5ff'};
 function renderBubblesSheet(sh){
-  sh.innerHTML=sheetHeader('Mes bulles d\'intérêt',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`)+`
+  const oc=Object.assign({},ORB_DEFAULT_COLOR,S.orbColors||{});
+  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
       <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
       <button data-k="film" class="${orbKind==='film'?'active':''}">Série·Film</button>
+    </div>
+    <div class="orb-color-row" id="orbColorRow">
+      <label class="orb-color-swatch" title="Couleur des bulles Musique"><span class="sw"><input type="color" data-k="music" value="${oc.music||ORB_DEFAULT_COLOR.music}"></span><span>Musique</span></label>
+      <label class="orb-color-swatch" title="Couleur des bulles Jeu"><span class="sw"><input type="color" data-k="game" value="${oc.game||ORB_DEFAULT_COLOR.game}"></span><span>Jeu</span></label>
+      <label class="orb-color-swatch" title="Couleur des bulles Série·Film"><span class="sw"><input type="color" data-k="film" value="${oc.film||ORB_DEFAULT_COLOR.film}"></span><span>Série·Film</span></label>
     </div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
     <div class="sugg-list" id="orbSugg"></div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.focus();runOrbSearch(input.value.trim());}));
+  sh.querySelectorAll('#orbColorRow input[type=color]').forEach(inp=>{
+    inp.addEventListener('input',()=>{S.orbColors=S.orbColors||{};S.orbColors[inp.dataset.k]=inp.value;renderOrbs();persist();});
+  });
   let deb=null;
   input.addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();deb=setTimeout(()=>runOrbSearch(q),orbKind==='music'?320:80);});
   // jeu/film : montrer la liste curatée tout de suite
@@ -1902,6 +1921,8 @@ function renderOrbs(){
     wrap.style.transform='translate(-50%, -'+(D/2)+'px)';
     const orb=document.createElement('div'); orb.className='orb'; orb.dataset.kind=o.kind;
     orb.style.width=D+'px'; orb.style.height=D+'px';
+    const orbCol=S.orbColors&&S.orbColors[o.kind];
+    if(orbCol){orb.style.setProperty('--orb-bc',hexToRgba(orbCol,.85));orb.style.setProperty('--orb-rc',hexToRgba(orbCol,.45));orb.style.setProperty('--orb-gc',hexToRgba(orbCol,.7));}
     orb.innerHTML = o.cover?`<img src="${o.cover}" alt="">`:ORB_ICON[o.kind];
     const svg=orb.querySelector('svg'); if(svg){ svg.style.width=Math.round(D*0.34)+'px'; svg.style.height=Math.round(D*0.34)+'px'; }
     const del=document.createElement('div'); del.className='orb-del'; del.textContent='✕';
@@ -2705,6 +2726,11 @@ function writeState(){
     if(pm.landscape&&typeof pm.landscape.x==='number') r.posLandscape={x:(pm.landscape.x-50)/100,y:(pm.landscape.y-50)/100};
     return r;
   });
+  st.profile.orbColors={
+    music:(S.orbColors&&/^#[0-9a-f]{6}$/i.test(S.orbColors.music))?S.orbColors.music:null,
+    game:(S.orbColors&&/^#[0-9a-f]{6}$/i.test(S.orbColors.game))?S.orbColors.game:null,
+    film:(S.orbColors&&/^#[0-9a-f]{6}$/i.test(S.orbColors.film))?S.orbColors.film:null,
+  };
   st.user.gifs=S.gifs.map(g=>{
     const pm=g.posByMode||{};
     const d=pm.desktop||{x:g.x,y:g.y,w:g.w,rot:g.rot};
@@ -2782,7 +2808,7 @@ function buildDbProfile(st){
     accentColor:u.accentColor||null, profileVoice:u.profileVoice||null,
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
-    orbs, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
+    orbs, orbColors:p.orbColors||null, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
     gifs:Array.isArray(u.gifs)?u.gifs:[], gifContour:(u.gifContour!==false), photos:Array.isArray(u.photos)?u.photos:[], photoContour:(u.photoContour!==false), bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
     connections:(p.connections&&typeof p.connections==='object')?p.connections:{},
     handleBlur:!!u.handleBlur, showBoostName:(u.boostShowName===false)?false:true,
@@ -2922,6 +2948,11 @@ function hydrateFromSite(){
       .filter(o=>['music','game','film'].includes(o.kind)).slice(0,orbMax());
     renderOrbs();
   }
+  if(p.orbColors && typeof p.orbColors==='object'){
+    S.orbColors={music:null,game:null,film:null};
+    ['music','game','film'].forEach(k=>{ if(p.orbColors[k]&&/^#[0-9a-f]{6}$/i.test(p.orbColors[k])) S.orbColors[k]=p.orbColors[k]; });
+    renderOrbs();
+  }
   S.gifContour=(u.gifContour!==false);
   if(Array.isArray(u.gifs)&&u.gifs.length){
     S.gifs=u.gifs.slice(0,GIF_MAX).map(g=>{
@@ -2991,7 +3022,7 @@ let PRESETS=loadPresets();
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
-  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
 }
 // Snapshot vierge : personnalisation (bio, couleurs, bulles, GIFs…) remise à zéro,
@@ -3000,7 +3031,7 @@ function snapshotProfile(){
 async function blankPresetSnapshot(){
   const base={ username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
     bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
-    orbs:[], gifs:[], gifContour:true, photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
+    orbs:[], orbColors:{music:null,game:null,film:null}, gifs:[], gifContour:true, photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
     nameCustom:false, avatarCustom:false, addBubblePos:null };
   try{
     const token=localStorage.getItem('matefindr_discord_token');
@@ -3080,7 +3111,10 @@ function applyPreset(snap){
     S.voice=c.voice||null; S.music=c.music||null;
     S.c1=c.c1||S.c1; S.c2=c.c2||S.c2;
     S.nameColor=(c.nameColor&&/^#[0-9a-f]{6}$/i.test(c.nameColor))?c.nameColor:null;
-    S.orbs=Array.isArray(c.orbs)?c.orbs:[]; S.gifs=Array.isArray(c.gifs)?c.gifs:[]; S.gifContour=(c.gifContour!==false);
+    S.orbs=Array.isArray(c.orbs)?c.orbs:[];
+    S.orbColors={music:null,game:null,film:null};
+    if(c.orbColors&&typeof c.orbColors==='object'){ ['music','game','film'].forEach(k=>{ if(c.orbColors[k]&&/^#[0-9a-f]{6}$/i.test(c.orbColors[k])) S.orbColors[k]=c.orbColors[k]; }); }
+    S.gifs=Array.isArray(c.gifs)?c.gifs:[]; S.gifContour=(c.gifContour!==false);
     S.photos=Array.isArray(c.photos)?c.photos:[]; S.photoContour=(c.photoContour!==false);
     S.connections=c.connections||{};
     S.handleBlur=!!c.handleBlur; S.boostShowName=(c.boostShowName!==false);
