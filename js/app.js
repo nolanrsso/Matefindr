@@ -853,6 +853,7 @@
           renderSwipePhotos(_sharedProfile);
           playProfileEntryMusic(_sharedProfile);
         } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
+        if (typeof positionSharedComments === 'function') requestAnimationFrame(positionSharedComments);
         return;
       }
       const myP = buildUserProfile();
@@ -2272,8 +2273,9 @@
         const p = e.touches ? e.touches[0] : e;
         dx = p.clientX - sx; dy = p.clientY - sy;
         card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
-        // Aperçu : on déplace librement la carte, sans stamps LIKE/NOPE ni boutons de swipe.
-        if (_previewMode) return;
+        // Aperçu / lien perso : on déplace librement la carte, sans stamps LIKE/NOPE
+        // ni boutons de swipe (le lien perso n'a plus qu'un cœur, pas de dislike).
+        if (_previewMode || _sharedProfile) return;
         like.style.opacity = Math.max(0, Math.min(1, dx / 120));
         nope.style.opacity = Math.max(0, Math.min(1, -dx / 120));
         if (dx > 40) setDir('right');
@@ -2287,8 +2289,9 @@
         document.removeEventListener('touchmove', onMove);
         document.removeEventListener('touchend', onUp);
         card.style.transition = '';
-        // En mode aperçu : la carte rebondit toujours au centre (pas de swipe possible).
-        if (!_previewMode && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
+        // En mode aperçu / lien perso : la carte rebondit toujours au centre (pas de
+        // swipe au drag -- le lien perso ne like que via le bouton cœur dédié).
+        if (!_previewMode && !_sharedProfile && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
         else {
           // Retour au centre avec un léger ressort.
           card.style.transition = 'transform .55s cubic-bezier(.34,1.4,.5,1)';
@@ -5855,6 +5858,7 @@
       if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
       prof._showViews = true;
       _sharedProfile = prof;
+      document.body.setAttribute('data-shared', 'true'); // masque like/dislike/swipe/FABs, montre cœur + commentaires
       // Compteur de vues : +1 une seule fois par navigateur pour ce profil.
       try {
         const seen = 'mf_viewed_' + prof.uid;
@@ -5866,6 +5870,7 @@
         }
       } catch(_){}
       setScreen('swipe'); // ensureDeckSync affiche _sharedProfile
+      if (typeof loadSharedComments === 'function') loadSharedComments(prof.uid);
     }
     async function handleSharedAction(action){
       const target = _sharedProfile;
@@ -5883,9 +5888,100 @@
     }
     function finishShared(){
       _sharedProfile = null;
+      document.body.removeAttribute('data-shared');
+      if (typeof clearSharedComments === 'function') clearSharedComments();
       try { history.replaceState(null,'','/'); } catch(_){}
       if (typeof setScreen === 'function') setScreen(state.profile ? 'landing' : 'onboarding');
     }
+
+    /* ===== Lien perso : commentaires du profil (bas-gauche de la carte) ===== */
+    let _sharedCommentsProfileId = null, _sharedCommentsResize = null;
+    function clearSharedComments(){
+      _sharedCommentsProfileId = null;
+      const list = document.getElementById('scList'); if (list) list.innerHTML = '';
+      const cnt = document.getElementById('scCount'); if (cnt) cnt.textContent = '0';
+      if (_sharedCommentsResize) { window.removeEventListener('resize', _sharedCommentsResize); _sharedCommentsResize = null; }
+    }
+    function escapeHtmlSc(s){ return String(s||'').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+    function renderSharedComments(rows){
+      const list = document.getElementById('scList'), cnt = document.getElementById('scCount');
+      if (!list) return;
+      const n = rows.length;
+      if (cnt) cnt.textContent = String(n);
+      if (!n) { list.innerHTML = '<p class="sc-empty">Aucun commentaire pour l\'instant — sois le premier !</p>'; return; }
+      list.innerHTML = rows.map(r => {
+        const avi = r.author_avatar
+          ? `<img class="sc-avi" src="${r.author_avatar}" alt="">`
+          : `<span class="sc-avi">${escapeHtmlSc((r.author_name||'?').charAt(0).toUpperCase())}</span>`;
+        return `<div class="sc-item">${avi}<div class="sc-body"><b>${escapeHtmlSc(r.author_name||'Anonyme')}</b>${escapeHtmlSc(r.body)}</div></div>`;
+      }).join('');
+    }
+    async function loadSharedComments(profileId){
+      _sharedCommentsProfileId = profileId;
+      if (typeof positionSharedComments === 'function') {
+        positionSharedComments();
+        if (!_sharedCommentsResize) {
+          _sharedCommentsResize = () => positionSharedComments();
+          window.addEventListener('resize', _sharedCommentsResize);
+        }
+      }
+      if (!window.__supa) return;
+      try {
+        const { data, error } = await window.__supa.from('profile_comments')
+          .select('*').eq('profile_id', profileId)
+          .order('created_at', { ascending: false }).limit(100);
+        if (error) { console.warn('[Matefindr] load comments', error.message || error); return; }
+        if (_sharedCommentsProfileId === profileId) renderSharedComments(data || []);
+      } catch(e){ console.warn('[Matefindr] load comments', e); }
+    }
+    // Ancré en bas-gauche de la carte (comme les GIFs/photos) ; bascule sous la
+    // carte si pas assez de place à gauche (mobile/écran étroit).
+    function positionSharedComments(){
+      const panel = document.getElementById('sharedComments');
+      const wrap = document.getElementById('swipeWrap');
+      if (!panel || !wrap || panel.hidden) return;
+      const r = wrap.getBoundingClientRect();
+      const pw = panel.offsetWidth || 280, ph = panel.offsetHeight || 200;
+      if (r.left - pw - 24 > 8) {
+        panel.style.left = (r.left - pw - 16) + 'px';
+        panel.style.top = Math.max(70, r.bottom - ph) + 'px';
+      } else {
+        panel.style.left = Math.max(8, r.left) + 'px';
+        panel.style.top = Math.min(window.innerHeight - ph - 12, r.bottom + 12) + 'px';
+      }
+    }
+    document.getElementById('scForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const inp = document.getElementById('scInput');
+      const body = (inp.value || '').trim();
+      if (!body || !_sharedCommentsProfileId) return;
+      let session = null;
+      try { ({ data:{ session } } = await window.__supa.auth.getSession()); } catch(_){}
+      if (!session) {
+        showToast && showToast('🔒', 'Connecte-toi', 'Il faut un compte pour commenter');
+        if (typeof signInWithDiscord === 'function') signInWithDiscord();
+        else if (window.signInWithDiscord) window.signInWithDiscord();
+        return;
+      }
+      const u = session.user.user_metadata || {};
+      const authorName = (state.user && state.user.displayName) || u.full_name || u.name || 'Matefindr_user';
+      const authorAvatar = (state.user && state.user.avatarUrl) || null;
+      inp.disabled = true;
+      try {
+        const { error } = await window.__supa.from('profile_comments').insert({
+          profile_id: _sharedCommentsProfileId, author_id: session.user.id,
+          author_name: authorName, author_avatar: authorAvatar, body: body.slice(0, 500),
+        });
+        if (error) { console.warn('[Matefindr] post comment', error.message || error); showToast && showToast('⚠️','Échec','Réessaie dans un instant'); }
+        else { inp.value = ''; loadSharedComments(_sharedCommentsProfileId); }
+      } catch(e){ console.warn('[Matefindr] post comment', e); }
+      inp.disabled = false;
+    });
+    document.getElementById('sharedHeartBtn')?.addEventListener('click', () => {
+      const card = document.querySelector('#swipeWrap .swipe-card');
+      if (card && typeof commitSwipe === 'function') commitSwipe('yes', card);
+      else if (typeof handleSharedAction === 'function') handleSharedAction('like');
+    });
     // Au chargement : si l'URL est un slug, on ouvre le profil partagé (même sans être connecté).
     (function handleSharedLink(){
       // Retour d'OAuth avec une action en attente → onLogin s'en charge (et révèlera la page), on ne rouvre pas la carte.
