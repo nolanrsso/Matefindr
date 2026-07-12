@@ -2888,6 +2888,28 @@ async function loadOwnReactions(){
   }catch(e){ console.warn('[editor] load reactions', e); }
 }
 loadOwnReactions();
+/* Statut "profil désactivé" : relu DEPUIS LA BASE (pas juste localStorage) à l'ouverture
+   de l'éditeur. Sans ça, si un admin réactive le compte pendant que l'utilisateur est
+   resté sur cette page, le premier autosave de l'éditeur (buildDbProfile, qui inclut
+   disabled/disabledReason en passthrough) réécrivait l'ANCIENNE valeur locale et
+   annulait la réactivation presque immédiatement -- la réactivation "ne marchait pas". */
+async function refreshDisabledStatus(){
+  const sb=edSupa(); if(!sb) return;
+  try{
+    const { data:{ session } }=await sb.auth.getSession();
+    if(!session) return;
+    const { data }=await sb.from('profiles').select('data').eq('id',session.user.id).maybeSingle();
+    const dRaw=(data&&data.data&&typeof data.data==='object')?data.data:null;
+    const disabled=!!(dRaw&&dRaw.disabled===true);
+    const reason=disabled?(dRaw.disabledReason||''):null;
+    const count=(dRaw&&typeof dRaw.disabledCount==='number')?dRaw.disabledCount:0;
+    const st=readSite(); st.user=st.user||{};
+    st.user.disabled=disabled; st.user.disabledReason=reason; st.user.disabledCount=count;
+    try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
+    showDisabledBanner(disabled?reason:null);
+  }catch(e){ console.warn('[editor] refresh disabled status', e); }
+}
+refreshDisabledStatus();
 /* Décoration d'avatar Discord + point de statut, déposés par-dessus l'avatar (réappliqués après tout setCroppedMedia). */
 let _decorationUrl=null;
 function applyAvatarDeco(){
