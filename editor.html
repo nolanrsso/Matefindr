@@ -2705,6 +2705,15 @@ function readSite(){ try{ return JSON.parse(localStorage.getItem(STATE_KEY)||'{}
 // Snapshot du profil à l'ouverture — sert au bouton « Annuler » (avant toute écriture).
 const _entrySnapshot = localStorage.getItem(STATE_KEY);
 let _persistT=null;
+// Horodatage "vraie modif visuelle" pour l'admin (admin.html trie/notifie dessus) --
+// volontairement DIFFÉRENT de profiles.updated_at (qui bouge aussi pour les vues,
+// likes, matchs, messages...). Ne doit bouger QUE quand le contenu réellement visible
+// sur la carte change (pseudo, bio, avatar, bannière, couleurs, bulles, GIFs, photos,
+// connexions...), jamais sur un simple rechargement de page (applyPreset() au boot
+// déclenche aussi persist() sans qu'aucun champ n'ait changé).
+const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+function visualFingerprint(){ try{ return JSON.stringify(VISUAL_KEYS.map(k=>S[k])); }catch(_){ return ''; } }
+let _lastVisualFingerprint=null; // posé juste après l'hydratation initiale (cf. boot plus bas)
 function writeState(){
   const st=readSite(); st.user=st.user||{}; st.profile=st.profile||{};
   st.user.displayName=S.username;
@@ -2765,6 +2774,9 @@ function writeState(){
   // l'ancienne URL dans l'état → repoussée en DB → toujours visible par les autres.
   st.user.profileVoice = S.voice ? S.voice.url : null;
   st.profile.connections=Object.assign({},S.connections);
+  const _fp=visualFingerprint();
+  if(_lastVisualFingerprint!==null && _fp!==_lastVisualFingerprint) st.profile.lastEditedAt=new Date().toISOString();
+  _lastVisualFingerprint=_fp;
   try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
   scheduleDbSync(); // ← pousse aussi vers Supabase à chaque modif
   if(typeof syncActivePreset==='function') syncActivePreset(); // sauvegarde aussi dans le preset actif
@@ -2828,6 +2840,10 @@ function buildDbProfile(st){
     // (justement ce qu'on demande à un compte désactivé de faire) effacerait silencieusement
     // le flag "disabled" côté base.
     disabled:!!u.disabled, disabledReason:u.disabledReason||null, disabledCount:u.disabledCount||0,
+    // Horodatage de la dernière VRAIE modif visuelle (cf. writeState/visualFingerprint) --
+    // lu par admin.html pour trier/notifier, distinct de profiles.updated_at (vues, likes,
+    // matchs, messages ne doivent pas déclencher de notif "modification du profil").
+    lastEditedAt:p.lastEditedAt||null,
   };
 }
 let _dbSyncT=null, _dbSyncing=false;
@@ -3102,6 +3118,10 @@ else {
   // vraiment actif.
   applyPreset(PRESETS[_activePresetIdx]);
 }
+// Ligne de base pour lastEditedAt : posée APRÈS toute l'hydratation/normalisation du
+// boot (qui peut elle-même déclencher persist() sans aucune vraie modif) -- seules les
+// modifs faites APRÈS ce point (donc par l'utilisateur) bougeront lastEditedAt.
+_lastVisualFingerprint=visualFingerprint();
 /* Garde multi-onglets : si un AUTRE onglet (ex: cet éditeur laissé ouvert ailleurs)
    modifie les presets ou le preset actif pendant que celui-ci est ouvert, ce tab-ci
    travaillerait sur des données périmées puis écraserait la modif la plus récente

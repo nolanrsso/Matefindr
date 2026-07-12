@@ -164,6 +164,7 @@
     <label class="chk"><input type="checkbox" id="onlyBanned" /> Bannis seulement</label>
     <label class="chk"><input type="checkbox" id="onlyDisabled" /> Désactivés seulement</label>
     <button class="tbtn" id="migrateBtn" style="display:none">🧹 Migrer images → Storage</button>
+    <button class="tbtn" id="clearSeenBtn">✓ Tout marquer comme vu</button>
     <button class="tbtn" id="refreshBtn">↻ Actualiser</button>
     <button class="tbtn" id="logoutBtn">Déconnexion</button>
   </div>
@@ -187,7 +188,9 @@
   function loadSeen(){ try{ return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}'); }catch(_){ return {}; } }
   function saveSeen(map){ try{ localStorage.setItem(SEEN_KEY, JSON.stringify(map)); }catch(_){} }
   let SEEN=loadSeen();
-  function lastMod(a){ return (a.prof&&a.prof.updated_at) || a.created_at || 0; }
+  // lastEditedAt (posé par editor.html, seulement sur une vraie modif visuelle) prime sur
+  // profiles.updated_at (qui bouge aussi pour les vues/likes/matchs/messages -- pas voulu ici).
+  function lastMod(a){ const dd=(a.prof&&a.prof.data)||{}; return dd.lastEditedAt || (a.prof&&a.prof.updated_at) || a.created_at || 0; }
   function isUnseen(a){ const lm=lastMod(a); if(!lm) return false; const seenAt=SEEN[a.id]||0; return new Date(lm).getTime() > seenAt; }
   function markSeen(a){ SEEN[a.id]=Date.now(); saveSeen(SEEN); }
   // Clé anon (publique — déjà en clair dans index.html du site) : permet la lecture seule
@@ -222,6 +225,14 @@
     location.reload();
   });
   $('refreshBtn').addEventListener('click',loadAll);
+  // Efface toutes les pastilles de notif actuelles (utile après un déploiement de cette
+  // fonctionnalité : sans ça, tout compte déjà modifié avant coup montrerait une pastille
+  // à tort, faute d'avoir jamais été "vu" par cet admin).
+  $('clearSeenBtn').addEventListener('click',()=>{
+    ACCOUNTS.forEach(a=>markSeen(a));
+    renderTable();
+    toast('✓ Toutes les notifs marquées comme vues');
+  });
   $('search').addEventListener('input',renderTable);
   $('onlyBanned').addEventListener('change',renderTable);
   $('onlyDisabled').addEventListener('change',renderTable);
@@ -264,6 +275,15 @@
     // Le compte dont le profil a été modifié le plus récemment remonte en haut
     // (plutôt que trié par date d'inscription) -- c'est ce qu'un admin veut surveiller.
     ACCOUNTS.sort((a,b)=> new Date(lastMod(b))-new Date(lastMod(a)));
+    // 1er chargement avec cette fonctionnalité (aucun "vu" encore enregistré dans ce
+    // navigateur) : sans ça, TOUS les comptes déjà existants montreraient une pastille
+    // de notif à tort (rien n'a jamais été marqué "vu"). On efface une seule fois.
+    try{
+      if(localStorage.getItem('mf_admin_seen_init')===null){
+        ACCOUNTS.forEach(a=>markSeen(a));
+        localStorage.setItem('mf_admin_seen_init','1');
+      }
+    }catch(_){}
     $('migrateBtn').style.display = FULL ? '' : 'none';
     renderTable();
   }
