@@ -1520,7 +1520,7 @@
   .swipe-card .card-views{
     position:absolute;left:14px;bottom:14px;z-index:6;
     display:inline-flex;align-items:center;gap:7px;
-    color:#fff;font-size:18px;font-weight:400;
+    color:#fff;font-size:18px;font-weight:400;font-family:"Clash Display",sans-serif;
     text-shadow:0 2px 8px rgba(0,0,0,.6);
     pointer-events:none;
   }
@@ -1542,7 +1542,7 @@
     display:block;width:9px;border-radius:4px;background:rgba(255,255,255,.55);
     height:9px;transition:height .25s cubic-bezier(.2,.7,.3,1), background .2s ease, box-shadow .2s ease;
   }
-  .swipe-card .card-reactions .cr-col b{font-size:16px;line-height:1;font-weight:400;font-style:normal;opacity:.9}
+  .swipe-card .card-reactions .cr-col b{font-size:16px;line-height:1;font-weight:400;font-style:normal;opacity:.9;font-family:"Clash Display",sans-serif}
   .swipe-card .card-reactions[data-reacted="true"] .cr-col i.top{
     background:#fff;box-shadow:0 0 0 1px rgba(255,126,182,.6), 0 0 6px rgba(255,126,182,.5);
   }
@@ -1550,7 +1550,7 @@
      (qui restent toutes visibles, étiquetées 1-5). Icône étoile (pas un emoji). */
   .swipe-card .card-reactions .cr-avg{
     display:flex;align-items:center;gap:4px;
-    font-size:18px;font-weight:800;color:#fff;
+    font-size:18px;font-weight:800;color:#fff;font-family:"Clash Display",sans-serif;
   }
   .swipe-card .card-reactions .cr-avg svg{width:18px;height:18px;flex:0 0 auto;color:#FFD84D}
   .swipe-card .bio{
