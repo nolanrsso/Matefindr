@@ -694,10 +694,7 @@
         const h = reacted ? Math.round(9 + pct * 27) : 9; // 9px repos, jusqu'à 36px révélé (+50%)
         return `<span class="cr-col"><i class="${i === topIdx ? 'top' : ''}" style="height:${h}px"></i><b>${REACTIONS[i]}</b></span>`;
       }).join('');
-      return `
-        <svg class="cr-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V13M10 20V6M16 20v-9M22 20v-4"/></svg>
-        <span class="cr-dots">${dots}</span>
-      `;
+      return `<span class="cr-dots">${dots}</span>`;
     }
     function reactionBadgeHtml(p){
       if (!p || !p.uid || p.isMe) return '';

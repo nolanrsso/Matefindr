@@ -395,6 +395,25 @@ body[data-canvas="portrait"] .card-age-badge .cab-age{font-size:17px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag{font-size:15px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14px}
 body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
+/* Réactions reçues (🫩🙄😐😳🤩) : identique à .swipe-card .card-reactions (css/app.css),
+   mais TOUJOURS révélé (jamais de teaser) -- ici c'est TON profil, la logique "caché
+   tant que je n'ai pas réagi" ne s'applique pas puisqu'on ne réagit pas à soi-même. */
+.card .card-reactions{
+  position:absolute;right:14px;bottom:14px;z-index:6;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);
+  pointer-events:none;
+}
+.card .card-reactions .cr-dots{display:flex;align-items:flex-end;gap:8px}
+.card .card-reactions .cr-col{display:flex;flex-direction:column;align-items:center;gap:5px}
+.card .card-reactions .cr-col i{
+  display:block;width:9px;border-radius:4px;background:rgba(255,255,255,.55);
+  height:9px;transition:height .25s cubic-bezier(.2,.7,.3,1), background .2s ease, box-shadow .2s ease;
+}
+.card .card-reactions .cr-col b{font-size:16px;line-height:1;font-weight:400;font-style:normal;opacity:.9}
+.card .card-reactions .cr-col i.top{
+  background:#fff;box-shadow:0 0 0 1px rgba(255,126,182,.6), 0 0 6px rgba(255,126,182,.5);
+}
 /* Style doré Boost sur le pseudo Matefindr (carte éditeur) */
 .username--boost{
   background:linear-gradient(110deg,#FFE17A 0%,#F5C040 20%,#FFFAE6 35%,#F5C040 50%,#B27B14 65%,#F5C040 80%,#FFE17A 100%);
@@ -1085,6 +1104,7 @@ html.perf-lite *{
       <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
       <div class="avatar-deco" id="avatarDeco" aria-hidden="true"></div>
       <div class="card-age-badge" id="ageBadge" hidden></div>
+      <span class="card-reactions" id="edCardReactions" hidden></span>
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
         <div class="tag">@matefindr · en ligne sur Matefindr</div>
@@ -2771,6 +2791,30 @@ async function syncToDb(){
   finally{ _dbSyncing=false; }
 }
 function scheduleDbSync(){ clearTimeout(_dbSyncT); _dbSyncT=setTimeout(syncToDb,1000); }
+/* Réactions reçues (🫩🙄😐😳🤩) sur TON profil : affichées ici TOUJOURS révélées
+   (pas de teaser -- cf. .card-reactions plus haut) puisqu'on ne réagit jamais à
+   soi-même. Même format d'aggrégation que js/app.js (loadReactions), en lecture
+   seule ici (l'éditeur n'envoie jamais de réaction). */
+async function loadOwnReactions(){
+  const sb=edSupa(); const badge=$('edCardReactions'); if(!sb||!badge) return;
+  try{
+    const { data:{ session } }=await sb.auth.getSession();
+    if(!session){ badge.hidden=true; return; }
+    const { data }=await sb.from('profile_reactions').select('emoji').eq('profile_id',session.user.id).limit(5000);
+    if(!data||!data.length){ badge.hidden=true; return; }
+    const REACTIONS=['🫩','🙄','😐','😳','🤩'];
+    const counts=[0,0,0,0,0];
+    data.forEach(r=>{ if(r.emoji>=0&&r.emoji<=4) counts[r.emoji]++; });
+    const total=counts.reduce((a,b)=>a+b,0); if(!total){ badge.hidden=true; return; }
+    const top=counts.indexOf(Math.max(...counts));
+    badge.innerHTML='<span class="cr-dots">'+counts.map((n,i)=>{
+      const h=Math.round(9+(n/total)*27);
+      return '<span class="cr-col"><i class="'+(i===top?'top':'')+'" style="height:'+h+'px"></i><b>'+REACTIONS[i]+'</b></span>';
+    }).join('')+'</span>';
+    badge.hidden=false;
+  }catch(e){ console.warn('[editor] load reactions', e); }
+}
+loadOwnReactions();
 /* Décoration d'avatar Discord + point de statut, déposés par-dessus l'avatar (réappliqués après tout setCroppedMedia). */
 let _decorationUrl=null;
 function applyAvatarDeco(){
