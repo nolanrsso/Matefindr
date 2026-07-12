@@ -1935,13 +1935,15 @@
     -webkit-user-select:none;user-select:none;
   }
   .rate-handle.dragging{transition:none;cursor:grabbing}
+  /* display:none (pas juste opacity:0) : au repos, sans note en cours, rien de ce
+     libellé ne doit être rendu -- "le petit truc au-dessus" signalé par l'utilisateur. */
   .rate-handle .rate-value{
-    position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);
+    display:none;position:absolute;bottom:calc(100% + 9px);left:50%;transform:translateX(-50%);
     font-size:13px;font-weight:800;color:#fff;background:rgba(0,0,0,.65);
     padding:3px 9px;border-radius:8px;white-space:nowrap;
-    opacity:0;pointer-events:none;transition:opacity .15s ease;
+    pointer-events:none;
   }
-  .rate-handle.dragging .rate-value{opacity:1}
+  .rate-handle.dragging .rate-value{display:block}
   .rate-handle .rate-submitted{display:none;font-size:12px;font-weight:800}
   .rate-slider[data-size="lg"] .rate-handle .rate-submitted{font-size:15px}
   .rate-handle.has-submitted .rate-arrow{display:none}
