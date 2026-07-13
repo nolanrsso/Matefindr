@@ -3251,15 +3251,22 @@ function renderPresets(){
     slot.querySelector('.pset-del').addEventListener('click',e=>{
       e.stopPropagation();
       if(!confirm('Supprimer le preset '+(i+1)+' ?\nCette action est irréversible.')) return;
+      // BUG corrigé : supprimer un preset quelconque rechargeait TOUJOURS un autre preset
+      // dans l'éditeur (applyPreset), même si ce n'était pas celui en cours d'édition --
+      // ça écrasait le travail en cours avec le contenu d'un preset différent. Ne recharger
+      // que si le preset SUPPRIMÉ était bien celui actif ; sinon juste recaler l'index si
+      // besoin (le tableau se décale), sans toucher à l'état affiché.
+      const wasActive = (i===_activePresetIdx);
       PRESETS.splice(i,1);
-      // Bascule directement sur le preset PRÉCÉDENT (celui juste avant dans la liste),
-      // ou le nouveau premier si on supprimait le tout premier.
-      if(PRESETS.length){
+      if(!PRESETS.length){
+        _activePresetIdx=null;
+      } else if(wasActive){
+        // Le preset édité vient de disparaître -> bascule sur le précédent (ou le 1er).
         const newIdx=Math.max(0,i-1);
         _activePresetIdx=newIdx;
         applyPreset(PRESETS[newIdx]);
-      } else {
-        _activePresetIdx=null;
+      } else if(_activePresetIdx!==null && _activePresetIdx>i){
+        _activePresetIdx=_activePresetIdx-1; // le tableau s'est décalé sous l'actif
       }
       savePresetsLS(); saveActivePresetIdx(); renderPresets(); toast('Preset supprimé');
     });
