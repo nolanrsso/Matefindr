@@ -75,6 +75,8 @@
   .pill.ban{background:rgba(232,25,75,.2);color:#ff8098}
   .pill.off{background:rgba(255,193,84,.16);color:#ffcf6b}
   .unseen-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px rgba(232,25,75,.25);flex:none;margin-right:2px}
+  .chg-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px rgba(232,25,75,.3);flex:none;vertical-align:middle;margin-left:6px}
+  .chg-dot--abs{position:absolute;z-index:5;margin:0}
   .row-actions{display:flex;gap:6px;justify-content:flex-end}
   .a-btn{padding:5px 10px;border-radius:8px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:12px}
   .a-btn:hover{background:rgba(255,255,255,.12)}
@@ -196,6 +198,43 @@
   function lastMod(a){ const dd=(a.prof&&a.prof.data)||{}; return dd.lastEditedAt || (a.prof&&a.prof.updated_at) || a.created_at || 0; }
   function isUnseen(a){ const lm=lastMod(a); if(!lm) return false; const seenAt=SEEN[a.id]||0; return new Date(lm).getTime() > seenAt; }
   function markSeen(a){ SEEN[a.id]=Date.now(); saveSeen(SEEN); }
+  // Snapshot par CHAMP (pas juste un timestamp global) : permet d'afficher un point de
+  // notif précisément sur ce qui a changé (pseudo, avatar, bannière, bio, couleurs,
+  // bulles, GIFs, photos, connexions, fond perso) quand on ouvre la fiche d'un profil.
+  const FIELD_SNAP_KEY='mf_admin_field_snapshot';
+  function loadFieldSnaps(){ try{ return JSON.parse(localStorage.getItem(FIELD_SNAP_KEY)||'{}'); }catch(_){ return {}; } }
+  function saveFieldSnaps(map){ try{ localStorage.setItem(FIELD_SNAP_KEY, JSON.stringify(map)); }catch(_){} }
+  function extractFields(a){
+    const dd=d(a); const p=a.prof||{};
+    return {
+      name: p.display_name||dd.name||'',
+      bio: dd.bio||'',
+      avatarUrl: p.avatar_url||dd.avatarUrl||'',
+      bannerUrl: p.banner_url||dd.bannerUrl||'',
+      c1: dd.profileColor||dd.c1||'',
+      c2: dd.profileColor2||dd.c2||'',
+      nameColor: dd.nameColor||'',
+      orbs: JSON.stringify(dd.orbs||[]),
+      orbColors: JSON.stringify(dd.orbColors||null),
+      gifs: JSON.stringify((dd.gifs||[]).map(g=>g&&(g.full||g.preview||g.url))),
+      photos: JSON.stringify((dd.photos||[]).map(ph=>ph&&ph.url)),
+      connections: JSON.stringify(dd.connections||{}),
+      bg: dd.bg||'',
+    };
+  }
+  // Diff vs le snapshot enregistré la DERNIÈRE FOIS que cette fiche a été ouverte -- vide
+  // (aucun point) si jamais ouverte avant, pour ne pas marquer tout comme "nouveau" au 1er coup.
+  function changedFields(a){
+    const cur=extractFields(a);
+    const snaps=loadFieldSnaps(); const prev=snaps[a.id];
+    const changed={};
+    if(prev){ Object.keys(cur).forEach(k=>{ if(cur[k]!==prev[k]) changed[k]=true; }); }
+    return changed;
+  }
+  function commitFieldSnapshot(a){
+    const snaps=loadFieldSnaps(); snaps[a.id]=extractFields(a); saveFieldSnaps(snaps);
+  }
+  const dot=()=>'<span class="chg-dot" title="Modifié depuis ta dernière visite de cette fiche"></span>';
   // Clé anon (publique — déjà en clair dans index.html du site) : permet la lecture seule
   // de tous les profils sans le dashboard. NE donne PAS les emails ni le ban (service_role only).
   const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkaGZmcHhzc2FnY2xleHR0Zm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NzA4NjgsImV4cCI6MjA5NjI0Njg2OH0.wqnVvxAcjMGfl6QgeUfgEs4EEJAQDjVLMOwy676sccg';
@@ -648,6 +687,7 @@
   /* ---- Modal : profil complet ---- */
   function openProfile(a){
     if(isUnseen(a)){ markSeen(a); renderTable(); } // ouvrir la fiche = "vu", comme un ping Discord qu'on consulte
+    const changed=changedFields(a); // calculé AVANT de committer le nouveau snapshot plus bas
     const dd=d(a); const p=a.prof||{}; const banned=isBanned(a);
     const c1=dd.profileColor||dd.c1||'#393a41', c2=dd.profileColor2||dd.c2||'#1a1a1d';
     const name=p.display_name||dd.name||'—';
@@ -659,16 +699,19 @@
     }).join('');
     const conns=Object.entries(dd.connections||{}).map(([k,v])=>'<span class="c">'+esc(k)+' : '+esc(v)+'</span>').join('');
     const gifs=(dd.gifs||[]).length;
+    const colorsChanged = changed.c1||changed.c2||changed.nameColor;
+    const bulleChanged = changed.orbs||changed.orbColors;
+    const mediaChanged = changed.avatarUrl||changed.bannerUrl||changed.bg||changed.gifs||changed.photos;
 
     const card='<div class="card" style="--pc1:'+esc(c1)+';--pc2:'+esc(c2)+'">'
-      +'<div class="banner" style="'+(banner?'background-image:url(\''+esc(banner)+'\')':'')+'"></div>'
-      +'<div class="cbody"><div class="avatar" style="--pc1:'+esc(c1)+';'+(av?'background-image:url(\''+esc(av)+'\')':'')+'">'+(av?'':esc(initial(name)))+'</div>'
-      +'<div class="cname" style="'+nameStyle+'">'+esc(name)+'</div>'
+      +'<div class="banner" style="'+(banner?'background-image:url(\''+esc(banner)+'\')':'')+'">'+(changed.bannerUrl?dot():'')+'</div>'
+      +'<div class="cbody"><div class="avatar" style="--pc1:'+esc(c1)+';'+(av?'background-image:url(\''+esc(av)+'\')':'')+'">'+(av?'':esc(initial(name)))+(changed.avatarUrl?dot():'')+'</div>'
+      +'<div class="cname" style="'+nameStyle+'">'+esc(name)+(changed.name?dot():'')+'</div>'
       +'<div class="ctag">@'+esc(dd.tag||p.discord_tag||'—')+' · '+esc(dd.looking||p.look_for||'')+'</div>'
-      +'<div class="badges">'+(dd.age?'<span class="pill">'+esc(dd.age)+' ans</span>':'')+(dd.gender?'<span class="pill">'+esc(dd.gender)+'</span>':'')+((dd.country)?'<span class="pill">'+(esc(dd.countryFlag||'')+' '+esc(dd.country))+'</span>':'')+(dd.boost?'<span class="pill boost">Boost</span>':'')+'</div>'
-      +(dd.bio?('<div class="cbio">'+esc(dd.bio)+'</div>'):'')
-      +(orbs?('<div class="corbs">'+orbs+'</div>'):'')
-      +(conns?('<div class="cconn">'+conns+'</div>'):'')
+      +'<div class="badges">'+(dd.age?'<span class="pill">'+esc(dd.age)+' ans</span>':'')+(dd.gender?'<span class="pill">'+esc(dd.gender)+'</span>':'')+((dd.country)?'<span class="pill">'+(esc(dd.countryFlag||'')+' '+esc(dd.country))+'</span>':'')+(dd.boost?'<span class="pill boost">Boost</span>':'')+(colorsChanged?dot():'')+'</div>'
+      +(dd.bio?('<div class="cbio">'+esc(dd.bio)+(changed.bio?dot():'')+'</div>'):(changed.bio?('<div class="cbio muted">(bio retirée)'+dot()+'</div>'):''))
+      +(orbs?('<div class="corbs">'+orbs+(bulleChanged?dot():'')+'</div>'):'')
+      +(conns?('<div class="cconn">'+conns+(changed.connections?dot():'')+'</div>'):'')
       +'</div></div>';
 
     const link = p.slug ? ('https://matefindr.com/'+p.slug) : null;
@@ -684,9 +727,9 @@
       +'<dt>Discord ID</dt><dd>'+esc(p.discord_id||'—')+'</dd>'
       +'<dt>Lien perso</dt><dd>'+(link?('<a class="linkval" href="'+esc(link)+'" target="_blank" rel="noopener">'+esc(link)+'</a><button type="button" class="a-btn copybtn" id="copyLink">Copier</button>'):'<span class="muted">—</span>')+'</dd>'
       +'<dt>Boost</dt><dd>'+(dd.boost?'Oui ✦':'Non')+'</dd>'
-      +'<dt>Bulles / GIFs</dt><dd>'+((dd.orbs||[]).length)+' bulles · '+gifs+' GIFs</dd>'
+      +'<dt>Bulles / GIFs</dt><dd>'+((dd.orbs||[]).length)+' bulles · '+gifs+' GIFs'+((bulleChanged||changed.gifs)?dot():'')+'</dd>'
       +'<dt>Vocal</dt><dd>'+(dd.profileVoice?'Oui':'Non')+'</dd>'
-      +'<div class="sec">Médias</div>'
+      +'<div class="sec">Médias'+(mediaChanged?dot():'')+'</div>'
       +'<dd style="grid-column:1/-1">'+mediaGallery(dd)+'</dd>'
       +'<div class="sec">Compte</div>'
       +'<dt>User ID</dt><dd style="font-size:12px">'+esc(a.id)+'</dd>'
@@ -713,6 +756,7 @@
 
     $('modalBox').innerHTML='<div class="m-head"><h2>'+esc(name)+'</h2><span class="spacer"></span><button class="m-close" id="mClose">×</button></div>'
       +'<div class="m-grid">'+card+info+'</div>';
+    commitFieldSnapshot(a); // les points affichés ci-dessus reflètent déjà le diff -- on peut baseliner
     $('modal').classList.add('on');
     $('mClose').addEventListener('click',closeModal);
     const mb=$('modalBan'); if(mb) mb.addEventListener('click',()=>toggleBan(a,mb));
