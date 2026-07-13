@@ -90,7 +90,10 @@
       revealApp();
       if (name === 'account') renderAccount();
       if (name === 'onboarding' && typeof window.__initOnboarding === 'function') window.__initOnboarding();
-      if (name === 'swipe')   { deckIdx = 0; ensureDeck(); refreshMyStatusUI(); refreshSwipeTools(); }
+      // force=true : (ré)entrer sur le swipe court-circuite le cache 30s de fetchOtherProfiles
+      // -- sinon un profil réactivé (ou désactivé) par un admin entre-temps pouvait rester
+      // invisible/visible à tort jusqu'à 30s de plus après être revenu sur cet écran.
+      if (name === 'swipe')   { deckIdx = 0; ensureDeck(true); refreshMyStatusUI(); refreshSwipeTools(); }
       if (name !== 'swipe')   {
         stopSwipeMusic();
         if (typeof orbSimStop === 'function') orbSimStop();
@@ -1279,7 +1282,7 @@
       const accept = map[f] || [];
       return pool.filter(p => accept.includes(p.gender));
     }
-    function ensureDeck(){
+    function ensureDeck(force){
       // Rendu IMMÉDIAT (depuis le cache + ta propre carte) → jamais d'écran blanc/bloqué
       // en attendant le réseau Supabase. Le rafraîchissement se fait en arrière-plan.
       ensureDeckSync();
@@ -1290,7 +1293,7 @@
       // qu'on ne swipait pas dessus (le deck n'était re-rendu QUE si vide auparavant).
       let shownUid = null;
       try { const pool = genderFilteredProfiles(); shownUid = (pool[deckIdx] && pool[deckIdx].uid) || null; } catch(_){}
-      fetchOtherProfiles().then(() => {
+      fetchOtherProfiles(force).then(() => {
         if (document.body.getAttribute('data-screen') !== 'swipe') return;
         // On re-rend si le deck était vide (nouveaux profils arrivés), OU si le profil
         // affiché à l'écran a disparu du pool entre-temps (désactivé/supprimé).
