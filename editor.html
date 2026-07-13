@@ -3250,6 +3250,7 @@ function renderPresets(){
     });
     slot.querySelector('.pset-del').addEventListener('click',e=>{
       e.stopPropagation();
+      if(!confirm('Supprimer le preset '+(i+1)+' ?\nCette action est irréversible.')) return;
       PRESETS.splice(i,1);
       // Bascule directement sur le preset PRÉCÉDENT (celui juste avant dans la liste),
       // ou le nouveau premier si on supprimait le tout premier.
