@@ -1173,6 +1173,7 @@
         avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
         accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
         orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null, _showViews: true,
+        disabled: !!(r.data && r.data.disabled),
       };
     }
 
@@ -1283,11 +1284,18 @@
       // en attendant le réseau Supabase. Le rafraîchissement se fait en arrière-plan.
       ensureDeckSync();
       const wasEmpty = document.body.getAttribute('data-swipe-empty') === 'true';
+      // Profil actuellement affiché AVANT le refresh réseau -- si un admin le désactive
+      // (ou le supprime) pendant qu'il est déjà à l'écran, fetchOtherProfiles() le retire
+      // de _remoteProfiles mais la carte déjà rendue restait affichée indéfiniment tant
+      // qu'on ne swipait pas dessus (le deck n'était re-rendu QUE si vide auparavant).
+      let shownUid = null;
+      try { const pool = genderFilteredProfiles(); shownUid = (pool[deckIdx] && pool[deckIdx].uid) || null; } catch(_){}
       fetchOtherProfiles().then(() => {
         if (document.body.getAttribute('data-screen') !== 'swipe') return;
-        // On ne re-rend QUE si on était sur le deck vide et que de nouveaux profils sont arrivés
-        // (évite de relancer la musique / faire clignoter la carte déjà affichée).
-        if (wasEmpty) ensureDeckSync();
+        // On re-rend si le deck était vide (nouveaux profils arrivés), OU si le profil
+        // affiché à l'écran a disparu du pool entre-temps (désactivé/supprimé).
+        if (wasEmpty) { ensureDeckSync(); return; }
+        if (shownUid && !genderFilteredProfiles().some(p => p.uid === shownUid)) ensureDeckSync();
       }).catch(() => {});
     }
     function ensureDeckSync(){
