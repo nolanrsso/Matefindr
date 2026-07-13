@@ -30,6 +30,49 @@
       try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(_){}
       try { if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); } catch(_){}
     }
+
+    /* ===== Mode maintenance (admin.html) =====
+       Coupe l'accès au site à TOUT LE MONDE sauf au(x) compte(s) Discord listé(s)
+       (comparaison sur le tag Discord). Réglage global dans la table site_settings
+       (lisible par tous via la clé anon, modifiable uniquement par admin.html via
+       service_role). Vérifié tôt (avant même une connexion, avec le tag déjà connu
+       localement s'il y en a un) ET réévalué à chaque login avec le tag FRAIS venu
+       de Discord (le cache local peut être absent ou périmé). */
+    let _maintenanceInfo = null;
+    function showMaintenanceOverlay(){
+      if (document.getElementById('mfMaintenanceOverlay')) return;
+      document.documentElement.style.overflow = 'hidden';
+      const ov = document.createElement('div');
+      ov.id = 'mfMaintenanceOverlay';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:24px;'
+        + 'background:radial-gradient(1100px 700px at 15% -10%,#201642 0%,transparent 55%),radial-gradient(900px 700px at 95% 0%,#2a1636 0%,transparent 50%),#0D0B1E;';
+      ov.innerHTML = ''
+        + '<div style="width:min(440px,100%);text-align:center;background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));'
+        +   'border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px);'
+        +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
+        +   '<div style="font-size:44px;margin-bottom:10px">🚧</div>'
+        +   '<h1 style="margin:0 0 10px;font-size:22px">Matefindr est en maintenance</h1>'
+        +   '<p style="color:#b9bbbe;font-size:14.5px;line-height:1.55;margin:0">On revient très vite — reste à l\'écoute sur notre Discord pour les mises à jour.</p>'
+        + '</div>';
+      document.body.appendChild(ov);
+    }
+    function hideMaintenanceOverlay(){
+      const ov = document.getElementById('mfMaintenanceOverlay');
+      if (ov) { ov.remove(); document.documentElement.style.overflow = ''; }
+    }
+    function applyMaintenanceGate(discordTag){
+      if (!_maintenanceInfo || !_maintenanceInfo.enabled) { hideMaintenanceOverlay(); return; }
+      const allowed = !!(_maintenanceInfo.allowedTag && discordTag && discordTag.toLowerCase() === _maintenanceInfo.allowedTag.toLowerCase());
+      if (allowed) hideMaintenanceOverlay(); else showMaintenanceOverlay();
+    }
+    (async () => {
+      try {
+        if (!window.__supa) return;
+        const { data } = await window.__supa.from('site_settings').select('maintenance_mode,maintenance_allowed_tag').eq('id', 1).maybeSingle();
+        _maintenanceInfo = { enabled: !!(data && data.maintenance_mode), allowedTag: (data && data.maintenance_allowed_tag) || null };
+        applyMaintenanceGate((state.user && state.user.discordTag) || null);
+      } catch(_){}
+    })();
     function tx(k){
       const code = (document.documentElement.lang || 'fr').toUpperCase();
       return (I18N[code] && I18N[code][k]) || (I18N.FR[k]) || k;
@@ -176,6 +219,9 @@
     // Hand-off used by login/signup handlers
     window.__matefindr = {
       async onLogin(user){
+        // Mode maintenance : réévalué avec le tag Discord FRAIS (pas le cache local,
+        // potentiellement absent/périmé) dès qu'on sait qui se connecte.
+        if (typeof applyMaintenanceGate === 'function') applyMaintenanceGate(user && user.discordTag);
         // Déjà connecté et déjà dans l'app ? (ex : onAuthStateChange qui refire quand on
         // revient sur l'onglet) → on met à jour les données SANS changer l'écran courant.
         // Fonction (pas une const figée ici) : ce onLogin() traverse plusieurs `await`

@@ -50,6 +50,8 @@
   .topbar input[type=search]:focus{border-color:rgba(145,70,255,.6)}
   .tbtn{padding:9px 14px;border-radius:11px;border:1px solid var(--stroke2);background:rgba(255,255,255,.05);color:#fff;font-weight:700;font-size:13px}
   .tbtn:hover{background:rgba(255,255,255,.1)}
+  .tbtn.on{border-color:rgba(232,25,75,.6);background:rgba(232,25,75,.18);color:#ff8098}
+  .tbtn.on:hover{background:rgba(232,25,75,.3)}
   .chk{display:inline-flex;align-items:center;gap:7px;color:var(--dim);font-size:13px}
 
   table{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:13px}
@@ -165,6 +167,7 @@
     <label class="chk"><input type="checkbox" id="onlyDisabled" /> Désactivés seulement</label>
     <button class="tbtn" id="migrateBtn" style="display:none">🧹 Migrer images → Storage</button>
     <button class="tbtn" id="clearSeenBtn">✓ Tout marquer comme vu</button>
+    <button class="tbtn" id="maintenanceBtn" title="Coupe l'accès au site à tout le monde sauf à alonemaxing">🚧 Mode maintenance</button>
     <button class="tbtn" id="refreshBtn">↻ Actualiser</button>
     <button class="tbtn" id="logoutBtn">Déconnexion</button>
   </div>
@@ -219,7 +222,7 @@
     try{ localStorage.setItem(LS_URL,url); localStorage.setItem(LS_KEY,key); }catch(_){}
     startDash();
   }
-  function startDash(){ $('gate').style.display='none'; $('dash').style.display='block'; loadAll(); }
+  function startDash(){ $('gate').style.display='none'; $('dash').style.display='block'; loadAll(); loadMaintenanceState(); }
 
   $('logoutBtn').addEventListener('click',()=>{
     try{ localStorage.removeItem(LS_KEY); }catch(_){}
@@ -233,6 +236,42 @@
     ACCOUNTS.forEach(a=>markSeen(a));
     renderTable();
     toast('✓ Toutes les notifs marquées comme vues');
+  });
+
+  /* ---- Mode maintenance : coupe l'accès au site à tout le monde sauf à alonemaxing.
+     Réglage global dans public.site_settings (voir supabase/site-settings.sql -- à exécuter
+     une fois dans le SQL Editor Supabase si ce n'est pas déjà fait), lu par js/app.js. ---- */
+  const MAINTENANCE_ALLOWED_TAG='alonemaxing';
+  let _maintenanceOn=false;
+  async function loadMaintenanceState(){
+    try{
+      const { data, error }=await sb.from('site_settings').select('maintenance_mode').eq('id',1).maybeSingle();
+      if(error) throw error;
+      _maintenanceOn=!!(data&&data.maintenance_mode);
+    }catch(e){ console.warn('[admin] site_settings introuvable (as-tu exécuté supabase/site-settings.sql ?)', e.message||e); }
+    paintMaintenanceBtn();
+  }
+  function paintMaintenanceBtn(){
+    const btn=$('maintenanceBtn'); if(!btn) return;
+    btn.classList.toggle('on',_maintenanceOn);
+    btn.textContent = _maintenanceOn ? '🚧 Maintenance : ON (clic pour couper)' : '🚧 Mode maintenance';
+  }
+  $('maintenanceBtn').addEventListener('click', async ()=>{
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const turningOn=!_maintenanceOn;
+    const msg = turningOn
+      ? 'Activer le mode maintenance ?\nPlus PERSONNE ne pourra utiliser le site, sauf le compte Discord « '+MAINTENANCE_ALLOWED_TAG+' ».'
+      : 'Désactiver le mode maintenance et rouvrir le site à tout le monde ?';
+    if(!confirm(msg)) return;
+    const btn=$('maintenanceBtn'); btn.disabled=true;
+    try{
+      const { error }=await sb.from('site_settings').upsert({ id:1, maintenance_mode:turningOn, maintenance_allowed_tag:MAINTENANCE_ALLOWED_TAG, updated_at:new Date().toISOString() },{onConflict:'id'});
+      if(error) throw error;
+      _maintenanceOn=turningOn;
+      paintMaintenanceBtn();
+      toast(turningOn?'🚧 Maintenance activée — site coupé sauf pour '+MAINTENANCE_ALLOWED_TAG:'✅ Maintenance désactivée — site rouvert');
+    }catch(e){ toast('Échec : '+e.message+' (la table site_settings existe-t-elle ? cf. supabase/site-settings.sql)'); }
+    btn.disabled=false;
   });
   $('search').addEventListener('input',renderTable);
   $('onlyBanned').addEventListener('change',renderTable);

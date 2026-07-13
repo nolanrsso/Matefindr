@@ -3250,7 +3250,6 @@ function renderPresets(){
     });
     slot.querySelector('.pset-del').addEventListener('click',e=>{
       e.stopPropagation();
-      if(!confirm('Supprimer le preset '+(i+1)+' ?\nCette action est irréversible.')) return;
       // BUG corrigé : supprimer un preset quelconque rechargeait TOUJOURS un autre preset
       // dans l'éditeur (applyPreset), même si ce n'était pas celui en cours d'édition --
       // ça écrasait le travail en cours avec le contenu d'un preset différent. Ne recharger
