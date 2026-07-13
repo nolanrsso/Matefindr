@@ -525,23 +525,6 @@
     });
   }
 
-  /* ---- Se connecter en tant que (lien magique généré côté service_role, ouvert
-     dans un nouvel onglet -- ne révèle jamais le mot de passe du compte) ---- */
-  async function impersonate(a, btn){
-    if(!FULL){ toast('Nécessite la clé service_role'); return; }
-    if(!a.email || a.email==='—' || a.email==='(profil seul)'){ toast('Pas d\'email pour ce compte'); return; }
-    if(btn) btn.disabled=true;
-    try{
-      const { data, error }=await sb.auth.admin.generateLink({ type:'magiclink', email:a.email });
-      if(error) throw error;
-      const link=data && data.properties && data.properties.action_link;
-      if(!link) throw new Error('Pas de lien généré');
-      window.open(link,'_blank');
-      toast('🔑 Lien de connexion ouvert dans un nouvel onglet');
-    }catch(e){ toast('Échec : '+e.message); }
-    if(btn) btn.disabled=false;
-  }
-
   /* ---- Galerie médias (avatar, bannière, fond perso, photos, GIFs) ---- */
   function mediaGallery(dd){
     const items=[];
@@ -749,7 +732,6 @@
           +'<button class="a-btn '+(disabled?'unban':'ban')+'" id="modalDisable">'+(disabled?'✅ Réactiver le profil':'🚫 Désactiver le profil')+'</button>'
           +'<button class="a-btn" id="modalLogout">🔌 Déconnecter</button>'
           +'<button class="a-btn" id="modalStaffMsg">💬 Message du staff</button>'
-          +'<button class="a-btn" id="modalImpersonate" '+((!a.email||a.email==='—'||a.email==='(profil seul)')?'disabled':'')+'>🔑 Se connecter en tant que</button>'
           +'<button class="a-btn ban" id="modalDelete">🗑️ Supprimer</button></div>') : '')
       +'<details class="raw"><summary>Données brutes (JSON)</summary><pre>'+esc(JSON.stringify(a.prof||{},null,2))+'</pre></details>'
       +'</dl></div>';
@@ -765,7 +747,6 @@
     const mBoost=$('modalBoost'); if(mBoost) mBoost.addEventListener('click',()=>toggleBoost(a,mBoost));
     const mDis=$('modalDisable'); if(mDis) mDis.addEventListener('click',()=>{ disabled ? reactivateProfile(a,mDis) : startDisableProfile(a); });
     const mLogout=$('modalLogout'); if(mLogout) mLogout.addEventListener('click',()=>forceLogout(a,mLogout));
-    const mImp=$('modalImpersonate'); if(mImp) mImp.addEventListener('click',()=>impersonate(a,mImp));
     const mStaff=$('modalStaffMsg'); if(mStaff) mStaff.addEventListener('click',()=>startStaffMessage(a));
     const cl=$('copyLink'); if(cl) cl.addEventListener('click',()=>{ navigator.clipboard.writeText(link).then(()=>toast('🔗 Lien copié')).catch(()=>toast('Échec de la copie')); });
   }
