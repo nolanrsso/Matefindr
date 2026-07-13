@@ -728,7 +728,7 @@
       +'<dt>Lien perso</dt><dd>'+(link?('<a class="linkval" href="'+esc(link)+'" target="_blank" rel="noopener">'+esc(link)+'</a><button type="button" class="a-btn copybtn" id="copyLink">Copier</button>'):'<span class="muted">—</span>')+'</dd>'
       +'<dt>Boost</dt><dd>'+(dd.boost?'Oui ✦':'Non')+'</dd>'
       +'<dt>Bulles / GIFs</dt><dd>'+((dd.orbs||[]).length)+' bulles · '+gifs+' GIFs'+((bulleChanged||changed.gifs)?dot():'')+'</dd>'
-      +'<dt>Vocal</dt><dd>'+(dd.profileVoice?'Oui':'Non')+'</dd>'
+      +'<dt>Vocal</dt><dd>'+(dd.profileVoice?('<audio controls preload="none" src="'+esc(dd.profileVoice)+'" style="height:32px;max-width:100%;vertical-align:middle"></audio>'):'<span class="muted">Aucun</span>')+'</dd>'
       +'<div class="sec">Médias'+(mediaChanged?dot():'')+'</div>'
       +'<dd style="grid-column:1/-1">'+mediaGallery(dd)+'</dd>'
       +'<div class="sec">Compte</div>'
