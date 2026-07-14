@@ -1322,8 +1322,7 @@
     margin-top:-1px;padding-top:1px;
     margin-bottom:-1px;padding-bottom:1px;
     border-radius:20px;overflow:hidden;overflow:clip;overflow-clip-margin:0;
-    background:linear-gradient(180deg, var(--c1,#242429) 0%, var(--c2,#1c1d22) 100%);
-    box-shadow:0 0 0 1px var(--c1,#242429);
+    background:transparent;
     filter:drop-shadow(0 30px 80px rgba(0,0,0,.6));
     transform:translateZ(0);
     -webkit-backface-visibility:hidden;
@@ -1339,8 +1338,10 @@
 
   /* Discord-style profile card */
   .swipe-card{
-    position:absolute;inset:0;border-radius:0;overflow:hidden;isolation:isolate;
-    background-color:transparent;color:#fff;cursor:grab;user-select:none;
+    position:absolute;inset:0;border-radius:20px;overflow:hidden;isolation:isolate;
+    background-color:var(--c2,#1c1d22);
+    background-image:linear-gradient(180deg, var(--c1,#242429) 0%, var(--c2,#1c1d22) 100%);
+    color:#fff;cursor:grab;user-select:none;
     border:none;
     display:flex;flex-direction:column;
     transition:transform .35s cubic-bezier(.2,.7,.3,1), opacity .35s ease;
