@@ -1698,28 +1698,22 @@
         ${ttUrl ? `<a href="${ttUrl}" target="_blank" rel="noopener" class="card-social" data-kind="tiktok" title="Voir le profil TikTok"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg><span>@${escapeHtmlMini(ttH)}</span></a>` : ''}
         ${spUrl ? `<a href="${spUrl}" target="_blank" rel="noopener" class="card-social" data-kind="spotify" title="Voir le profil Spotify"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Z"/></svg><span>${escapeHtmlMini(spH)}</span></a>` : ''}
       </div>` : '';
-      // Connexions (éditeur) : logos d'apps + pseudo, cliquables quand l'app a une page profil.
-      const CONN_COLOR = {spotify:'1DB954',steam:'ffffff',twitch:'9146FF',youtube:'FF0000',x:'ffffff',instagram:'E4405F',tiktok:'ffffff',riotgames:'EB0029',epicgames:'ffffff',roblox:'ffffff'};
-      const CONN_URL = {
-        spotify:u=>`https://open.spotify.com/search/${encodeURIComponent(u)}`,
-        steam:u=>`https://steamcommunity.com/id/${encodeURIComponent(u)}`,
-        twitch:u=>`https://twitch.tv/${encodeURIComponent(u)}`,
-        youtube:u=>`https://youtube.com/@${encodeURIComponent(u.replace(/^@/,''))}`,
-        x:u=>`https://x.com/${encodeURIComponent(u.replace(/^@/,''))}`,
-        instagram:u=>`https://instagram.com/${encodeURIComponent(u.replace(/^@/,''))}`,
-        tiktok:u=>`https://www.tiktok.com/@${encodeURIComponent(u.replace(/^@/,''))}`,
-        roblox:u=>`https://www.roblox.com/users/profile?username=${encodeURIComponent(u)}`,
-      };
+      // Connexions (éditeur) : réseaux sociaux avec URL officielle + lien custom.
+      const MC = window.MatefindrConnections;
       const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
-      const connKeys = Object.keys(conns).filter(k => conns[k]);
+      const connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
       const connectionsHtml = connKeys.length ? `<div class="card-connections">${connKeys.map(k => {
-        const u = String(conns[k]); const color = CONN_COLOR[k] || 'ffffff';
-        const logo = `https://cdn.simpleicons.org/${k}/${color}`;
-        const href = CONN_URL[k] ? CONN_URL[k](u) : null;
-        const inner = `<img src="${logo}" alt="" loading="lazy"><span>${escapeHtmlMini(u)}</span>`;
-        return href
-          ? `<a href="${href}" target="_blank" rel="noopener" class="card-conn" title="${escapeHtmlMini(k)} : ${escapeHtmlMini(u)}">${inner}</a>`
-          : `<span class="card-conn" title="${escapeHtmlMini(k)} : ${escapeHtmlMini(u)}">${inner}</span>`;
+        const app = MC ? MC.connApp(k) : null;
+        const entry = MC ? MC.connGet(conns, k) : { v: String(conns[k]), mode: 'link' };
+        if (!entry) return '';
+        const logo = app ? MC.connLogo(app) : `https://cdn.simpleicons.org/${k}/ffffff`;
+        const href = MC && app ? MC.buildConnUrl(app, entry) : null;
+        const label = MC && app ? MC.connDisplayText(app, entry) : String(entry.v || conns[k]);
+        const iconHtml = MC && app ? MC.connIconHtml(app, 14) : (logo ? `<img src="${logo}" alt="" loading="lazy">` : '');
+        const inner = `${iconHtml}<span>${escapeHtmlMini(label)}</span>`;
+        return (entry.mode !== 'text' && href)
+          ? `<a href="${href}" target="_blank" rel="noopener" class="card-conn" title="${escapeHtmlMini(app ? app.name : k)} : ${escapeHtmlMini(label)}">${inner}</a>`
+          : `<span class="card-conn" title="${escapeHtmlMini(app ? app.name : k)} : ${escapeHtmlMini(label)}">${inner}</span>`;
       }).join('')}</div>` : '';
       // Age + gender badge in the top-right corner of the banner.
       // 'hidden' (Je préfère ne pas dire) : no symbol — just the age.

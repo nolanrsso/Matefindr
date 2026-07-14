@@ -661,26 +661,71 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
   .pset-slot{width:38px;height:38px;border-radius:10px}
 }
 
-/* Connexions (logos d'apps) */
-.connections{display:flex;flex-wrap:wrap;gap:9px}
+/* Connexions (réseaux sociaux) */
+.connections{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
 .conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease;padding:0}
 .conn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.3)}
-.conn img{width:22px;height:22px;object-fit:contain;opacity:.5;transition:opacity .14s}
-.conn.set{border-color:rgba(91,233,255,.5);background:rgba(91,233,255,.10)}
-.conn.set img{opacity:1}
+.conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
+.conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
+.conn .conn-ico-svg svg{width:20px;height:20px}
+.conn-add-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease}
+.conn-add-btn:hover{border-color:rgba(145,70,255,.55);background:rgba(145,70,255,.12)}
+.conn-add-btn svg{width:15px;height:15px;opacity:.85}
 .conn .conn-del{position:absolute;right:-5px;top:-5px;width:17px;height:17px;border-radius:50%;background:#FF4FA0;border:2px solid var(--card);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 6px rgba(255,79,160,.5)}
 .conn .conn-del svg{width:9px;height:9px;color:#fff}
 .conn .conn-del:hover{transform:scale(1.15)}
-/* popover pseudo */
-.conn-pop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:85;width:min(90vw,320px);padding:16px;border-radius:18px;
-  background:linear-gradient(180deg, rgba(28,22,58,.98), rgba(18,12,42,.98));border:1px solid var(--stroke-2);box-shadow:0 30px 80px rgba(0,0,0,.7)}
-.conn-pop[hidden]{display:none}
-.conn-pop-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.conn-pop-head img{width:26px;height:26px;object-fit:contain}
-.conn-pop-head b{font-size:15px}
-.conn-pop input{width:100%;padding:11px 13px;border-radius:11px;font:inherit;color:#fff;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2);outline:none}
-.conn-pop input:focus{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
-.conn-pop-actions{display:flex;justify-content:space-between;gap:9px;margin-top:13px}
+.conn-modal-backdrop{position:fixed;inset:0;z-index:86;background:rgba(6,7,12,.72);backdrop-filter:blur(8px)}
+.conn-modal-backdrop[hidden]{display:none}
+.conn-pick-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:87;width:min(94vw,680px);max-height:min(88vh,760px);overflow:hidden auto;border-radius:20px;padding:22px 22px 18px;
+  background:linear-gradient(180deg,rgba(22,22,26,.99),rgba(12,12,16,.99));border:1px solid rgba(255,255,255,.08);box-shadow:0 34px 90px rgba(0,0,0,.75)}
+.conn-pick-sheet[hidden]{display:none}
+.conn-pick-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
+.conn-pick-head h2{margin:0;font-size:18px;font-weight:800;line-height:1.25}
+.conn-pick-sub{margin:0 0 16px;color:var(--dim);font-size:13px;line-height:1.45}
+.conn-pick-close{width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:15px;font-family:inherit;flex:0 0 auto}
+.conn-pick-close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.conn-pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
+.conn-pick-tile{aspect-ratio:1;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;padding:0;transition:transform .12s ease,background .12s ease,border-color .12s ease}
+.conn-pick-tile:hover{transform:translateY(-2px);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.conn-pick-tile img,.conn-pick-tile .conn-ico-svg{width:26px;height:26px;object-fit:contain}
+.conn-pick-tile .conn-ico-svg{display:grid;place-items:center;color:#fff}
+.conn-pick-tile .conn-ico-svg svg{width:24px;height:24px}
+.conn-pick-tile--wide{grid-column:span 2;aspect-ratio:auto;min-height:52px;justify-content:flex-start;padding:0 14px;gap:10px;display:flex;align-items:center}
+.conn-pick-tile--wide span{font-size:12px;font-weight:700;color:#fff;text-align:left;line-height:1.25}
+.conn-pick-tile--wide .conn-ico-svg,.conn-pick-tile--wide img{width:24px;height:24px;flex:0 0 auto}
+.conn-pick-tile[disabled]{opacity:.35;cursor:not-allowed;transform:none}
+.conn-add-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:88;width:min(92vw,420px);padding:20px;border-radius:18px;
+  background:linear-gradient(180deg,rgba(24,24,28,.99),rgba(14,14,18,.99));border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 80px rgba(0,0,0,.78)}
+.conn-add-modal[hidden]{display:none}
+.conn-add-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.conn-add-top h3{margin:0;font-size:17px;font-weight:800;line-height:1.25}
+.conn-add-close{width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:14px;font-family:inherit}
+.conn-add-close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.conn-mode-lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px}
+.conn-mode-lbl .q{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;font-size:10px;color:var(--dim)}
+.conn-mode-tgl{display:flex;gap:0;padding:3px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-bottom:14px}
+.conn-mode-tgl button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 10px;border:none;border-radius:9px;background:transparent;color:var(--dim);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.conn-mode-tgl button.active{background:rgba(255,255,255,.10);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.conn-mode-tgl button svg{width:15px;height:15px;opacity:.85}
+.conn-url-field{display:flex;align-items:center;gap:0;border-radius:12px;border:1.5px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);overflow:hidden;margin-bottom:14px}
+.conn-url-field:focus-within{border-color:rgba(145,70,255,.55);box-shadow:0 0 0 4px rgba(145,70,255,.14)}
+.conn-url-ico{display:grid;place-items:center;width:42px;flex:0 0 auto;padding-left:4px}
+.conn-url-ico img,.conn-url-ico .conn-ico-svg{width:22px;height:22px;object-fit:contain}
+.conn-url-ico .conn-ico-svg{display:grid;place-items:center;color:#fff}
+.conn-url-prefix{padding:0 2px 0 0;color:var(--dim);font-size:13px;white-space:nowrap;flex:0 0 auto}
+.conn-url-field input{flex:1;min-width:0;padding:12px 12px 12px 0;border:none!important;background:transparent!important;box-shadow:none!important;color:#fff;font:inherit;font-size:13.5px;outline:none}
+.conn-discord-box{padding:12px;border-radius:12px;background:rgba(88,101,242,.12);border:1px solid rgba(88,101,242,.28);margin-bottom:14px}
+.conn-discord-box b{display:block;font-size:14px;margin-bottom:4px}
+.conn-discord-box span{font-size:12px;color:var(--dim)}
+.conn-discord-tgl{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.conn-discord-tgl label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;color:#fff;cursor:pointer}
+.conn-discord-tgl input[type=checkbox]{width:18px;height:18px;accent-color:#5865F2;cursor:pointer}
+.conn-add-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
+.conn-add-foot .btn-remove{background:transparent;border:none;color:var(--dim);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:8px 0}
+.conn-add-foot .btn-remove:hover{color:#FF6B8A}
+.conn-add-foot .btn-add{padding:10px 18px;border-radius:11px;border:none;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-left:auto}
+.conn-add-foot .btn-add:hover{background:rgba(255,255,255,.18)}
+.conn-pop-backdrop{position:fixed;inset:0;z-index:84;background:rgba(8,9,14,.55);backdrop-filter:blur(6px)}
 /* ===== Modale "Ton lien de partage" ===== */
 .top-btn--link{color:#C7A5FF}
 .top-btn--link:hover{background:rgba(145,70,255,.16);color:#E3D2FF}
@@ -1287,12 +1332,47 @@ html.perf-lite *{
 <button class="boost-fab" id="btnBoostUpsell" title="Passer à Matefindr Boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg><span>Passez à Matefindr Boost</span></button>
 
 
-<!-- Petit popover pour saisir le pseudo d'une connexion -->
-<div class="conn-pop-backdrop" id="connBackdrop" hidden></div>
-<div class="conn-pop" id="connPop" hidden>
-  <div class="conn-pop-head"><img id="connPopLogo" alt=""><b id="connPopName"></b></div>
-  <input id="connPopInput" maxlength="40" placeholder="Ton pseudo sur l'app…" autocomplete="off">
-  <div class="conn-pop-actions"><button class="btn ghost-danger" id="connPopRemove">Retirer</button><button class="btn primary" id="connPopSave">Enregistrer</button></div>
+<!-- Connexions : grille de choix + modale d'ajout -->
+<div class="conn-modal-backdrop" id="connModalBackdrop" hidden></div>
+<div class="conn-pick-sheet" id="connPickSheet" hidden>
+  <div class="conn-pick-head">
+    <h2>Connectez vos profils de réseaux sociaux.</h2>
+    <button type="button" class="conn-pick-close" id="connPickClose" aria-label="Fermer">✕</button>
+  </div>
+  <p class="conn-pick-sub">Choisissez un réseau social à ajouter à votre profil.</p>
+  <div class="conn-pick-grid" id="connPickGrid"></div>
+</div>
+<div class="conn-add-modal" id="connAddModal" hidden>
+  <div class="conn-add-top">
+    <h3 id="connAddTitle">Ajouter le réseau</h3>
+    <button type="button" class="conn-add-close" id="connAddClose" aria-label="Fermer">✕</button>
+  </div>
+  <div id="connAddDiscordPanel" hidden>
+    <div class="conn-discord-box">
+      <b id="connDiscordName">Discord</b>
+      <span id="connDiscordSub">Compte lié via connexion Matefindr</span>
+    </div>
+    <div class="conn-discord-tgl">
+      <label><span>Afficher l'activité Discord</span><input type="checkbox" id="connDiscordActivity" checked></label>
+      <label><span>Afficher le statut (en ligne / hors ligne)</span><input type="checkbox" id="connDiscordStatus" checked></label>
+    </div>
+  </div>
+  <div id="connAddLinkPanel">
+    <div class="conn-mode-lbl">Mode du réseau <span class="q">?</span></div>
+    <div class="conn-mode-tgl" id="connModeTgl">
+      <button type="button" data-mode="link" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Lien</button>
+      <button type="button" data-mode="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Texte</button>
+    </div>
+    <div class="conn-url-field">
+      <span class="conn-url-ico" id="connAddIcon"></span>
+      <span class="conn-url-prefix" id="connAddPrefix"></span>
+      <input id="connAddInput" maxlength="400" autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+  <div class="conn-add-foot">
+    <button type="button" class="btn-remove" id="connAddRemove" hidden>Retirer</button>
+    <button type="button" class="btn-add" id="connAddSubmit">Ajouter</button>
+  </div>
 </div>
 
 <!-- Popover bulle JEU : clip + rang -->
@@ -1391,6 +1471,7 @@ html.perf-lite *{
 <input type="file" id="fileBg" accept="image/*,video/*" hidden>
 <input type="file" id="filePhoto" accept="image/*" multiple hidden>
 
+<script src="js/connections.js"></script>
 <script>
 'use strict';
 /* Migration rebrand Tindord→Matefindr : recopie les anciennes cles localStorage tindord_* vers matefindr_* (aucun reset). */
@@ -3027,55 +3108,123 @@ function updateEyeVisibility(){
 }
 updateEyeVisibility();
 
-/* ===== CONNEXIONS (logos d'apps + pseudo, façon Discord) ===== */
-const CONN_APPS=[
-  {id:'spotify',name:'Spotify',color:'1DB954'},
-  {id:'steam',name:'Steam',color:'ffffff'},
-  {id:'twitch',name:'Twitch',color:'9146FF'},
-  {id:'youtube',name:'YouTube',color:'FF0000'},
-  {id:'x',name:'X',color:'ffffff'},
-  {id:'instagram',name:'Instagram',color:'E4405F'},
-  {id:'tiktok',name:'TikTok',color:'ffffff'},
-  {id:'riotgames',name:'Riot Games',color:'EB0029'},
-  {id:'epicgames',name:'Epic Games',color:'ffffff'},
-  {id:'roblox',name:'Roblox',color:'ffffff'},
-];
-const connLogo=a=>`https://cdn.simpleicons.org/${a.id}/${a.color}`;
+/* ===== CONNEXIONS (réseaux sociaux) ===== */
+const MC = () => window.MatefindrConnections;
 const CONN_DEL='<span class="conn-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>';
+let _connApp=null, _connMode='link';
+
+function connReadUser(){
+  try{ const st=readSite(); return st.user||{}; }catch(_){ return {}; }
+}
+
 function renderConnections(){
-  const box=$('connections'); if(!box) return; box.innerHTML='';
-  // Apps connectées affichées en premier.
-  const ordered=CONN_APPS.slice().sort((a,b)=>(S.connections[a.id]?0:1)-(S.connections[b.id]?0:1));
-  ordered.forEach(a=>{
-    const set=!!(S.connections&&S.connections[a.id]);
-    const b=document.createElement('button'); b.type='button'; b.className='conn'+(set?' set':'');
-    b.title=set?`${a.name} : ${S.connections[a.id]}`:`Ajouter ${a.name}`;
-    b.innerHTML=`<img src="${connLogo(a)}" alt="${esc(a.name)}" loading="lazy">`+(set?CONN_DEL:'');
+  const box=$('connections'); if(!box||!MC()) return;
+  box.innerHTML='';
+  MC().connOrderedIds(S.connections).forEach(id=>{
+    const app=MC().connApp(id); if(!app) return;
+    const entry=MC().connGet(S.connections,id);
+    const b=document.createElement('button'); b.type='button'; b.className='conn set';
+    b.title=`${app.name} : ${MC().connDisplayText(app,entry)}`;
+    b.innerHTML=MC().connIconHtml(app,22)+CONN_DEL;
     b.addEventListener('click',e=>{
-      if(e.target.closest('.conn-del')){ e.stopPropagation(); delete S.connections[a.id]; renderConnections(); persist(); toast('Connexion retirée'); return; }
-      openConnPop(a);
+      if(e.target.closest('.conn-del')){ e.stopPropagation(); delete S.connections[id]; renderConnections(); persist(); toast('Connexion retirée'); return; }
+      openConnAdd(app);
     });
     box.appendChild(b);
   });
+  const add=document.createElement('button');
+  add.type='button'; add.className='conn-add-btn';
+  add.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter connexion';
+  add.addEventListener('click',openConnPick);
+  box.appendChild(add);
 }
-let _connApp=null;
-function openConnPop(a){
-  _connApp=a;
-  $('connPopLogo').src=connLogo(a); $('connPopName').textContent=a.name;
-  $('connPopInput').value=(S.connections&&S.connections[a.id])||'';
-  $('connPopRemove').style.display=(S.connections&&S.connections[a.id])?'':'none';
-  $('connBackdrop').hidden=false; $('connPop').hidden=false;
-  setTimeout(()=>$('connPopInput').focus(),50);
+
+function openConnPick(){
+  const grid=$('connPickGrid'); if(!grid||!MC()) return;
+  grid.innerHTML='';
+  MC().CONN_APPS.forEach(app=>{
+    const taken=MC().connIsSet(S.connections,app.id);
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'');
+    b.disabled=taken && app.id!=='custom';
+    b.title=taken?`${app.name} déjà ajouté`:app.name;
+    if(app.wide) b.innerHTML=MC().connIconHtml(app,24)+`<span>${esc(app.name)}</span>`;
+    else b.innerHTML=MC().connIconHtml(app,26);
+    b.addEventListener('click',()=>{ if(b.disabled) return; closeConnPick(); openConnAdd(app); });
+    grid.appendChild(b);
+  });
+  $('connModalBackdrop').hidden=false;
+  $('connPickSheet').hidden=false;
 }
-function closeConnPop(){ $('connBackdrop').hidden=true; $('connPop').hidden=true; _connApp=null; }
-$('connPopSave').addEventListener('click',()=>{
-  if(!_connApp)return; const v=$('connPopInput').value.trim();
-  if(v) S.connections[_connApp.id]=v; else delete S.connections[_connApp.id];
-  renderConnections(); persist(); closeConnPop(); toast('Connexion enregistrée');
+function closeConnPick(){ $('connModalBackdrop').hidden=true; $('connPickSheet').hidden=true; }
+
+function syncConnAddUi(){
+  const app=_connApp; if(!app) return;
+  const isDiscord=app.special==='discord';
+  $('connAddDiscordPanel').hidden=!isDiscord;
+  $('connAddLinkPanel').hidden=!!isDiscord;
+  $('connAddTitle').textContent=(MC().connIsSet(S.connections,app.id)?'Modifier':'Ajouter')+' le réseau '+app.name;
+  $('connAddRemove').hidden=!MC().connIsSet(S.connections,app.id);
+  if(isDiscord){
+    const u=connReadUser();
+    $('connDiscordName').textContent=u.displayName||u.discordTag||'Discord';
+    $('connDiscordSub').textContent=u.discordId?('@'+(u.discordTag||'compte Discord')):'Connecte-toi avec Discord pour lier ton profil';
+    const cur=MC().connGet(S.connections,'discord');
+    $('connDiscordActivity').checked=cur?cur.showActivity!==false:true;
+    $('connDiscordStatus').checked=cur?cur.showStatus!==false:true;
+    return;
+  }
+  const cur=MC().connGet(S.connections,app.id);
+  _connMode=cur&&cur.mode==='text'?'text':'link';
+  $('connModeTgl').querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===_connMode));
+  $('connAddIcon').innerHTML=MC().connIconHtml(app,22);
+  $('connAddPrefix').textContent=app.prefix||'';
+  const inp=$('connAddInput');
+  inp.type=app.inputType||'text';
+  inp.placeholder=app.placeholder||'…';
+  inp.value=cur?MC().connValueForInput(app,cur):'';
+}
+
+function openConnAdd(app){
+  _connApp=app;
+  syncConnAddUi();
+  $('connModalBackdrop').hidden=false;
+  $('connAddModal').hidden=false;
+  setTimeout(()=>{ if(app.special!=='discord') $('connAddInput').focus(); },50);
+}
+function closeConnAdd(){ $('connAddModal').hidden=true; if($('connPickSheet').hidden) $('connModalBackdrop').hidden=true; _connApp=null; }
+function closeConnAll(){ closeConnAdd(); closeConnPick(); $('connModalBackdrop').hidden=true; _connApp=null; }
+
+function saveConnAdd(){
+  if(!_connApp||!MC()) return;
+  const app=_connApp;
+  if(app.special==='discord'){
+    const u=connReadUser();
+    if(!u.discordId){ toast('Connecte-toi avec Discord d\'abord'); return; }
+    S.connections.discord={v:u.discordId,mode:'link',showActivity:$('connDiscordActivity').checked,showStatus:$('connDiscordStatus').checked};
+  } else {
+    const v=$('connAddInput').value.trim();
+    if(!v){ toast('Renseigne un identifiant ou un lien'); return; }
+    S.connections[app.id]={v,mode:_connMode};
+  }
+  renderConnections(); persist(); closeConnAll(); toast('Connexion enregistrée');
+}
+
+$('connPickClose').addEventListener('click',closeConnPick);
+$('connAddClose').addEventListener('click',closeConnAdd);
+$('connModalBackdrop').addEventListener('click',closeConnAll);
+$('connAddSubmit').addEventListener('click',saveConnAdd);
+$('connAddRemove').addEventListener('click',()=>{
+  if(!_connApp) return;
+  delete S.connections[_connApp.id]; renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
 });
-$('connPopRemove').addEventListener('click',()=>{ if(!_connApp)return; delete S.connections[_connApp.id]; renderConnections(); persist(); closeConnPop(); toast('Connexion retirée'); });
-$('connPopInput').addEventListener('keydown',e=>{ if(e.key==='Enter')$('connPopSave').click(); });
-$('connBackdrop').addEventListener('click',closeConnPop);
+$('connModeTgl').addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-mode]'); if(!btn) return;
+  _connMode=btn.dataset.mode;
+  $('connModeTgl').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===btn));
+});
+$('connAddInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveConnAdd(); });
 renderConnections();
 
 /* ===== Popover bulle JEU : clip + rang ===== */
@@ -3223,7 +3372,7 @@ $('btnResync').addEventListener('click',()=>{ $('discModal').classList.add('open
 $('discCancel').addEventListener('click',()=>$('discModal').classList.remove('open'));
 $('discOk').addEventListener('click',()=>{ $('discModal').classList.remove('open'); resyncDiscord(); });
 
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('boostGate').classList.contains('open'))$('bgateClose').click();else if($('discModal').classList.contains('open'))$('discModal').classList.remove('open');else if($('unamePop')&&!$('unamePop').hidden){if(window.closeUnamePop)closeUnamePop();}else if(!$('gamePop').hidden)closeGamePop();else if(!$('connPop').hidden)closeConnPop();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('boostGate').classList.contains('open'))$('bgateClose').click();else if($('discModal').classList.contains('open'))$('discModal').classList.remove('open');else if($('unamePop')&&!$('unamePop').hidden){if(window.closeUnamePop)closeUnamePop();}else if(!$('gamePop').hidden)closeGamePop();else if(!$('connAddModal').hidden||!$('connPickSheet').hidden)closeConnAll();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
 /* ===================================================================
    PONT avec le vrai profil Matefindr (localStorage matefindr_state, même

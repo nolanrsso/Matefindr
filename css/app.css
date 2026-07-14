@@ -1622,7 +1622,9 @@
   /* Connexions (éditeur) — logos d'apps + pseudo sur la carte */
   .card-connections{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;position:relative;z-index:6}
   .card-conn{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);text-decoration:none;color:#fff;font-size:11px;font-weight:600;max-width:140px}
-  .card-conn img{width:14px;height:14px;object-fit:contain;flex:0 0 auto}
+  .card-conn img,.card-conn .conn-ico-svg{width:14px;height:14px;object-fit:contain;flex:0 0 auto}
+  .card-conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
+  .card-conn .conn-ico-svg svg{width:13px;height:13px}
   .card-conn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .card-conn:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22)}
   /* Social connections on card (clickable links) */
