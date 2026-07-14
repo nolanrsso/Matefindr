@@ -816,8 +816,12 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .orbstyle-card-title{font-size:12.5px;font-weight:700;color:#fff;line-height:1.35;min-width:0;word-break:break-word}
 .orbstyle-card-ctrl{display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
 .orbstyle-card-ctrl .orbstyle-sw{width:30px;height:30px;border-width:2.5px}
-.orbstyle-card-ctrl .orbstyle-lbl{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-right:auto}
-.orbstyle-card-ctrl .sh-contour-tgl{margin-left:auto;flex:0 0 auto}
+.orbstyle-card-ctrl .orbstyle-lbl{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.orbstyle-card-ctrl [data-glow]{margin-left:auto;flex:0 0 auto}
+.orbstyle-row .sh-contour-tgl:last-child{margin-left:auto}
+.orbstyle-filter{margin-bottom:12px;flex:0 0 auto}
+.orbstyle-filter button{font-size:11px;padding:8px 6px}
+.orbstyle-empty{padding:24px 8px;text-align:center;font-size:13px;color:var(--dim);font-weight:600}
 .orbstyle-all-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px}
 /* Panneau "Toutes les bulles" : tiroir pleine hauteur, liste scrollable, reset en bas */
 #orbColorPanel.orbstyle-all-mode{
@@ -1755,11 +1759,12 @@ function curatedMatches(query,kind,limit){
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
 const ORB_DEFAULT_COLOR={music:'#1ed760',game:'#8dcbff',film:'#c7a5ff'};
 const ORB_STYLE_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-1.5 2.2-4.2 3.8-4.2 7.2 0 2.3 1.9 4.2 4.2 4.2s4.2-1.9 4.2-4.2C16.2 6.8 13.5 5.2 12 3zm0 14.2c-3.9 0-7.2 2.4-7.2 5.3 0 .8.6 1.5 1.5 1.5h11.4c.8 0 1.5-.7 1.5-1.5 0-2.9-3.3-5.3-7.2-5.3z"/></svg>';
-function orbStyleThumbHtml(o,col,glowOn,px){
+function orbStyleThumbHtml(o,col,glowOn,px,contourOn){
   const sz=px||52, c=col||ORB_DEFAULT_COLOR[o.kind]||'#9146FF';
   const g=glowOn?('0 0 16px '+hexToRgba(c,.75)+', '):'';
+  const ring=contourOn!==false?c:'transparent';
   const inner=o.cover?`<img src="${esc(o.cover)}" alt="">`:`<span class="orbstyle-ph">${ORB_FALLBACK_ICO[o.kind]||'✨'}</span>`;
-  return `<div class="orbstyle-thumb" style="width:${sz}px;height:${sz}px;--orb-ring:${c};box-shadow:${g}0 4px 14px rgba(0,0,0,.45)">${inner}</div>`;
+  return `<div class="orbstyle-thumb" style="width:${sz}px;height:${sz}px;--orb-ring:${ring};border-color:${ring};box-shadow:${g}0 4px 14px rgba(0,0,0,.45)">${inner}</div>`;
 }
 function orbEffColor(o){
   if(o.color&&/^#[0-9a-f]{6}$/i.test(o.color)) return o.color;
@@ -1771,12 +1776,22 @@ function orbEffGlowOff(o){
   if(o.glow===true) return false;
   return !!(S.orbGlow&&S.orbGlow[o.kind]===false);
 }
-let _orbStyleIdx=null, _orbStyleAll=false;
+function orbEffContourOff(o){
+  if(o.contour===false) return true;
+  if(o.contour===true) return false;
+  return false;
+}
+let _orbStyleIdx=null, _orbStyleAll=false, _orbStyleFilter='all';
 function applyOrbStyleEl(el,o){
   if(!el||!o) return;
-  const col=orbEffColor(o), glowOff=orbEffGlowOff(o);
-  el.style.setProperty('--orb-bc',hexToRgba(col,.85));
-  el.style.setProperty('--orb-rc',hexToRgba(col,.45));
+  const col=orbEffColor(o), glowOff=orbEffGlowOff(o), contourOff=orbEffContourOff(o);
+  if(contourOff){
+    el.style.setProperty('--orb-bc','transparent');
+    el.style.setProperty('--orb-rc','transparent');
+  }else{
+    el.style.setProperty('--orb-bc',hexToRgba(col,.85));
+    el.style.setProperty('--orb-rc',hexToRgba(col,.45));
+  }
   el.style.setProperty('--orb-gc',glowOff?'rgba(0,0,0,0)':hexToRgba(col,.7));
 }
 function renderBubblesSheet(sh){
@@ -2523,29 +2538,37 @@ function renderOrbStylePanel(){
   p.classList.remove('orbstyle-all-mode');
   const o=(_orbStyleIdx!==null)?S.orbs[_orbStyleIdx]:null;
   if(!o){ closeOrbStylePanel(); return; }
-  const col=orbEffColor(o), glowOn=!orbEffGlowOff(o);
+  const col=orbEffColor(o), glowOn=!orbEffGlowOff(o), contourOn=!orbEffContourOff(o);
   p.innerHTML=`
     <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
     <div class="cp-title">Style de la bulle</div>
     <div class="orbstyle-preview">
-      ${orbStyleThumbHtml(o,col,glowOn,56)}
+      ${orbStyleThumbHtml(o,col,glowOn,56,contourOn)}
       <div class="orbstyle-name">${esc(o.title)}</div>
     </div>
     <div class="orbstyle-row">
+      <button type="button" class="sh-contour-tgl${contourOn?' on':''}" id="ocpContour" title="Activer/désactiver le contour"><span>Contour</span><span class="sw"></span></button>
       <label class="orbstyle-sw" id="ocpSw" style="background:${col}" title="Couleur de cette bulle"><input type="color" id="ocpColor" value="${col}"></label>
       <span class="orbstyle-lbl">Couleur</span>
       <button type="button" class="sh-contour-tgl${glowOn?' on':''}" id="ocpGlow" title="Activer/désactiver le glow"><span>Glow</span><span class="sw"></span></button>
     </div>
     <button class="cp-reset" id="ocpReset">↺ Couleur par défaut</button>`;
   const syncPreview=()=>{
-    const c=orbEffColor(o), g=!orbEffGlowOff(o);
+    const c=orbEffColor(o), g=!orbEffGlowOff(o), ct=!orbEffContourOff(o);
     const prev=p.querySelector('.orbstyle-preview');
-    if(prev) prev.innerHTML=orbStyleThumbHtml(o,c,g,56)+`<div class="orbstyle-name">${esc(o.title)}</div>`;
+    if(prev) prev.innerHTML=orbStyleThumbHtml(o,c,g,56,ct)+`<div class="orbstyle-name">${esc(o.title)}</div>`;
     const sw=p.querySelector('#ocpSw'); if(sw) sw.style.background=c;
   };
   p.querySelector('#ocpColor').addEventListener('input',e=>{
     o.color=e.target.value;
     syncPreview(); renderOrbs(); persist();
+  });
+  p.querySelector('#ocpContour').addEventListener('click',()=>{
+    const wasOn=!orbEffContourOff(o);
+    o.contour=!wasOn;
+    p.querySelector('#ocpContour').classList.toggle('on',!wasOn);
+    syncPreview(); renderOrbs(); persist();
+    toast(wasOn?'Contour désactivé':'Contour activé');
   });
   p.querySelector('#ocpGlow').addEventListener('click',()=>{
     const wasOn=!orbEffGlowOff(o);
@@ -2555,7 +2578,7 @@ function renderOrbStylePanel(){
     toast(wasOn?'Glow désactivé':'Glow activé');
   });
   p.querySelector('#ocpReset').addEventListener('click',()=>{
-    delete o.color; delete o.glow;
+    delete o.color; delete o.glow; delete o.contour;
     renderOrbStylePanel(); renderOrbs(); persist();
     toast('Style par défaut');
   });
@@ -2564,40 +2587,56 @@ function renderOrbStylePanel(){
 function renderOrbStyleAllPanel(){
   const p=$('orbColorPanel');
   if(!S.orbs.length){ toast('Aucune bulle placée'); closeOrbStylePanel(); return; }
-  const rows=S.orbs.map((o,i)=>{
-    const col=orbEffColor(o), glowOn=!orbEffGlowOff(o);
+  const filterLabels={all:'Toutes les bulles',music:'Bulles musique',game:'Bulles jeu',film:'Bulles série·film'};
+  const entries=S.orbs.map((o,i)=>({o,i})).filter(({o})=>_orbStyleFilter==='all'||o.kind===_orbStyleFilter);
+  const filterBtns=['all','music','game','film'].map(k=>{
+    const n=k==='all'?S.orbs.length:S.orbs.filter(o=>o.kind===k).length;
+    return `<button type="button" data-f="${k}" class="${_orbStyleFilter===k?'active':''}">${k==='all'?'Toutes':k==='music'?'Musique':k==='game'?'Jeu':'Série·Film'}${n?` (${n})`:''}</button>`;
+  }).join('');
+  const rows=entries.map(({o,i})=>{
+    const col=orbEffColor(o), glowOn=!orbEffGlowOff(o), contourOn=!orbEffContourOff(o);
     return `<div class="orbstyle-card" data-i="${i}">
       <div class="orbstyle-card-top">
-        ${orbStyleThumbHtml(o,col,glowOn,46)}
+        ${orbStyleThumbHtml(o,col,glowOn,46,contourOn)}
         <div class="orbstyle-card-title">${esc(o.title)}</div>
       </div>
       <div class="orbstyle-card-ctrl">
+        <button type="button" class="sh-contour-tgl${contourOn?' on':''}" data-contour="${i}" title="Contour"><span>Contour</span><span class="sw"></span></button>
         <span class="orbstyle-lbl">Couleur</span>
         <label class="orbstyle-sw" style="background:${col}" title="Couleur"><input type="color" data-i="${i}" value="${col}"></label>
         <button type="button" class="sh-contour-tgl${glowOn?' on':''}" data-glow="${i}" title="Glow"><span>Glow</span><span class="sw"></span></button>
       </div>
     </div>`;
   }).join('');
+  const listHtml=rows||'<div class="orbstyle-empty">Aucune bulle dans cette catégorie</div>';
   p.innerHTML=`
     <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
     <div class="orbstyle-all-body">
-      <div class="cp-title">Toutes les bulles</div>
-      <div class="orbstyle-all-list">${rows}</div>
+      <div class="cp-title">${filterLabels[_orbStyleFilter]||'Toutes les bulles'}</div>
+      <div class="orbstyle-filter cats" id="orbStyleFilter">${filterBtns}</div>
+      <div class="orbstyle-all-list">${listHtml}</div>
       <button class="cp-reset" id="ocpResetAll">↺ Tout remettre par défaut</button>
     </div>`;
+  p.querySelectorAll('#orbStyleFilter button').forEach(btn=>{
+    btn.addEventListener('click',()=>{ _orbStyleFilter=btn.dataset.f; renderOrbStyleAllPanel(); });
+  });
   p.querySelectorAll('.orbstyle-sw input[type=color]').forEach(inp=>{
     inp.addEventListener('click',e=>e.stopPropagation());
     inp.addEventListener('input',e=>{
       const i=+inp.dataset.i, o=S.orbs[i]; if(!o) return;
       o.color=inp.value;
-      const row=inp.closest('.orbstyle-card');
-      const thumb=row&&row.querySelector('.orbstyle-thumb');
-      if(thumb){
-        const c=orbEffColor(o), g=!orbEffGlowOff(o);
-        thumb.style.setProperty('--orb-ring',c);
-        thumb.style.boxShadow=(g?'0 0 16px '+hexToRgba(c,.75)+', ':'')+'0 4px 14px rgba(0,0,0,.45)';
-      }
+      syncOrbStyleCardThumb(inp.closest('.orbstyle-card'), o);
       inp.closest('.orbstyle-sw').style.background=inp.value;
+      renderOrbs(); persist();
+    });
+  });
+  p.querySelectorAll('[data-contour]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=+btn.dataset.contour, o=S.orbs[i]; if(!o) return;
+      const wasOn=!orbEffContourOff(o);
+      o.contour=!wasOn;
+      btn.classList.toggle('on',!wasOn);
+      syncOrbStyleCardThumb(btn.closest('.orbstyle-card'), o);
       renderOrbs(); persist();
     });
   });
@@ -2607,28 +2646,34 @@ function renderOrbStyleAllPanel(){
       const wasOn=!orbEffGlowOff(o);
       o.glow=!wasOn;
       btn.classList.toggle('on',!wasOn);
-      const row=btn.closest('.orbstyle-card');
-      const thumb=row&&row.querySelector('.orbstyle-thumb');
-      if(thumb){
-        const c=orbEffColor(o);
-        thumb.style.boxShadow=(!wasOn?('0 0 16px '+hexToRgba(c,.75)+', '):'')+'0 4px 14px rgba(0,0,0,.45)';
-      }
+      syncOrbStyleCardThumb(btn.closest('.orbstyle-card'), o);
       renderOrbs(); persist();
     });
   });
   p.querySelector('#ocpResetAll').addEventListener('click',()=>{
-    S.orbs.forEach(o=>{ delete o.color; delete o.glow; });
+    const targets=_orbStyleFilter==='all'?S.orbs:S.orbs.filter(o=>o.kind===_orbStyleFilter);
+    targets.forEach(o=>{ delete o.color; delete o.glow; delete o.contour; });
     renderOrbStylePanel(); renderOrbs(); persist();
-    toast('Toutes les bulles remises par défaut');
+    toast(_orbStyleFilter==='all'?'Toutes les bulles remises par défaut':'Bulles remises par défaut');
   });
   p.querySelector('#ocpClose').addEventListener('click',closeOrbStylePanel);
+}
+function syncOrbStyleCardThumb(row,o){
+  if(!row||!o) return;
+  const thumb=row.querySelector('.orbstyle-thumb');
+  if(!thumb) return;
+  const c=orbEffColor(o), g=!orbEffGlowOff(o), ct=!orbEffContourOff(o);
+  const ring=ct?c:'transparent';
+  thumb.style.setProperty('--orb-ring',ring);
+  thumb.style.borderColor=ring;
+  thumb.style.boxShadow=(g?('0 0 16px '+hexToRgba(c,.75)+', '):'')+'0 4px 14px rgba(0,0,0,.45)';
 }
 function openOrbStylePanel(idx){ closeColorPanel(); closeSheet(); _orbStyleAll=false; _orbStyleIdx=idx; renderOrbStylePanel(); document.body.classList.add('orbcolor-open'); }
 function openOrbStyleAllPanel(){
   if(!S.orbs.length){ toast('Place d\'abord au moins une bulle'); return; }
   closeColorPanel(); closeSheet(); _orbStyleAll=true; _orbStyleIdx=null; renderOrbStylePanel(); document.body.classList.add('orbcolor-open');
 }
-function closeOrbStylePanel(){ _orbStyleIdx=null; _orbStyleAll=false; const p=$('orbColorPanel'); if(p) p.classList.remove('orbstyle-all-mode'); document.body.classList.remove('orbcolor-open'); }
+function closeOrbStylePanel(){ _orbStyleIdx=null; _orbStyleAll=false; _orbStyleFilter='all'; const p=$('orbColorPanel'); if(p) p.classList.remove('orbstyle-all-mode'); document.body.classList.remove('orbcolor-open'); }
 function closeOrbColorPanel(){ closeOrbStylePanel(); }
 function openOrbColorPanel(){ openOrbStyleAllPanel(); }
 
@@ -2944,6 +2989,7 @@ function writeState(){
     const r={kind:o.kind,title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,clipUrl:o.clipUrl||null};
     if(o.color&&/^#[0-9a-f]{6}$/i.test(o.color)) r.color=o.color;
     if(o.glow===false) r.glow=false;
+    if(o.contour===false) r.contour=false;
     const pm=o.posByMode||{};
     const d=pm.desktop||((typeof o.x==='number'&&typeof o.y==='number')?{x:o.x,y:o.y}:null);
     if(d&&typeof d.x==='number'){ r.x=d.x; r.y=d.y; r.customX=(d.x-50)/100; r.customY=(d.y-50)/100; }
@@ -3031,6 +3077,7 @@ function buildDbProfile(st){
     const out={kind:o.kind,title:o.title,sub:(o.kind==='game'&&o.rank)?o.rank:(subByKind[o.kind]||''),emoji:emoByKind[o.kind]||'✨',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,customX:o.customX,customY:o.customY,posPortrait:o.posPortrait||null,posLandscape:o.posLandscape||null};
     if(o.color&&/^#[0-9a-f]{6}$/i.test(o.color)) out.color=o.color;
     if(o.glow===false) out.glow=false;
+    if(o.contour===false) out.contour=false;
     return out;
   });
   return {
@@ -3235,6 +3282,7 @@ function hydrateFromSite(){
         const orb={kind:(o.kind==='anime'?'film':o.kind),title:o.title,sub:o.sub||'',cover:o.cover||null,previewUrl:o.previewUrl||null,rank:o.rank||null,clipUrl:o.clipUrl||null};
         if(o.color&&/^#[0-9a-f]{6}$/i.test(o.color)) orb.color=o.color;
         if(o.glow===false) orb.glow=false;
+        if(o.contour===false) orb.contour=false;
         // Positions séparées par orientation → posByMode (% éditeur).
         const dX=(typeof o.customX==='number')?50+o.customX*100:(typeof o.x==='number'?o.x:undefined);
         const dY=(typeof o.customY==='number')?50+o.customY*100:(typeof o.y==='number'?o.y:undefined);
