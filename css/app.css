@@ -1321,19 +1321,17 @@
     position:relative;width:min(92vw,380px);height:min(calc(100vh - 240px),620px);z-index:60;
     margin-top:-1px;padding-top:1px;
     margin-bottom:-1px;padding-bottom:1px;
-    border-radius:20px;overflow:hidden;overflow:clip;overflow-clip-margin:0;
-    background:transparent;
-    filter:drop-shadow(0 30px 80px rgba(0,0,0,.6));
+    border-radius:20px;overflow:visible;
     transform:translateZ(0);
     -webkit-backface-visibility:hidden;
   }
   .swipe-shell{
     position:relative;width:100%;height:100%;
-    background:transparent;
+    background:transparent;overflow:visible;
   }
   .swipe-wrap{
     position:relative;width:100%;height:100%;
-    background:transparent;
+    background:transparent;overflow:visible;
   }
 
   /* Discord-style profile card */
@@ -1344,8 +1342,10 @@
     color:#fff;cursor:grab;user-select:none;
     border:none;
     display:flex;flex-direction:column;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
     transition:transform .35s cubic-bezier(.2,.7,.3,1), opacity .35s ease;
     will-change:transform;
+    z-index:2;
   }
   .swipe-card.entering{
     animation:cardIn .55s cubic-bezier(.2,.7,.3,1) both;
