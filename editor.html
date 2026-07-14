@@ -693,7 +693,7 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-pick-tile--wide{grid-column:1 / -1;aspect-ratio:auto;min-height:52px;justify-content:flex-start;padding:0 14px;gap:10px;display:flex;align-items:center;overflow:hidden}
 .conn-pick-tile--wide span{font-size:12px;font-weight:700;color:#fff;text-align:left;line-height:1.25;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conn-pick-tile--wide .conn-ico-svg,.conn-pick-tile--wide img{width:24px;height:24px;flex:0 0 auto}
-.conn-pick-tile[disabled]{opacity:.35;cursor:not-allowed;transform:none}
+.conn-favicon{border-radius:6px;object-fit:contain;background:rgba(255,255,255,.06)}
 .conn-add-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:88;width:min(92vw,420px);padding:20px;border-radius:18px;
   background:linear-gradient(180deg,rgba(24,24,28,.99),rgba(14,14,18,.99));border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 80px rgba(0,0,0,.78)}
 .conn-add-modal[hidden]{display:none}
@@ -3129,7 +3129,7 @@ function renderConnections(){
     const entry=MC().connGet(S.connections,id);
     const b=document.createElement('button'); b.type='button'; b.className='conn set';
     b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''}`;
-    b.innerHTML=MC().connIconHtml(app,22)+CONN_DEL;
+    b.innerHTML=MC().connIconHtml(app,22,entry)+CONN_DEL;
     b.addEventListener('click',e=>{
       if(e.target.closest('.conn-del')){ e.stopPropagation(); delete S.connections[id]; renderConnections(); persist(); toast('Connexion retirée'); return; }
       openConnAdd(app);
@@ -3153,7 +3153,10 @@ function openConnPick(){
     b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'');
     b.disabled=taken && app.id!=='custom';
     b.title=taken?`${app.name} déjà ajouté`:app.name;
-    if(app.wide) b.innerHTML=MC().connIconHtml(app,24)+`<span>${esc(app.name)}</span>`;
+    if(app.wide){
+      const entry=app.id==='custom'?MC().connGet(S.connections,'custom'):null;
+      b.innerHTML=MC().connIconHtml(app,24,entry)+`<span>${esc(app.name)}</span>`;
+    }
     else b.innerHTML=MC().connIconHtml(app,26);
     b.addEventListener('click',()=>{ if(b.disabled) return; closeConnPick(); openConnAdd(app); });
     grid.appendChild(b);
@@ -3190,6 +3193,17 @@ function syncConnAddUi(){
   inp.placeholder=app.placeholder||'…';
   inp.value=cur?MC().connValueForInput(app,cur):'';
   $('connShowLabelLink').checked=cur?cur.showLabel!==false:true;
+  if(app.id==='custom') updateCustomConnIconPreview();
+}
+
+function updateCustomConnIconPreview(){
+  if(!_connApp||_connApp.id!=='custom'||!MC()) return;
+  const v=$('connAddInput').value.trim();
+  const cur=MC().connGet(S.connections,'custom');
+  const fav=MC().connFaviconUrl(v)||(cur&&cur.favicon)||'';
+  $('connAddIcon').innerHTML=fav
+    ? `<img src="${fav}" alt="" width="22" height="22" loading="lazy" class="conn-favicon">`
+    : MC().connIconHtml(_connApp,22);
 }
 
 function openConnAdd(app){
@@ -3218,11 +3232,17 @@ function saveConnAdd(){
   } else {
     const v=$('connAddInput').value.trim();
     if(!v){ toast('Renseigne un identifiant ou un lien'); return; }
-    S.connections[app.id]={
+    const payload={
       v,mode:_connMode,
-      label:MC().cleanHandle(v),
       showLabel:$('connShowLabelLink').checked
     };
+    if(app.id==='custom'){
+      payload.label=MC().connSiteHost(v)||MC().cleanHandle(v);
+      payload.favicon=MC().connFaviconUrl(v);
+    } else {
+      payload.label=MC().cleanHandle(v);
+    }
+    S.connections[app.id]=payload;
   }
   renderConnections(); persist(); closeConnAll(); toast('Connexion enregistrée');
 }
@@ -3240,6 +3260,7 @@ $('connModeTgl').addEventListener('click',e=>{
   _connMode=btn.dataset.mode;
   $('connModeTgl').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===btn));
 });
+$('connAddInput').addEventListener('input',()=>{ if(_connApp&&_connApp.id==='custom') updateCustomConnIconPreview(); });
 $('connAddInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveConnAdd(); });
 renderConnections();
 

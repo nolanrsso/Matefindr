@@ -1625,6 +1625,7 @@
   .card-conn{display:inline-flex;flex-direction:column;align-items:center;gap:5px;padding:0;border:none;background:transparent;text-decoration:none;color:#fff;max-width:76px}
   .card-conn-ico{display:grid;place-items:center;width:40px;height:40px}
   .card-conn img,.card-conn .conn-ico-svg{width:36px;height:36px;object-fit:contain;flex:0 0 auto}
+  .card-conn .conn-favicon{border-radius:8px;background:rgba(255,255,255,.06)}
   .card-conn .conn-ico-svg{display:grid;place-items:center}
   .card-conn .conn-ico-svg svg{width:34px;height:34px}
   .card-conn-user{font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

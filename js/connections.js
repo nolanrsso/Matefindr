@@ -47,10 +47,36 @@
     return `https://cdn.simpleicons.org/${app.id}/${app.color}`;
   }
 
-  function connIconHtml(app, size){
+  function connSiteHost(url){
+    try{
+      let u=String(url||'').trim();
+      if(!u) return '';
+      if(!/^https?:\/\//i.test(u)) u='https://'+u;
+      return new URL(u).hostname.replace(/^www\./i,'');
+    }catch(_){ return ''; }
+  }
+
+  function connFaviconUrl(url){
+    const host=connSiteHost(url);
+    if(!host) return '';
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+  }
+
+  function connFaviconForEntry(entry){
+    const e=connNormalize(entry);
+    if(!e) return '';
+    if(e.favicon) return e.favicon;
+    return connFaviconUrl(e.v);
+  }
+
+  function connIconHtml(app, size, entry){
     if(typeof app === 'string') app = connApp(app);
     if(!app) return '';
     const px = size || 22;
+    if(app.id === 'custom'){
+      const fav=connFaviconForEntry(entry);
+      if(fav) return `<img src="${fav}" alt="" width="${px}" height="${px}" loading="lazy" class="conn-favicon">`;
+    }
     if(app.icon && ICON_SVG[app.icon])
       return `<span class="conn-ico-svg" style="width:${px}px;height:${px}px">${ICON_SVG[app.icon]}</span>`;
     const logo = connLogo(app);
@@ -70,6 +96,7 @@
         showStatus: raw.showStatus !== false,
         showLabel: raw.showLabel !== false,
         label: raw.label || '',
+        favicon: raw.favicon || '',
       };
     }
     return null;
@@ -123,6 +150,10 @@
       return '';
     }
     if(app && app.id === 'email') return e.v.replace(/^mailto:/i, '');
+    if(app && app.id === 'custom'){
+      const host=connSiteHost(e.v);
+      if(host) return host;
+    }
     return cleanHandle(e.v) || '';
   }
 
@@ -133,7 +164,7 @@
     const escFn = typeof esc === 'function' ? esc : s => String(s);
     const href = buildConnUrl(app, entry);
     const user = connProfileLabel(app, entry, profileTag);
-    const iconHtml = connIconHtml(app, 36);
+    const iconHtml = connIconHtml(app, 36, e);
     const labelHtml = user ? `<span class="card-conn-user">${escFn(user)}</span>` : '';
     const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
     const name = app ? app.name : 'Connexion';
@@ -185,6 +216,9 @@
     connCardHtml,
     connDisplayText,
     connValueForInput,
+    connFaviconUrl,
+    connFaviconForEntry,
+    connSiteHost,
     cleanHandle,
   };
 })(typeof window !== 'undefined' ? window : global);
