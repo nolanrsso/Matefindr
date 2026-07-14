@@ -234,6 +234,14 @@ body[data-canvas="portrait"] .card-frame::before{
 html.perf-lite .orb[data-kind="music"] img{animation:none}
 .orb[data-kind="game"]{border-color:var(--orb-bc,rgba(141,203,255,.9));box-shadow:0 0 0 2px var(--orb-rc,rgba(47,123,216,.5)),0 0 22px 4px var(--orb-gc,rgba(141,203,255,.7)),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="film"]{border-color:var(--orb-bc,rgba(199,165,255,.85));box-shadow:0 0 0 2px var(--orb-rc,rgba(139,92,246,.5)),0 0 22px 4px var(--orb-gc,rgba(199,165,255,.7)),0 12px 30px rgba(0,0,0,.5)}
+/* Contour désactivé : retire bordure + anneau (plus de liseré sombre résiduel) */
+.orb.orb--no-contour{border:none!important}
+.orb.orb--no-contour[data-kind="music"]{box-shadow:0 0 22px 4px var(--orb-gc,rgba(30,215,96,.7)),0 12px 30px rgba(0,0,0,.5)}
+.orb.orb--no-contour[data-kind="game"]{box-shadow:0 0 22px 4px var(--orb-gc,rgba(141,203,255,.7)),0 12px 30px rgba(0,0,0,.5)}
+.orb.orb--no-contour[data-kind="film"]{box-shadow:0 0 22px 4px var(--orb-gc,rgba(199,165,255,.7)),0 12px 30px rgba(0,0,0,.5)}
+.orb.orb--no-contour.orb--no-glow[data-kind="music"],
+.orb.orb--no-contour.orb--no-glow[data-kind="game"],
+.orb.orb--no-contour.orb--no-glow[data-kind="film"]{box-shadow:0 12px 30px rgba(0,0,0,.5)!important}
 /* Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite) */
 .orb-wrap--add{cursor:pointer}
 .orb--add{cursor:pointer;background:rgba(145,70,255,.10);border:2.5px dashed rgba(145,70,255,.6);
@@ -256,21 +264,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
   opacity:1;transform:scale(1);transition:transform .12s ease;box-shadow:0 3px 10px rgba(255,79,160,.6);
 }
 .orb-del:hover{transform:scale(1.15)}
-/* Badge style (couleur + glow) — une bulle placée à la fois */
-.orb-style{position:absolute;bottom:-5px;left:-5px;width:26px;height:26px;border-radius:50%;z-index:6;
-  background:linear-gradient(145deg,#E8D5FF,#9146FF);border:2px solid rgba(255,255,255,.55);
-  display:grid;place-items:center;cursor:pointer;line-height:1;
-  box-shadow:0 3px 12px rgba(145,70,255,.45),0 0 0 1px rgba(0,0,0,.35) inset;
-  transition:transform .14s ease,box-shadow .14s ease;color:#fff}
-.orb-style svg{width:13px;height:13px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
-.orb-style:hover{transform:scale(1.12);box-shadow:0 4px 16px rgba(145,70,255,.65),0 0 0 1px rgba(255,255,255,.25) inset}
-.orb-style.active{background:linear-gradient(145deg,#fff,#C7A5FF);color:#5a2d91;box-shadow:0 0 0 3px rgba(145,70,255,.55),0 4px 14px rgba(145,70,255,.5)}
-/* Bulle JEU : badge édition (clip+rang), indicateur clip, badge rang */
-.orb-edit{position:absolute;top:-6px;left:-6px;width:24px;height:24px;border-radius:50%;z-index:6;
-  background:linear-gradient(135deg,#5BE9FF,#2F7BD8);color:#072033;border:2px solid #0d0b1e;
-  display:grid;place-items:center;font-size:13px;font-weight:800;cursor:pointer;line-height:1;
-  box-shadow:0 3px 10px rgba(91,233,255,.55);transition:transform .12s ease}
-.orb-edit:hover{transform:scale(1.15)}
+/* Bulle JEU : indicateur clip + badge rang (clip/rang éditables depuis Mes bulles) */
 .orb-clip{position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;border-radius:50%;z-index:6;
   background:linear-gradient(135deg,#FF4FA0,#9146FF);color:#fff;border:2px solid #0d0b1e;
   display:grid;place-items:center;font-size:11px;line-height:1;box-shadow:0 3px 9px rgba(145,70,255,.5)}
@@ -734,7 +728,7 @@ body.color-open #colorPanel{transform:translateX(0)}
 body.orbcolor-open #orbColorPanel{transform:translateX(0)}
 .card-zone{transition:transform .34s cubic-bezier(.6,.05,.2,1)}
 body.color-open .card-zone,
-body.orbcolor-open .card-zone{transform:translateX(158px)}
+body.orbcolor-open .card-zone{transform:translateX(198px)}
 @media (max-width:720px){
   .color-panel{width:min(58vw,258px);padding-left:15px;padding-right:15px}
   /* Écran étroit : carte réduite et poussée à droite pour dégager le panneau — elle
@@ -792,6 +786,24 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
 
+/* Bulles déjà placées — édition depuis l'onglet Mes bulles */
+.orb-placed{margin-bottom:12px}
+.orb-placed-hd{font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.orb-placed-list{display:flex;flex-direction:column;gap:6px}
+.orb-placed-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.04)}
+.orb-placed-thumb{width:34px;height:34px;border-radius:50%;flex:0 0 auto;overflow:hidden;border:2px solid rgba(255,255,255,.35);background:#1c1d22;display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.orb-placed-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.orb-placed-thumb .orb-placed-ph{font-size:15px;line-height:1}
+.orb-placed-title{flex:1;font-size:12px;font-weight:700;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orb-placed-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.orb-placed-swatch{width:28px;height:28px;border-radius:50%;flex:0 0 auto;border:2.5px solid #fff;cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,.4);transition:transform .12s ease;padding:0;font:inherit}
+.orb-placed-swatch:hover{transform:scale(1.1)}
+.orb-placed-game{width:28px;height:28px;border-radius:50%;flex:0 0 auto;border:2px solid #0d0b1e;
+  background:linear-gradient(135deg,#5BE9FF,#2F7BD8);color:#072033;font-size:13px;font-weight:800;cursor:pointer;line-height:1;
+  display:grid;place-items:center;box-shadow:0 3px 10px rgba(91,233,255,.55);transition:transform .12s ease}
+.orb-placed-game:hover{transform:scale(1.1)}
+
 /* Bouton "Modifier" (toutes les bulles) dans l'en-tête du sheet Mes bulles */
 .sh-orbstyle-btn{padding:5px 11px;border-radius:999px;border:1px solid rgba(145,70,255,.55);
   background:rgba(145,70,255,.14);color:#C7A5FF;font-size:11.5px;font-weight:800;letter-spacing:.02em;
@@ -810,14 +822,13 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .orbstyle-thumb .orbstyle-ph{font-size:22px;line-height:1}
 .orbstyle-name{font-size:13px;font-weight:700;color:#fff;line-height:1.35;min-width:0;flex:1;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.orbstyle-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.orbstyle-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .orbstyle-card{padding:12px 12px 11px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--stroke-2)}
 .orbstyle-card-top{display:flex;align-items:center;gap:11px;margin-bottom:10px;min-width:0}
 .orbstyle-card-top .orbstyle-thumb{width:46px;height:46px;flex:0 0 auto}
 .orbstyle-card-title{font-size:12.5px;font-weight:700;color:#fff;line-height:1.35;min-width:0;word-break:break-word}
-.orbstyle-card-ctrl{display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+.orbstyle-card-ctrl{display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);flex-wrap:wrap}
 .orbstyle-card-ctrl .orbstyle-sw{width:30px;height:30px;border-width:2.5px}
-.orbstyle-card-ctrl .orbstyle-lbl{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
 .orbstyle-card-ctrl [data-glow]{margin-left:auto;flex:0 0 auto}
 .orbstyle-row .sh-contour-tgl:last-child{margin-left:auto}
 .orbstyle-filter{margin-bottom:12px;flex:0 0 auto}
@@ -840,6 +851,8 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 #orbColorPanel.orbstyle-all-mode .orbstyle-all-list{
   flex:1 1 auto;min-height:0;max-height:none;margin-bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #orbColorPanel.orbstyle-all-mode .cp-reset{flex:0 0 auto;margin-top:12px;margin-bottom:0}
+#orbColorPanel{width:min(92vw,380px);padding-top:56px;box-sizing:border-box}
+#orbColorPanel:not(.orbstyle-all-mode){max-height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .orbstyle-sw{position:relative;width:34px;height:34px;border-radius:50%;flex:0 0 auto;border:3px solid #fff;
   cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);transition:transform .12s ease;
   padding:0;font:inherit;background:#9146FF}
@@ -1809,6 +1822,39 @@ let orbKind='music';
 function updateOrbCount(){
   const c=document.getElementById('orbCount'); if(c)c.innerHTML=`<b>${S.orbs.length}</b> / ${orbMax()}`;
   if(window.updateBubbleWarning)window.updateBubbleWarning();
+  refreshOrbPlacedIfOpen();
+}
+function refreshOrbPlacedIfOpen(){
+  if(typeof activeTool==='undefined'||activeTool!=='bubbles') return;
+  const sh=$('sheet'); if(!sh||!sh.classList.contains('open')) return;
+  refreshOrbPlacedList(sh);
+}
+function refreshOrbPlacedList(sh){
+  const box=sh&&sh.querySelector('#orbPlaced'); if(!box) return;
+  const placed=S.orbs.map((o,i)=>({o,i})).filter(x=>x.o.kind===orbKind);
+  if(!placed.length){ box.hidden=true; box.innerHTML=''; return; }
+  box.hidden=false;
+  const labels={music:'Sur la carte · Musique',game:'Sur la carte · Jeu',film:'Sur la carte · Série·Film'};
+  const rows=placed.map(({o,i})=>{
+    const col=orbEffColor(o);
+    const thumb=o.cover?`<img src="${esc(o.cover)}" alt="">`:`<span class="orb-placed-ph">${ORB_FALLBACK_ICO[o.kind]||'✨'}</span>`;
+    const gameBtn=o.kind==='game'?`<button type="button" class="orb-placed-game" data-i="${i}" title="Clip + rang" aria-label="Clip et rang">✎</button>`:'';
+    return `<div class="orb-placed-row">
+      <div class="orb-placed-thumb" style="border-color:${hexToRgba(col,.75)}">${thumb}</div>
+      <span class="orb-placed-title">${esc(o.title)}${o.rank?` · ${esc(o.rank)}`:''}${o.clipUrl?' · ▶':''}</span>
+      <div class="orb-placed-actions">
+        <button type="button" class="orb-placed-swatch" data-i="${i}" style="background:${col}" title="Couleur et glow" aria-label="Modifier le style"></button>
+        ${gameBtn}
+      </div>
+    </div>`;
+  }).join('');
+  box.innerHTML=`<div class="orb-placed-hd">${labels[orbKind]||'Sur la carte'}</div><div class="orb-placed-list">${rows}</div>`;
+  box.querySelectorAll('.orb-placed-swatch').forEach(btn=>{
+    btn.addEventListener('click',e=>{ e.stopPropagation(); openOrbStylePanel(+btn.dataset.i); });
+  });
+  box.querySelectorAll('.orb-placed-game').forEach(btn=>{
+    btn.addEventListener('click',e=>{ e.stopPropagation(); const o=S.orbs[+btn.dataset.i]; if(o) openGamePop(o); });
+  });
 }
 function updateGifCount(){
   const c=document.getElementById('gifCount'); if(c)c.innerHTML=`<b>${S.gifs.length}</b> / ${GIF_MAX}`;
@@ -1903,7 +1949,6 @@ function curatedMatches(query,kind,limit){
 }
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
 const ORB_DEFAULT_COLOR={music:'#1ed760',game:'#8dcbff',film:'#c7a5ff'};
-const ORB_STYLE_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-1.5 2.2-4.2 3.8-4.2 7.2 0 2.3 1.9 4.2 4.2 4.2s4.2-1.9 4.2-4.2C16.2 6.8 13.5 5.2 12 3zm0 14.2c-3.9 0-7.2 2.4-7.2 5.3 0 .8.6 1.5 1.5 1.5h11.4c.8 0 1.5-.7 1.5-1.5 0-2.9-3.3-5.3-7.2-5.3z"/></svg>';
 function orbStyleThumbHtml(o,col,glowOn,px,contourOn){
   const sz=px||52, c=col||ORB_DEFAULT_COLOR[o.kind]||'#9146FF';
   const g=glowOn?('0 0 16px '+hexToRgba(c,.75)+', '):'';
@@ -1959,6 +2004,8 @@ function applyBulkOrbStyle(scope,patch){
 function applyOrbStyleEl(el,o){
   if(!el||!o) return;
   const col=orbEffColor(o), glowOff=orbEffGlowOff(o), contourOff=orbEffContourOff(o);
+  el.classList.toggle('orb--no-contour',contourOff);
+  el.classList.toggle('orb--no-glow',glowOff);
   if(contourOff){
     el.style.setProperty('--orb-bc','transparent');
     el.style.setProperty('--orb-rc','transparent');
@@ -1976,11 +2023,13 @@ function renderBubblesSheet(sh){
       <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
       <button data-k="film" class="${orbKind==='film'?'active':''}">Série·Film</button>
     </div>
+    <div class="orb-placed" id="orbPlaced" hidden></div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
     <div class="sugg-list" id="orbSugg"></div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
-  sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.focus();runOrbSearch(input.value.trim());}));
+  refreshOrbPlacedList(sh);
+  sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];refreshOrbPlacedList(sh);input.focus();runOrbSearch(input.value.trim());}));
   const allStyleBtn=sh.querySelector('#orbStyleAllBtn');
   if(allStyleBtn) allStyleBtn.addEventListener('click',e=>{e.stopPropagation();openOrbStyleAllPanel();});
   let deb=null;
@@ -2206,19 +2255,7 @@ function renderOrbs(){
     del.addEventListener('pointerdown',e=>e.stopPropagation());
     del.addEventListener('click',e=>{e.stopPropagation();closeOrbStylePanel();S.orbs.splice(i,1);renderOrbs();toast('Bulle retirée');updateOrbCount();});
     orb.appendChild(del);
-    const sty=document.createElement('button'); sty.type='button'; sty.className='orb-style'+(!_orbStyleAll&&_orbStyleIdx===i?' active':'');
-    sty.title='Couleur et glow de cette bulle'; sty.innerHTML=ORB_STYLE_SVG;
-    sty.style.width=Math.round(D*0.30)+'px'; sty.style.height=Math.round(D*0.30)+'px';
-    sty.addEventListener('pointerdown',e=>e.stopPropagation());
-    sty.addEventListener('click',e=>{e.stopPropagation();openOrbStylePanel(i);});
-    orb.appendChild(sty);
-    // Bulle JEU : badge d'édition (clip + rang) + indicateur clip
     if(o.kind==='game'){
-      const ed=document.createElement('div'); ed.className='orb-edit'; ed.title='Ajouter un clip + un rang'; ed.textContent='✎';
-      ed.style.width=Math.round(D*0.28)+'px'; ed.style.height=Math.round(D*0.28)+'px'; ed.style.fontSize=Math.round(D*0.15)+'px';
-      ed.addEventListener('pointerdown',e=>e.stopPropagation());
-      ed.addEventListener('click',e=>{e.stopPropagation();openGamePop(o);});
-      orb.appendChild(ed);
       if(o.clipUrl){ const cl=document.createElement('div'); cl.className='orb-clip'; cl.textContent='▶'; cl.title='Clip ajouté'; cl.style.width=Math.round(D*0.26)+'px'; cl.style.height=Math.round(D*0.26)+'px'; cl.style.fontSize=Math.round(D*0.13)+'px'; orb.appendChild(cl); }
       if(o.rank){ orb.appendChild(buildRankOrbit(o)); }
     }
@@ -2236,7 +2273,7 @@ function renderOrbs(){
     wrap.appendChild(col);
     // === drag : placer la bulle où on veut autour de la carte ===
     let drag=null;
-    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del,.orb-edit,.orb-style'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const or=orb.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};wrap.classList.add('dragging');showGuide('orb');});
+    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const or=orb.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};wrap.classList.add('dragging');showGuide('orb');});
     wrap.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.mx)+Math.abs(e.clientY-drag.my)>2)drag.moved=true;const bnd=orbBounds(D/2+6);const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();o.x=(cx-lr.left)/lr.width*100;o.y=(cy-lr.top)/lr.height*100;wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
     const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');hideGuide();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved){o.userPlaced=true;renderOrbs();persist();}else if(o.kind==='music'&&o.previewUrl)toggleOrbMusic(o,orb);};
     wrap.addEventListener('pointerup',endDrag);wrap.addEventListener('pointercancel',endDrag);
@@ -2723,7 +2760,6 @@ function renderOrbStylePanel(){
     <div class="orbstyle-row">
       <button type="button" class="sh-contour-tgl${contourOn?' on':''}" id="ocpContour" title="Activer/désactiver le contour"><span>Contour</span><span class="sw"></span></button>
       <button type="button" class="orbstyle-sw" id="ocpSw" style="background:${col}" data-hex="${col}" title="Couleur de cette bulle"></button>
-      <span class="orbstyle-lbl">Couleur</span>
       <button type="button" class="sh-contour-tgl${glowOn?' on':''}" id="ocpGlow" title="Activer/désactiver le glow"><span>Glow</span><span class="sw"></span></button>
     </div>
     <button class="cp-reset" id="ocpReset">↺ Couleur par défaut</button>`;
@@ -2775,7 +2811,6 @@ function renderOrbStyleAllPanel(){
       </div>
       <div class="orbstyle-card-ctrl">
         <button type="button" class="sh-contour-tgl${contourOn?' on':''}" data-contour="${i}" title="Contour"><span>Contour</span><span class="sw"></span></button>
-        <span class="orbstyle-lbl">Couleur</span>
         <button type="button" class="orbstyle-sw" data-i="${i}" style="background:${col}" data-hex="${col}" title="Couleur"></button>
         <button type="button" class="sh-contour-tgl${glowOn?' on':''}" data-glow="${i}" title="Glow"><span>Glow</span><span class="sw"></span></button>
       </div>
@@ -2791,7 +2826,6 @@ function renderOrbStyleAllPanel(){
         <div class="orbstyle-row"${bulkDisabled?' disabled':''}>
           <button type="button" class="sh-contour-tgl${bulk.contourOn?' on':''}" id="ocpBulkContour" title="Contour"${bulkDisabled?' disabled':''}><span>Contour</span><span class="sw"></span></button>
           <button type="button" class="orbstyle-sw" id="ocpBulkSw" style="background:${bulk.col}" data-hex="${bulk.col}" title="Couleur"${bulkDisabled?' disabled':''}></button>
-          <span class="orbstyle-lbl">Couleur</span>
           <button type="button" class="sh-contour-tgl${bulk.glowOn?' on':''}" id="ocpBulkGlow" title="Glow"${bulkDisabled?' disabled':''}><span>Glow</span><span class="sw"></span></button>
         </div>
         <div class="orbstyle-bulk-hint">${bulkDisabled?`Aucune bulle dans cette catégorie`:`S'applique à ${bulk.count} ${bulk.label}`}</div>
@@ -3116,9 +3150,9 @@ $('gamePopSave').addEventListener('click',()=>{
   if(cl&&!isYouTubeUrl(cl)){toast('Mets un lien YouTube valide (youtube.com / youtu.be)');return;}
   if(rk)_gameOrb.rank=rk;else delete _gameOrb.rank;
   if(cl)_gameOrb.clipUrl=cl;else delete _gameOrb.clipUrl;
-  renderOrbs(); persist(); closeGamePop(); toast('Bulle de jeu mise à jour');
+  renderOrbs(); persist(); refreshOrbPlacedIfOpen(); closeGamePop(); toast('Bulle de jeu mise à jour');
 });
-$('gamePopClear').addEventListener('click',()=>{if(!_gameOrb)return;delete _gameOrb.rank;delete _gameOrb.clipUrl;renderOrbs();persist();closeGamePop();toast('Clip et rang retirés');});
+$('gamePopClear').addEventListener('click',()=>{if(!_gameOrb)return;delete _gameOrb.rank;delete _gameOrb.clipUrl;renderOrbs();persist();refreshOrbPlacedIfOpen();closeGamePop();toast('Clip et rang retirés');});
 $('gamePopClip').addEventListener('keydown',e=>{if(e.key==='Enter')$('gamePopSave').click();});
 $('gameBackdrop').addEventListener('click',closeGamePop);
 

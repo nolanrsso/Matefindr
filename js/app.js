@@ -1305,6 +1305,24 @@
         if (shownUid && !genderFilteredProfiles().some(p => p.uid === shownUid)) ensureDeckSync();
       }).catch(() => {});
     }
+    function syncSwipeWrapGradient(p){
+      const wrap = document.getElementById('swipeWrap');
+      if (!wrap || !p) return;
+      const shell = wrap.parentElement;
+      const shellWrap = shell?.parentElement;
+      const accentHex = p.accentColor ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
+      const pc1 = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
+      const pc2 = (p.profileColor2 && p.profileColor2 !== 'discord') ? p.profileColor2 : null;
+      let c1 = '#242429', c2 = '#1c1d22';
+      if (pc1 && pc2) { c1 = pc1; c2 = pc2; }
+      else if (pc1) { c1 = pc2 = pc1; }
+      else if (accentHex) { c1 = c2 = accentHex; }
+      [shellWrap, shell, wrap].forEach(el => {
+        if (!el) return;
+        el.style.setProperty('--c1', c1);
+        el.style.setProperty('--c2', c2);
+      });
+    }
     function ensureDeckSync(){
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
@@ -1316,6 +1334,7 @@
         if (typeof applyBgChoice === 'function') applyBgChoice(_sharedProfile.bg, _sharedProfile.bgPos);
         try {
           wrap.appendChild(buildCard(_sharedProfile, true));
+          syncSwipeWrapGradient(_sharedProfile);
           renderOrbs(_sharedProfile);
           renderSwipeGifs(_sharedProfile);
           renderSwipePhotos(_sharedProfile);
@@ -1353,6 +1372,7 @@
       // au lieu de laisser le deck vide et bloqué (cause du « on ne peut plus swiper »).
       try {
         wrap.appendChild(buildCard(p, true));
+        syncSwipeWrapGradient(p);
         renderOrbs(p);
         renderSwipeGifs(p);
         renderSwipePhotos(p);
@@ -1591,14 +1611,17 @@
       const pc1 = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
       const pc2 = (p.profileColor2 && p.profileColor2 !== 'discord') ? p.profileColor2 : null;
       if (pc1 && pc2) {
-        c.style.backgroundColor = pc2;
-        c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
+        c.style.setProperty('--c1', pc1);
+        c.style.setProperty('--c2', pc2);
       } else if (pc1) {
-        c.style.backgroundColor = pc1;
-        c.style.background = pc1;
+        c.style.setProperty('--c1', pc1);
+        c.style.setProperty('--c2', pc1);
       } else if (accentHex) {
-        c.style.backgroundColor = accentHex;
-        c.style.background = accentHex;
+        c.style.setProperty('--c1', accentHex);
+        c.style.setProperty('--c2', accentHex);
+      } else {
+        c.style.setProperty('--c1', '#242429');
+        c.style.setProperty('--c2', '#1c1d22');
       }
       // BANNER : image Discord/custom si dispo, sinon TRANSPARENTE → c'est le dégradé
       // du corps de la carte (déjà posé sur .swipe-card, pleine hauteur) qui montre au
@@ -1964,6 +1987,8 @@
     }
     function applyOrbCustomColor(el, hex, glowOff, contourOff){
       if (!el) return;
+      el.classList.toggle('orb--no-contour', !!contourOff);
+      el.classList.toggle('orb--no-glow', !!glowOff);
       const valid = hex && /^#[0-9a-f]{6}$/i.test(hex);
       if (contourOff) {
         el.style.setProperty('--orb-bc', 'transparent');
