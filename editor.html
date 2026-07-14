@@ -264,7 +264,12 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
   opacity:1;transform:scale(1);transition:transform .12s ease;box-shadow:0 3px 10px rgba(255,79,160,.6);
 }
 .orb-del:hover{transform:scale(1.15)}
-/* Bulle JEU : indicateur clip + badge rang (clip/rang éditables depuis Mes bulles) */
+/* Bulle JEU : crayon clip+rang + indicateur clip + badge rang */
+.orb-edit{position:absolute;top:-6px;left:-6px;width:24px;height:24px;border-radius:50%;z-index:6;
+  background:linear-gradient(135deg,#5BE9FF,#2F7BD8);color:#072033;border:2px solid #0d0b1e;
+  display:grid;place-items:center;font-size:13px;font-weight:800;cursor:pointer;line-height:1;
+  box-shadow:0 3px 10px rgba(91,233,255,.55);transition:transform .12s ease}
+.orb-edit:hover{transform:scale(1.15)}
 .orb-clip{position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;border-radius:50%;z-index:6;
   background:linear-gradient(135deg,#FF4FA0,#9146FF);color:#fff;border:2px solid #0d0b1e;
   display:grid;place-items:center;font-size:11px;line-height:1;box-shadow:0 3px 9px rgba(145,70,255,.5)}
@@ -2260,6 +2265,11 @@ function renderOrbs(){
     del.addEventListener('click',e=>{e.stopPropagation();closeOrbStylePanel();S.orbs.splice(i,1);renderOrbs();toast('Bulle retirée');updateOrbCount();});
     orb.appendChild(del);
     if(o.kind==='game'){
+      const ed=document.createElement('div'); ed.className='orb-edit'; ed.title='Clip + rang'; ed.textContent='✎';
+      ed.style.width=Math.round(D*0.28)+'px'; ed.style.height=Math.round(D*0.28)+'px'; ed.style.fontSize=Math.round(D*0.15)+'px';
+      ed.addEventListener('pointerdown',e=>e.stopPropagation());
+      ed.addEventListener('click',e=>{e.stopPropagation();openGamePop(o);});
+      orb.appendChild(ed);
       if(o.clipUrl){ const cl=document.createElement('div'); cl.className='orb-clip'; cl.textContent='▶'; cl.title='Clip ajouté'; cl.style.width=Math.round(D*0.26)+'px'; cl.style.height=Math.round(D*0.26)+'px'; cl.style.fontSize=Math.round(D*0.13)+'px'; orb.appendChild(cl); }
       if(o.rank){ orb.appendChild(buildRankOrbit(o)); }
     }
@@ -2277,7 +2287,7 @@ function renderOrbs(){
     wrap.appendChild(col);
     // === drag : placer la bulle où on veut autour de la carte ===
     let drag=null;
-    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const or=orb.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};wrap.classList.add('dragging');showGuide('orb');});
+    wrap.addEventListener('pointerdown',e=>{if(e.target.closest('.orb-del,.orb-edit'))return;if(e.button)return;e.preventDefault();try{wrap.setPointerCapture(e.pointerId);}catch(_){}const or=orb.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:or.left+or.width/2,sy0:or.top+or.height/2,moved:false};wrap.classList.add('dragging');showGuide('orb');});
     wrap.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.mx)+Math.abs(e.clientY-drag.my)>2)drag.moved=true;const bnd=orbBounds(D/2+6);const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();o.x=(cx-lr.left)/lr.width*100;o.y=(cy-lr.top)/lr.height*100;wrap.style.left=o.x+'%';wrap.style.top=o.y+'%';});
     const endDrag=e=>{if(!drag)return;const moved=drag.moved;drag=null;wrap.classList.remove('dragging');hideGuide();try{wrap.releasePointerCapture(e.pointerId);}catch(_){}if(moved){o.userPlaced=true;renderOrbs();persist();}else if(o.kind==='music'&&o.previewUrl)toggleOrbMusic(o,orb);};
     wrap.addEventListener('pointerup',endDrag);wrap.addEventListener('pointercancel',endDrag);
