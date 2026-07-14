@@ -805,7 +805,6 @@
         nameColor: u.nameColor || null,
         handleBlur: !!u.handleBlur,
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
-        activity: {type:'game', title:'Matefindr', sub:'Swipe en cours…'},
         games: [p.game].filter(Boolean),
         bio: p.bio || '',
         common: {friends:0, servers:0},
@@ -1171,7 +1170,6 @@
         looking: r.look_for || 'chill', status: 'online',
         nitro: false, boost: false,
         joinedOn: r.created_at ? new Date(r.created_at).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}) : 'récemment',
-        activity: {type:'game', title:'Matefindr', sub:'Sur Matefindr'},
         games: [], bio: r.bio || '',
         common: {friends:0, servers:0},
         c1:'#5865F2', c2:'#404EED',
@@ -1600,6 +1598,27 @@
       return t;
     }
 
+    function isPlaceholderActivity(act){
+      if(!act || typeof act !== 'object') return true;
+      const title = String(act.title || '').trim();
+      const sub = String(act.sub || '').trim();
+      if(!title && !sub) return true;
+      if(/^Matefindr$/i.test(title)) return true;
+      if(/Swipe en cours|Sur Matefindr|Vient de te liker/i.test(sub)) return true;
+      return false;
+    }
+
+    function cardActivityHtml(p){
+      if(p.profileVoice) return '';
+      const act = (p.activity && typeof p.activity === 'object') ? p.activity : null;
+      if(isPlaceholderActivity(act)) return '';
+      const type = act.type || 'game';
+      return `<div class="activity">
+              <div class="icon">${activityIcon(type)}</div>
+              <div class="lbl"><b>${escapeHtmlMini(act.title || '')}</b><span>${escapeHtmlMini(act.sub || '')}</span></div>
+            </div>`;
+    }
+
     function buildCard(p, isTop){
       const c = document.createElement('div');
       c.className = 'swipe-card' + (isTop ? ' entering' : '');
@@ -1776,17 +1795,7 @@
               </div>
               <span class="card-voice-time">0:00</span>
             </div>
-          ` : (() => {
-            // Garde-fou : certains profils (anciennes sauvegardes) n'ont pas d'objet activity.
-            // Sans ce fallback, p.activity.type lève une exception qui fait planter buildCard
-            // → la carte ne se construit pas → le deck reste vide et on ne peut plus swiper.
-            const act = (p.activity && typeof p.activity === 'object') ? p.activity : { type:'game', title:'Matefindr', sub:'Sur Matefindr' };
-            return `
-            <div class="activity">
-              <div class="icon">${activityIcon(act.type)}</div>
-              <div class="lbl"><b>${act.title || ''}</b><span>${act.sub || ''}</span></div>
-            </div>
-          `; })()}
+          ` : cardActivityHtml(p)}
           ${bioHtml}
           ${socialHtml}
           ${connectionsHtml}
@@ -4526,7 +4535,7 @@
         nameColor: f.nameColor || null,
         showBoostName: f.showBoostName,
         joinedOn: f.joinedOn || 'récemment',
-        activity: f.activity || { type:'game', title:'Matefindr', sub:'Vient de te liker' },
+        activity: f.activity,
         games: f.games || [],
         bio: f.bio || 'Vient de liker ton profil. Réponds vite ?',
         common: f.common || { friends:0, servers:0 },
