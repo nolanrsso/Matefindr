@@ -759,7 +759,7 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
   background:linear-gradient(135deg,#9146FF 0%,#6B2BFF 55%,#3d1a8a 100%);color:#fff;cursor:pointer;
   display:grid;place-items:center;box-shadow:0 4px 16px rgba(107,43,255,.45);padding:0;font:inherit;transition:transform .12s ease,filter .12s ease}
 .gv-swap:hover{transform:scale(1.06);filter:brightness(1.1)}
-.gv-swap-ico{display:block;width:24px;height:24px}
+.gv-swap-ico{display:block;width:22px;height:22px}
 .cp-sub{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 11px}
 .cp-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
 .cp-swatches button{height:42px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);transition:transform .12s ease}
@@ -2719,7 +2719,7 @@ const SWATCH_PAIRS=[
   ['#DAD2A0','#6E6A1E'], // kaki clair → or foncé
 ];
 const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','#3BD17C','#FFB66E','#FF5555','#5865F2'];
-const GRAD_SWAP_SVG='<svg class="gv-swap-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 2.5L10.4 7.8H8.6V14.2H5.4V7.8H3.6L7 2.5Z"/><path d="M17 21.5L13.6 16.2H15.4V9.8H18.6V16.2H20.4L17 21.5Z"/></svg>';
+const GRAD_SWAP_SVG='<svg class="gv-swap-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path transform="translate(6.5 2)" d="M0 0L4 5.5H1.4V12.6H-1.4V5.5H-4Z"/><path transform="translate(17.5 22) rotate(180)" d="M0 0L4 5.5H1.4V12.6H-1.4V5.5H-4Z"/></svg>';
 /* Panneau "Couleur de la carte" : dégradé vertical à 2 poignées (haut = c1, bas = c2),
    chaque poignée ouvre le picker natif. + dégradés 1 clic + reset Discord. */
 function renderColorPanel(){
