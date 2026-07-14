@@ -29,13 +29,24 @@ also works if you prefer.
   syntax check: `node --check js/core.js js/landing.js js/app.js`.
 - Vercel deploys the files as-is (see `vercel.json`); there is no build command.
 
+### Beta access gate (needed before anything loads)
+The app is behind a **client-side private-access gate** ("Accès privé"). On first load in a fresh browser
+profile you must enter the beta password **`8090`** (defined in `index.html`) to reach the landing page. It is
+remembered per device via `localStorage` (`matefindr_gate_ok`), so clearing storage re-triggers the gate.
+
 ### Testing the app locally without Discord
 The primary login is Discord OAuth (`signInWithDiscord`), which needs real Discord credentials and hits the
-live Supabase project. For a **fully local smoke test that exercises core swipe/match functionality**, use the
-built-in **email demo login** instead: on the landing page click **Se connecter** → **Continuer avec un email**,
-enter any valid-looking email + a 6+ char password. This creates a fake local session (no backend, see
-`js/app.js` / `js/landing.js`), runs onboarding (gender/age/looking-for), and drops you into the swipe deck
-populated with **mock profiles** — so you can swipe/like/match without any external service.
+live Supabase project. There is also a **built-in email demo login** that creates a fake local session (no
+backend) and drops you into the swipe deck populated with **mock profiles** — ideal for a fully local
+smoke test of core swipe/like/match functionality.
+
+Gotcha: in the current stock `index.html`, the auth modal only renders the **Discord** button — the
+"Continuer avec un email" entry button is not present, even though the email form and its submit handler in
+`js/landing.js` / `js/app.js` are fully wired. To reach the email form without editing files, open the auth
+modal ("Se connecter") then run in the browser console:
+`document.getElementById('authCard').setAttribute('data-view','email');`
+Then enter any valid-looking email + a 6+ char password and submit. (Onboarding — gender/age/looking-for —
+may run the first time before the swipe deck appears.)
 
 ### Notes / gotchas
 - The UI is in **French** (with an EN language switcher on the landing page).
