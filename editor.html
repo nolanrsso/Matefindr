@@ -826,7 +826,11 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .orbstyle-card{padding:12px 12px 11px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--stroke-2)}
 .orbstyle-card-top{display:flex;align-items:center;gap:11px;margin-bottom:10px;min-width:0}
 .orbstyle-card-top .orbstyle-thumb{width:46px;height:46px;flex:0 0 auto}
-.orbstyle-card-title{font-size:12.5px;font-weight:700;color:#fff;line-height:1.35;min-width:0;word-break:break-word}
+.orbstyle-card-title{flex:1;font-size:12.5px;font-weight:700;color:#fff;line-height:1.35;min-width:0;word-break:break-word}
+.orbstyle-card-edit{width:30px;height:30px;border-radius:50%;flex:0 0 auto;border:2px solid #0d0b1e;margin-left:auto;
+  background:linear-gradient(135deg,#5BE9FF,#2F7BD8);color:#072033;font-size:14px;font-weight:800;cursor:pointer;line-height:1;
+  display:grid;place-items:center;box-shadow:0 3px 10px rgba(91,233,255,.55);transition:transform .12s ease;font-family:inherit;padding:0}
+.orbstyle-card-edit:hover{transform:scale(1.1)}
 .orbstyle-card-ctrl{display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);flex-wrap:wrap}
 .orbstyle-card-ctrl .orbstyle-sw{width:30px;height:30px;border-width:2.5px}
 .orbstyle-card-ctrl [data-glow]{margin-left:auto;flex:0 0 auto}
@@ -2750,12 +2754,14 @@ function renderOrbStylePanel(){
   const o=(_orbStyleIdx!==null)?S.orbs[_orbStyleIdx]:null;
   if(!o){ closeOrbStylePanel(); return; }
   const col=orbEffColor(o), glowOn=!orbEffGlowOff(o), contourOn=!orbEffContourOff(o);
+  const gameEditBtn=o.kind==='game'?`<button type="button" class="orbstyle-card-edit" id="ocpGameEdit" title="Clip + rang" aria-label="Modifier clip et rang">✎</button>`:'';
   p.innerHTML=`
     <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
     <div class="cp-title">Style de la bulle</div>
     <div class="orbstyle-preview">
       ${orbStyleThumbHtml(o,col,glowOn,56,contourOn)}
       <div class="orbstyle-name">${esc(o.title)}</div>
+      ${gameEditBtn}
     </div>
     <div class="orbstyle-row">
       <button type="button" class="sh-contour-tgl${contourOn?' on':''}" id="ocpContour" title="Activer/désactiver le contour"><span>Contour</span><span class="sw"></span></button>
@@ -2791,6 +2797,8 @@ function renderOrbStylePanel(){
     renderOrbStylePanel(); renderOrbs(); persist();
     toast('Style par défaut');
   });
+  const ge=p.querySelector('#ocpGameEdit');
+  if(ge) ge.addEventListener('click',()=>openGamePop(o));
   p.querySelector('#ocpClose').addEventListener('click',closeOrbStylePanel);
 }
 function renderOrbStyleAllPanel(){
@@ -2804,10 +2812,12 @@ function renderOrbStyleAllPanel(){
   const bulkDisabled=bulk.count===0;
   const rows=S.orbs.map((o,i)=>{
     const col=orbEffColor(o), glowOn=!orbEffGlowOff(o), contourOn=!orbEffContourOff(o);
+    const gameEdit=o.kind==='game'?`<button type="button" class="orbstyle-card-edit" data-game-edit="${i}" title="Clip + rang" aria-label="Modifier clip et rang">✎</button>`:'';
     return `<div class="orbstyle-card" data-i="${i}">
       <div class="orbstyle-card-top">
         ${orbStyleThumbHtml(o,col,glowOn,46,contourOn)}
         <div class="orbstyle-card-title">${esc(o.title)}</div>
+        ${gameEdit}
       </div>
       <div class="orbstyle-card-ctrl">
         <button type="button" class="sh-contour-tgl${contourOn?' on':''}" data-contour="${i}" title="Contour"><span>Contour</span><span class="sw"></span></button>
@@ -2891,6 +2901,13 @@ function renderOrbStyleAllPanel(){
       btn.classList.toggle('on',!wasOn);
       syncOrbStyleCardThumb(btn.closest('.orbstyle-card'), o);
       renderOrbs(); persist();
+    });
+  });
+  p.querySelectorAll('[data-game-edit]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const o=S.orbs[+btn.dataset.gameEdit];
+      if(o) openGamePop(o);
     });
   });
   p.querySelector('#ocpResetAll').addEventListener('click',()=>{
