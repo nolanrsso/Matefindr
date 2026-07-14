@@ -753,12 +753,13 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
   border:3px solid #fff;cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);padding:0;font:inherit}
 .gv-handle:hover{transform:translateX(-50%) scale(1.08)}
 .gv-top{top:14px}.gv-bot{bottom:14px}
-.gv-swap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;
-  width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
-  background:rgba(13,11,24,.88);color:#fff;cursor:pointer;font-size:17px;line-height:1;
-  display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.5);padding:0;font:inherit}
-.gv-swap:hover{transform:translate(-50%,-50%) scale(1.08);background:rgba(145,70,255,.55);border-color:rgba(255,255,255,.65)}
-.gv-labels{display:flex;flex-direction:column;justify-content:space-between;padding:6px 0;font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.03em}
+.gv-side{display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:6px 0;flex:1;min-width:0}
+.gv-side>span{font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.03em;line-height:1.2}
+.gv-swap{align-self:flex-start;margin:auto 0;width:40px;height:40px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#9146FF 0%,#6B2BFF 55%,#3d1a8a 100%);color:#0a0818;cursor:pointer;
+  display:grid;place-items:center;box-shadow:0 4px 16px rgba(107,43,255,.45);padding:0;font:inherit;transition:transform .12s ease,filter .12s ease}
+.gv-swap:hover{transform:scale(1.06);filter:brightness(1.1)}
+.gv-swap-ico{display:block;width:20px;height:20px}
 .cp-sub{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 11px}
 .cp-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
 .cp-swatches button{height:42px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);transition:transform .12s ease}
@@ -2718,6 +2719,7 @@ const SWATCH_PAIRS=[
   ['#DAD2A0','#6E6A1E'], // kaki clair → or foncé
 ];
 const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','#3BD17C','#FFB66E','#FF5555','#5865F2'];
+const GRAD_SWAP_SVG='<svg class="gv-swap-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 5H6v10.2H3l4 4.3 4-4.3H8V5h2z"/><path d="M14 19h4V8.8h3l-4-4.3-4 4.3h2V19h2z"/></svg>';
 /* Panneau "Couleur de la carte" : dégradé vertical à 2 poignées (haut = c1, bas = c2),
    chaque poignée ouvre le picker natif. + dégradés 1 clic + reset Discord. */
 function renderColorPanel(){
@@ -2730,10 +2732,13 @@ function renderColorPanel(){
     <div class="cp-grad-wrap">
       <div class="grad-vert" id="gradVert" style="background:linear-gradient(180deg,${S.c1},${S.c2})">
         <button type="button" class="gv-handle gv-top" id="colP" style="background:${S.c1}" data-hex="${S.c1}" title="Couleur du haut"></button>
-        <button type="button" class="gv-swap" id="colSwap" title="Inverser haut et bas" aria-label="Inverser haut et bas">↕</button>
         <button type="button" class="gv-handle gv-bot" id="colS" style="background:${S.c2}" data-hex="${S.c2}" title="Couleur du bas"></button>
       </div>
-      <div class="gv-labels"><span>Haut</span><span>Bas</span></div>
+      <div class="gv-side">
+        <span>Haut</span>
+        <button type="button" class="gv-swap" id="colSwap" title="Inverser haut et bas" aria-label="Inverser haut et bas">${GRAD_SWAP_SVG}</button>
+        <span>Bas</span>
+      </div>
     </div>
     <div class="cp-sub">Dégradés en 1 clic</div>
     <div class="cp-swatches">${SWATCH_PAIRS.map(pr=>`<button data-c1="${pr[0]}" data-c2="${pr[1]}" title="${pr[0]} → ${pr[1]}" style="background:linear-gradient(180deg,${pr[0]},${pr[1]})"></button>`).join('')}</div>
