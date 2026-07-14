@@ -1629,21 +1629,30 @@
   }
 
   /* Connexions (éditeur) — logos d'apps + pseudo sur la carte */
-  .card-connections{display:flex;flex-wrap:wrap;gap:16px 18px;margin-top:10px;position:relative;z-index:6}
-  .card-conn{display:inline-flex;flex-direction:column;align-items:center;gap:5px;padding:0;border:none;background:transparent;text-decoration:none;color:#fff;max-width:76px}
-  .card-conn-ico{display:grid;place-items:center;width:40px;height:40px}
-  .card-conn img,.card-conn .conn-ico-svg{width:36px;height:36px;object-fit:contain;flex:0 0 auto}
-  .card-conn .conn-favicon{border-radius:8px;background:rgba(255,255,255,.06)}
-  .card-conn .conn-ico-svg{display:grid;place-items:center}
-  .card-conn .conn-ico-svg svg{width:34px;height:34px}
-  .card-conn-user{font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
-  .card-conn--show-label .card-conn-user{opacity:0;max-height:0;margin-top:-5px;transform:translateY(4px);transition:opacity .16s ease, transform .16s ease, max-height .16s ease, margin .16s ease}
+  .swipe-card .card-connections{display:flex;flex-wrap:wrap;gap:12px 14px;margin-top:10px;position:relative;z-index:6}
+  .swipe-card .card-conn{display:inline-flex;flex-direction:column;align-items:center;gap:4px;padding:0;border:none;background:transparent;text-decoration:none;color:#fff;max-width:68px}
+  .swipe-card .card-conn-ico{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;overflow:hidden}
+  .swipe-card .card-conn-ico > img,
+  .swipe-card .card-conn-ico > .conn-ico-svg{width:100%;height:100%;object-fit:contain;flex:0 0 auto;display:grid;place-items:center}
+  .swipe-card .card-conn .conn-favicon{object-fit:cover;border-radius:7px;background:transparent;transform:scale(1.14)}
+  .swipe-card .card-conn .conn-ico-svg svg{width:88%;height:88%}
+  .swipe-card .card-conn-user{font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  .swipe-card .card-connections--many{gap:9px 11px}
+  .swipe-card .card-connections--many .card-conn{max-width:56px;gap:3px}
+  .swipe-card .card-connections--many .card-conn-ico{width:28px;height:28px}
+  .swipe-card .card-connections--many .card-conn-user{font-size:10px;max-width:56px}
+  .swipe-card .card-connections--dense{gap:7px 8px}
+  .swipe-card .card-connections--dense .card-conn{max-width:46px;gap:2px}
+  .swipe-card .card-connections--dense .card-conn-ico{width:24px;height:24px}
+  .swipe-card .card-connections--dense .card-conn-user{font-size:9px;max-width:46px}
+  .swipe-card .card-connections--dense .card-conn .conn-favicon{transform:scale(1.08)}
+  .swipe-card .card-conn--show-label .card-conn-user{opacity:0;max-height:0;margin-top:-5px;transform:translateY(4px);transition:opacity .16s ease, transform .16s ease, max-height .16s ease, margin .16s ease}
   @media (hover:hover){
-    .card-conn--show-label:hover .card-conn-user,.card-conn--show-label:focus-visible .card-conn-user{opacity:1;max-height:1.4em;margin-top:0;transform:none;color:#fff}
+    .swipe-card .card-conn--show-label:hover .card-conn-user,.swipe-card .card-conn--show-label:focus-visible .card-conn-user{opacity:1;max-height:1.4em;margin-top:0;transform:none;color:#fff}
     .swipe-card.light-bg .card-conn--show-label:hover .card-conn-user,.swipe-card.light-bg .card-conn--show-label:focus-visible .card-conn-user{color:#101014}
   }
   @media (hover:none){
-    .card-conn--show-label:active .card-conn-user,.card-conn--show-label:focus-within .card-conn-user{opacity:1;max-height:1.4em;margin-top:0;transform:none;color:#fff}
+    .swipe-card .card-conn--show-label:active .card-conn-user,.swipe-card .card-conn--show-label:focus-within .card-conn-user{opacity:1;max-height:1.4em;margin-top:0;transform:none;color:#fff}
     .swipe-card.light-bg .card-conn--show-label:active .card-conn-user,.swipe-card.light-bg .card-conn--show-label:focus-within .card-conn-user{color:#101014}
   }
   /* Social connections on card (clickable links) */
@@ -1815,10 +1824,10 @@
     .swipe-card .chip{font-size:11px;padding:4px 9px}
     .swipe-card .me-chip{font-size:9px;padding:2px 7px;top:8px;left:10px}
 
-    .card-conn-user{font-size:10px;max-width:64px}
-    .card-conn img,.card-conn .conn-ico-svg{width:30px;height:30px}
-    .card-conn .conn-ico-svg svg{width:28px;height:28px}
-    .card-conn-ico{width:34px;height:34px}
+    .swipe-card .card-conn-user{font-size:10px;max-width:56px}
+    .swipe-card .card-conn-ico{width:30px;height:30px}
+    .swipe-card .card-connections--many .card-conn-ico{width:26px;height:26px}
+    .swipe-card .card-connections--dense .card-conn-ico{width:22px;height:22px}
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}

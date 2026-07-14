@@ -1727,13 +1727,14 @@
       const MC = window.MatefindrConnections;
       const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
       const connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
-      const connectionsHtml = connKeys.length ? `<div class="card-connections">${connKeys.map(k => {
+      const connDensity = connKeys.length >= 9 ? ' card-connections--dense' : connKeys.length >= 6 ? ' card-connections--many' : '';
+      const connectionsHtml = connKeys.length ? `<div class="card-connections${connDensity}">${connKeys.map(k => {
         const app = MC ? MC.connApp(k) : null;
         const entry = MC ? MC.connGet(conns, k) : { v: String(conns[k]), mode: 'link' };
         if (!entry) return '';
         if (MC && app) return MC.connCardHtml(app, entry, p.tag, escapeHtmlMini);
         const label = String(entry.v || conns[k]);
-        return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy" width="36" height="36"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
+        return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
       }).join('')}</div>` : '';
       const bioText = cardBioText(p.bio);
       const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';

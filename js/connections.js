@@ -59,7 +59,7 @@
   function connFaviconUrl(url){
     const host=connSiteHost(url);
     if(!host) return '';
-    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
   }
 
   function connFaviconForEntry(entry){
@@ -73,14 +73,15 @@
     if(typeof app === 'string') app = connApp(app);
     if(!app) return '';
     const px = size || 22;
+    const dim = size ? ` width="${px}" height="${px}"` : '';
     if(app.id === 'custom'){
       const fav=connFaviconForEntry(entry);
-      if(fav) return `<img src="${fav}" alt="" width="${px}" height="${px}" loading="lazy" class="conn-favicon">`;
+      if(fav) return `<img src="${fav}" alt=""${dim} loading="lazy" class="conn-favicon">`;
     }
     if(app.icon && ICON_SVG[app.icon])
-      return `<span class="conn-ico-svg" style="width:${px}px;height:${px}px">${ICON_SVG[app.icon]}</span>`;
+      return `<span class="conn-ico-svg"${size ? ` style="width:${px}px;height:${px}px"` : ''}>${ICON_SVG[app.icon]}</span>`;
     const logo = connLogo(app);
-    return logo ? `<img src="${logo}" alt="" width="${px}" height="${px}" loading="lazy">` : '';
+    return logo ? `<img src="${logo}" alt=""${dim} loading="lazy">` : '';
   }
 
   function connNormalize(raw){
@@ -201,7 +202,7 @@
     const escFn = typeof esc === 'function' ? esc : s => String(s);
     const href = buildConnUrl(app, entry);
     const user = connProfileLabel(app, entry, profileTag);
-    const iconHtml = connIconHtml(app, 36, e);
+    const iconHtml = connIconHtml(app, null, e);
     const labelHtml = user ? `<span class="card-conn-user">${escFn(user)}</span>` : '';
     const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
     const name = app ? app.name : 'Connexion';
