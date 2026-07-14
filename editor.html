@@ -818,12 +818,17 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .orbstyle-card-ctrl .orbstyle-sw{width:30px;height:30px;border-width:2.5px}
 .orbstyle-card-ctrl .orbstyle-lbl{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-right:auto}
 .orbstyle-card-ctrl .sh-contour-tgl{margin-left:auto;flex:0 0 auto}
-.orbstyle-all-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:min(52vh,420px);overflow-y:auto;padding-right:2px}
-/* Panneau "Toutes les bulles" : occupe toute la hauteur du tiroir */
-#orbColorPanel.orbstyle-all-mode{display:flex;flex-direction:column;overflow:hidden;padding-bottom:20px}
+.orbstyle-all-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:2px}
+/* Panneau "Toutes les bulles" : tiroir pleine hauteur, liste scrollable, reset en bas */
+#orbColorPanel.orbstyle-all-mode{
+  display:flex;flex-direction:column;height:100dvh;max-height:100dvh;
+  overflow:hidden;box-sizing:border-box;padding:56px 20px 16px}
+#orbColorPanel.orbstyle-all-mode .orbstyle-all-body{
+  flex:1 1 auto;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 #orbColorPanel.orbstyle-all-mode .cp-title{flex:0 0 auto;margin-bottom:12px}
-#orbColorPanel.orbstyle-all-mode .orbstyle-all-list{flex:1 1 auto;min-height:0;max-height:none;margin-bottom:12px}
-#orbColorPanel.orbstyle-all-mode .cp-reset{flex:0 0 auto;margin-top:auto;margin-bottom:0}
+#orbColorPanel.orbstyle-all-mode .orbstyle-all-list{
+  flex:1 1 auto;min-height:0;max-height:none;margin-bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#orbColorPanel.orbstyle-all-mode .cp-reset{flex:0 0 auto;margin-top:12px;margin-bottom:0}
 .orbstyle-sw{position:relative;width:34px;height:34px;border-radius:50%;flex:0 0 auto;border:3px solid #fff;
   cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);transition:transform .12s ease}
 .orbstyle-sw:hover{transform:scale(1.08)}
@@ -2575,9 +2580,11 @@ function renderOrbStyleAllPanel(){
   }).join('');
   p.innerHTML=`
     <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
-    <div class="cp-title">Toutes les bulles</div>
-    <div class="orbstyle-all-list">${rows}</div>
-    <button class="cp-reset" id="ocpResetAll">↺ Tout remettre par défaut</button>`;
+    <div class="orbstyle-all-body">
+      <div class="cp-title">Toutes les bulles</div>
+      <div class="orbstyle-all-list">${rows}</div>
+      <button class="cp-reset" id="ocpResetAll">↺ Tout remettre par défaut</button>
+    </div>`;
   p.querySelectorAll('.orbstyle-sw input[type=color]').forEach(inp=>{
     inp.addEventListener('click',e=>e.stopPropagation());
     inp.addEventListener('input',e=>{
