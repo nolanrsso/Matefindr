@@ -690,8 +690,8 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-pick-tile img,.conn-pick-tile .conn-ico-svg{width:26px;height:26px;object-fit:contain}
 .conn-pick-tile .conn-ico-svg{display:grid;place-items:center;color:#fff}
 .conn-pick-tile .conn-ico-svg svg{width:24px;height:24px}
-.conn-pick-tile--wide{grid-column:span 2;aspect-ratio:auto;min-height:52px;justify-content:flex-start;padding:0 14px;gap:10px;display:flex;align-items:center}
-.conn-pick-tile--wide span{font-size:12px;font-weight:700;color:#fff;text-align:left;line-height:1.25}
+.conn-pick-tile--wide{grid-column:1 / -1;aspect-ratio:auto;min-height:52px;justify-content:flex-start;padding:0 14px;gap:10px;display:flex;align-items:center;overflow:hidden}
+.conn-pick-tile--wide span{font-size:12px;font-weight:700;color:#fff;text-align:left;line-height:1.25;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conn-pick-tile--wide .conn-ico-svg,.conn-pick-tile--wide img{width:24px;height:24px;flex:0 0 auto}
 .conn-pick-tile[disabled]{opacity:.35;cursor:not-allowed;transform:none}
 .conn-add-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:88;width:min(92vw,420px);padding:20px;border-radius:18px;
