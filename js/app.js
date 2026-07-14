@@ -778,6 +778,8 @@
         emoji: emoByKind[o.kind] || '✨',
         cover: o.cover || null, previewUrl: o.previewUrl || null,
         rank: o.rank || null, clipUrl: o.clipUrl || null,
+        color: (o.color && /^#[0-9a-f]{6}$/i.test(o.color)) ? o.color : null,
+        glow: (o.glow === false) ? false : (o.glow === true ? true : undefined),
         // Conserver la position custom (drag&drop) pour que la carte de swipe
         // place la bulle exactement là où l'utilisateur l'a posée dans l'éditeur.
         // + positions séparées par orientation (portrait/paysage téléphone).
@@ -1937,6 +1939,16 @@
     }
     // glowOff : n'annule que le halo flou (--orb-gc/--orb-hc), le contour/anneau
     // (--orb-bc/--orb-rc) reste inchangé même quand le glow est désactivé.
+    function orbDisplayColor(o, p){
+      if (o.color && /^#[0-9a-f]{6}$/i.test(o.color)) return o.color;
+      if (p.orbColors && p.orbColors[o.kind]) return p.orbColors[o.kind];
+      return null;
+    }
+    function orbDisplayGlowOff(o, p){
+      if (o.glow === false) return true;
+      if (o.glow === true) return false;
+      return !!(p.orbGlow && p.orbGlow[o.kind] === false);
+    }
     function applyOrbCustomColor(el, hex, glowOff){
       if (!el) return;
       const valid = hex && /^#[0-9a-f]{6}$/i.test(hex);
@@ -2046,7 +2058,7 @@
         btn.type = 'button';
         btn.className = 'orb' + (isCommon ? ' orb--common' : '') + (locked ? ' orb--locked' : '');
         btn.dataset.kind = o.kind;
-        if (!locked) applyOrbCustomColor(btn, p.orbColors && p.orbColors[o.kind], !!(p.orbGlow && p.orbGlow[o.kind] === false));
+        if (!locked) applyOrbCustomColor(btn, orbDisplayColor(o, p), orbDisplayGlowOff(o, p));
         if (locked) {
           btn.title = 'Bulle verrouillée';
           btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
@@ -3418,7 +3430,7 @@
         const circle = document.createElement('div');
         circle.className = 'acc-orb-circle';
         circle.dataset.kind = o.kind;
-        applyOrbCustomColor(circle, p.orbColors && p.orbColors[o.kind], !!(p.orbGlow && p.orbGlow[o.kind] === false));
+        applyOrbCustomColor(circle, orbDisplayColor(o, p), orbDisplayGlowOff(o, p));
         circle.innerHTML = orbInner(o);
         if (o.kind === 'game' && o.rank) {
           const rb = document.createElement('span');
