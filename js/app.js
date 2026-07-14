@@ -807,7 +807,7 @@
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
         activity: {type:'game', title:'Matefindr', sub:'Swipe en cours…'},
         games: [p.game].filter(Boolean),
-        bio: p.bio || '✏️ Complète ta bio dans Mon profil !',
+        bio: p.bio || '',
         common: {friends:0, servers:0},
         c1:'#393a41', c2:'#393a41',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
@@ -1594,6 +1594,12 @@
     // Backwards-compat alias (some legacy code uses LOOK_EMOJI string)
     const LOOK_EMOJI = LOOK_SVG;
 
+    function cardBioText(raw){
+      const t = String(raw || '').trim();
+      if(!t || /Complète ta bio/i.test(t)) return '';
+      return t;
+    }
+
     function buildCard(p, isTop){
       const c = document.createElement('div');
       c.className = 'swipe-card' + (isTop ? ' entering' : '');
@@ -1710,6 +1716,8 @@
         const label = String(entry.v || conns[k]);
         return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy" width="36" height="36"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
       }).join('')}</div>` : '';
+      const bioText = cardBioText(p.bio);
+      const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';
       // Age + gender badge in the top-right corner of the banner.
       // 'hidden' (Je préfère ne pas dire) : no symbol — just the age.
       // 'autre' : outline star SVG (white) instead of ⚧.
@@ -1779,7 +1787,7 @@
               <div class="lbl"><b>${act.title || ''}</b><span>${act.sub || ''}</span></div>
             </div>
           `; })()}
-          <div class="bio"><b>Bio</b>${p.bio}</div>
+          ${bioHtml}
           ${socialHtml}
           ${connectionsHtml}
           ${guildsHtml}
