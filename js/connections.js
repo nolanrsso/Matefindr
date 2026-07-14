@@ -102,16 +102,53 @@
     return null;
   }
 
+  const CONN_META_ORDER = '_order';
+
+  function connIsMetaKey(id){ return id === CONN_META_ORDER; }
+
   function connGet(connObj, id){
-    if(!connObj || typeof connObj !== 'object') return null;
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return null;
     return connNormalize(connObj[id]);
   }
 
-  function connIsSet(connObj, id){ return !!connGet(connObj, id); }
+  function connIsSet(connObj, id){
+    if(connIsMetaKey(id)) return false;
+    return !!connGet(connObj, id);
+  }
 
   function connOrderedIds(connObj){
     if(!connObj || typeof connObj !== 'object') return [];
-    return CONN_APPS.map(a => a.id).filter(id => connIsSet(connObj, id));
+    const seen = new Set();
+    const ordered = [];
+    if(Array.isArray(connObj[CONN_META_ORDER])){
+      connObj[CONN_META_ORDER].forEach(id => {
+        if(seen.has(id) || !connIsSet(connObj, id)) return;
+        seen.add(id);
+        ordered.push(id);
+      });
+    }
+    CONN_APPS.forEach(app => {
+      if(seen.has(app.id) || !connIsSet(connObj, app.id)) return;
+      seen.add(app.id);
+      ordered.push(app.id);
+    });
+    return ordered;
+  }
+
+  function connSetOrder(connObj, ids){
+    if(!connObj || typeof connObj !== 'object') return;
+    connObj[CONN_META_ORDER] = (ids || []).filter(id => connIsSet(connObj, id));
+  }
+
+  function connEnsureOrder(connObj){
+    connSetOrder(connObj, connOrderedIds(connObj));
+  }
+
+  function connRemove(connObj, id){
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return;
+    delete connObj[id];
+    if(Array.isArray(connObj[CONN_META_ORDER]))
+      connObj[CONN_META_ORDER] = connObj[CONN_META_ORDER].filter(x => x !== id);
   }
 
   function cleanHandle(v){
@@ -168,9 +205,10 @@
     const labelHtml = user ? `<span class="card-conn-user">${escFn(user)}</span>` : '';
     const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
     const name = app ? app.name : 'Connexion';
+    const labelCls = user ? ' card-conn--show-label' : '';
     if(e.mode !== 'text' && href)
-      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</a>`;
-    return `<span class="card-conn" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</span>`;
+      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn${labelCls}" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</a>`;
+    return `<span class="card-conn${labelCls}" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</span>`;
   }
 
   function connDisplayText(app, entry, profileTag){
@@ -211,6 +249,9 @@
     connGet,
     connIsSet,
     connOrderedIds,
+    connSetOrder,
+    connEnsureOrder,
+    connRemove,
     buildConnUrl,
     connProfileLabel,
     connCardHtml,

@@ -663,8 +663,11 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 
 /* Connexions (réseaux sociaux) */
 .connections{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
-.conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:pointer;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease;padding:0}
+.conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:grab;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease,opacity .14s ease;padding:0;touch-action:none}
 .conn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.3)}
+.conn:active{cursor:grabbing}
+.conn.dragging{opacity:.45;transform:scale(.94)}
+.conn.drag-over{border-color:rgba(145,70,255,.75);box-shadow:0 0 0 2px rgba(145,70,255,.28)}
 .conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
 .conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
 .conn .conn-ico-svg svg{width:20px;height:20px}
@@ -1357,7 +1360,7 @@ html.perf-lite *{
     <div class="conn-discord-tgl">
       <label><span>Afficher l'activité Discord</span><input type="checkbox" id="connDiscordActivity" checked></label>
       <label><span>Afficher le statut (en ligne / hors ligne)</span><input type="checkbox" id="connDiscordStatus" checked></label>
-      <label><span>Afficher le username sous le logo</span><input type="checkbox" id="connShowLabel" checked></label>
+      <label><span>Afficher le username au survol</span><input type="checkbox" id="connShowLabel" checked></label>
     </div>
   </div>
   <div id="connAddLinkPanel">
@@ -1371,7 +1374,7 @@ html.perf-lite *{
       <span class="conn-url-prefix" id="connAddPrefix"></span>
       <input id="connAddInput" maxlength="400" autocomplete="off" spellcheck="false">
     </div>
-    <label class="conn-show-label"><span>Afficher le username sous le logo</span><input type="checkbox" id="connShowLabelLink" checked></label>
+    <label class="conn-show-label"><span>Afficher le username au survol</span><input type="checkbox" id="connShowLabelLink" checked></label>
   </div>
   <div class="conn-add-foot">
     <button type="button" class="btn-remove" id="connAddRemove" hidden>Retirer</button>
@@ -3121,17 +3124,65 @@ function connReadUser(){
   try{ const st=readSite(); return st.user||{}; }catch(_){ return {}; }
 }
 
+let _connDragId=null, _connDragDidMove=false;
+
+function reorderConnections(fromId,toId){
+  if(!fromId||!toId||fromId===toId||!MC()) return;
+  const ids=MC().connOrderedIds(S.connections);
+  const fromIdx=ids.indexOf(fromId), toIdx=ids.indexOf(toId);
+  if(fromIdx<0||toIdx<0) return;
+  ids.splice(fromIdx,1);
+  ids.splice(toIdx,0,fromId);
+  MC().connSetOrder(S.connections,ids);
+  renderConnections();
+  persist();
+}
+
 function renderConnections(){
   const box=$('connections'); if(!box||!MC()) return;
   box.innerHTML='';
+  MC().connEnsureOrder(S.connections);
   MC().connOrderedIds(S.connections).forEach(id=>{
     const app=MC().connApp(id); if(!app) return;
     const entry=MC().connGet(S.connections,id);
     const b=document.createElement('button'); b.type='button'; b.className='conn set';
-    b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''}`;
+    b.draggable=true;
+    b.dataset.connId=id;
+    b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''} · glisser pour réordonner`;
     b.innerHTML=MC().connIconHtml(app,22,entry)+CONN_DEL;
+    b.addEventListener('dragstart',e=>{
+      if(e.target.closest('.conn-del')){ e.preventDefault(); return; }
+      _connDragId=id;
+      _connDragDidMove=false;
+      e.dataTransfer.effectAllowed='move';
+      try{ e.dataTransfer.setData('text/plain',id); }catch(_){}
+      b.classList.add('dragging');
+    });
+    b.addEventListener('dragend',()=>{
+      b.classList.remove('dragging');
+      box.querySelectorAll('.conn.drag-over').forEach(el=>el.classList.remove('drag-over'));
+      _connDragId=null;
+      setTimeout(()=>{ _connDragDidMove=false; },0);
+    });
+    b.addEventListener('dragover',e=>{
+      if(!_connDragId||id===_connDragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      box.querySelectorAll('.conn.drag-over').forEach(el=>el.classList.remove('drag-over'));
+      b.classList.add('drag-over');
+    });
+    b.addEventListener('dragleave',e=>{
+      if(!e.currentTarget.contains(e.relatedTarget)) b.classList.remove('drag-over');
+    });
+    b.addEventListener('drop',e=>{
+      e.preventDefault();
+      b.classList.remove('drag-over');
+      const from=e.dataTransfer.getData('text/plain')||_connDragId;
+      if(from&&from!==id){ _connDragDidMove=true; reorderConnections(from,id); }
+    });
     b.addEventListener('click',e=>{
-      if(e.target.closest('.conn-del')){ e.stopPropagation(); delete S.connections[id]; renderConnections(); persist(); toast('Connexion retirée'); return; }
+      if(_connDragDidMove){ e.preventDefault(); e.stopPropagation(); return; }
+      if(e.target.closest('.conn-del')){ e.stopPropagation(); MC().connRemove(S.connections,id); renderConnections(); persist(); toast('Connexion retirée'); return; }
       openConnAdd(app);
     });
     box.appendChild(b);
@@ -3244,6 +3295,7 @@ function saveConnAdd(){
     }
     S.connections[app.id]=payload;
   }
+  MC().connEnsureOrder(S.connections);
   renderConnections(); persist(); closeConnAll(); toast('Connexion enregistrée');
 }
 
@@ -3253,7 +3305,7 @@ $('connModalBackdrop').addEventListener('click',closeConnAll);
 $('connAddSubmit').addEventListener('click',saveConnAdd);
 $('connAddRemove').addEventListener('click',()=>{
   if(!_connApp) return;
-  delete S.connections[_connApp.id]; renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
+  MC().connRemove(S.connections,_connApp.id); renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
 });
 $('connModeTgl').addEventListener('click',e=>{
   const btn=e.target.closest('button[data-mode]'); if(!btn) return;
