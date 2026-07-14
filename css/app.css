@@ -1408,6 +1408,7 @@
     overflow-y:auto;overflow-x:hidden;position:relative;
     -webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;
   }
+  .swipe-card.has-common-guilds .body{padding-bottom:min(32vh,200px)}
   .swipe-card .body::-webkit-scrollbar{width:5px}
   .swipe-card .body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px}
   .swipe-card .body::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.32)}
@@ -1557,8 +1558,15 @@
     letter-spacing:.06em;box-shadow:0 3px 10px rgba(145,70,255,.45);
   }
   /* Lien de partage : nombre de vues, en bas à gauche de la carte. */
-  .swipe-card .card-views{
+  .swipe-card .card-bottom-left{
     position:absolute;left:14px;bottom:14px;z-index:6;
+    display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+    max-width:calc(100% - 110px);pointer-events:none;
+  }
+  .swipe-card .card-bottom-left .card-views{
+    position:static;left:auto;bottom:auto;
+  }
+  .swipe-card .card-views{
     display:inline-flex;align-items:center;gap:7px;
     color:#fff;font-size:18px;font-weight:400;font-family:"Clash Display",sans-serif;
     text-shadow:0 2px 8px rgba(0,0,0,.6);
@@ -1658,6 +1666,17 @@
 
   /* Discord servers in common — icons row + count label */
   .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
+  .swipe-card .card-guilds--corner{
+    margin-top:0;flex-direction:column;align-items:flex-start;gap:6px;
+    padding:8px 10px;border-radius:12px;
+    background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+  }
+  .swipe-card .card-guilds--corner .cg-icons{
+    display:flex;flex-wrap:wrap;align-items:center;gap:5px;max-width:min(72vw,300px);
+  }
+  .swipe-card .card-guilds--corner .cg-icon{margin-left:0}
   .swipe-card .cg-icons{display:flex;align-items:center}
   .swipe-card .cg-icon{
     width:26px;height:26px;border-radius:50%;
@@ -1679,6 +1698,7 @@
   .swipe-card.light-bg .cg-more{background:rgba(0,0,0,.10);color:#101014;border-color:rgba(255,255,255,.65)}
   .swipe-card.light-bg .cg-label,
   .swipe-card.light-bg .cg-label b{color:#101014 !important}
+  .swipe-card.light-bg .card-guilds--corner{background:rgba(255,255,255,.72);border-color:rgba(0,0,0,.08)}
 
   /* Auto-contrast — when profile color is too light, switch text to dark */
   .swipe-card.light-bg .name,
@@ -1802,6 +1822,8 @@
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}
+    .swipe-card .card-guilds--corner{padding:6px 8px;gap:5px}
+    .swipe-card .card-guilds--corner .cg-icons{gap:4px;max-width:min(68vw,240px)}
     .swipe-card .card-guilds{gap:8px}
     .swipe-card .cg-icon,
     .swipe-card .cg-more{width:22px;height:22px;font-size:10px}

@@ -1694,9 +1694,7 @@
       // synchronisés → on n'affiche rien (plutôt qu'un faux nombre aléatoire).
       const myGuilds = (state.user && Array.isArray(state.user.guilds)) ? state.user.guilds : [];
       let commonGuilds = [];
-      if (p.isMe) {
-        commonGuilds = myGuilds;
-      } else if (Array.isArray(p.guildIds) && myGuilds.length > 0) {
+      if (!p.isMe && Array.isArray(p.guildIds) && myGuilds.length > 0) {
         const theirs = new Set(p.guildIds.map(String));
         commonGuilds = myGuilds.filter(g => theirs.has(String(g.id)));
       }
@@ -1704,14 +1702,16 @@
         ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
         : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
       const guildsHtml = commonGuilds.length > 0 ? `
-        <div class="card-guilds">
+        <div class="card-guilds card-guilds--corner">
           <div class="cg-icons">
-            ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
-            ${commonGuilds.length > 5 ? `<span class="cg-more">+${commonGuilds.length - 5}</span>` : ''}
+            ${commonGuilds.map(guildIconHtml).join('')}
           </div>
           <span class="cg-label"><b>${commonGuilds.length}</b> serveur${commonGuilds.length > 1 ? 's' : ''} en commun</span>
         </div>
       ` : '';
+      const viewsHtml = (p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : '';
+      const bottomLeftHtml = (guildsHtml || viewsHtml) ? `<div class="card-bottom-left">${guildsHtml}${viewsHtml}</div>` : '';
+      if (commonGuilds.length > 0) c.classList.add('has-common-guilds');
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
       const igH = cleanHandle(s.instagram), ttH = cleanHandle(s.tiktok), spH = cleanHandle(s.spotify);
@@ -1761,7 +1761,7 @@
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
-        ${(p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : ''}
+        ${bottomLeftHtml}
         ${reactionBadgeHtml(p)}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
@@ -1799,7 +1799,6 @@
           ${bioHtml}
           ${socialHtml}
           ${connectionsHtml}
-          ${guildsHtml}
         </div>
       `;
       // Réactions : chargées à la demande (pas encore en cache) puis mises à jour en
@@ -4558,6 +4557,7 @@
         publicFlags: f.publicFlags || 0,
         premiumType: f.premiumType || 0,
         socials: f.socials || {},
+        guildIds: f.guildIds || p.guildIds,
         profileVoice: f.profileVoice || null,
         isMe: false,
       };
