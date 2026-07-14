@@ -446,10 +446,7 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 .uname-color{display:flex;align-items:center;gap:11px;margin:12px 0 2px}
 .uname-color[hidden]{display:none}
 .uname-color-swatch{position:relative;width:40px;height:40px;border-radius:12px;overflow:hidden;flex:0 0 auto;cursor:pointer;
-  box-shadow:0 3px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4) inset}
-.uname-color-swatch input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer}
-.uname-color-swatch input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-.uname-color-swatch input[type=color]::-webkit-color-swatch{border:none}
+  box-shadow:0 3px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4) inset;border:2px solid rgba(255,255,255,.18);padding:0;font:inherit;background:#fff}
 .uname-color-lbl{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--dim)}
 .uname-color-def{padding:8px 13px;border-radius:10px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:12px;cursor:pointer;transition:.15s}
 .uname-color-def:hover{background:rgba(255,255,255,.1)}
@@ -749,10 +746,9 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .grad-vert{position:relative;width:92px;min-height:232px;border-radius:22px;flex:0 0 auto;
   box-shadow:0 12px 34px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.4) inset}
 .gv-handle{position:absolute;left:50%;transform:translateX(-50%);width:36px;height:36px;border-radius:50%;
-  border:3px solid #fff;cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3)}
+  border:3px solid #fff;cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);padding:0;font:inherit}
 .gv-handle:hover{transform:translateX(-50%) scale(1.08)}
 .gv-top{top:14px}.gv-bot{bottom:14px}
-.gv-handle input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer;opacity:0}
 .gv-labels{display:flex;flex-direction:column;justify-content:space-between;padding:6px 0;font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.03em}
 .cp-sub{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 11px}
 .cp-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
@@ -840,9 +836,40 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
   flex:1 1 auto;min-height:0;max-height:none;margin-bottom:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 #orbColorPanel.orbstyle-all-mode .cp-reset{flex:0 0 auto;margin-top:12px;margin-bottom:0}
 .orbstyle-sw{position:relative;width:34px;height:34px;border-radius:50%;flex:0 0 auto;border:3px solid #fff;
-  cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);transition:transform .12s ease}
+  cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);transition:transform .12s ease;
+  padding:0;font:inherit;background:#9146FF}
 .orbstyle-sw:hover{transform:scale(1.08)}
-.orbstyle-sw input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer;opacity:0}
+.orbstyle-sw:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.orbstyle-sw:focus-visible{outline:2px solid rgba(145,70,255,.75);outline-offset:2px}
+
+/* Sélecteur de couleur sombre (remplace le picker natif blanc) */
+.dk-pick{position:fixed;z-index:120;width:248px;padding:14px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(28,22,58,.98),rgba(13,11,24,.99));
+  border:1px solid var(--stroke-2);box-shadow:0 24px 70px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.04) inset;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;user-select:none}
+.dk-pick[hidden]{display:none!important}
+.dk-pick-sv{position:relative;height:148px;border-radius:12px;cursor:crosshair;overflow:hidden;margin-bottom:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08) inset}
+.dk-pick-sv::before,.dk-pick-sv::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+.dk-pick-sv::before{background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
+.dk-pick-sv::after{background:linear-gradient(180deg,rgba(0,0,0,0),#000)}
+.dk-pick-cursor{position:absolute;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);pointer-events:none}
+.dk-pick-hue{position:relative;height:14px;border-radius:999px;margin-bottom:12px;cursor:pointer;
+  background:linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+.dk-pick-hue-thumb{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;
+  background:#fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+.dk-pick-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dk-pick-preview{width:38px;height:38px;border-radius:11px;flex:0 0 auto;border:2px solid rgba(255,255,255,.22);
+  box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.35) inset}
+.dk-pick-hex{flex:1;min-width:0;padding:9px 11px;border-radius:10px;border:1.5px solid var(--stroke-2);
+  background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;outline:none}
+.dk-pick-hex:focus{border-color:rgba(145,70,255,.65);box-shadow:0 0 0 3px rgba(145,70,255,.18)}
+.dk-pick-presets{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.dk-pick-presets button{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);
+  cursor:pointer;padding:0;transition:transform .12s ease,border-color .12s ease}
+.dk-pick-presets button:hover{transform:scale(1.08);border-color:rgba(255,255,255,.45)}
 .orbstyle-lbl{flex:1;font-size:13px;font-weight:700;color:#fff}
 
 .search-row{display:flex;gap:8px;margin-bottom:10px}
@@ -1253,7 +1280,7 @@ html.perf-lite *{
   <div class="conn-pop-head"><b>Ton pseudo Matefindr</b></div>
   <input id="unameInput" maxlength="32" placeholder="Ton pseudo…" autocomplete="off">
   <div class="uname-color" id="unameColorRow" hidden>
-    <label class="uname-color-swatch" title="Couleur du pseudo"><input type="color" id="unameColor" value="#ffffff"></label>
+    <button type="button" class="uname-color-swatch" id="unameColor" title="Couleur du pseudo"></button>
     <span class="uname-color-lbl">Couleur du pseudo</span>
     <button type="button" class="uname-color-def" id="unameColorDef">Défaut</button>
   </div>
@@ -1263,6 +1290,15 @@ html.perf-lite *{
 <!-- Panneau couleur de la carte : glisse la carte à droite et s'ouvre sur sa gauche -->
 <div class="color-panel" id="colorPanel"></div>
 <div class="color-panel" id="orbColorPanel"></div>
+<div class="dk-pick" id="darkColorPicker" hidden aria-hidden="true">
+  <div class="dk-pick-sv" id="dkPickSv"><div class="dk-pick-cursor" id="dkPickCursor"></div></div>
+  <div class="dk-pick-hue" id="dkPickHue"><div class="dk-pick-hue-thumb" id="dkPickHueThumb"></div></div>
+  <div class="dk-pick-row">
+    <div class="dk-pick-preview" id="dkPickPreview"></div>
+    <input class="dk-pick-hex" id="dkPickHex" type="text" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Code hexadécimal">
+  </div>
+  <div class="dk-pick-presets" id="dkPickPresets"></div>
+</div>
 <div class="sheet" id="sheet"></div>
 
 <div class="modal" id="boostGate"><div class="box boost-gate-box">
@@ -1339,6 +1375,99 @@ async function klipySearchGifs(q, page){
   return { gifs, hasNext:!!box.has_next };
 }
 function hexToRgba(hex,a){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return null;const r=parseInt(m[1].substr(0,2),16),g=parseInt(m[1].substr(2,2),16),b=parseInt(m[1].substr(4,2),16);return `rgba(${r},${g},${b},${a})`;}
+function normHex6(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');return m?'#'+m[1].toUpperCase():null;}
+function hexToRgbObj(hex){const h=normHex6(hex);if(!h)return null;return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};}
+function rgbToHex(r,g,b){const c=n=>Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,'0');return '#'+c(r)+c(g)+c(b);}
+function rgbToHsv(r,g,b){
+  r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
+  let h=0; const s=max===0?0:d/max, v=max;
+  if(d){ if(max===r) h=((g-b)/d+(g<b?6:0))*60; else if(max===g) h=((b-r)/d+2)*60; else h=((r-g)/d+4)*60; }
+  return{h,s:s*100,v:v*100};
+}
+function hsvToRgb(h,s,v){
+  s/=100;v/=100;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rp=0,gp=0,bp=0;
+  if(h<60){rp=c;gp=x}else if(h<120){rp=x;gp=c}else if(h<180){gp=c;bp=x}else if(h<240){gp=x;bp=c}else if(h<300){rp=x;bp=c}else{rp=c;bp=x}
+  return{r:Math.round((rp+m)*255),g:Math.round((gp+m)*255),b:Math.round((bp+m)*255)};
+}
+const DARK_PICK_PRESETS=['#1ED760','#8DCBFF','#C7A5FF','#9146FF','#FF4FA0','#FFD83D','#FFFFFF','#242429'];
+const DarkColorPicker=(function(){
+  let root,sv,hue,cursor,hueThumb,preview,hexIn,presetsEl,anchor=null,onChange=null,h=280,s=70,v=80,drag=null;
+  function ensure(){
+    if(root) return;
+    root=$('darkColorPicker'); sv=$('dkPickSv'); hue=$('dkPickHue'); cursor=$('dkPickCursor');
+    hueThumb=$('dkPickHueThumb'); preview=$('dkPickPreview'); hexIn=$('dkPickHex'); presetsEl=$('dkPickPresets');
+    presetsEl.innerHTML=DARK_PICK_PRESETS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
+    presetsEl.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>setFromHex(btn.dataset.c,true)));
+    hexIn.addEventListener('change',()=>{ const nx=normHex6(hexIn.value); if(nx) setFromHex(nx,true); else hexIn.value=currentHex(); });
+    hexIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); hexIn.blur(); } });
+    sv.addEventListener('pointerdown',e=>startDrag('sv',e));
+    hue.addEventListener('pointerdown',e=>startDrag('hue',e));
+    window.addEventListener('pointermove',onMove);
+    window.addEventListener('pointerup',endDrag);
+    window.addEventListener('pointercancel',endDrag);
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&root&&!root.hidden) close(); });
+    document.addEventListener('pointerdown',e=>{
+      if(root.hidden||!anchor) return;
+      if(root.contains(e.target)||anchor.contains(e.target)) return;
+      close();
+    },true);
+  }
+  function currentHex(){ const rgb=hsvToRgb(h,s,v); return rgbToHex(rgb.r,rgb.g,rgb.b).toUpperCase(); }
+  function paint(emit){
+    sv.style.background='hsl('+h+',100%,50%)';
+    cursor.style.left=s+'%'; cursor.style.top=(100-v)+'%';
+    hueThumb.style.left=(h/360*100)+'%';
+    const hex=currentHex();
+    preview.style.background=hex; hexIn.value=hex;
+    if(emit!==false&&onChange) onChange(hex);
+    if(anchor) anchor.style.background=hex;
+  }
+  function setFromHex(hex,emit){
+    const rgb=hexToRgbObj(hex); if(!rgb) return;
+    const hsv=rgbToHsv(rgb.r,rgb.g,rgb.b); h=hsv.h; s=hsv.s; v=hsv.v; paint(emit);
+  }
+  function position(){
+    if(!anchor||!root) return;
+    const r=anchor.getBoundingClientRect(), pw=root.offsetWidth||248, ph=root.offsetHeight||320;
+    let left=r.right+10; if(left+pw>window.innerWidth-10) left=Math.max(10,r.left-pw-10);
+    let top=r.top; if(top+ph>window.innerHeight-10) top=Math.max(10,window.innerHeight-ph-10);
+    root.style.left=left+'px'; root.style.top=top+'px';
+  }
+  function startDrag(kind,e){
+    e.preventDefault(); drag=kind;
+    try{(kind==='sv'?sv:hue).setPointerCapture(e.pointerId);}catch(_){}
+    applyPoint(kind,e); root.setAttribute('aria-hidden','false');
+  }
+  function applyPoint(kind,e){
+    const box=(kind==='sv'?sv:hue).getBoundingClientRect();
+    if(kind==='sv'){
+      s=Math.max(0,Math.min(100,(e.clientX-box.left)/box.width*100));
+      v=Math.max(0,Math.min(100,(1-(e.clientY-box.top)/box.height)*100));
+    }else h=Math.max(0,Math.min(360,(e.clientX-box.left)/box.width*360));
+    paint();
+  }
+  function onMove(e){ if(!drag) return; applyPoint(drag,e); }
+  function endDrag(e){ if(!drag) return; drag=null; try{sv.releasePointerCapture(e.pointerId);hue.releasePointerCapture(e.pointerId);}catch(_){} }
+  function open(anchorEl,hex,cb){
+    ensure(); anchor=anchorEl; onChange=cb||null;
+    setFromHex(normHex6(hex)||'#9146FF',false);
+    root.hidden=false; root.setAttribute('aria-hidden','false');
+    requestAnimationFrame(position);
+  }
+  function close(){ if(!root) return; root.hidden=true; root.setAttribute('aria-hidden','true'); anchor=null; onChange=null; drag=null; }
+  function bindSwatch(el,get,set){
+    if(!el||el.disabled) return;
+    el.addEventListener('click',e=>{
+      if(el.disabled) return;
+      e.stopPropagation();
+      const start=normHex6(typeof get==='function'?get():el.dataset.hex)||'#9146FF';
+      if(el.style) el.style.background=start;
+      open(el,start,hex=>{ if(typeof set==='function') set(hex); });
+    });
+  }
+  function setSwatchBg(el,hex){ if(!el) return; const c=normHex6(hex)||'#9146FF'; el.style.background=c; el.dataset.hex=c; }
+  return {open,close,bindSwatch,setSwatchBg};
+})();
 // Bannière fixe en haut : posée quand un admin a désactivé ce profil (admin.html).
 // Le compte reste utilisable ICI (pour corriger le contenu signalé) mais swipe/messagerie
 // sont bloqués côté site (cf. js/app.js) tant que non réactivé.
@@ -1447,15 +1576,14 @@ function applyTagBlur(){
     inp.value=S.username;
     const isBoost=!document.body.classList.contains('not-boost');
     colorRow.hidden=!isBoost;
-    if(isBoost) colorInp.value=nameSwatchColor();
+    if(isBoost) DarkColorPicker.setSwatchBg(colorInp,nameSwatchColor());
     back.hidden=false; pop.hidden=false; inp.focus(); inp.select();
   };
-  window.closeUnamePop=function(){ pop.hidden=true; back.hidden=true; };
+  window.closeUnamePop=function(){ pop.hidden=true; back.hidden=true; DarkColorPicker.close(); };
   slot.addEventListener('click',openUnamePop);
   back.addEventListener('click',closeUnamePop);
-  // Couleur du pseudo directement dans le popup (Boost) — picker natif, défaut = doré.
-  colorInp.addEventListener('input',e=>applyNameColorVal(e.target.value));
-  colorDef.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); colorInp.value='#ffffff'; toast('Pseudo remis en blanc'); });
+  DarkColorPicker.bindSwatch(colorInp,()=>nameSwatchColor(),hex=>applyNameColorVal(hex));
+  colorDef.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(colorInp,'#FFFFFF'); toast('Pseudo remis en blanc'); });
   $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; slot.textContent=v; applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
@@ -2534,8 +2662,8 @@ function renderColorPanel(){
     <div class="cp-title">Couleur de la carte</div>
     <div class="cp-grad-wrap">
       <div class="grad-vert" id="gradVert" style="background:linear-gradient(180deg,${S.c1},${S.c2})">
-        <label class="gv-handle gv-top" style="background:${S.c1}" title="Couleur du haut"><input type="color" id="colP" value="${S.c1.toLowerCase()}"></label>
-        <label class="gv-handle gv-bot" style="background:${S.c2}" title="Couleur du bas"><input type="color" id="colS" value="${S.c2.toLowerCase()}"></label>
+        <button type="button" class="gv-handle gv-top" id="colP" style="background:${S.c1}" data-hex="${S.c1}" title="Couleur du haut"></button>
+        <button type="button" class="gv-handle gv-bot" id="colS" style="background:${S.c2}" data-hex="${S.c2}" title="Couleur du bas"></button>
       </div>
       <div class="gv-labels"><span>Haut</span><span>Bas</span></div>
     </div>
@@ -2546,25 +2674,25 @@ function renderColorPanel(){
     <div class="cp-div"></div>
     <div class="cp-title">Couleur du pseudo</div>
     <div class="uname-color" style="margin-top:2px">
-      <label class="uname-color-swatch"><input type="color" id="cpNameColor" value="${ncVal}"></label>
+      <button type="button" class="uname-color-swatch" id="cpNameColor" style="background:${ncVal}" data-hex="${ncVal}"></button>
       <span class="uname-color-lbl">${esc(S.username||'Pseudo')}</span>
       <button type="button" class="uname-color-def" id="cpNameDef">Défaut</button>
     </div>` : ''}`;
   const sync=()=>{ const g=p.querySelector('#gradVert'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
-    const t=p.querySelector('.gv-top'); if(t) t.style.background=S.c1;
-    const b=p.querySelector('.gv-bot'); if(b) b.style.background=S.c2; };
-  p.querySelector('#colP').addEventListener('input',e=>{ applyColors(e.target.value, S.c2); sync(); });
-  p.querySelector('#colS').addEventListener('input',e=>{ applyColors(S.c1, e.target.value); sync(); });
-  p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); p.querySelector('#colP').value=S.c1.toLowerCase(); p.querySelector('#colS').value=S.c2.toLowerCase(); sync(); }));
-  p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#242429','#242429'); p.querySelector('#colP').value='#242429'; p.querySelector('#colS').value='#242429'; sync(); toast('Couleur par défaut appliquée'); });
+    const t=p.querySelector('#colP'); if(t){ t.style.background=S.c1; t.dataset.hex=S.c1; }
+    const b=p.querySelector('#colS'); if(b){ b.style.background=S.c2; b.dataset.hex=S.c2; } };
+  DarkColorPicker.bindSwatch(p.querySelector('#colP'),()=>S.c1,hex=>{ applyColors(hex,S.c2); sync(); });
+  DarkColorPicker.bindSwatch(p.querySelector('#colS'),()=>S.c2,hex=>{ applyColors(S.c1,hex); sync(); });
+  p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); sync(); }));
+  p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#242429','#242429'); sync(); toast('Couleur par défaut appliquée'); });
   const cpNC=p.querySelector('#cpNameColor');
-  if(cpNC) cpNC.addEventListener('input',e=>applyNameColorVal(e.target.value));
+  if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>applyNameColorVal(hex));
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); if(cpNC)cpNC.value='#ffffff'; toast('Pseudo remis en blanc'); });
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(cpNC,'#FFFFFF'); toast('Pseudo remis en blanc'); });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ closeOrbStylePanel(); renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
-function closeColorPanel(){ document.body.classList.remove('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.remove('active'); }
+function closeColorPanel(){ DarkColorPicker.close(); document.body.classList.remove('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.remove('active'); }
 
 /* Panneau "Style de la bulle" : une bulle ou toutes les bulles placées. */
 function renderOrbStylePanel(){
@@ -2583,7 +2711,7 @@ function renderOrbStylePanel(){
     </div>
     <div class="orbstyle-row">
       <button type="button" class="sh-contour-tgl${contourOn?' on':''}" id="ocpContour" title="Activer/désactiver le contour"><span>Contour</span><span class="sw"></span></button>
-      <label class="orbstyle-sw" id="ocpSw" style="background:${col}" title="Couleur de cette bulle"><input type="color" id="ocpColor" value="${col}"></label>
+      <button type="button" class="orbstyle-sw" id="ocpSw" style="background:${col}" data-hex="${col}" title="Couleur de cette bulle"></button>
       <span class="orbstyle-lbl">Couleur</span>
       <button type="button" class="sh-contour-tgl${glowOn?' on':''}" id="ocpGlow" title="Activer/désactiver le glow"><span>Glow</span><span class="sw"></span></button>
     </div>
@@ -2594,9 +2722,8 @@ function renderOrbStylePanel(){
     if(prev) prev.innerHTML=orbStyleThumbHtml(o,c,g,56,ct)+`<div class="orbstyle-name">${esc(o.title)}</div>`;
     const sw=p.querySelector('#ocpSw'); if(sw) sw.style.background=c;
   };
-  p.querySelector('#ocpColor').addEventListener('input',e=>{
-    o.color=e.target.value;
-    syncPreview(); renderOrbs(); persist();
+  DarkColorPicker.bindSwatch(p.querySelector('#ocpSw'),()=>orbEffColor(o),hex=>{
+    o.color=hex; syncPreview(); renderOrbs(); persist();
   });
   p.querySelector('#ocpContour').addEventListener('click',()=>{
     const wasOn=!orbEffContourOff(o);
@@ -2638,7 +2765,7 @@ function renderOrbStyleAllPanel(){
       <div class="orbstyle-card-ctrl">
         <button type="button" class="sh-contour-tgl${contourOn?' on':''}" data-contour="${i}" title="Contour"><span>Contour</span><span class="sw"></span></button>
         <span class="orbstyle-lbl">Couleur</span>
-        <label class="orbstyle-sw" style="background:${col}" title="Couleur"><input type="color" data-i="${i}" value="${col}"></label>
+        <button type="button" class="orbstyle-sw" data-i="${i}" style="background:${col}" data-hex="${col}" title="Couleur"></button>
         <button type="button" class="sh-contour-tgl${glowOn?' on':''}" data-glow="${i}" title="Glow"><span>Glow</span><span class="sw"></span></button>
       </div>
     </div>`;
@@ -2652,7 +2779,7 @@ function renderOrbStyleAllPanel(){
         <div class="orbstyle-bulk-scope cats" id="orbBulkScope">${bulkBtns}</div>
         <div class="orbstyle-row"${bulkDisabled?' disabled':''}>
           <button type="button" class="sh-contour-tgl${bulk.contourOn?' on':''}" id="ocpBulkContour" title="Contour"${bulkDisabled?' disabled':''}><span>Contour</span><span class="sw"></span></button>
-          <label class="orbstyle-sw" id="ocpBulkSw" style="background:${bulk.col}" title="Couleur"><input type="color" id="ocpBulkColor" value="${bulk.col}"${bulkDisabled?' disabled':''}></label>
+          <button type="button" class="orbstyle-sw" id="ocpBulkSw" style="background:${bulk.col}" data-hex="${bulk.col}" title="Couleur"${bulkDisabled?' disabled':''}></button>
           <span class="orbstyle-lbl">Couleur</span>
           <button type="button" class="sh-contour-tgl${bulk.glowOn?' on':''}" id="ocpBulkGlow" title="Glow"${bulkDisabled?' disabled':''}><span>Glow</span><span class="sw"></span></button>
         </div>
@@ -2665,16 +2792,15 @@ function renderOrbStyleAllPanel(){
   p.querySelectorAll('#orbBulkScope button').forEach(btn=>{
     btn.addEventListener('click',()=>{ _orbBulkScope=btn.dataset.bulk; renderOrbStyleAllPanel(); });
   });
-  const bulkColor=p.querySelector('#ocpBulkColor');
-  if(bulkColor) bulkColor.addEventListener('input',e=>{
-    const n=applyBulkOrbStyle(_orbBulkScope,{color:e.target.value});
+  const bulkSw=p.querySelector('#ocpBulkSw');
+  if(bulkSw&&!bulkDisabled) DarkColorPicker.bindSwatch(bulkSw,()=>bulkScopeMeta(_orbBulkScope).col,hex=>{
+    const n=applyBulkOrbStyle(_orbBulkScope,{color:hex});
     if(!n) return;
-    const sw=p.querySelector('#ocpBulkSw'); if(sw) sw.style.background=e.target.value;
     p.querySelectorAll('.orbstyle-all-list .orbstyle-card').forEach(card=>{
       const i=+card.dataset.i, o=S.orbs[i]; if(!o) return;
       if(_orbBulkScope!=='all'&&o.kind!==_orbBulkScope) return;
       syncOrbStyleCardThumb(card, o);
-      const inp=card.querySelector('input[type=color]'); if(inp){ inp.value=e.target.value; inp.closest('.orbstyle-sw').style.background=e.target.value; }
+      const sw=card.querySelector('.orbstyle-sw'); if(sw) DarkColorPicker.setSwatchBg(sw,hex);
     });
     renderOrbs(); persist();
   });
@@ -2694,14 +2820,11 @@ function renderOrbStyleAllPanel(){
     renderOrbStyleAllPanel(); renderOrbs(); persist();
     toast(next?`Glow activé (${meta.count})`:`Glow désactivé (${meta.count})`);
   });
-  p.querySelectorAll('.orbstyle-sw input[type=color]').forEach(inp=>{
-    if(inp.id==='ocpBulkColor') return;
-    inp.addEventListener('click',e=>e.stopPropagation());
-    inp.addEventListener('input',e=>{
-      const i=+inp.dataset.i, o=S.orbs[i]; if(!o) return;
-      o.color=inp.value;
-      syncOrbStyleCardThumb(inp.closest('.orbstyle-card'), o);
-      inp.closest('.orbstyle-sw').style.background=inp.value;
+  p.querySelectorAll('.orbstyle-all-list .orbstyle-sw[data-i]').forEach(btn=>{
+    DarkColorPicker.bindSwatch(btn,()=>{ const o=S.orbs[+btn.dataset.i]; return o?orbEffColor(o):'#9146FF'; },hex=>{
+      const i=+btn.dataset.i, o=S.orbs[i]; if(!o) return;
+      o.color=hex;
+      syncOrbStyleCardThumb(btn.closest('.orbstyle-card'), o);
       renderOrbs(); persist();
     });
   });
@@ -2747,7 +2870,7 @@ function openOrbStyleAllPanel(){
   if(!S.orbs.length){ toast('Place d\'abord au moins une bulle'); return; }
   closeColorPanel(); closeSheet(); _orbStyleAll=true; _orbStyleIdx=null; renderOrbStylePanel(); document.body.classList.add('orbcolor-open');
 }
-function closeOrbStylePanel(){ _orbStyleIdx=null; _orbStyleAll=false; _orbBulkScope='all'; const p=$('orbColorPanel'); if(p) p.classList.remove('orbstyle-all-mode'); document.body.classList.remove('orbcolor-open'); }
+function closeOrbStylePanel(){ _orbStyleIdx=null; _orbStyleAll=false; _orbBulkScope='all'; DarkColorPicker.close(); const p=$('orbColorPanel'); if(p) p.classList.remove('orbstyle-all-mode'); document.body.classList.remove('orbcolor-open'); }
 function closeOrbColorPanel(){ closeOrbStylePanel(); }
 function openOrbColorPanel(){ openOrbStyleAllPanel(); }
 
