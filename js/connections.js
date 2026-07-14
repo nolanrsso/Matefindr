@@ -68,6 +68,7 @@
         mode: raw.mode === 'text' ? 'text' : 'link',
         showActivity: raw.showActivity !== false,
         showStatus: raw.showStatus !== false,
+        showLabel: raw.showLabel !== false,
         label: raw.label || '',
       };
     }
@@ -111,10 +112,41 @@
     return `https://${p}${handle}`;
   }
 
-  function connDisplayText(app, entry){
+  function connProfileLabel(app, entry, profileTag){
+    const e = connNormalize(entry);
+    if(!e || e.showLabel === false) return '';
+    if(e.label) return cleanHandle(e.label);
+    if(typeof app === 'string') app = connApp(app);
+    if(app && app.id === 'discord'){
+      if(profileTag) return cleanHandle(profileTag);
+      if(e.v && !/^\d{15,22}$/.test(String(e.v).trim())) return cleanHandle(e.v);
+      return '';
+    }
+    if(app && app.id === 'email') return e.v.replace(/^mailto:/i, '');
+    return cleanHandle(e.v) || '';
+  }
+
+  function connCardHtml(app, entry, profileTag, esc){
     const e = connNormalize(entry);
     if(!e) return '';
-    if(e.label) return e.label;
+    if(typeof app === 'string') app = connApp(app);
+    const escFn = typeof esc === 'function' ? esc : s => String(s);
+    const href = buildConnUrl(app, entry);
+    const user = connProfileLabel(app, entry, profileTag);
+    const iconHtml = connIconHtml(app, 36);
+    const labelHtml = user ? `<span class="card-conn-user">${escFn(user)}</span>` : '';
+    const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
+    const name = app ? app.name : 'Connexion';
+    if(e.mode !== 'text' && href)
+      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</a>`;
+    return `<span class="card-conn" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</span>`;
+  }
+
+  function connDisplayText(app, entry, profileTag){
+    const user = connProfileLabel(app, entry, profileTag);
+    if(user) return user;
+    const e = connNormalize(entry);
+    if(!e) return '';
     if(typeof app === 'string') app = connApp(app);
     if(!app) return e.v;
     if(app.id === 'email') return e.v.replace(/^mailto:/i, '');
@@ -149,6 +181,8 @@
     connIsSet,
     connOrderedIds,
     buildConnUrl,
+    connProfileLabel,
+    connCardHtml,
     connDisplayText,
     connValueForInput,
     cleanHandle,

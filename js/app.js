@@ -1706,14 +1706,9 @@
         const app = MC ? MC.connApp(k) : null;
         const entry = MC ? MC.connGet(conns, k) : { v: String(conns[k]), mode: 'link' };
         if (!entry) return '';
-        const logo = app ? MC.connLogo(app) : `https://cdn.simpleicons.org/${k}/ffffff`;
-        const href = MC && app ? MC.buildConnUrl(app, entry) : null;
-        const label = MC && app ? MC.connDisplayText(app, entry) : String(entry.v || conns[k]);
-        const iconHtml = MC && app ? MC.connIconHtml(app, 14) : (logo ? `<img src="${logo}" alt="" loading="lazy">` : '');
-        const inner = `${iconHtml}<span>${escapeHtmlMini(label)}</span>`;
-        return (entry.mode !== 'text' && href)
-          ? `<a href="${href}" target="_blank" rel="noopener" class="card-conn" title="${escapeHtmlMini(app ? app.name : k)} : ${escapeHtmlMini(label)}">${inner}</a>`
-          : `<span class="card-conn" title="${escapeHtmlMini(app ? app.name : k)} : ${escapeHtmlMini(label)}">${inner}</span>`;
+        if (MC && app) return MC.connCardHtml(app, entry, p.tag, escapeHtmlMini);
+        const label = String(entry.v || conns[k]);
+        return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy" width="36" height="36"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
       }).join('')}</div>` : '';
       // Age + gender badge in the top-right corner of the banner.
       // 'hidden' (Je préfère ne pas dire) : no symbol — just the age.

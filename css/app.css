@@ -1621,13 +1621,16 @@
   }
 
   /* Connexions (éditeur) — logos d'apps + pseudo sur la carte */
-  .card-connections{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;position:relative;z-index:6}
-  .card-conn{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);text-decoration:none;color:#fff;font-size:11px;font-weight:600;max-width:140px}
-  .card-conn img,.card-conn .conn-ico-svg{width:14px;height:14px;object-fit:contain;flex:0 0 auto}
-  .card-conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
-  .card-conn .conn-ico-svg svg{width:13px;height:13px}
-  .card-conn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .card-conn:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22)}
+  .card-connections{display:flex;flex-wrap:wrap;gap:16px 18px;margin-top:10px;position:relative;z-index:6}
+  .card-conn{display:inline-flex;flex-direction:column;align-items:center;gap:5px;padding:0;border:none;background:transparent;text-decoration:none;color:#fff;max-width:76px}
+  .card-conn-ico{display:grid;place-items:center;width:40px;height:40px}
+  .card-conn img,.card-conn .conn-ico-svg{width:36px;height:36px;object-fit:contain;flex:0 0 auto}
+  .card-conn .conn-ico-svg{display:grid;place-items:center}
+  .card-conn .conn-ico-svg svg{width:34px;height:34px}
+  .card-conn-user{font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-conn:hover .card-conn-user{color:#fff}
+  .swipe-card.light-bg .card-conn-user{color:rgba(16,16,20,.72)}
+  .swipe-card.light-bg .card-conn:hover .card-conn-user{color:#101014}
   /* Social connections on card (clickable links) */
   .card-socials{display:flex;flex-direction:column;gap:4px;margin-top:-4px;position:relative;z-index:6}
   .card-social{
@@ -1785,8 +1788,10 @@
     .swipe-card .chip{font-size:11px;padding:4px 9px}
     .swipe-card .me-chip{font-size:9px;padding:2px 7px;top:8px;left:10px}
 
-    .card-conn{font-size:10.5px;padding:3px 8px;max-width:120px}
-    .card-conn img{width:13px;height:13px}
+    .card-conn-user{font-size:10px;max-width:64px}
+    .card-conn img,.card-conn .conn-ico-svg{width:30px;height:30px}
+    .card-conn .conn-ico-svg svg{width:28px;height:28px}
+    .card-conn-ico{width:34px;height:34px}
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}

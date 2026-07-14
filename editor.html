@@ -720,6 +720,8 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-discord-tgl{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
 .conn-discord-tgl label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;color:#fff;cursor:pointer}
 .conn-discord-tgl input[type=checkbox]{width:18px;height:18px;accent-color:#5865F2;cursor:pointer}
+.conn-show-label{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:14px}
+.conn-show-label input[type=checkbox]{width:18px;height:18px;accent-color:#9146FF;cursor:pointer}
 .conn-add-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
 .conn-add-foot .btn-remove{background:transparent;border:none;color:var(--dim);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:8px 0}
 .conn-add-foot .btn-remove:hover{color:#FF6B8A}
@@ -1355,6 +1357,7 @@ html.perf-lite *{
     <div class="conn-discord-tgl">
       <label><span>Afficher l'activité Discord</span><input type="checkbox" id="connDiscordActivity" checked></label>
       <label><span>Afficher le statut (en ligne / hors ligne)</span><input type="checkbox" id="connDiscordStatus" checked></label>
+      <label><span>Afficher le username sous le logo</span><input type="checkbox" id="connShowLabel" checked></label>
     </div>
   </div>
   <div id="connAddLinkPanel">
@@ -1368,6 +1371,7 @@ html.perf-lite *{
       <span class="conn-url-prefix" id="connAddPrefix"></span>
       <input id="connAddInput" maxlength="400" autocomplete="off" spellcheck="false">
     </div>
+    <label class="conn-show-label"><span>Afficher le username sous le logo</span><input type="checkbox" id="connShowLabelLink" checked></label>
   </div>
   <div class="conn-add-foot">
     <button type="button" class="btn-remove" id="connAddRemove" hidden>Retirer</button>
@@ -3124,7 +3128,7 @@ function renderConnections(){
     const app=MC().connApp(id); if(!app) return;
     const entry=MC().connGet(S.connections,id);
     const b=document.createElement('button'); b.type='button'; b.className='conn set';
-    b.title=`${app.name} : ${MC().connDisplayText(app,entry)}`;
+    b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''}`;
     b.innerHTML=MC().connIconHtml(app,22)+CONN_DEL;
     b.addEventListener('click',e=>{
       if(e.target.closest('.conn-del')){ e.stopPropagation(); delete S.connections[id]; renderConnections(); persist(); toast('Connexion retirée'); return; }
@@ -3173,6 +3177,7 @@ function syncConnAddUi(){
     const cur=MC().connGet(S.connections,'discord');
     $('connDiscordActivity').checked=cur?cur.showActivity!==false:true;
     $('connDiscordStatus').checked=cur?cur.showStatus!==false:true;
+    $('connShowLabel').checked=cur?cur.showLabel!==false:true;
     return;
   }
   const cur=MC().connGet(S.connections,app.id);
@@ -3184,6 +3189,7 @@ function syncConnAddUi(){
   inp.type=app.inputType||'text';
   inp.placeholder=app.placeholder||'…';
   inp.value=cur?MC().connValueForInput(app,cur):'';
+  $('connShowLabelLink').checked=cur?cur.showLabel!==false:true;
 }
 
 function openConnAdd(app){
@@ -3202,11 +3208,21 @@ function saveConnAdd(){
   if(app.special==='discord'){
     const u=connReadUser();
     if(!u.discordId){ toast('Connecte-toi avec Discord d\'abord'); return; }
-    S.connections.discord={v:u.discordId,mode:'link',showActivity:$('connDiscordActivity').checked,showStatus:$('connDiscordStatus').checked};
+    const tag=(u.discordTag||'').replace(/^@+/,'').replace(/#0$/,'');
+    S.connections.discord={
+      v:u.discordId,mode:'link',label:tag,
+      showLabel:$('connShowLabel').checked,
+      showActivity:$('connDiscordActivity').checked,
+      showStatus:$('connDiscordStatus').checked
+    };
   } else {
     const v=$('connAddInput').value.trim();
     if(!v){ toast('Renseigne un identifiant ou un lien'); return; }
-    S.connections[app.id]={v,mode:_connMode};
+    S.connections[app.id]={
+      v,mode:_connMode,
+      label:MC().cleanHandle(v),
+      showLabel:$('connShowLabelLink').checked
+    };
   }
   renderConnections(); persist(); closeConnAll(); toast('Connexion enregistrée');
 }
