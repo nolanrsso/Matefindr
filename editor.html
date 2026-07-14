@@ -2421,8 +2421,9 @@ function renderOrbs(){
   spreadOrbs(nodes, D);
   if(typeof updateEyeVisibility==='function') updateEyeVisibility();
   if(typeof persist==='function') persist();
-  if(_orbStyleAll && document.body.classList.contains('orbcolor-open')) renderOrbStylePanel();
-  else if(_orbStyleIdx!==null){
+  /* Ne pas re-rendre « Toutes les bulles » depuis renderOrbs : chaque clic (contour,
+     glow, couleur…) appelle renderOrbs() → ça remontait tout le menu en haut. */
+  if(_orbStyleIdx!==null){
     if(_orbStyleIdx>=S.orbs.length) closeOrbStylePanel();
     else if(document.body.classList.contains('orbcolor-open')) renderOrbStylePanel();
   }
@@ -2913,6 +2914,7 @@ function renderOrbStylePanel(){
 }
 function renderOrbStyleAllPanel(){
   const p=$('orbColorPanel');
+  const prevScroll=p.querySelector('.orbstyle-all-list')?.scrollTop ?? 0;
   if(!S.orbs.length){ toast('Aucune bulle placée'); closeOrbStylePanel(); return; }
   const bulk=bulkScopeMeta(_orbBulkScope);
   const bulkBtns=['all','music','game','film'].map(k=>{
@@ -2974,7 +2976,14 @@ function renderOrbStyleAllPanel(){
     const meta=bulkScopeMeta(_orbBulkScope); if(!meta.count) return;
     const next=!meta.contourOn;
     applyBulkOrbStyle(_orbBulkScope,{contour:next});
-    renderOrbStyleAllPanel(); renderOrbs(); persist();
+    bulkContour.classList.toggle('on',next);
+    p.querySelectorAll('.orbstyle-all-list .orbstyle-card').forEach(card=>{
+      const i=+card.dataset.i, o=S.orbs[i]; if(!o) return;
+      if(_orbBulkScope!=='all'&&o.kind!==_orbBulkScope) return;
+      syncOrbStyleCardThumb(card,o);
+      card.querySelector('[data-contour]')?.classList.toggle('on',next);
+    });
+    renderOrbs(); persist();
     toast(next?`Contour activé (${meta.count})`:`Contour désactivé (${meta.count})`);
   });
   const bulkGlow=p.querySelector('#ocpBulkGlow');
@@ -2982,7 +2991,14 @@ function renderOrbStyleAllPanel(){
     const meta=bulkScopeMeta(_orbBulkScope); if(!meta.count) return;
     const next=!meta.glowOn;
     applyBulkOrbStyle(_orbBulkScope,{glow:next});
-    renderOrbStyleAllPanel(); renderOrbs(); persist();
+    bulkGlow.classList.toggle('on',next);
+    p.querySelectorAll('.orbstyle-all-list .orbstyle-card').forEach(card=>{
+      const i=+card.dataset.i, o=S.orbs[i]; if(!o) return;
+      if(_orbBulkScope!=='all'&&o.kind!==_orbBulkScope) return;
+      syncOrbStyleCardThumb(card,o);
+      card.querySelector('[data-glow]')?.classList.toggle('on',next);
+    });
+    renderOrbs(); persist();
     toast(next?`Glow activé (${meta.count})`:`Glow désactivé (${meta.count})`);
   });
   p.querySelectorAll('.orbstyle-all-list .orbstyle-sw[data-i]').forEach(btn=>{
@@ -3026,6 +3042,8 @@ function renderOrbStyleAllPanel(){
     toast('Toutes les bulles remises par défaut');
   });
   p.querySelector('#ocpClose').addEventListener('click',closeOrbStylePanel);
+  const list=p.querySelector('.orbstyle-all-list');
+  if(list) requestAnimationFrame(()=>{ list.scrollTop=prevScroll; });
 }
 function syncOrbStyleCardThumb(row,o){
   if(!row||!o) return;
