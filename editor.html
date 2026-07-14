@@ -329,15 +329,20 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
      et TOUTES les bulles/GIFs (positionnés en % de cette hauteur) atterrissent
      un peu à côté de leur position dans l'éditeur. */
   position:relative;z-index:3;width:min(92vw,380px);height:min(calc(100vh - 240px),620px);
-  border-radius:20px;overflow:hidden;
-  background:linear-gradient(180deg, var(--c1) 0%, var(--c2) 100%);
+  border-radius:20px;overflow:hidden;isolation:isolate;
+  /* Couleur pleine sous le dégradé → coins arrondis opaques (pas de fond d'eau visible). */
+  background-color:var(--c2);
+  background-image:linear-gradient(180deg, var(--c1) 0%, var(--c2) 100%);
   border:1px solid rgba(255,255,255,.06);
-  box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset, 0 0 60px color-mix(in srgb, var(--c1) 20%, transparent);
+  box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
   transition:box-shadow .4s ease;
 }
 .banner{
   position:relative;height:120px;overflow:hidden;cursor:pointer;
-  background:linear-gradient(135deg, color-mix(in srgb,var(--c1) 60%, #1c1d22) 0%, var(--c2) 55%, #1a0d2c 100%);
+  border-radius:20px 20px 0 0;
+  /* Transparent : le dégradé unique de .card monte derrière (comme swipe-card).
+     Évite la double teinte qui déborde aux coins hauts autour de la bannière. */
+  background:transparent;
 }
 .banner img,.banner .ph{position:absolute;inset:0;width:100%;height:100%}
 .banner img{object-fit:cover}
@@ -1521,10 +1526,16 @@ function applyColors(c1,c2){
   S.c1=c1; S.c2=c2;
   const r=document.documentElement.style;
   r.setProperty('--accent',c1); r.setProperty('--c1',c1); r.setProperty('--c2',c2);
+  syncCardGradient();
   // Synchronise les champs du sélecteur (sans casser la saisie en cours)
   const set=(id,v)=>{const el=$(id); if(el && el!==document.activeElement) el.value=(el.type==='color'?v.toLowerCase():v.toUpperCase());};
   set('colP',c1); set('hexP',c1); set('colS',c2); set('hexS',c2);
   if(typeof persist==='function') persist();
+}
+function syncCardGradient(){
+  const card=$('card'); if(!card) return;
+  card.style.backgroundColor=S.c2;
+  card.style.backgroundImage='linear-gradient(180deg, '+S.c1+' 0%, '+S.c2+' 100%)';
 }
 // Compat : une seule couleur → secondaire dérivée (utilisé à l'init).
 function applyColor(hex){ applyColors(hex, darken(hex,.55)); }
@@ -3471,6 +3482,7 @@ function hydrateFromSite(){
   if(u.profileColor && /^#[0-9a-f]{6}$/i.test(u.profileColor)){
     S.c1=u.profileColor; S.c2=(u.profileColor2&&/^#[0-9a-f]{6}$/i.test(u.profileColor2))?u.profileColor2:darken(S.c1,.55);
     const r=document.documentElement.style; r.setProperty('--accent',S.c1); r.setProperty('--c1',S.c1); r.setProperty('--c2',S.c2);
+    syncCardGradient();
   }
   S.nameColor=(u.nameColor&&/^#[0-9a-f]{6}$/i.test(u.nameColor))?u.nameColor:null; applyUsernameBoostStyle();
   if(u.boostBg){ if(/^https?:/.test(u.boostBg)) applyBg({type:'custom',value:u.boostBg,video:!!u.boostBgVideo,posX:u.boostBgPos?u.boostBgPos.posX:undefined,posY:u.boostBgPos?u.boostBgPos.posY:undefined,scale:u.boostBgPos?u.boostBgPos.scale:undefined}); else applyBg({type:'preset',value:u.boostBg}); }

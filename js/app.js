@@ -1590,9 +1590,16 @@
       const accentHex = p.accentColor ? `#${p.accentColor.toString(16).padStart(6,'0')}` : null;
       const pc1 = (p.profileColor && p.profileColor !== 'discord') ? p.profileColor : null;
       const pc2 = (p.profileColor2 && p.profileColor2 !== 'discord') ? p.profileColor2 : null;
-      if (pc1 && pc2) c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
-      else if (pc1)   c.style.background = pc1;
-      else if (accentHex) c.style.background = accentHex;
+      if (pc1 && pc2) {
+        c.style.backgroundColor = pc2;
+        c.style.background = `linear-gradient(180deg, ${pc1} 0%, ${pc2} 100%)`;
+      } else if (pc1) {
+        c.style.backgroundColor = pc1;
+        c.style.background = pc1;
+      } else if (accentHex) {
+        c.style.backgroundColor = accentHex;
+        c.style.background = accentHex;
+      }
       // BANNER : image Discord/custom si dispo, sinon TRANSPARENTE → c'est le dégradé
       // du corps de la carte (déjà posé sur .swipe-card, pleine hauteur) qui montre au
       // travers, sans couture ni second dégradé recalculé sur la seule bande du haut

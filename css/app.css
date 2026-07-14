@@ -1305,8 +1305,8 @@
 
   /* Discord-style profile card */
   .swipe-card{
-    position:absolute;inset:0;border-radius:20px;overflow:hidden;
-    background:#1c1d22;color:#fff;cursor:grab;user-select:none;
+    position:absolute;inset:0;border-radius:20px;overflow:hidden;isolation:isolate;
+    background-color:#1c1d22;color:#fff;cursor:grab;user-select:none;
     border:1px solid rgba(255,255,255,.06);
     box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
     display:flex;flex-direction:column;
@@ -1322,8 +1322,8 @@
   }
   .swipe-card:active{cursor:grabbing}
   .swipe-card .banner{
-    height:120px;max-height:120px;background:linear-gradient(135deg, var(--c1,#36393F) 0%, var(--c2,#2F3136) 100%);
-    position:relative;flex:0 0 auto;overflow:hidden;
+    height:120px;max-height:120px;background:transparent;
+    position:relative;flex:0 0 auto;overflow:hidden;border-radius:20px 20px 0 0;
   }
   .swipe-card .banner::after{
     content:"";position:absolute;inset:0;
@@ -2127,14 +2127,11 @@
     background:conic-gradient(from 0deg, rgba(255,255,255,0), rgba(145,70,255,.55), rgba(91,233,255,.55), rgba(255,126,182,.55), rgba(255,255,255,0));
     filter:blur(4px);opacity:.55;animation:nitroSpin 8s linear infinite;z-index:0;pointer-events:none;
   }
-  /* Profile body color shimmer — when user has a profile color set */
+  /* Profile body color — dégradé statique plein cadre (pas d'animation qui
+     laisse voir le fond derrière aux coins arrondis). */
   .swipe-card[style*="background:"]{
-    background-size:200% 200% !important;
-    animation: profileShimmer 12s ease-in-out infinite;
-  }
-  @keyframes profileShimmer{
-    0%,100% { background-position: 0% 0%; }
-    50%     { background-position: 100% 100%; }
+    background-size:100% 100% !important;
+    background-repeat:no-repeat !important;
   }
 
   /* Discord notifications panel */
