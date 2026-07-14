@@ -821,6 +821,7 @@
         guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => g.id) : []),
         orbs,
         orbColors: (p.orbColors && typeof p.orbColors === 'object') ? p.orbColors : null,
+        orbGlow: (p.orbGlow && typeof p.orbGlow === 'object') ? p.orbGlow : null,
         // Champs posés par admin.html -- jamais modifiés depuis ce site, mais buildUserProfile()
         // remplace TOUTE la colonne data à chaque sync : sans ce passthrough, se reconnecter
         // effacerait silencieusement le message du staff / le flag disabled / le compteur.
@@ -1934,15 +1935,25 @@
       const r = parseInt(m[1].substr(0,2),16), g = parseInt(m[1].substr(2,2),16), b = parseInt(m[1].substr(4,2),16);
       return `rgba(${r},${g},${b},${a})`;
     }
-    function applyOrbCustomColor(el, hex){
-      if (!el || !hex || !/^#[0-9a-f]{6}$/i.test(hex)) return;
-      el.style.setProperty('--orb-c1', shadeHex(hex, .35));
-      el.style.setProperty('--orb-c2', hex);
-      el.style.setProperty('--orb-c3', shadeHex(hex, -.55));
-      el.style.setProperty('--orb-bc', hexToRgbaOrb(hex, .85));
-      el.style.setProperty('--orb-rc', hexToRgbaOrb(hex, .45));
-      el.style.setProperty('--orb-gc', hexToRgbaOrb(hex, .8));
-      el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
+    // glowOff : n'annule que le halo flou (--orb-gc/--orb-hc), le contour/anneau
+    // (--orb-bc/--orb-rc) reste inchangé même quand le glow est désactivé.
+    function applyOrbCustomColor(el, hex, glowOff){
+      if (!el) return;
+      const valid = hex && /^#[0-9a-f]{6}$/i.test(hex);
+      if (valid) {
+        el.style.setProperty('--orb-c1', shadeHex(hex, .35));
+        el.style.setProperty('--orb-c2', hex);
+        el.style.setProperty('--orb-c3', shadeHex(hex, -.55));
+        el.style.setProperty('--orb-bc', hexToRgbaOrb(hex, .85));
+        el.style.setProperty('--orb-rc', hexToRgbaOrb(hex, .45));
+      }
+      if (glowOff) {
+        el.style.setProperty('--orb-gc', 'rgba(0,0,0,0)');
+        el.style.setProperty('--orb-hc', 'rgba(0,0,0,0)');
+      } else if (valid) {
+        el.style.setProperty('--orb-gc', hexToRgbaOrb(hex, .8));
+        el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
+      }
     }
     function renderOrbs(p){
       _swipeCurrentP = p;
@@ -2035,7 +2046,7 @@
         btn.type = 'button';
         btn.className = 'orb' + (isCommon ? ' orb--common' : '') + (locked ? ' orb--locked' : '');
         btn.dataset.kind = o.kind;
-        if (!locked && p.orbColors) applyOrbCustomColor(btn, p.orbColors[o.kind]);
+        if (!locked) applyOrbCustomColor(btn, p.orbColors && p.orbColors[o.kind], !!(p.orbGlow && p.orbGlow[o.kind] === false));
         if (locked) {
           btn.title = 'Bulle verrouillée';
           btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
@@ -3407,7 +3418,7 @@
         const circle = document.createElement('div');
         circle.className = 'acc-orb-circle';
         circle.dataset.kind = o.kind;
-        if (p.orbColors) applyOrbCustomColor(circle, p.orbColors[o.kind]);
+        applyOrbCustomColor(circle, p.orbColors && p.orbColors[o.kind], !!(p.orbGlow && p.orbGlow[o.kind] === false));
         circle.innerHTML = orbInner(o);
         if (o.kind === 'game' && o.rank) {
           const rb = document.createElement('span');
@@ -4478,6 +4489,7 @@
         decorationUrl: f.decorationUrl || p.decorationUrl || null,
         orbs: f.orbs || p.orbs || [],
         orbColors: f.orbColors || p.orbColors || null,
+        orbGlow: f.orbGlow || p.orbGlow || null,
         gifs: f.gifs || [],
         gifContour: f.gifContour !== false,
         photos: f.photos || [],

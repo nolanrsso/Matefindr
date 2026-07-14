@@ -719,15 +719,18 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
   border-right:1px solid var(--stroke-2);box-shadow:24px 0 70px rgba(0,0,0,.55);
   transform:translateX(-101%);transition:transform .34s cubic-bezier(.6,.05,.2,1);
   backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
-body.color-open .color-panel{transform:translateX(0)}
+body.color-open #colorPanel{transform:translateX(0)}
+body.orbcolor-open #orbColorPanel{transform:translateX(0)}
 .card-zone{transition:transform .34s cubic-bezier(.6,.05,.2,1)}
-body.color-open .card-zone{transform:translateX(158px)}
+body.color-open .card-zone,
+body.orbcolor-open .card-zone{transform:translateX(158px)}
 @media (max-width:720px){
   .color-panel{width:min(58vw,258px);padding-left:15px;padding-right:15px}
   /* Écran étroit : carte réduite et poussée à droite pour dégager le panneau — elle
      déborde un peu à droite, on garde sa partie droite + le dégradé qui s'actualise
      en live (le scale n'affecte que le visuel — pas de drag d'orbe pendant l'édition). */
-  body.color-open .card-zone{transform:translateX(66vw) scale(.6);transform-origin:center center}
+  body.color-open .card-zone,
+  body.orbcolor-open .card-zone{transform:translateX(66vw) scale(.6);transform-origin:center center}
 }
 .cp-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke-2);
   background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:13px;font-family:inherit}
@@ -778,10 +781,20 @@ body.color-open .card-zone{transform:translateX(158px)}
 .cats button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:11px;border:1.5px solid var(--stroke);background:rgba(255,255,255,.03);color:var(--dim);font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;transition:.14s ease}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
-.cat-color-sw{position:relative;width:16px;height:16px;border-radius:5px;flex:0 0 auto;border:1.5px solid rgba(255,255,255,.35);overflow:hidden;cursor:pointer}
-.cat-color-sw input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer}
-.cat-color-sw input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-.cat-color-sw input[type=color]::-webkit-color-swatch{border:none}
+/* Bouton icône dans l'en-tête d'un sheet (ex: ouvrir "Couleur des bulles" depuis "Mes bulles") */
+.sh-icon-btn{width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);
+  color:var(--dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  margin-left:auto;margin-right:8px;transition:.15s ease;font-family:inherit}
+.sh-icon-btn:hover{color:#fff;background:rgba(145,70,255,.18);border-color:rgba(145,70,255,.45)}
+.sh-icon-btn svg{width:15px;height:15px}
+
+/* Panneau "Couleur des bulles" : une ligne par catégorie (couleur + libellé + glow on/off) */
+.orbcol-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.orbcol-sw{position:relative;width:34px;height:34px;border-radius:50%;flex:0 0 auto;border:3px solid #fff;
+  cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);transition:transform .12s ease}
+.orbcol-sw:hover{transform:scale(1.08)}
+.orbcol-sw input[type=color]{position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);border:none;padding:0;background:none;cursor:pointer;opacity:0}
+.orbcol-lbl{flex:1;font-size:13px;font-weight:700;color:#fff}
 
 .search-row{display:flex;gap:8px;margin-bottom:10px}
 .search-row input{flex:1;padding:10px 13px;border-radius:11px;font:inherit;color:#fff;outline:none;background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2)}
@@ -1200,6 +1213,7 @@ html.perf-lite *{
 
 <!-- Panneau couleur de la carte : glisse la carte à droite et s'ouvre sur sa gauche -->
 <div class="color-panel" id="colorPanel"></div>
+<div class="color-panel" id="orbColorPanel"></div>
 <div class="sheet" id="sheet"></div>
 
 <div class="modal" id="boostGate"><div class="box boost-gate-box">
@@ -1307,6 +1321,7 @@ const S = {
   nameColor:null,             // couleur du pseudo (null = blanc par défaut)
   orbs:[],     // {kind,title,sub,cover, posByMode:{desktop,portrait}} (landscape = legacy, lu mais plus édité)
   orbColors:{music:null,game:null,film:null}, // couleur perso par type de bulle (null = couleur par défaut)
+  orbGlow:{music:true,game:true,film:true}, // glow derrière chaque type de bulle (false = désactivé)
   gifs:[],     // {url,x,y,w,rot, posByMode}   (x,y = % carte, w = % largeur carte)
   gifContour:true,   // contour blanc autour des GIFs (désactivable) — n'affecte pas les photos
   photos:[],   // {url,x,y,w,rot, posByMode} — photos perso (Boost), mêmes mécaniques que les GIFs
@@ -1584,12 +1599,12 @@ let activeTool=null;
 document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener('click',()=>{const tool=btn.dataset.tool;
   // Couleur de la carte : pas de bottom-sheet → tiroir gauche + carte glissée à droite.
   if(tool==='color'){ if(document.body.classList.contains('color-open')){closeColorPanel();} else {closeSheet();openColorPanel();} return; }
-  closeColorPanel();
+  closeColorPanel(); closeOrbColorPanel();
   if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
 // Sélecteur d'orientation → bascule le mode d'édition (Bureau / Portrait / Paysage).
 document.querySelectorAll('.canvas-mode-btn').forEach(btn=>{btn.addEventListener('click',()=>setCanvasMode(btn.dataset.mode));});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
-function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
+function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();if(typeof closeOrbColorPanel==='function')closeOrbColorPanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='',rightExtra='')=>`<h3><span class="sh-title">${t}${badge}</span>${rightExtra}<button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
 function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);else if(tool==='photos')renderPhotosSheet(sh);}
@@ -1700,23 +1715,22 @@ function curatedMatches(query,kind,limit){
 }
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
 const ORB_DEFAULT_COLOR={music:'#1ed760',game:'#8dcbff',film:'#c7a5ff'};
+const ORBCOLOR_BTN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="15.5" cy="9" r="1.5" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="14.5" r="1.5" fill="currentColor" stroke="none"/></svg>';
 function renderBubblesSheet(sh){
-  const oc=Object.assign({},ORB_DEFAULT_COLOR,S.orbColors||{});
-  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`)+`
+  const orbColorBtn=`<button type="button" class="sh-icon-btn" id="orbColorBtn" title="Couleur et glow des bulles" aria-label="Couleur et glow des bulles">${ORBCOLOR_BTN_SVG}</button>`;
+  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,orbColorBtn)+`
     <div class="cats" id="orbCats">
-      <button data-k="music" class="${orbKind==='music'?'active':''}"><span class="cat-color-sw" title="Couleur des bulles Musique"><input type="color" data-k="music" value="${oc.music||ORB_DEFAULT_COLOR.music}"></span>Musique</button>
-      <button data-k="game" class="${orbKind==='game'?'active':''}"><span class="cat-color-sw" title="Couleur des bulles Jeu"><input type="color" data-k="game" value="${oc.game||ORB_DEFAULT_COLOR.game}"></span>Jeu</button>
-      <button data-k="film" class="${orbKind==='film'?'active':''}"><span class="cat-color-sw" title="Couleur des bulles Série·Film"><input type="color" data-k="film" value="${oc.film||ORB_DEFAULT_COLOR.film}"></span>Série·Film</button>
+      <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
+      <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
+      <button data-k="film" class="${orbKind==='film'?'active':''}">Série·Film</button>
     </div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
     <div class="sugg-list" id="orbSugg"></div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.focus();runOrbSearch(input.value.trim());}));
-  sh.querySelectorAll('#orbCats input[type=color]').forEach(inp=>{
-    inp.addEventListener('click',e=>e.stopPropagation());
-    inp.addEventListener('input',e=>{e.stopPropagation();S.orbColors=S.orbColors||{};S.orbColors[inp.dataset.k]=inp.value;renderOrbs();persist();});
-  });
+  const colorBtn=sh.querySelector('#orbColorBtn');
+  if(colorBtn) colorBtn.addEventListener('click',e=>{e.stopPropagation();openOrbColorPanel();});
   let deb=null;
   input.addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();deb=setTimeout(()=>runOrbSearch(q),orbKind==='music'?320:80);});
   // jeu/film : montrer la liste curatée tout de suite
@@ -1933,7 +1947,11 @@ function renderOrbs(){
     const orb=document.createElement('div'); orb.className='orb'; orb.dataset.kind=o.kind;
     orb.style.width=D+'px'; orb.style.height=D+'px';
     const orbCol=S.orbColors&&S.orbColors[o.kind];
-    if(orbCol){orb.style.setProperty('--orb-bc',hexToRgba(orbCol,.85));orb.style.setProperty('--orb-rc',hexToRgba(orbCol,.45));orb.style.setProperty('--orb-gc',hexToRgba(orbCol,.7));}
+    if(orbCol){orb.style.setProperty('--orb-bc',hexToRgba(orbCol,.85));orb.style.setProperty('--orb-rc',hexToRgba(orbCol,.45));}
+    // Glow désactivable indépendamment de la couleur (défaut = activé) : n'annule que le
+    // halo flou (--orb-gc), le contour/anneau (--orb-bc/--orb-rc) reste inchangé.
+    const glowOff=S.orbGlow&&S.orbGlow[o.kind]===false;
+    orb.style.setProperty('--orb-gc', glowOff?'rgba(0,0,0,0)':hexToRgba(orbCol||ORB_DEFAULT_COLOR[o.kind],.7));
     orb.innerHTML = o.cover?`<img src="${o.cover}" alt="">`:ORB_ICON[o.kind];
     const svg=orb.querySelector('svg'); if(svg){ svg.style.width=Math.round(D*0.34)+'px'; svg.style.height=Math.round(D*0.34)+'px'; }
     const del=document.createElement('div'); del.className='orb-del'; del.textContent='✕';
@@ -2426,8 +2444,57 @@ function renderColorPanel(){
   if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); if(cpNC)cpNC.value='#ffffff'; toast('Pseudo remis en blanc'); });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
-function openColorPanel(){ renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
+function openColorPanel(){ closeOrbColorPanel(); renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
 function closeColorPanel(){ document.body.classList.remove('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.remove('active'); }
+
+/* Panneau "Couleur des bulles" : une couleur + un glow on/off par catégorie (Musique/Jeu/Série·Film).
+   Même tiroir gauche que "Couleur de la carte", ouvert depuis le bouton dans l'en-tête de "Mes bulles". */
+function renderOrbColorPanel(){
+  const p=$('orbColorPanel');
+  const oc=S.orbColors||{}, og=S.orbGlow||{};
+  const rows=[['music','Musique'],['game','Jeu'],['film','Série·Film']];
+  p.innerHTML=`
+    <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
+    <div class="cp-title">Couleur des bulles</div>
+    ${rows.map(([k,label])=>{
+      const col=oc[k]||ORB_DEFAULT_COLOR[k];
+      const glowOn=og[k]!==false;
+      return `<div class="orbcol-row" data-k="${k}">
+        <label class="orbcol-sw" style="background:${col}" title="Couleur des bulles ${label}"><input type="color" data-k="${k}" value="${col}"></label>
+        <span class="orbcol-lbl">${label}</span>
+        <button type="button" class="sh-contour-tgl${glowOn?' on':''}" data-glow="${k}" title="Activer/désactiver le glow"><span>Glow</span><span class="sw"></span></button>
+      </div>`;
+    }).join('')}
+    <button class="cp-reset" id="ocpReset">↺ Couleurs par défaut</button>`;
+  p.querySelectorAll('.orbcol-sw input[type=color]').forEach(inp=>{
+    inp.addEventListener('click',e=>e.stopPropagation());
+    inp.addEventListener('input',e=>{
+      e.stopPropagation();
+      S.orbColors=S.orbColors||{}; S.orbColors[inp.dataset.k]=inp.value;
+      const sw=inp.closest('.orbcol-sw'); if(sw) sw.style.background=inp.value;
+      renderOrbs(); persist();
+    });
+  });
+  p.querySelectorAll('[data-glow]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const k=btn.dataset.glow;
+      S.orbGlow=Object.assign({music:true,game:true,film:true},S.orbGlow||{});
+      const wasOn=S.orbGlow[k]!==false;
+      S.orbGlow[k]=!wasOn;
+      btn.classList.toggle('on',!wasOn);
+      renderOrbs(); persist();
+      toast(wasOn?'Glow désactivé':'Glow activé');
+    });
+  });
+  p.querySelector('#ocpReset').addEventListener('click',()=>{
+    S.orbColors={music:null,game:null,film:null}; S.orbGlow={music:true,game:true,film:true};
+    renderOrbColorPanel(); renderOrbs(); persist();
+    toast('Couleurs des bulles réinitialisées');
+  });
+  p.querySelector('#ocpClose').addEventListener('click',closeOrbColorPanel);
+}
+function openOrbColorPanel(){ closeColorPanel(); closeSheet(); renderOrbColorPanel(); document.body.classList.add('orbcolor-open'); }
+function closeOrbColorPanel(){ document.body.classList.remove('orbcolor-open'); }
 
 /* ===== 5. MUSIQUE D'ENTRÉE ===== */
 const music={sel:null,startSec:0,audio:null};
@@ -2711,7 +2778,7 @@ let _persistT=null;
 // sur la carte change (pseudo, bio, avatar, bannière, couleurs, bulles, GIFs, photos,
 // connexions...), jamais sur un simple rechargement de page (applyPreset() au boot
 // déclenche aussi persist() sans qu'aucun champ n'ait changé).
-const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','orbGlow','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
 function visualFingerprint(){ try{ return JSON.stringify(VISUAL_KEYS.map(k=>S[k])); }catch(_){ return ''; } }
 let _lastVisualFingerprint=null; // posé juste après l'hydratation initiale (cf. boot plus bas)
 function writeState(){
@@ -2750,6 +2817,12 @@ function writeState(){
     music:(S.orbColors&&/^#[0-9a-f]{6}$/i.test(S.orbColors.music))?S.orbColors.music:null,
     game:(S.orbColors&&/^#[0-9a-f]{6}$/i.test(S.orbColors.game))?S.orbColors.game:null,
     film:(S.orbColors&&/^#[0-9a-f]{6}$/i.test(S.orbColors.film))?S.orbColors.film:null,
+  };
+  // Glow derrière chaque type de bulle, désactivable indépendamment de la couleur (défaut = activé).
+  st.profile.orbGlow={
+    music:(S.orbGlow&&S.orbGlow.music===false)?false:true,
+    game:(S.orbGlow&&S.orbGlow.game===false)?false:true,
+    film:(S.orbGlow&&S.orbGlow.film===false)?false:true,
   };
   st.user.gifs=S.gifs.map(g=>{
     const pm=g.posByMode||{};
@@ -2831,7 +2904,7 @@ function buildDbProfile(st){
     accentColor:u.accentColor||null, profileVoice:u.profileVoice||null,
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
-    orbs, orbColors:p.orbColors||null, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
+    orbs, orbColors:p.orbColors||null, orbGlow:p.orbGlow||null, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
     gifs:Array.isArray(u.gifs)?u.gifs:[], gifContour:(u.gifContour!==false), photos:Array.isArray(u.photos)?u.photos:[], photoContour:(u.photoContour!==false), bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
     connections:(p.connections&&typeof p.connections==='object')?p.connections:{},
     handleBlur:!!u.handleBlur, showBoostName:(u.boostShowName===false)?false:true,
@@ -3037,6 +3110,11 @@ function hydrateFromSite(){
     ['music','game','film'].forEach(k=>{ if(p.orbColors[k]&&/^#[0-9a-f]{6}$/i.test(p.orbColors[k])) S.orbColors[k]=p.orbColors[k]; });
     renderOrbs();
   }
+  if(p.orbGlow && typeof p.orbGlow==='object'){
+    S.orbGlow={music:true,game:true,film:true};
+    ['music','game','film'].forEach(k=>{ if(p.orbGlow[k]===false) S.orbGlow[k]=false; });
+    renderOrbs();
+  }
   S.gifContour=(u.gifContour!==false);
   if(Array.isArray(u.gifs)&&u.gifs.length){
     S.gifs=u.gifs.slice(0,GIF_MAX).map(g=>{
@@ -3106,7 +3184,7 @@ let PRESETS=loadPresets();
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
-  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','orbGlow','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
 }
 // Snapshot vierge : personnalisation (bio, couleurs, bulles, GIFs…) remise à zéro,
@@ -3115,7 +3193,7 @@ function snapshotProfile(){
 async function blankPresetSnapshot(){
   const base={ username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
     bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
-    orbs:[], orbColors:{music:null,game:null,film:null}, gifs:[], gifContour:true, photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
+    orbs:[], orbColors:{music:null,game:null,film:null}, orbGlow:{music:true,game:true,film:true}, gifs:[], gifContour:true, photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
     nameCustom:false, avatarCustom:false, addBubblePos:null };
   try{
     const token=localStorage.getItem('matefindr_discord_token');
@@ -3190,6 +3268,8 @@ function applyPreset(snap){
     S.orbs=Array.isArray(c.orbs)?c.orbs:[];
     S.orbColors={music:null,game:null,film:null};
     if(c.orbColors&&typeof c.orbColors==='object'){ ['music','game','film'].forEach(k=>{ if(c.orbColors[k]&&/^#[0-9a-f]{6}$/i.test(c.orbColors[k])) S.orbColors[k]=c.orbColors[k]; }); }
+    S.orbGlow={music:true,game:true,film:true};
+    if(c.orbGlow&&typeof c.orbGlow==='object'){ ['music','game','film'].forEach(k=>{ if(c.orbGlow[k]===false) S.orbGlow[k]=false; }); }
     S.gifs=Array.isArray(c.gifs)?c.gifs:[]; S.gifContour=(c.gifContour!==false);
     S.photos=Array.isArray(c.photos)?c.photos:[]; S.photoContour=(c.photoContour!==false);
     S.connections=c.connections||{};
@@ -3576,7 +3656,7 @@ function renderSettingsSheet(sh){
     card.style.left=left+'px'; card.style.top=top+'px';
   }
   function hide(){ spot.classList.remove('show'); card.classList.remove('show'); }
-  function panelOpen(){ return document.body.classList.contains('color-open') || !!document.querySelector('.sheet.open, .modal.open, #boostGate.open'); }
+  function panelOpen(){ return document.body.classList.contains('color-open') || document.body.classList.contains('orbcolor-open') || !!document.querySelector('.sheet.open, .modal.open, #boostGate.open'); }
 
   /* Clic sur la cible ⇒ un panneau s'ouvre : on s'efface, et on avance dès qu'il se referme. */
   function watchPanel(){

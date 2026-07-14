@@ -216,6 +216,7 @@
       nameColor: dd.nameColor||'',
       orbs: JSON.stringify(dd.orbs||[]),
       orbColors: JSON.stringify(dd.orbColors||null),
+      orbGlow: JSON.stringify(dd.orbGlow||null),
       gifs: JSON.stringify((dd.gifs||[]).map(g=>g&&(g.full||g.preview||g.url))),
       photos: JSON.stringify((dd.photos||[]).map(ph=>ph&&ph.url)),
       connections: JSON.stringify(dd.connections||{}),
@@ -683,7 +684,7 @@
     const conns=Object.entries(dd.connections||{}).map(([k,v])=>'<span class="c">'+esc(k)+' : '+esc(v)+'</span>').join('');
     const gifs=(dd.gifs||[]).length;
     const colorsChanged = changed.c1||changed.c2||changed.nameColor;
-    const bulleChanged = changed.orbs||changed.orbColors;
+    const bulleChanged = changed.orbs||changed.orbColors||changed.orbGlow;
     const mediaChanged = changed.avatarUrl||changed.bannerUrl||changed.bg||changed.gifs||changed.photos;
 
     const card='<div class="card" style="--pc1:'+esc(c1)+';--pc2:'+esc(c2)+'">'
