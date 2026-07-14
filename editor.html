@@ -753,6 +753,11 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
   border:3px solid #fff;cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);padding:0;font:inherit}
 .gv-handle:hover{transform:translateX(-50%) scale(1.08)}
 .gv-top{top:14px}.gv-bot{bottom:14px}
+.gv-swap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;
+  width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  background:rgba(13,11,24,.88);color:#fff;cursor:pointer;font-size:17px;line-height:1;
+  display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.5);padding:0;font:inherit}
+.gv-swap:hover{transform:translate(-50%,-50%) scale(1.08);background:rgba(145,70,255,.55);border-color:rgba(255,255,255,.65)}
 .gv-labels{display:flex;flex-direction:column;justify-content:space-between;padding:6px 0;font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.03em}
 .cp-sub{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 11px}
 .cp-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
@@ -2725,6 +2730,7 @@ function renderColorPanel(){
     <div class="cp-grad-wrap">
       <div class="grad-vert" id="gradVert" style="background:linear-gradient(180deg,${S.c1},${S.c2})">
         <button type="button" class="gv-handle gv-top" id="colP" style="background:${S.c1}" data-hex="${S.c1}" title="Couleur du haut"></button>
+        <button type="button" class="gv-swap" id="colSwap" title="Inverser haut et bas" aria-label="Inverser haut et bas">↕</button>
         <button type="button" class="gv-handle gv-bot" id="colS" style="background:${S.c2}" data-hex="${S.c2}" title="Couleur du bas"></button>
       </div>
       <div class="gv-labels"><span>Haut</span><span>Bas</span></div>
@@ -2745,6 +2751,7 @@ function renderColorPanel(){
     const b=p.querySelector('#colS'); if(b){ b.style.background=S.c2; b.dataset.hex=S.c2; } };
   DarkColorPicker.bindSwatch(p.querySelector('#colP'),()=>S.c1,hex=>{ applyColors(hex,S.c2); sync(); });
   DarkColorPicker.bindSwatch(p.querySelector('#colS'),()=>S.c2,hex=>{ applyColors(S.c1,hex); sync(); });
+  p.querySelector('#colSwap').addEventListener('click',()=>{ applyColors(S.c2,S.c1); sync(); });
   p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); sync(); }));
   p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#242429','#242429'); sync(); toast('Couleur par défaut appliquée'); });
   const cpNC=p.querySelector('#cpNameColor');
