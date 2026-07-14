@@ -6369,7 +6369,7 @@
       try {
         const seg = decodeURIComponent((location.pathname || '').split('/').filter(Boolean)[0] || '');
         if (!seg || seg.includes('.')) return null;
-        const reserved = ['editor','checkout','admin','index','v2','assets','js','css','supabase','api','favicon'];
+        const reserved = window.__mfReservedSlugs || ['editor','index','settings','checkout','rules','admin','v2','assets','js','css','supabase','api','favicon'];
         if (reserved.includes(seg.toLowerCase())) return null;
         if (!/^[a-z0-9_-]{2,40}$/i.test(seg)) return null;
         return seg.toLowerCase();

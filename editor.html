@@ -3781,13 +3781,26 @@ renderPresets();
   const psetRow=$('linkPsetRow'), psetSlots=$('linkPsetSlots');
   if(!btn||!pop) return;
   const sanit=s=>String(s||'').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);
+  const RESERVED_SLUGS=['editor','index','settings','checkout','rules','admin','v2','assets','js','css','supabase','api','favicon'];
+  const isReservedSlug=s=>RESERVED_SLUGS.includes(String(s||'').toLowerCase());
   let fullHref='';
   function currentSlug(){ try{ const st=readSite(); return (st.user&&st.user.slug)||''; }catch(_){ return ''; } }
   function showLink(slug){ fullHref='https://matefindr.com/'+slug; share.hidden=false; }
   // Le champ est TOUJOURS visible/éditable (plus de mode "édition" séparé) : le
   // bouton du bas reflète juste si le texte tapé diffère du lien enregistré.
+  function linkStatusForSlug(slug){
+    if(slug.length<2) return {ok:true,text:''};
+    if(isReservedSlug(slug)) return {ok:false,text:'« '+slug+' » est déjà pris, essaie autre chose.'};
+    return {ok:true,text:''};
+  }
   function refreshDirty(){
-    const dirty = sanit(inp.value) !== currentSlug();
+    const slug=sanit(inp.value);
+    const st=linkStatusForSlug(slug);
+    if(!st.ok){
+      status.className='link-status err'; status.textContent=st.text;
+      editSaveBtn.disabled=true; return;
+    }
+    const dirty = slug !== currentSlug();
     editSaveBtn.textContent = dirty ? 'Sauvegarder' : 'Modifier';
     editSaveBtn.disabled = !dirty;
   }
@@ -3830,12 +3843,13 @@ renderPresets();
   btn.addEventListener('click',openPop);
   back.addEventListener('click',closePop);
   closeBtn.addEventListener('click',closePop);
-  inp.addEventListener('input',()=>{ const v=sanit(inp.value); if(v!==inp.value) inp.value=v; status.textContent=''; status.className='link-status'; refreshDirty(); });
+  inp.addEventListener('input',()=>{ const v=sanit(inp.value); if(v!==inp.value) inp.value=v; refreshDirty(); });
   copyBtn.addEventListener('click',()=>{ try{ navigator.clipboard.writeText(fullHref); toast('Lien copié 📋'); }catch(_){ toast('Copie impossible'); } });
   openBtn?.addEventListener('click',()=>{ if(fullHref) window.open(fullHref,'_blank','noopener'); });
   editSaveBtn.addEventListener('click',async()=>{
     const slug=sanit(inp.value);
     if(slug.length<2){ status.className='link-status err'; status.textContent='2 caractères minimum.'; return; }
+    if(isReservedSlug(slug)){ status.className='link-status err'; status.textContent='« '+slug+' » est déjà pris, essaie autre chose.'; return; }
     const sb=(typeof edSupa==='function')?edSupa():null;
     if(!sb){ status.className='link-status err'; status.textContent='Connexion requise.'; return; }
     editSaveBtn.disabled=true; status.className='link-status dim'; status.textContent='Vérification…';

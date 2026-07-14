@@ -174,3 +174,12 @@
   }
   window.signInWithDiscord = signInWithDiscord;
 
+  /* Slugs réservés pour matefindr.com/<slug> — routes système, jamais assignables. */
+  window.__mfReservedSlugs = [
+    'editor', 'index', 'settings', 'checkout', 'rules',
+    'admin', 'v2', 'assets', 'js', 'css', 'supabase', 'api', 'favicon',
+  ];
+  window.__mfIsReservedSlug = function(slug){
+    return window.__mfReservedSlugs.includes(String(slug || '').toLowerCase());
+  };
+

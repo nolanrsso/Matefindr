@@ -34,7 +34,7 @@
 (function(){
   try{
     var path = (location.pathname || '').replace(/^\/+|\/+$/g, '');
-    var reserved = ['editor','checkout','admin','index','v2','assets','js','css','supabase','api','favicon'];
+    var reserved = ['editor','index','settings','checkout','rules','admin','v2','assets','js','css','supabase','api','favicon'];
     var isSlug = path && !path.includes('.') && !reserved.includes(path.toLowerCase()) && /^[a-z0-9_-]{2,40}$/i.test(path);
     // Exposé globalement : le lien perso (matefindr.com/<slug>) reste consultable sans le
     // mot de passe (cf. script du gate plus bas), mais ce flag sert aussi de garde-fou dans
