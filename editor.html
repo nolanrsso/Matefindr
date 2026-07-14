@@ -1364,11 +1364,6 @@ html.perf-lite *{
     </div>
   </div>
   <div id="connAddLinkPanel">
-    <div class="conn-mode-lbl">Mode du réseau <span class="q">?</span></div>
-    <div class="conn-mode-tgl" id="connModeTgl">
-      <button type="button" data-mode="link" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Lien</button>
-      <button type="button" data-mode="text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>Texte</button>
-    </div>
     <div class="conn-url-field">
       <span class="conn-url-ico" id="connAddIcon"></span>
       <span class="conn-url-prefix" id="connAddPrefix"></span>
@@ -3136,7 +3131,7 @@ updateEyeVisibility();
 /* ===== CONNEXIONS (réseaux sociaux) ===== */
 const MC = () => window.MatefindrConnections;
 const CONN_DEL='<span class="conn-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>';
-let _connApp=null, _connMode='link';
+let _connApp=null;
 
 function connReadUser(){
   try{ const st=readSite(); return st.user||{}; }catch(_){ return {}; }
@@ -3253,8 +3248,6 @@ function syncConnAddUi(){
     return;
   }
   const cur=MC().connGet(S.connections,app.id);
-  _connMode=cur&&cur.mode==='text'?'text':'link';
-  $('connModeTgl').querySelectorAll('button').forEach(btn=>btn.classList.toggle('active',btn.dataset.mode===_connMode));
   $('connAddIcon').innerHTML=MC().connIconHtml(app,22);
   $('connAddPrefix').textContent=app.prefix||'';
   const inp=$('connAddInput');
@@ -3302,7 +3295,7 @@ function saveConnAdd(){
     const v=$('connAddInput').value.trim();
     if(!v){ toast('Renseigne un identifiant ou un lien'); return; }
     const payload={
-      v,mode:_connMode,
+      v,mode:'link',
       showLabel:$('connShowLabelLink').checked
     };
     if(app.id==='custom'){
@@ -3324,11 +3317,6 @@ $('connAddSubmit').addEventListener('click',saveConnAdd);
 $('connAddRemove').addEventListener('click',()=>{
   if(!_connApp) return;
   MC().connRemove(S.connections,_connApp.id); renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
-});
-$('connModeTgl').addEventListener('click',e=>{
-  const btn=e.target.closest('button[data-mode]'); if(!btn) return;
-  _connMode=btn.dataset.mode;
-  $('connModeTgl').querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===btn));
 });
 $('connAddInput').addEventListener('input',()=>{ if(_connApp&&_connApp.id==='custom') updateCustomConnIconPreview(); });
 $('connAddInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveConnAdd(); });
@@ -3645,6 +3633,7 @@ function buildDbProfile(st){
     // matchs, messages ne doivent pas déclencher de notif "modification du profil").
     lastEditedAt:p.lastEditedAt||null,
     staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
+    discordLive:u.discordLive||null,
   };
 }
 let _dbSyncT=null, _dbSyncing=false;

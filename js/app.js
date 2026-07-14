@@ -261,6 +261,7 @@
         if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
         if (keepAvatar) { state.user.avatarUrl = prev.avatarUrl; state.user.avatarCustom = true; state.user.avatarPos = prev.avatarPos || null; }
         if (keepName)   { state.user.displayName = prev.displayName; state.user.nameCustom = true; }
+        if (sameAccount && prev.discordLive) state.user.discordLive = prev.discordLive;
         // Restore an archived profile if we have one for this Discord ID
         try {
           const key = state.user.discordId || state.user.email || state.user.discordTag;
@@ -385,6 +386,7 @@
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
         }
         save(); setAuth(true);
+        if (window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
         // Sync AVANT l'appel Discord (awaited) : discord-join-dm lit profiles.data.boost
         // pour synchroniser le rôle Discord "Boost" → il faut que la base soit à jour
         // (ex: juste après un achat Boost) avant que la fonction ne la lise.
@@ -829,6 +831,7 @@
         // effacerait silencieusement le message du staff / le flag disabled / le compteur.
         disabled: !!u.disabled, disabledReason: u.disabledReason || null, disabledCount: u.disabledCount || 0,
         staffMessage: u.staffMessage || null, lastSeenAt: u.lastSeenAt || null,
+    discordLive: u.discordLive || null,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
         socials: u.socials || {},
@@ -1142,6 +1145,13 @@
     }
     window.__syncMyProfileToCloud = syncMyProfileToCloud;
     window.__scheduleCloudSync = scheduleCloudSync;
+    window.__matefindrStateRef = () => state;
+    window.__matefindrSave = save;
+    window.__matefindrRefreshCard = () => {
+      if (typeof ensureDeckSync !== 'function') return;
+      if (document.body.getAttribute('data-screen') !== 'swipe') return;
+      if (_previewMode) ensureDeckSync();
+    };
 
     /* Convertit une ligne Supabase (data jsonb OU colonnes legacy) en profil pour buildCard. */
     function rowToProfile(r){
@@ -1580,6 +1590,110 @@
       return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 12h2M9 11v2M14 12h.01M16 13h.01"/></svg>`;
     }
     const STATUS_LABEL = { online:'En ligne sur Matefindr', idle:'Inactif', dnd:'Ne pas déranger', offline:'Inactif' };
+    const DISCORD_STATUS_LABEL = { online:'En ligne', idle:'Inactif', dnd:'Ne pas déranger', offline:'Hors ligne', invisible:'Hors ligne' };
+
+    function discordConnPrefs(p){
+      const MC = window.MatefindrConnections;
+      if(!MC || !p.connections || !MC.connIsSet(p.connections, 'discord')) return null;
+      const e = MC.connGet(p.connections, 'discord');
+      if(!e) return null;
+      return { showActivity: e.showActivity !== false, showStatus: e.showStatus !== false };
+    }
+
+    function fmtRelativeFr(iso){
+      if(!iso) return '';
+      const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if(s < 45) return 'à l\'instant';
+      if(s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+      if(s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
+      if(s < 604800) return `il y a ${Math.floor(s / 86400)} j`;
+      return new Date(iso).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+    }
+
+    function discordActivityArt(act){
+      const img = act.assets?.large_image || act.assets?.small_image;
+      if(!img) return null;
+      if(String(img).startsWith('mp:external/')){
+        try{
+          const encoded = String(img).split('/').slice(2).join('/');
+          return decodeURIComponent(encoded);
+        }catch(_){ return null; }
+      }
+      if(act.application_id) return `https://cdn.discordapp.com/app-assets/${act.application_id}/${img}.png?size=128`;
+      return null;
+    }
+
+    function discordActivityHeader(act){
+      const t = typeof act.type === 'number' ? act.type : 0;
+      const name = act.name || '';
+      if(t === 2) return /spotify/i.test(name) ? 'Écoute Spotify' : (name ? `Écoute ${name}` : 'Écoute');
+      if(t === 0) return name ? `Joue à ${name}` : 'En jeu';
+      if(t === 3) return name ? `Regarde ${name}` : 'Regarde';
+      if(t === 5) return name ? `En compétition sur ${name}` : 'En compétition';
+      if(t === 1) return name ? `Stream ${name}` : 'En stream';
+      return name || 'Activité';
+    }
+
+    function discordActivityProgress(act){
+      const ts = act.timestamps;
+      if(!ts || ts.start == null || ts.end == null) return null;
+      const start = Number(ts.start), end = Number(ts.end);
+      if(!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+      const now = Date.now();
+      const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+      const fmt = (ms) => {
+        const sec = Math.max(0, Math.floor(ms / 1000));
+        return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      };
+      return { pct, current: fmt(now - start), total: fmt(end - start) };
+    }
+
+    function cardDiscordActivityHtml(p){
+      const prefs = discordConnPrefs(p);
+      if(!prefs?.showActivity) return '';
+      const live = p.discordLive;
+      const act = live?.activities?.[0];
+      if(!act) return '';
+      const art = discordActivityArt(act);
+      const title = act.details || act.name || '';
+      const sub = act.state || (act.details ? act.name : '') || '';
+      const prog = discordActivityProgress(act);
+      const brand = /spotify/i.test(act.name || '') ? 'https://cdn.simpleicons.org/spotify/1DB954' : '';
+      const isSpotify = /spotify/i.test(act.name || '');
+      return `<div class="discord-activity${isSpotify ? ' discord-activity--spotify' : ''}">
+        <div class="discord-activity-head">
+          <span class="discord-activity-kind">${escapeHtmlMini(discordActivityHeader(act))}</span>
+          ${brand ? `<img class="discord-activity-brand" src="${brand}" alt="" width="16" height="16" loading="lazy">` : ''}
+        </div>
+        <div class="discord-activity-body">
+          ${art ? `<img class="discord-activity-cover" src="${escapeHtmlMini(art)}" alt="" loading="lazy">` : `<span class="discord-activity-cover discord-activity-cover--ph">${activityIcon(act.type === 2 ? 'music' : act.type === 0 ? 'game' : 'call')}</span>`}
+          <div class="discord-activity-meta">
+            ${title ? `<b>${escapeHtmlMini(title)}</b>` : ''}
+            ${sub ? `<span>${escapeHtmlMini(sub)}</span>` : ''}
+            ${prog ? `<div class="discord-activity-progress"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
+            <div class="discord-activity-times"><span>${prog.current}</span><span>${prog.total}</span></div>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function cardDiscordLastSeenHtml(p){
+      const prefs = discordConnPrefs(p);
+      if(!prefs?.showStatus) return '';
+      const live = p.discordLive;
+      const online = live?.status && !['offline','invisible'].includes(live.status);
+      if(online) return '';
+      const at = live?.lastOnlineAt || live?.updatedAt || p.lastSeenAt;
+      if(!at) return '';
+      return `<div class="discord-last-seen">Dernière fois en ligne ${fmtRelativeFr(at)}</div>`;
+    }
+
+    function cardPresenceHtml(p){
+      if(p.profileVoice) return '';
+      const disc = cardDiscordActivityHtml(p);
+      if(disc) return disc;
+      return cardActivityHtml(p);
+    }
     /* Moon icon shown over the avatar for inactive/offline users (Discord-style) */
     const STATUS_MOON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="#dcddde"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>';
     // Outline-style SVG icons (white) for looking_for badges — same DA as ♂ ♀ ⭐
@@ -1738,6 +1852,19 @@
       }).join('')}</div>` : '';
       const bioText = cardBioText(p.bio);
       const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';
+      const joinedHtml = p.joinedOn ? `<div class="joined">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              ${tx('joined_on')} ${p.joinedOn}
+            </div>` : '';
+      const discPrefs = discordConnPrefs(p);
+      const discLive = p.discordLive;
+      let cardStatus = p.status || 'offline';
+      if(discPrefs?.showStatus && discLive?.status){
+        cardStatus = discLive.status === 'invisible' ? 'offline' : discLive.status;
+      }
+      const statusLabel = (discPrefs?.showStatus && discLive?.status)
+        ? (DISCORD_STATUS_LABEL[discLive.status] || DISCORD_STATUS_LABEL.offline)
+        : (STATUS_LABEL[p.status] || '');
       // Age + gender badge in the top-right corner of the banner.
       // 'hidden' (Je préfère ne pas dire) : no symbol — just the age.
       // 'autre' : outline star SVG (white) instead of ⚧.
@@ -1769,7 +1896,7 @@
         <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
           ${fakeDecoHtml}
           <div class="avi" ${aviStyle}>${aviInner}</div>
-          <span class="status-dot ${p.status}">${(p.status === 'offline' || p.status === 'idle') ? STATUS_MOON_SVG : ''}</span>
+          <span class="status-dot ${cardStatus}">${(cardStatus === 'offline' || cardStatus === 'idle') ? STATUS_MOON_SVG : ''}</span>
         </div>
         ${p.nitro ? `<span class="nitro-badge">${tx('nitro')}</span>` : ''}
         <div class="body">
@@ -1777,11 +1904,7 @@
             <div class="name-row">
               <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
-            <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span> <span class="sep">•</span> ${STATUS_LABEL[p.status] || ''}</div>
-            <div class="joined">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              ${tx('joined_on')} ${p.joinedOn}
-            </div>
+            <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
           </div>
           <hr class="div"/>
           ${p.profileVoice ? `
@@ -1796,8 +1919,10 @@
               </div>
               <span class="card-voice-time">0:00</span>
             </div>
-          ` : cardActivityHtml(p)}
+          ` : cardPresenceHtml(p)}
           ${bioHtml}
+          ${joinedHtml}
+          ${cardDiscordLastSeenHtml(p)}
           ${socialHtml}
           ${connectionsHtml}
         </div>
@@ -4560,6 +4685,7 @@
         socials: f.socials || {},
         guildIds: f.guildIds || p.guildIds,
         profileVoice: f.profileVoice || null,
+        discordLive: f.discordLive || p.discordLive || null,
         isMe: false,
       };
       // Referme les panneaux (messages/qui t'a liké) : l'aperçu prend tout l'écran,
@@ -6738,6 +6864,7 @@
     if (typeof checkBoostExpiry === 'function') checkBoostExpiry(); // expiration/renouvellement mensuel au chargement
     if (state.user) {
       setAuth(true);
+      if (window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
       // Si l'URL va être reprise par un lien de partage (/<slug>) ou un retour
       // d'éditeur (#preview/#account), on NE révèle PAS encore landing/onboarding
       // (ça flasherait avant le bon écran) : on pose juste l'attribut en silence,
