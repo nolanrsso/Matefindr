@@ -791,14 +791,30 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
 
-/* Panneau "Style de la bulle" (une bulle placée à la fois) */
+/* Bouton "toutes les bulles" dans l'en-tête du sheet Mes bulles */
+.sh-orbstyle-btn{width:32px;height:32px;border-radius:10px;border:1px solid rgba(145,70,255,.45);
+  background:linear-gradient(145deg,rgba(145,70,255,.22),rgba(91,233,255,.12));color:#E8D5FF;
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  margin-left:auto;margin-right:8px;transition:.15s ease;font-family:inherit;
+  box-shadow:0 2px 10px rgba(145,70,255,.25)}
+.sh-orbstyle-btn:hover{color:#fff;background:linear-gradient(145deg,rgba(145,70,255,.45),rgba(91,233,255,.22));transform:scale(1.05)}
+.sh-orbstyle-btn svg{width:16px;height:16px}
+
+/* Panneau "Style de la bulle" (une bulle ou toutes) */
 .orbstyle-preview{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px 14px;border-radius:14px;
   background:rgba(255,255,255,.05);border:1px solid var(--stroke-2)}
-.orbstyle-dot{width:44px;height:44px;border-radius:50%;flex:0 0 auto;border:3px solid #fff;
-  box-shadow:0 4px 14px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.25)}
-.orbstyle-name{font-size:13px;font-weight:700;color:#fff;line-height:1.35;min-width:0;
+.orbstyle-thumb{width:52px;height:52px;border-radius:50%;flex:0 0 auto;overflow:hidden;
+  border:3px solid var(--orb-ring,#fff);background:#1c1d22;display:grid;place-items:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.45);position:relative}
+.orbstyle-thumb img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.orbstyle-thumb .orbstyle-ph{font-size:22px;line-height:1}
+.orbstyle-name{font-size:13px;font-weight:700;color:#fff;line-height:1.35;min-width:0;flex:1;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .orbstyle-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.orbstyle-row--all{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--stroke-2)}
+.orbstyle-row--all .orbstyle-thumb{width:44px;height:44px}
+.orbstyle-row--all .orbstyle-name{font-size:12px;-webkit-line-clamp:1}
+.orbstyle-all-list{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;max-height:min(52vh,420px);overflow-y:auto;padding-right:2px}
 .orbstyle-sw{position:relative;width:34px;height:34px;border-radius:50%;flex:0 0 auto;border:3px solid #fff;
   cursor:pointer;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.3);transition:transform .12s ease}
 .orbstyle-sw:hover{transform:scale(1.08)}
@@ -1725,6 +1741,13 @@ function curatedMatches(query,kind,limit){
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
 const ORB_DEFAULT_COLOR={music:'#1ed760',game:'#8dcbff',film:'#c7a5ff'};
 const ORB_STYLE_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-1.5 2.2-4.2 3.8-4.2 7.2 0 2.3 1.9 4.2 4.2 4.2s4.2-1.9 4.2-4.2C16.2 6.8 13.5 5.2 12 3zm0 14.2c-3.9 0-7.2 2.4-7.2 5.3 0 .8.6 1.5 1.5 1.5h11.4c.8 0 1.5-.7 1.5-1.5 0-2.9-3.3-5.3-7.2-5.3z"/></svg>';
+const ORB_STYLE_ALL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="3.5" fill="currentColor" fill-opacity=".35" stroke="none"/><circle cx="16" cy="8" r="3.5" fill="currentColor" fill-opacity=".55" stroke="none"/><circle cx="12" cy="15" r="3.5" fill="currentColor" fill-opacity=".85" stroke="none"/><path d="M4 20h16"/></svg>';
+function orbStyleThumbHtml(o,col,glowOn,px){
+  const sz=px||52, c=col||ORB_DEFAULT_COLOR[o.kind]||'#9146FF';
+  const g=glowOn?('0 0 16px '+hexToRgba(c,.75)+', '):'';
+  const inner=o.cover?`<img src="${esc(o.cover)}" alt="">`:`<span class="orbstyle-ph">${ORB_FALLBACK_ICO[o.kind]||'✨'}</span>`;
+  return `<div class="orbstyle-thumb" style="width:${sz}px;height:${sz}px;--orb-ring:${c};box-shadow:${g}0 4px 14px rgba(0,0,0,.45)">${inner}</div>`;
+}
 function orbEffColor(o){
   if(o.color&&/^#[0-9a-f]{6}$/i.test(o.color)) return o.color;
   if(S.orbColors&&S.orbColors[o.kind]&&/^#[0-9a-f]{6}$/i.test(S.orbColors[o.kind])) return S.orbColors[o.kind];
@@ -1735,7 +1758,7 @@ function orbEffGlowOff(o){
   if(o.glow===true) return false;
   return !!(S.orbGlow&&S.orbGlow[o.kind]===false);
 }
-let _orbStyleIdx=null;
+let _orbStyleIdx=null, _orbStyleAll=false;
 function applyOrbStyleEl(el,o){
   if(!el||!o) return;
   const col=orbEffColor(o), glowOff=orbEffGlowOff(o);
@@ -1744,7 +1767,8 @@ function applyOrbStyleEl(el,o){
   el.style.setProperty('--orb-gc',glowOff?'rgba(0,0,0,0)':hexToRgba(col,.7));
 }
 function renderBubblesSheet(sh){
-  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`)+`
+  const allBtn=`<button type="button" class="sh-orbstyle-btn" id="orbStyleAllBtn" title="Modifier toutes les bulles" aria-label="Modifier toutes les bulles">${ORB_STYLE_ALL_SVG}</button>`;
+  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,allBtn)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
       <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
@@ -1755,6 +1779,8 @@ function renderBubblesSheet(sh){
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.focus();runOrbSearch(input.value.trim());}));
+  const allStyleBtn=sh.querySelector('#orbStyleAllBtn');
+  if(allStyleBtn) allStyleBtn.addEventListener('click',e=>{e.stopPropagation();openOrbStyleAllPanel();});
   let deb=null;
   input.addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();deb=setTimeout(()=>runOrbSearch(q),orbKind==='music'?320:80);});
   // jeu/film : montrer la liste curatée tout de suite
@@ -1978,7 +2004,7 @@ function renderOrbs(){
     del.addEventListener('pointerdown',e=>e.stopPropagation());
     del.addEventListener('click',e=>{e.stopPropagation();closeOrbStylePanel();S.orbs.splice(i,1);renderOrbs();toast('Bulle retirée');updateOrbCount();});
     orb.appendChild(del);
-    const sty=document.createElement('button'); sty.type='button'; sty.className='orb-style'+(_orbStyleIdx===i?' active':'');
+    const sty=document.createElement('button'); sty.type='button'; sty.className='orb-style'+(!_orbStyleAll&&_orbStyleIdx===i?' active':'');
     sty.title='Couleur et glow de cette bulle'; sty.innerHTML=ORB_STYLE_SVG;
     sty.style.width=Math.round(D*0.30)+'px'; sty.style.height=Math.round(D*0.30)+'px';
     sty.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -2048,7 +2074,8 @@ function renderOrbs(){
   spreadOrbs(nodes, D);
   if(typeof updateEyeVisibility==='function') updateEyeVisibility();
   if(typeof persist==='function') persist();
-  if(_orbStyleIdx!==null){
+  if(_orbStyleAll && document.body.classList.contains('orbcolor-open')) renderOrbStylePanel();
+  else if(_orbStyleIdx!==null){
     if(_orbStyleIdx>=S.orbs.length) closeOrbStylePanel();
     else if(document.body.classList.contains('orbcolor-open')) renderOrbStylePanel();
   }
@@ -2476,8 +2503,9 @@ function renderColorPanel(){
 function openColorPanel(){ closeOrbStylePanel(); renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
 function closeColorPanel(){ document.body.classList.remove('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.remove('active'); }
 
-/* Panneau "Style de la bulle" : couleur + glow pour UNE bulle placée (bouton sur la bulle). */
+/* Panneau "Style de la bulle" : une bulle ou toutes les bulles placées. */
 function renderOrbStylePanel(){
+  if(_orbStyleAll) return renderOrbStyleAllPanel();
   const p=$('orbColorPanel');
   const o=(_orbStyleIdx!==null)?S.orbs[_orbStyleIdx]:null;
   if(!o){ closeOrbStylePanel(); return; }
@@ -2486,7 +2514,7 @@ function renderOrbStylePanel(){
     <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
     <div class="cp-title">Style de la bulle</div>
     <div class="orbstyle-preview">
-      <div class="orbstyle-dot" id="ocpDot" style="background:${col};box-shadow:${glowOn?'0 0 18px '+hexToRgba(col,.75):'none'},0 4px 14px rgba(0,0,0,.5)"></div>
+      ${orbStyleThumbHtml(o,col,glowOn,56)}
       <div class="orbstyle-name">${esc(o.title)}</div>
     </div>
     <div class="orbstyle-row">
@@ -2497,9 +2525,9 @@ function renderOrbStylePanel(){
     <button class="cp-reset" id="ocpReset">↺ Couleur par défaut</button>`;
   const syncPreview=()=>{
     const c=orbEffColor(o), g=!orbEffGlowOff(o);
-    const dot=p.querySelector('#ocpDot'), sw=p.querySelector('#ocpSw');
-    if(dot){ dot.style.background=c; dot.style.boxShadow=(g?'0 0 18px '+hexToRgba(c,.75)+',':'')+'0 4px 14px rgba(0,0,0,.5)'; }
-    if(sw) sw.style.background=c;
+    const prev=p.querySelector('.orbstyle-preview');
+    if(prev) prev.innerHTML=orbStyleThumbHtml(o,c,g,56)+`<div class="orbstyle-name">${esc(o.title)}</div>`;
+    const sw=p.querySelector('#ocpSw'); if(sw) sw.style.background=c;
   };
   p.querySelector('#ocpColor').addEventListener('input',e=>{
     o.color=e.target.value;
@@ -2514,16 +2542,74 @@ function renderOrbStylePanel(){
   });
   p.querySelector('#ocpReset').addEventListener('click',()=>{
     delete o.color; delete o.glow;
-    p.querySelector('#ocpColor').value=ORB_DEFAULT_COLOR[o.kind]||'#9146FF';
     renderOrbStylePanel(); renderOrbs(); persist();
     toast('Style par défaut');
   });
   p.querySelector('#ocpClose').addEventListener('click',closeOrbStylePanel);
 }
-function openOrbStylePanel(idx){ closeColorPanel(); closeSheet(); _orbStyleIdx=idx; renderOrbStylePanel(); document.body.classList.add('orbcolor-open'); }
-function closeOrbStylePanel(){ _orbStyleIdx=null; document.body.classList.remove('orbcolor-open'); }
+function renderOrbStyleAllPanel(){
+  const p=$('orbColorPanel');
+  if(!S.orbs.length){ toast('Aucune bulle placée'); closeOrbStylePanel(); return; }
+  const rows=S.orbs.map((o,i)=>{
+    const col=orbEffColor(o), glowOn=!orbEffGlowOff(o);
+    return `<div class="orbstyle-row orbstyle-row--all" data-i="${i}">
+      ${orbStyleThumbHtml(o,col,glowOn,44)}
+      <span class="orbstyle-name">${esc(o.title)}</span>
+      <label class="orbstyle-sw" style="background:${col}" title="Couleur"><input type="color" data-i="${i}" value="${col}"></label>
+      <button type="button" class="sh-contour-tgl${glowOn?' on':''}" data-glow="${i}" title="Glow"><span>Glow</span><span class="sw"></span></button>
+    </div>`;
+  }).join('');
+  p.innerHTML=`
+    <button class="cp-close" id="ocpClose" aria-label="Fermer">✕</button>
+    <div class="cp-title">Toutes les bulles</div>
+    <div class="orbstyle-all-list">${rows}</div>
+    <button class="cp-reset" id="ocpResetAll">↺ Tout remettre par défaut</button>`;
+  p.querySelectorAll('.orbstyle-sw input[type=color]').forEach(inp=>{
+    inp.addEventListener('click',e=>e.stopPropagation());
+    inp.addEventListener('input',e=>{
+      const i=+inp.dataset.i, o=S.orbs[i]; if(!o) return;
+      o.color=inp.value;
+      const row=inp.closest('.orbstyle-row--all');
+      const thumb=row&&row.querySelector('.orbstyle-thumb');
+      if(thumb){
+        const c=orbEffColor(o), g=!orbEffGlowOff(o);
+        thumb.style.setProperty('--orb-ring',c);
+        thumb.style.boxShadow=(g?'0 0 16px '+hexToRgba(c,.75)+', ':'')+'0 4px 14px rgba(0,0,0,.45)';
+      }
+      inp.closest('.orbstyle-sw').style.background=inp.value;
+      renderOrbs(); persist();
+    });
+  });
+  p.querySelectorAll('[data-glow]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const i=+btn.dataset.glow, o=S.orbs[i]; if(!o) return;
+      const wasOn=!orbEffGlowOff(o);
+      o.glow=!wasOn;
+      btn.classList.toggle('on',!wasOn);
+      const row=btn.closest('.orbstyle-row--all');
+      const thumb=row&&row.querySelector('.orbstyle-thumb');
+      if(thumb){
+        const c=orbEffColor(o);
+        thumb.style.boxShadow=(!wasOn?('0 0 16px '+hexToRgba(c,.75)+', '):'')+'0 4px 14px rgba(0,0,0,.45)';
+      }
+      renderOrbs(); persist();
+    });
+  });
+  p.querySelector('#ocpResetAll').addEventListener('click',()=>{
+    S.orbs.forEach(o=>{ delete o.color; delete o.glow; });
+    renderOrbStylePanel(); renderOrbs(); persist();
+    toast('Toutes les bulles remises par défaut');
+  });
+  p.querySelector('#ocpClose').addEventListener('click',closeOrbStylePanel);
+}
+function openOrbStylePanel(idx){ closeColorPanel(); closeSheet(); _orbStyleAll=false; _orbStyleIdx=idx; renderOrbStylePanel(); document.body.classList.add('orbcolor-open'); }
+function openOrbStyleAllPanel(){
+  if(!S.orbs.length){ toast('Place d\'abord au moins une bulle'); return; }
+  closeColorPanel(); closeSheet(); _orbStyleAll=true; _orbStyleIdx=null; renderOrbStylePanel(); document.body.classList.add('orbcolor-open');
+}
+function closeOrbStylePanel(){ _orbStyleIdx=null; _orbStyleAll=false; document.body.classList.remove('orbcolor-open'); }
 function closeOrbColorPanel(){ closeOrbStylePanel(); }
-function openOrbColorPanel(){ /* legacy */ if(S.orbs.length) openOrbStylePanel(0); }
+function openOrbColorPanel(){ openOrbStyleAllPanel(); }
 
 /* ===== 5. MUSIQUE D'ENTRÉE ===== */
 const music={sel:null,startSec:0,audio:null};
