@@ -791,14 +791,13 @@ body.orbcolor-open .card-zone{transform:translateX(158px)}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
 
-/* Bouton "toutes les bulles" dans l'en-tête du sheet Mes bulles */
-.sh-orbstyle-btn{width:32px;height:32px;border-radius:10px;border:1px solid rgba(145,70,255,.45);
-  background:linear-gradient(145deg,rgba(145,70,255,.22),rgba(91,233,255,.12));color:#E8D5FF;
+/* Bouton "Modifier" (toutes les bulles) dans l'en-tête du sheet Mes bulles */
+.sh-orbstyle-btn{padding:5px 11px;border-radius:999px;border:1px solid rgba(145,70,255,.55);
+  background:rgba(145,70,255,.14);color:#C7A5FF;font-size:11.5px;font-weight:800;letter-spacing:.02em;
   cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
-  margin-left:auto;margin-right:8px;transition:.15s ease;font-family:inherit;
-  box-shadow:0 2px 10px rgba(145,70,255,.25)}
-.sh-orbstyle-btn:hover{color:#fff;background:linear-gradient(145deg,rgba(145,70,255,.45),rgba(91,233,255,.22));transform:scale(1.05)}
-.sh-orbstyle-btn svg{width:16px;height:16px}
+  margin-left:auto;margin-right:8px;transition:.15s ease;font-family:inherit;white-space:nowrap;
+  box-shadow:0 2px 10px rgba(145,70,255,.18)}
+.sh-orbstyle-btn:hover{color:#fff;background:rgba(145,70,255,.32);border-color:#9146FF}
 
 /* Panneau "Style de la bulle" (une bulle ou toutes) */
 .orbstyle-preview{display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px 14px;border-radius:14px;
@@ -1741,7 +1740,6 @@ function curatedMatches(query,kind,limit){
 const ORB_FALLBACK_ICO={music:'🎵',game:'🎮',film:'📺'};
 const ORB_DEFAULT_COLOR={music:'#1ed760',game:'#8dcbff',film:'#c7a5ff'};
 const ORB_STYLE_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-1.5 2.2-4.2 3.8-4.2 7.2 0 2.3 1.9 4.2 4.2 4.2s4.2-1.9 4.2-4.2C16.2 6.8 13.5 5.2 12 3zm0 14.2c-3.9 0-7.2 2.4-7.2 5.3 0 .8.6 1.5 1.5 1.5h11.4c.8 0 1.5-.7 1.5-1.5 0-2.9-3.3-5.3-7.2-5.3z"/></svg>';
-const ORB_STYLE_ALL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="3.5" fill="currentColor" fill-opacity=".35" stroke="none"/><circle cx="16" cy="8" r="3.5" fill="currentColor" fill-opacity=".55" stroke="none"/><circle cx="12" cy="15" r="3.5" fill="currentColor" fill-opacity=".85" stroke="none"/><path d="M4 20h16"/></svg>';
 function orbStyleThumbHtml(o,col,glowOn,px){
   const sz=px||52, c=col||ORB_DEFAULT_COLOR[o.kind]||'#9146FF';
   const g=glowOn?('0 0 16px '+hexToRgba(c,.75)+', '):'';
@@ -1767,7 +1765,7 @@ function applyOrbStyleEl(el,o){
   el.style.setProperty('--orb-gc',glowOff?'rgba(0,0,0,0)':hexToRgba(col,.7));
 }
 function renderBubblesSheet(sh){
-  const allBtn=`<button type="button" class="sh-orbstyle-btn" id="orbStyleAllBtn" title="Modifier toutes les bulles" aria-label="Modifier toutes les bulles">${ORB_STYLE_ALL_SVG}</button>`;
+  const allBtn=`<button type="button" class="sh-orbstyle-btn" id="orbStyleAllBtn" title="Modifier toutes les bulles" aria-label="Modifier toutes les bulles">Modifier</button>`;
   sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,allBtn)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
