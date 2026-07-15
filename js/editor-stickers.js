@@ -283,13 +283,35 @@
     if (size && item) size.style.cursor = cursorForResizeHandle('se', item.rot || 0);
   }
 
+  /** Décalage local (non tourné) entre le centre du cadre plein et le centre visible. */
+  function fullVsVisibleOffset(m) {
+    return {
+      ox: (m.fullW * (m.cl - m.cr) / 100) / 2,
+      oy: (m.fullH * (m.ct - m.cb) / 100) / 2,
+    };
+  }
+
+  function rotateLocal(ox, oy, rotDeg) {
+    const r = (rotDeg || 0) * Math.PI / 180;
+    return { wx: ox * Math.cos(r) - oy * Math.sin(r), wy: ox * Math.sin(r) + oy * Math.cos(r) };
+  }
+
+  /** item.x/y : centre visible -> centre du cadre plein (image fixe). Appelé à l'entrée du mode rogner. */
+  function toFullFrameCenter(item, m) {
+    const { ox, oy } = fullVsVisibleOffset(m);
+    if (Math.abs(ox) < 0.01 && Math.abs(oy) < 0.01) return;
+    const { wx, wy } = rotateLocal(ox, oy, item.rot || 0);
+    const lr = layerEl()?.getBoundingClientRect();
+    if (!lr) return;
+    item.x -= (wx / lr.width) * 100;
+    item.y -= (wy / lr.height) * 100;
+  }
+
+  /** item.x/y : centre du cadre plein -> centre visible (image fixe). Appelé à la sortie du mode rogner. */
   function finalizeCropPosition(item, m) {
-    const ox = (m.fullW * (m.cl - m.cr) / 100) / 2;
-    const oy = (m.fullH * (m.ct - m.cb) / 100) / 2;
-    if (Math.abs(ox) < 0.5 && Math.abs(oy) < 0.5) return;
-    const r = (item.rot || 0) * Math.PI / 180;
-    const wx = ox * Math.cos(r) - oy * Math.sin(r);
-    const wy = ox * Math.sin(r) + oy * Math.cos(r);
+    const { ox, oy } = fullVsVisibleOffset(m);
+    if (Math.abs(ox) < 0.01 && Math.abs(oy) < 0.01) return;
+    const { wx, wy } = rotateLocal(ox, oy, item.rot || 0);
     const lr = layerEl()?.getBoundingClientRect();
     if (!lr) return;
     item.x += (wx / lr.width) * 100;
@@ -345,7 +367,7 @@
       img.style.objectFit = 'fill';
       img.style.clipPath = 'inset(' + m.ct + '% ' + m.cr + '% ' + m.cb + '% ' + m.cl + '%)';
       img.style.transform = '';
-    } else if (hasCrop || hasStretch) {
+    } else if (hasCrop) {
       el.style.width = m.visW + 'px';
       el.style.height = m.visH + 'px';
       img.style.position = 'absolute';
@@ -353,7 +375,18 @@
       img.style.height = m.fullH + 'px';
       img.style.left = (-m.cl / 100 * m.fullW) + 'px';
       img.style.top = (-m.ct / 100 * m.fullH) + 'px';
-      img.style.objectFit = hasStretch ? 'fill' : 'cover';
+      img.style.objectFit = 'cover';
+      img.style.clipPath = 'none';
+      img.style.transform = '';
+    } else if (hasStretch) {
+      el.style.width = m.visW + 'px';
+      el.style.height = m.visH + 'px';
+      img.style.position = 'absolute';
+      img.style.left = '0';
+      img.style.top = '0';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'fill';
       img.style.clipPath = 'none';
       img.style.transform = '';
     } else {
@@ -652,6 +685,7 @@
     activeTransform = { el, item, kind, mode };
     if (mode === 'crop') {
       ensureCropFields(item);
+      toFullFrameCenter(item, cropMetrics(el, item));
       const inner = el.querySelector('.sticker-inner');
       if (inner && !inner.querySelector('.ed-crop-shade')) {
         const shade = document.createElement('div');
