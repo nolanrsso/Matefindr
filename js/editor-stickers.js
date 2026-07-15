@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  const W_MIN = 12;
+  const W_MIN = 6;
   const W_MAX = 98;
   const W_DEFAULT = 48;
 
@@ -70,6 +70,25 @@
     return api.clamp(w, W_MIN, W_MAX);
   }
 
+  function frameSize(el) {
+    const img = el && el.querySelector('.sticker-inner img');
+    const bw = Math.max(1, el.getBoundingClientRect().width);
+    let aspect = 1;
+    if (img && img.naturalWidth > 0) aspect = img.naturalHeight / img.naturalWidth;
+    else if (img && img.offsetWidth > 0) aspect = img.offsetHeight / img.offsetWidth;
+    return { bw, bh: bw * aspect };
+  }
+
+  function syncXformFrame(el) {
+    const inner = el && el.querySelector('.sticker-inner');
+    const xform = el && el.querySelector('.ed-xform');
+    if (!inner || !xform) return;
+    xform.style.left = inner.offsetLeft + 'px';
+    xform.style.top = inner.offsetTop + 'px';
+    xform.style.width = inner.offsetWidth + 'px';
+    xform.style.height = inner.offsetHeight + 'px';
+  }
+
   function applyStickerVisual(el, item) {
     const inner = el && el.querySelector('.sticker-inner');
     const img = inner && inner.querySelector('img');
@@ -77,29 +96,57 @@
     normalizeItem(item);
     inner.style.transform = '';
     inner.style.clipPath = '';
+    inner.style.overflow = 'hidden';
     img.style.transform = '';
     img.style.objectPosition = '';
     img.style.transformOrigin = '';
-    img.style.position = '';
-    img.style.inset = '';
-    img.style.height = 'auto';
-    const ct = item.cropT || 0;
-    const cr = item.cropR || 0;
-    const cb = item.cropB || 0;
+    img.style.position = 'relative';
+    img.style.display = 'block';
+    img.style.maxWidth = 'none';
+
     const cl = item.cropL || 0;
-    if (ct || cr || cb || cl) {
-      inner.style.clipPath = 'inset(' + ct + '% ' + cr + '% ' + cb + '% ' + cl + '%)';
-    }
+    const cr = item.cropR || 0;
+    const ct = item.cropT || 0;
+    const cb = item.cropB || 0;
     const sx = item.scaleX || 1;
     const sy = item.scaleY || 1;
-    if (sx !== 1 || sy !== 1) {
-      inner.style.transform = 'scale(' + sx + ', ' + sy + ')';
+    const hasCrop = cl || cr || ct || cb;
+    const hasStretch = sx !== 1 || sy !== 1;
+
+    if (hasCrop || hasStretch) {
+      const { bw, bh } = frameSize(el);
+      const coreW = bw * (1 - cl / 100 - cr / 100);
+      const coreH = bh * (1 - ct / 100 - cb / 100);
+      const visW = Math.max(4, coreW * sx);
+      const visH = Math.max(4, coreH * sy);
+      inner.style.width = visW + 'px';
+      inner.style.height = visH + 'px';
+      inner.style.marginLeft = (bw * cl / 100) + 'px';
+      inner.style.marginTop = (bh * ct / 100) + 'px';
+      img.style.width = bw + 'px';
+      img.style.height = bh + 'px';
+      img.style.marginLeft = (-bw * cl / 100) + 'px';
+      img.style.marginTop = (-bh * ct / 100) + 'px';
+      img.style.objectFit = hasStretch ? 'fill' : 'cover';
+    } else {
+      inner.style.width = '';
+      inner.style.height = '';
+      inner.style.marginLeft = '';
+      inner.style.marginTop = '';
+      img.style.width = '100%';
+      img.style.height = 'auto';
+      img.style.marginLeft = '';
+      img.style.marginTop = '';
+      img.style.objectFit = 'cover';
     }
+
     if (item.posX != null && item.posY != null && (item.scale || 1) !== 1) {
       img.style.objectPosition = item.posX + '% ' + item.posY + '%';
       img.style.transformOrigin = item.posX + '% ' + item.posY + '%';
       img.style.transform = 'scale(' + (item.scale || 1) + ')';
     }
+
+    syncXformFrame(el);
   }
 
   function applyImgStyles(img, item) {
@@ -257,9 +304,11 @@
 
   function exitTransformMode() {
     if (!activeTransform) return;
-    activeTransform.el.classList.remove('transform-crop', 'transform-stretch');
-    activeTransform.el.querySelector('.ed-xform')?.remove();
+    const { el, item } = activeTransform;
+    el.classList.remove('transform-crop', 'transform-stretch');
+    el.querySelector('.ed-xform')?.remove();
     activeTransform = null;
+    applyStickerVisual(el, item);
   }
 
   function bindXformHandles(el, item, kind, mode) {
@@ -273,6 +322,7 @@
         try { handle.setPointerCapture(e.pointerId); } catch (_) {}
         if (mode === 'crop') ensureCropFields(item);
         else { item.scaleX = item.scaleX || 1; item.scaleY = item.scaleY || 1; }
+        const fs = frameSize(el);
         const startX = e.clientX;
         const startY = e.clientY;
         const s = {
@@ -282,39 +332,40 @@
           cropL: item.cropL || 0,
           scaleX: item.scaleX || 1,
           scaleY: item.scaleY || 1,
+          fullBw: fs.bw,
+          fullBh: fs.bh,
         };
-        const cropSens = 0.14;
-        const stretchSens = 0.008;
         const mv = ev => {
           const dx = ev.clientX - startX;
           const dy = ev.clientY - startY;
           if (mode === 'crop') {
-            if (h === 'n') item.cropT = clampN(s.cropT + dy * cropSens, 0, 45);
-            else if (h === 's') item.cropB = clampN(s.cropB - dy * cropSens, 0, 45);
-            else if (h === 'w') item.cropL = clampN(s.cropL + dx * cropSens, 0, 45);
-            else if (h === 'e') item.cropR = clampN(s.cropR - dx * cropSens, 0, 45);
+            if (h === 'n') item.cropT = clampN(s.cropT + (dy / s.fullBh) * 100, 0, 45);
+            else if (h === 's') item.cropB = clampN(s.cropB - (dy / s.fullBh) * 100, 0, 45);
+            else if (h === 'w') item.cropL = clampN(s.cropL + (dx / s.fullBw) * 100, 0, 45);
+            else if (h === 'e') item.cropR = clampN(s.cropR - (dx / s.fullBw) * 100, 0, 45);
             else if (h === 'nw') {
-              item.cropT = clampN(s.cropT + dy * cropSens, 0, 45);
-              item.cropL = clampN(s.cropL + dx * cropSens, 0, 45);
+              item.cropT = clampN(s.cropT + (dy / s.fullBh) * 100, 0, 45);
+              item.cropL = clampN(s.cropL + (dx / s.fullBw) * 100, 0, 45);
             } else if (h === 'ne') {
-              item.cropT = clampN(s.cropT + dy * cropSens, 0, 45);
-              item.cropR = clampN(s.cropR - dx * cropSens, 0, 45);
+              item.cropT = clampN(s.cropT + (dy / s.fullBh) * 100, 0, 45);
+              item.cropR = clampN(s.cropR - (dx / s.fullBw) * 100, 0, 45);
             } else if (h === 'sw') {
-              item.cropB = clampN(s.cropB - dy * cropSens, 0, 45);
-              item.cropL = clampN(s.cropL + dx * cropSens, 0, 45);
+              item.cropB = clampN(s.cropB - (dy / s.fullBh) * 100, 0, 45);
+              item.cropL = clampN(s.cropL + (dx / s.fullBw) * 100, 0, 45);
             } else if (h === 'se') {
-              item.cropB = clampN(s.cropB - dy * cropSens, 0, 45);
-              item.cropR = clampN(s.cropR - dx * cropSens, 0, 45);
+              item.cropB = clampN(s.cropB - (dy / s.fullBh) * 100, 0, 45);
+              item.cropR = clampN(s.cropR - (dx / s.fullBw) * 100, 0, 45);
             }
           } else {
-            if (h === 'e') item.scaleX = clampN(s.scaleX + dx * stretchSens, 0.2, 4);
-            else if (h === 'w') item.scaleX = clampN(s.scaleX - dx * stretchSens, 0.2, 4);
-            else if (h === 's') item.scaleY = clampN(s.scaleY + dy * stretchSens, 0.2, 4);
-            else if (h === 'n') item.scaleY = clampN(s.scaleY - dy * stretchSens, 0.2, 4);
+            const coreW = Math.max(4, s.fullBw * (1 - s.cropL / 100 - s.cropR / 100));
+            const coreH = Math.max(4, s.fullBh * (1 - s.cropT / 100 - s.cropB / 100));
+            if (h === 'e') item.scaleX = clampN(s.scaleX + dx / coreW, 0.12, 4);
+            else if (h === 'w') item.scaleX = clampN(s.scaleX - dx / coreW, 0.12, 4);
+            else if (h === 's') item.scaleY = clampN(s.scaleY + dy / coreH, 0.12, 4);
+            else if (h === 'n') item.scaleY = clampN(s.scaleY - dy / coreH, 0.12, 4);
             else {
-              const delta = (dx + dy) * stretchSens;
-              item.scaleX = clampN(s.scaleX + delta, 0.2, 4);
-              item.scaleY = clampN(s.scaleY + delta, 0.2, 4);
+              item.scaleX = clampN(s.scaleX + dx / coreW, 0.12, 4);
+              item.scaleY = clampN(s.scaleY + dy / coreH, 0.12, 4);
             }
           }
           refreshTransformImg(el, item);
@@ -480,6 +531,10 @@
       '<div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>' +
       '<div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>';
     applyStickerVisual(el, item);
+    const imgEl = el.querySelector('.sticker-inner img');
+    if (imgEl && !imgEl.complete) {
+      imgEl.addEventListener('load', () => applyStickerVisual(el, item), { once: true });
+    }
 
     const center = () => {
       const r = el.getBoundingClientRect();
@@ -550,6 +605,7 @@
       const mv = ev => {
         item.w = clampW(w0 * (Math.hypot(ev.clientX - c.x, ev.clientY - c.y) / d0));
         apply();
+        applyStickerVisual(el, item);
       };
       const up = ev => {
         rz.removeEventListener('pointermove', mv);

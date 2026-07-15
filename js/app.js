@@ -1639,29 +1639,55 @@
       if (!img || !m) return;
       const wrap = img.parentElement;
       if (!wrap) return;
+      wrap.style.height = '';
+      wrap.style.marginLeft = '';
+      wrap.style.marginTop = '';
       wrap.style.clipPath = '';
       wrap.style.overflow = '';
       img.style.transform = '';
       img.style.objectPosition = '';
       img.style.transformOrigin = '';
-      img.style.objectFit = 'cover';
-      img.style.width = '100%';
-      img.style.height = 'auto';
+      img.style.position = 'relative';
       img.style.display = 'block';
-      const ct = m.cropT || 0;
-      const cr = m.cropR || 0;
-      const cb = m.cropB || 0;
+      img.style.maxWidth = 'none';
+
       const cl = m.cropL || 0;
-      if (ct || cr || cb || cl) {
-        wrap.style.clipPath = 'inset(' + ct + '% ' + cr + '% ' + cb + '% ' + cl + '%)';
-        wrap.style.overflow = 'hidden';
-      }
+      const cr = m.cropR || 0;
+      const ct = m.cropT || 0;
+      const cb = m.cropB || 0;
       const sx = m.scaleX || 1;
       const sy = m.scaleY || 1;
-      if (sx !== 1 || sy !== 1) {
-        img.style.transformOrigin = 'center center';
-        img.style.transform = 'scale(' + sx + ', ' + sy + ')';
+      const hasCrop = cl || cr || ct || cb;
+      const hasStretch = sx !== 1 || sy !== 1;
+
+      if (hasCrop || hasStretch) {
+        const bw = Math.max(1, wrap.getBoundingClientRect().width);
+        let aspect = 1;
+        if (img.naturalWidth > 0) aspect = img.naturalHeight / img.naturalWidth;
+        else if (img.offsetWidth > 0) aspect = img.offsetHeight / img.offsetWidth;
+        const bh = bw * aspect;
+        const coreW = bw * (1 - cl / 100 - cr / 100);
+        const coreH = bh * (1 - ct / 100 - cb / 100);
+        const visW = Math.max(4, coreW * sx);
+        const visH = Math.max(4, coreH * sy);
+        wrap.style.width = visW + 'px';
+        wrap.style.height = visH + 'px';
+        wrap.style.marginLeft = (bw * cl / 100) + 'px';
+        wrap.style.marginTop = (bh * ct / 100) + 'px';
+        wrap.style.overflow = 'hidden';
+        img.style.width = bw + 'px';
+        img.style.height = bh + 'px';
+        img.style.marginLeft = (-bw * cl / 100) + 'px';
+        img.style.marginTop = (-bh * ct / 100) + 'px';
+        img.style.objectFit = hasStretch ? 'fill' : 'cover';
+      } else {
+        img.style.width = '100%';
+        img.style.height = 'auto';
+        img.style.marginLeft = '';
+        img.style.marginTop = '';
+        img.style.objectFit = 'cover';
       }
+
       if (m.posX != null && m.posY != null && m.scale) {
         img.style.objectPosition = m.posX + '% ' + m.posY + '%';
         img.style.transformOrigin = m.posX + '% ' + m.posY + '%';
