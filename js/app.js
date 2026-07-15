@@ -1637,21 +1637,36 @@
        - se mettent à jour à chaque resize */
     function applySwipeStickerImg(img, m) {
       if (!img || !m) return;
-      const sx = m.scaleX || 1;
-      const sy = m.scaleY || 1;
+      const wrap = img.parentElement;
+      if (!wrap) return;
+      wrap.style.clipPath = '';
+      wrap.style.overflow = '';
+      img.style.transform = '';
+      img.style.objectPosition = '';
+      img.style.transformOrigin = '';
       img.style.objectFit = 'cover';
       img.style.width = '100%';
-      img.style.height = '100%';
+      img.style.height = 'auto';
       img.style.display = 'block';
-      if (m.posX != null && m.posY != null) {
+      const ct = m.cropT || 0;
+      const cr = m.cropR || 0;
+      const cb = m.cropB || 0;
+      const cl = m.cropL || 0;
+      if (ct || cr || cb || cl) {
+        wrap.style.clipPath = 'inset(' + ct + '% ' + cr + '% ' + cb + '% ' + cl + '%)';
+        wrap.style.overflow = 'hidden';
+      }
+      const sx = m.scaleX || 1;
+      const sy = m.scaleY || 1;
+      if (sx !== 1 || sy !== 1) {
+        img.style.transformOrigin = 'center center';
+        img.style.transform = 'scale(' + sx + ', ' + sy + ')';
+      }
+      if (m.posX != null && m.posY != null && m.scale) {
         img.style.objectPosition = m.posX + '% ' + m.posY + '%';
         img.style.transformOrigin = m.posX + '% ' + m.posY + '%';
         const sc = m.scale || 1;
-        img.style.transform = 'scale(' + (sc * sx) + ', ' + (sc * sy) + ')';
-      } else {
-        img.style.objectPosition = '50% 50%';
-        img.style.transformOrigin = '50% 50%';
-        img.style.transform = (sx === 1 && sy === 1) ? '' : ('scale(' + sx + ', ' + sy + ')');
+        img.style.transform = 'scale(' + sc + ')';
       }
     }
     let _swipeGifsResize = null;
@@ -1694,6 +1709,7 @@
           rot: m.rot || 0,
           posX: m.posX, posY: m.posY, scale: m.scale,
           scaleX: m.scaleX, scaleY: m.scaleY,
+          cropT: m.cropT, cropR: m.cropR, cropB: m.cropB, cropL: m.cropL,
         };
       }
       function reposition(){
@@ -1755,6 +1771,7 @@
           rot: m.rot || 0,
           posX: m.posX, posY: m.posY, scale: m.scale,
           scaleX: m.scaleX, scaleY: m.scaleY,
+          cropT: m.cropT, cropR: m.cropR, cropB: m.cropB, cropL: m.cropL,
         };
       }
       function reposition(){

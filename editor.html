@@ -304,8 +304,8 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .sticker-layer{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
 .sticker{position:absolute;transform-origin:center center;pointer-events:auto;touch-action:none;cursor:grab}
 .sticker.dragging{cursor:grabbing}
-.sticker-inner{width:100%;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.55)}
-.sticker-inner img{width:100%;height:auto;display:block;pointer-events:none}
+.sticker-inner{width:100%;position:relative;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.55);line-height:0;transform-origin:center center}
+.sticker-inner img{width:100%;height:auto;display:block;pointer-events:none;object-fit:cover;vertical-align:top}
 /* Poignées (retirer/pivoter/redimensionner) masquées tant que le sticker n'est
    pas sélectionné (cliqué) — sinon elles restaient affichées en permanence sur
    TOUS les GIFs/photos, ce qui encombrait la carte. Un clic sur le sticker le
@@ -887,7 +887,6 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 #photoLayer.no-contour .sticker-inner,
 #stickerLayer.no-contour .sticker-inner{border:none;box-shadow:none}
 #photoLayer{z-index:2}
-.sticker-inner img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 
 /* Menu contextuel stickers (GIFs + photos) */
 .ed-ctx{position:fixed;z-index:320;min-width:210px;padding:6px;border-radius:12px;

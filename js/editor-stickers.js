@@ -70,24 +70,40 @@
     return api.clamp(w, W_MIN, W_MAX);
   }
 
-  function applyImgStyles(img, item) {
-    item = normalizeItem(item);
-    img.style.objectFit = 'cover';
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.display = 'block';
+  function applyStickerVisual(el, item) {
+    const inner = el && el.querySelector('.sticker-inner');
+    const img = inner && inner.querySelector('img');
+    if (!inner || !img) return;
+    normalizeItem(item);
+    inner.style.transform = '';
+    inner.style.clipPath = '';
+    img.style.transform = '';
+    img.style.objectPosition = '';
+    img.style.transformOrigin = '';
+    img.style.position = '';
+    img.style.inset = '';
+    img.style.height = 'auto';
+    const ct = item.cropT || 0;
+    const cr = item.cropR || 0;
+    const cb = item.cropB || 0;
+    const cl = item.cropL || 0;
+    if (ct || cr || cb || cl) {
+      inner.style.clipPath = 'inset(' + ct + '% ' + cr + '% ' + cb + '% ' + cl + '%)';
+    }
     const sx = item.scaleX || 1;
     const sy = item.scaleY || 1;
-    if (item.posX != null && item.posY != null) {
+    if (sx !== 1 || sy !== 1) {
+      inner.style.transform = 'scale(' + sx + ', ' + sy + ')';
+    }
+    if (item.posX != null && item.posY != null && (item.scale || 1) !== 1) {
       img.style.objectPosition = item.posX + '% ' + item.posY + '%';
       img.style.transformOrigin = item.posX + '% ' + item.posY + '%';
-      const sc = item.scale || 1;
-      img.style.transform = 'scale(' + (sc * sx) + ', ' + (sc * sy) + ')';
-    } else {
-      img.style.objectPosition = '50% 50%';
-      img.style.transformOrigin = '50% 50%';
-      img.style.transform = sx === 1 && sy === 1 ? '' : 'scale(' + sx + ', ' + sy + ')';
+      img.style.transform = 'scale(' + (item.scale || 1) + ')';
     }
+  }
+
+  function applyImgStyles(img, item) {
+    applyStickerVisual(img.closest('.sticker'), item);
   }
 
   function deselectAll() {
@@ -139,6 +155,10 @@
     delete item.posX;
     delete item.posY;
     delete item.scale;
+    delete item.cropT;
+    delete item.cropR;
+    delete item.cropB;
+    delete item.cropL;
     item.scaleX = 1;
     item.scaleY = 1;
   }
@@ -225,14 +245,14 @@
   }
 
   function ensureCropFields(item) {
-    if (item.posX == null) item.posX = 50;
-    if (item.posY == null) item.posY = 50;
-    if (item.scale == null) item.scale = 1;
+    item.cropT = item.cropT || 0;
+    item.cropR = item.cropR || 0;
+    item.cropB = item.cropB || 0;
+    item.cropL = item.cropL || 0;
   }
 
   function refreshTransformImg(el, item) {
-    const img = el.querySelector('.sticker-inner img');
-    if (img) applyImgStyles(img, item);
+    applyStickerVisual(el, item);
   }
 
   function exitTransformMode() {
@@ -256,30 +276,45 @@
         const startX = e.clientX;
         const startY = e.clientY;
         const s = {
-          posX: item.posX || 50,
-          posY: item.posY || 50,
-          scale: item.scale || 1,
+          cropT: item.cropT || 0,
+          cropR: item.cropR || 0,
+          cropB: item.cropB || 0,
+          cropL: item.cropL || 0,
           scaleX: item.scaleX || 1,
           scaleY: item.scaleY || 1,
         };
+        const cropSens = 0.14;
+        const stretchSens = 0.008;
         const mv = ev => {
           const dx = ev.clientX - startX;
           const dy = ev.clientY - startY;
           if (mode === 'crop') {
-            if (h === 'n') item.posY = clampN(s.posY - dy * 0.18, 0, 100);
-            else if (h === 's') item.posY = clampN(s.posY + dy * 0.18, 0, 100);
-            else if (h === 'w') item.posX = clampN(s.posX - dx * 0.18, 0, 100);
-            else if (h === 'e') item.posX = clampN(s.posX + dx * 0.18, 0, 100);
-            else item.scale = clampN(s.scale + (dx + dy) * 0.004, 0.5, 4);
+            if (h === 'n') item.cropT = clampN(s.cropT + dy * cropSens, 0, 45);
+            else if (h === 's') item.cropB = clampN(s.cropB - dy * cropSens, 0, 45);
+            else if (h === 'w') item.cropL = clampN(s.cropL + dx * cropSens, 0, 45);
+            else if (h === 'e') item.cropR = clampN(s.cropR - dx * cropSens, 0, 45);
+            else if (h === 'nw') {
+              item.cropT = clampN(s.cropT + dy * cropSens, 0, 45);
+              item.cropL = clampN(s.cropL + dx * cropSens, 0, 45);
+            } else if (h === 'ne') {
+              item.cropT = clampN(s.cropT + dy * cropSens, 0, 45);
+              item.cropR = clampN(s.cropR - dx * cropSens, 0, 45);
+            } else if (h === 'sw') {
+              item.cropB = clampN(s.cropB - dy * cropSens, 0, 45);
+              item.cropL = clampN(s.cropL + dx * cropSens, 0, 45);
+            } else if (h === 'se') {
+              item.cropB = clampN(s.cropB - dy * cropSens, 0, 45);
+              item.cropR = clampN(s.cropR - dx * cropSens, 0, 45);
+            }
           } else {
-            if (h === 'e') item.scaleX = clampN(s.scaleX + dx * 0.004, 0.25, 3);
-            else if (h === 'w') item.scaleX = clampN(s.scaleX - dx * 0.004, 0.25, 3);
-            else if (h === 's') item.scaleY = clampN(s.scaleY + dy * 0.004, 0.25, 3);
-            else if (h === 'n') item.scaleY = clampN(s.scaleY - dy * 0.004, 0.25, 3);
+            if (h === 'e') item.scaleX = clampN(s.scaleX + dx * stretchSens, 0.2, 4);
+            else if (h === 'w') item.scaleX = clampN(s.scaleX - dx * stretchSens, 0.2, 4);
+            else if (h === 's') item.scaleY = clampN(s.scaleY + dy * stretchSens, 0.2, 4);
+            else if (h === 'n') item.scaleY = clampN(s.scaleY - dy * stretchSens, 0.2, 4);
             else {
-              const delta = (dx + dy) * 0.004;
-              item.scaleX = clampN(s.scaleX + delta, 0.25, 3);
-              item.scaleY = clampN(s.scaleY + delta, 0.25, 3);
+              const delta = (dx + dy) * stretchSens;
+              item.scaleX = clampN(s.scaleX + delta, 0.2, 4);
+              item.scaleY = clampN(s.scaleY + delta, 0.2, 4);
             }
           }
           refreshTransformImg(el, item);
@@ -289,8 +324,6 @@
           handle.removeEventListener('pointerup', up);
           handle.removeEventListener('pointercancel', up);
           try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
-          if (kind === 'photo') api.renderPhotos();
-          else api.renderGifs();
           api.persist();
         };
         handle.addEventListener('pointermove', mv);
@@ -437,8 +470,7 @@
       el.style.top = item.y + '%';
       el.style.width = item.w + '%';
       el.style.transform = 'translate(-50%,-50%) rotate(' + item.rot + 'deg)';
-      const img = el.querySelector('img');
-      if (img) applyImgStyles(img, item);
+      applyStickerVisual(el, item);
     };
 
     apply();
@@ -447,7 +479,7 @@
       '<button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' +
       '<div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>' +
       '<div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>';
-    applyImgStyles(el.querySelector('img'), item);
+    applyStickerVisual(el, item);
 
     const center = () => {
       const r = el.getBoundingClientRect();
@@ -700,6 +732,10 @@
   function stickerFields(item) {
     const o = {};
     if (item.posX != null) { o.posX = item.posX; o.posY = item.posY; o.scale = item.scale; }
+    if (item.cropT) o.cropT = item.cropT;
+    if (item.cropR) o.cropR = item.cropR;
+    if (item.cropB) o.cropB = item.cropB;
+    if (item.cropL) o.cropL = item.cropL;
     if (item.scaleX != null && item.scaleX !== 1) o.scaleX = item.scaleX;
     if (item.scaleY != null && item.scaleY !== 1) o.scaleY = item.scaleY;
     return o;
@@ -707,6 +743,10 @@
 
   function hydrateFields(item, raw) {
     if (raw.posX != null) { item.posX = raw.posX; item.posY = raw.posY; item.scale = raw.scale; }
+    if (raw.cropT != null) item.cropT = raw.cropT;
+    if (raw.cropR != null) item.cropR = raw.cropR;
+    if (raw.cropB != null) item.cropB = raw.cropB;
+    if (raw.cropL != null) item.cropL = raw.cropL;
     if (raw.scaleX != null) item.scaleX = raw.scaleX;
     if (raw.scaleY != null) item.scaleY = raw.scaleY;
     normalizeItem(item);
