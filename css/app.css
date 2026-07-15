@@ -640,6 +640,7 @@
   .mf-vol{
     --mf-vol-btn-size:53px;
     --mf-vol-bar:78px;
+    --mf-vol-bg:rgba(255,255,255,.06);
     position:fixed;z-index:45;display:none;align-items:center;gap:0;
     top:auto;bottom:18px;left:14px;
     border:1px solid transparent;border-radius:18px;box-sizing:border-box;
@@ -664,11 +665,11 @@
   }
   body[data-shared="true"] .mf-vol{left:14px}
   .mf-vol:hover,.mf-vol.mf-vol--open{
-    background:rgba(255,255,255,.05);border-color:var(--stroke-2);padding-right:6px;
+    background:var(--mf-vol-bg);border-color:var(--stroke-2);padding-right:6px;
   }
   .mf-vol-btn{
     width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:18px;border:1px solid var(--stroke-2);
-    background:rgba(255,255,255,.05);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;
+    background:var(--mf-vol-bg);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;
     transition:background .18s ease,border-color .18s ease;box-sizing:border-box;
   }
   .mf-vol:hover .mf-vol-btn,.mf-vol.mf-vol--open .mf-vol-btn{background:transparent;border-color:transparent}
