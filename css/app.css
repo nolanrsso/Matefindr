@@ -1520,16 +1520,11 @@
 
   .swipe-card .body{
     flex:1 1 auto;padding:96px 18px 54px;display:flex;flex-direction:column;gap:10px;
-    overflow-y:auto;overflow-x:hidden;position:relative;
-    -webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;
+    overflow:hidden;position:relative;
   }
   .swipe-card.has-common-guilds .body,
   .swipe-card.has-card-connections .body{padding-bottom:200px}
   .swipe-card.has-bottom-stack.has-common-guilds.has-card-connections .body{padding-bottom:200px}
-  .swipe-card .body::-webkit-scrollbar{width:5px}
-  .swipe-card .body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px}
-  .swipe-card .body::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.32)}
-  .swipe-card .body::-webkit-scrollbar-track{background:transparent}
   .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
   .swipe-card .joined svg{opacity:.7}
 
@@ -2028,7 +2023,7 @@
     .swipe-shell-wrap{width:min(52vh,260px);height:min(96dvh,340px);max-height:100%}
     .swipe-stage{height:auto;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
     .swipe-card{max-height:100%}
-    .swipe-card .body{overflow-y:auto}
+    .swipe-card .body{overflow:hidden}
     .swipe-actions{position:fixed;left:0;right:0;bottom:10px;justify-content:center;gap:18px;z-index:23}
     #msgFab{left:12px;bottom:10px;width:52px;height:52px}
     .bf-fab--heart{right:12px;bottom:10px;width:52px;height:52px}
@@ -2348,8 +2343,8 @@
     position:relative !important;inset:auto !important;width:100%;height:100%;
     transform:none !important;cursor:default !important;animation:none !important;
   }
-  /* Le corps de la carte d'aperçu scrolle comme la vraie carte de profil */
-  .acc-preview-wrap .swipe-card.preview-mode .body{overflow-y:auto !important}
+  /* Le corps de la carte d'aperçu suit le même comportement que la vraie carte de profil (pas de scroll) */
+  .acc-preview-wrap .swipe-card.preview-mode .body{overflow:hidden !important}
   .acc-preview-wrap .swipe-card .badge-stamp{display:none !important}
   /* Frame autour du preview + bouton "Aperçu complet" en bas à droite */
   .acc-preview-frame{position:relative;width:100%;flex:1 1 auto;min-height:0;display:flex}
