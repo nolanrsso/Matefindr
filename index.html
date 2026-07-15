@@ -212,6 +212,12 @@
       <span class="brand-word">matef<span class="bw-i">&#305;<i class="bw-dot"></i></span>ndr</span>
     </a>
     <nav class="nav" aria-label="Navigation">
+      <button type="button" class="nav-ico" id="navShareLink" title="Mon lien de profil" aria-label="Mon lien de profil">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg>
+      </button>
+      <button type="button" class="nav-ico" id="navSettings" title="Paramètres" aria-label="Paramètres">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      </button>
       <a href="#" class="login" id="loginBtn"><span class="dot"></span><span data-i18n="login">Se connecter</span></a>
       <a href="#" class="account-chip" id="accountChip" aria-label="Mon profil">
         <span class="avatar" id="accountChipAvatar">?</span>
@@ -496,7 +502,7 @@
               <svg class="rate-star" data-i="5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg>
             </div>
             <div class="rate-handle" tabindex="0" role="slider" aria-label="Noter ce profil" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
-              <span class="rate-value">0.0</span>
+              <span class="rate-value"></span>
               <svg class="rate-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               <span class="rate-submitted"></span>
             </div>
@@ -520,7 +526,7 @@
             <svg class="rate-star" data-i="5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></svg>
           </div>
           <div class="rate-handle" tabindex="0" role="slider" aria-label="Noter ce profil" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
-            <span class="rate-value">0.0</span>
+            <span class="rate-value"></span>
             <svg class="rate-arrow" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             <span class="rate-submitted"></span>
           </div>
@@ -589,18 +595,19 @@
     <span class="fab-badge" id="heartFabBadge">0</span>
   </button>
 
-  <!-- Volume de la musique — slider horizontal à gauche du FAB cœur -->
-  <div class="swipe-vol" id="swipeVol" aria-label="Volume de la musique">
-    <button class="sv-ico" id="swipeVolIco" type="button" aria-label="Couper / rétablir le son">
+  <!-- Volume musique — haut-gauche (bas-gauche sur lien perso) -->
+  <div class="mf-vol" id="mfVol" aria-label="Volume de la musique">
+    <button class="mf-vol-btn" type="button" aria-label="Couper / rétablir le son">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 9v6h4l5 4V5L8 9H4z"/>
-        <path class="sv-wave sv-w1" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
-        <path class="sv-wave sv-w2" d="M19 6.5a7 7 0 0 1 0 11"/>
-        <path class="sv-wave sv-w3" d="M22 6a9 9 0 0 1 0 12"/>
-        <path class="sv-slash" d="M3 3l18 18"/>
+        <path class="mf-vol-wave" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
+        <path class="mf-vol-wave" d="M19 6.5a7 7 0 0 1 0 11"/>
+        <path class="mf-vol-slash" d="M3 3l18 18"/>
       </svg>
     </button>
-    <input type="range" id="swipeVolRange" min="0" max="100" value="50" aria-label="Volume de la musique" />
+    <div class="mf-vol-track">
+      <input class="mf-vol-range" type="range" min="0" max="100" value="50" aria-label="Volume de la musique">
+    </div>
   </div>
 
   <aside class="msg-panel" id="msgPanel" data-open="false" data-view="list" aria-label="Messages">
@@ -774,8 +781,36 @@
   </div>
 </main>
 
+<!-- Modales compte (lien perso + paramètres) -->
+<div class="conn-pop-backdrop" id="linkBackdrop" hidden></div>
+<div class="conn-pop" id="linkPop" hidden>
+  <button type="button" class="cp-close" id="linkClose" aria-label="Fermer">✕</button>
+  <div class="conn-pop-head"><b>Ton lien de partage</b></div>
+  <p class="link-sub">Choisis ton lien perso. Les gens tombent direct sur ton profil et peuvent te <b>liker</b> — ils créent un compte au passage.</p>
+  <div class="link-pset" id="linkPsetRow" hidden>
+    <div class="link-pset-label">Preset affiché par ce lien</div>
+    <div class="link-pset-slots" id="linkPsetSlots"></div>
+  </div>
+  <div class="link-input-row" id="linkInputRow"><span class="link-prefix">matefindr.com/</span><input id="linkSlug" maxlength="40" placeholder="ton-pseudo" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  <div class="link-status" id="linkStatus"></div>
+  <div class="link-share" id="linkShare" hidden>
+    <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
+    <button type="button" class="btn" id="linkCopy">Copier le lien</button>
+    <button type="button" class="btn primary" id="linkOpen">Ouvrir le lien</button>
+  </div>
+  <div class="conn-pop-actions"><button type="button" class="btn primary" id="linkEditSave" disabled>Modifier</button></div>
+</div>
+<div class="conn-pop-backdrop" id="settingsBackdrop" hidden></div>
+<div class="conn-pop settings-pop" id="settingsPop" hidden>
+  <button type="button" class="cp-close" id="settingsClose" aria-label="Fermer">✕</button>
+  <div class="conn-pop-head"><b>Paramètres</b></div>
+  <div id="settingsBody"></div>
+</div>
+
 <script src="js/connections.js"></script>
 <script src="js/discord-presence.js"></script>
+<script src="js/volume.js"></script>
+<script src="js/account-modals.js"></script>
 <script src="js/core.js"></script>
 <script src="js/landing.js"></script>
 <script src="js/app.js"></script>

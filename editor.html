@@ -115,7 +115,6 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .top-btn:hover{transform:translateY(-1px);filter:brightness(1.1);border-color:rgba(255,255,255,.28)}
 .top-btn:active{transform:translateY(0) scale(.97)}
 .top-btn svg{width:17px;height:17px}
-.top-btn--settings{margin-left:auto}
 @media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{padding:9px 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}}
 
 /* Sélecteur d'orientation (Bureau / Portrait / Paysage) — bloc normal centré
@@ -577,17 +576,23 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
   .tool-sep{margin:0 1px;flex:0 0 auto}
 }
 
-/* Bouton « Mettre à jour Discord » — bas-gauche */
-.disc-fab{position:fixed;left:22px;bottom:26px;z-index:41;display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:16px;border:none;cursor:pointer;
-  background:linear-gradient(140deg,#5865F2,#404EED);color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;
-  box-shadow:0 14px 38px rgba(64,78,237,.45),0 0 0 1px rgba(255,255,255,.08) inset;transition:transform .13s ease,filter .16s ease}
-.disc-fab:hover{transform:translateY(-2px);filter:brightness(1.08)}
-.disc-fab:active{transform:translateY(0) scale(.97)}
-.disc-fab svg{width:18px;height:18px}
-.disc-fab.spinning svg{animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:560px){.disc-fab span{display:none}.disc-fab{padding:13px}}
+/* Volume musique — bouton glass + barre blanche au survol (haut-gauche) */
+.mf-vol{position:fixed;top:70px;left:14px;z-index:39;display:flex;align-items:center;gap:0}
+.mf-vol-btn{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease}
+.mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(255,255,255,.12)}
+.mf-vol-btn svg{width:20px;height:20px;display:block}
+.mf-vol-slash{display:none}
+.mf-vol.muted .mf-vol-wave{display:none}
+.mf-vol.muted .mf-vol-slash{display:block}
+.mf-vol.muted .mf-vol-btn{color:rgba(255,126,182,.92)}
+.mf-vol-track{width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;transition:width .22s ease,opacity .18s ease,margin-left .22s ease}
+.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:96px;opacity:1;margin-left:10px}
+.mf-vol-range{-webkit-appearance:none;appearance:none;width:96px;height:4px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
+.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:10px;height:10px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+.mf-vol-range::-moz-range-thumb{width:10px;height:10px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:72px}.mf-vol-range{width:72px}}
 
+/* Presets de profil (Boost) — dans Paramètres */
 /* Bouton upsell "Passez à Matefindr Boost" — bas-droite, doré (non-Boost uniquement) */
 .boost-fab{position:fixed;right:22px;bottom:26px;z-index:41;display:none;align-items:center;gap:9px;padding:13px 20px;border-radius:16px;border:none;cursor:pointer;
   background:linear-gradient(180deg,#FFD15C,#F5A623);color:#3d1e00;font-family:inherit;font-weight:800;font-size:14px;
@@ -596,34 +601,14 @@ body.not-boost .boost-fab{display:inline-flex}
 .boost-fab:hover{transform:translateY(-2px);filter:brightness(1.06)}
 .boost-fab:active{transform:translateY(0) scale(.97)}
 .boost-fab svg{width:18px;height:18px}
-/* Masqué sur mobile : en bas-droite comme la toolbar (centrée, quasi pleine
-   largeur en mobile), il se retrouvait SUPERPOSÉ à la toolbar (z-index plus
-   haut), cachant les outils Aperçu/Fond. Les outils Boost restent signalés
-   en doré dans la toolbar elle-même (body.not-boost .tool--boost). */
 @media(max-width:600px){.boost-fab{display:none !important}}
-
-/* ===== Volume des previews audio de l'éditeur (bulles son, musique, vocal) ===== */
-.ed-vol{position:fixed;right:16px;top:70px;z-index:39;display:flex;align-items:center;gap:9px;height:44px;padding:0 14px 0 11px;border-radius:16px;
-  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:none;backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.4)}
-.ed-vol .ev-ico{background:none;border:none;padding:0;width:22px;height:22px;color:#fff;cursor:pointer;flex:0 0 auto;display:grid;place-items:center}
-.ed-vol .ev-ico svg{width:20px;height:20px;display:block}
-.ed-vol.muted .ev-w{display:none}
-.ed-vol.muted .ev-slash{display:block !important}
-.ed-vol.muted .ev-ico{color:#FF7EB6}
-.ed-vol input[type=range]{-webkit-appearance:none;appearance:none;width:96px;height:5px;border-radius:999px;background:linear-gradient(90deg,#FF7EB6,#9146FF);outline:none;cursor:pointer;flex:0 0 auto}
-.ed-vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
-.ed-vol input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:none;box-shadow:0 2px 7px rgba(0,0,0,.55);cursor:pointer}
-@media(max-width:600px){.ed-vol{top:62px;right:12px;height:38px;padding:0 11px 0 9px;gap:6px}.ed-vol input[type=range]{width:64px}}
-
-/* ===== Presets de profil (Boost uniquement) — colonne en haut à gauche ===== */
-.pset-panel{position:fixed;left:14px;top:70px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
-  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.45)}
 /* Non-boost : les presets restent VISIBLES (upsell). Le "+" passe en or et
    ouvre le pop-up Boost au clic (géré en JS). */
 body.not-boost .pset-slot--empty{border-color:rgba(245,166,35,.75);color:#FFD15C;background:rgba(245,166,35,.08)}
 body.not-boost .pset-slot--empty:hover{border-color:#FFD15C;color:#fff;background:rgba(245,166,35,.18)}
 body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
-.pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;padding:0 2px 1px}
+.ss-presets .pset-slots{display:flex;flex-direction:row;gap:6px;flex-wrap:wrap;margin-top:6px}
+.ss-presets .pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px}
 .pset-boost{font-size:8px;color:#3d1e00;background:linear-gradient(180deg,#FFD15C,#F5A623);padding:1px 5px;border-radius:6px;font-weight:900;letter-spacing:.04em}
 .pset-slots{display:flex;flex-direction:row;gap:6px}
 .pset-slot{position:relative;width:42px;height:42px;border-radius:12px;cursor:pointer;display:grid;place-items:center;
@@ -642,28 +627,10 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
   display:none;place-items:center;cursor:pointer;z-index:3;padding:0}
 .pset-slot .pset-dup svg{width:11px;height:11px}
 .pset-slot--filled:hover .pset-del,.pset-slot--filled:hover .pset-dup{display:grid}
-/* Bouton toggle — visible seulement sur mobile (desktop = panneau toujours ouvert). */
-.pset-toggle{display:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;place-items:center}
-.pset-toggle svg{width:20px;height:20px}
-.pset-toggle:hover{background:rgba(145,70,255,.16)}
-@media(max-width:600px){
-  /* Mobile : la carte occupe ~92vw → un panneau permanent recouvrirait l'avatar.
-     On replie : bouton toggle (dans la bande AU-DESSUS de la carte, pas de chevauchement),
-     et les slots s'ouvrent en pop-over à la demande par-dessus la carte. */
-  .pset-panel{left:10px;top:58px;padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
-  .pset-toggle{display:grid;background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(18,12,42,.92));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 28px rgba(0,0,0,.45)}
-  .pset-panel.open .pset-toggle{border-color:rgba(179,128,255,.9);background:rgba(145,70,255,.22)}
-  .pset-body{display:none;position:absolute;top:46px;left:0;padding:8px;border-radius:14px;
-    background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(18,12,42,.94));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 14px 40px rgba(0,0,0,.5)}
-  .pset-panel.open .pset-body{display:block}
-  .pset-head{display:none}
-  .pset-slots{flex-direction:row}
-  .pset-slot{width:38px;height:38px;border-radius:10px}
-}
 
 /* Connexions (réseaux sociaux) */
 .connections{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
-.conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:grab;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease,opacity .14s ease;padding:0;touch-action:none}
+.conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:grab;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease,opacity .14s ease;padding:0;touch-action:none;flex:0 0 40px}
 .conn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.3)}
 .conn:active{cursor:grabbing}
 .conn.dragging{opacity:.45;transform:scale(.94)}
@@ -671,22 +638,60 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
 .conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
 .conn .conn-ico-svg svg{width:20px;height:20px}
-.conn-add-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease}
+.conn-add-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease;flex:0 0 100%;width:max-content;max-width:100%;margin-top:2px}
 .conn-add-btn:hover{border-color:rgba(145,70,255,.55);background:rgba(145,70,255,.12)}
 .conn-add-btn svg{width:15px;height:15px;opacity:.85}
 .conn .conn-del{position:absolute;right:-5px;top:-5px;width:17px;height:17px;border-radius:50%;background:#FF4FA0;border:2px solid var(--card);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 6px rgba(255,79,160,.5)}
 .conn .conn-del svg{width:9px;height:9px;color:#fff}
 .conn .conn-del:hover{transform:scale(1.15)}
-.conn-modal-backdrop{position:fixed;inset:0;z-index:86;background:rgba(6,7,12,.72);backdrop-filter:blur(8px)}
-.conn-modal-backdrop[hidden]{display:none}
-.conn-pick-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:87;width:min(94vw,680px);max-height:min(88vh,760px);overflow:hidden auto;border-radius:20px;padding:22px 22px 18px;
-  background:linear-gradient(180deg,rgba(22,22,26,.99),rgba(12,12,16,.99));border:1px solid rgba(255,255,255,.08);box-shadow:0 34px 90px rgba(0,0,0,.75)}
+/* ===== Design modales unifié (style connexions — charcoal glass) ===== */
+:root{
+  --mf-modal-bg:linear-gradient(180deg,rgba(22,22,26,.99),rgba(12,12,16,.99));
+  --mf-modal-border:rgba(255,255,255,.08);
+  --mf-modal-shadow:0 34px 90px rgba(0,0,0,.75);
+  --mf-modal-radius:20px;
+  --mf-backdrop:rgba(6,7,12,.72);
+}
+.mf-modal-backdrop,.conn-modal-backdrop,.conn-pop-backdrop{
+  position:fixed;inset:0;z-index:298;background:var(--mf-backdrop);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+}
+.mf-modal-backdrop[hidden],.conn-modal-backdrop[hidden],.conn-pop-backdrop[hidden]{display:none}
+.mf-close-btn,.conn-pick-close,.conn-add-close,.cp-close{
+  width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);
+  color:var(--dim);cursor:pointer;font-size:15px;font-family:inherit;display:grid;place-items:center;flex:0 0 auto
+}
+.mf-close-btn:hover,.conn-pick-close:hover,.conn-add-close:hover,.cp-close:hover{color:#fff;background:rgba(255,255,255,.10)}
+.sheet,.modal .box:not(.boost-gate-box),.conn-pop,.conn-pick-sheet,.conn-add-modal,.color-panel,.dk-pick,#tourCard{
+  background:var(--mf-modal-bg);border:1px solid var(--mf-modal-border);box-shadow:var(--mf-modal-shadow)
+}
+.sheet .btn.primary,.modal .box:not(.boost-gate-box) .btn.primary,.conn-pop .btn.primary,.conn-add-foot .btn-add{
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.08);box-shadow:none;color:#fff
+}
+.sheet .btn.primary:hover,.modal .box:not(.boost-gate-box) .btn.primary:hover,.conn-pop .btn.primary:hover,.conn-add-foot .btn-add:hover{background:rgba(255,255,255,.18)}
+
+/* Popups éditeur (lien, pseudo, clip jeu, paramètres) — même DA que conn-pick */
+.conn-pop{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:299;
+  width:min(92vw,420px);max-height:min(88vh,760px);overflow:hidden auto;
+  border-radius:var(--mf-modal-radius);padding:20px 20px 18px;color:#fff;
+}
+.conn-pop:not([hidden]){display:block}
+.conn-pop[hidden]{display:none !important}
+.conn-pop .cp-close{position:absolute;top:16px;right:16px}
+.conn-pop-head{margin:0 0 8px;padding-right:36px}
+.conn-pop-head b{display:block;font-size:17px;font-weight:800;line-height:1.25}
+.conn-pop-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:16px}
+.conn-pop-actions .btn.ghost-danger{background:transparent;border:none;color:var(--dim);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:8px 0;margin-right:auto}
+.conn-pop-actions .btn.ghost-danger:hover{color:#FF6B8A}
+#sheetBackdrop{z-index:38}
+
+.conn-pick-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:299;width:min(94vw,680px);max-height:min(88vh,760px);overflow:hidden auto;border-radius:var(--mf-modal-radius);padding:22px 22px 18px}
 .conn-pick-sheet[hidden]{display:none}
 .conn-pick-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px}
 .conn-pick-head h2{margin:0;font-size:18px;font-weight:800;line-height:1.25}
 .conn-pick-sub{margin:0 0 16px;color:var(--dim);font-size:13px;line-height:1.45}
 .conn-pick-close{width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:15px;font-family:inherit;flex:0 0 auto}
-.conn-pick-close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.conn-pick-close:hover,.conn-add-close:hover{color:#fff;background:rgba(255,255,255,.10)}
 .conn-pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
 .conn-pick-tile{aspect-ratio:1;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;padding:0;transition:transform .12s ease,background .12s ease,border-color .12s ease}
 .conn-pick-tile:hover{transform:translateY(-2px);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
@@ -697,13 +702,12 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-pick-tile--wide span{font-size:12px;font-weight:700;color:#fff;text-align:left;line-height:1.25;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conn-pick-tile--wide .conn-ico-svg,.conn-pick-tile--wide img{width:24px;height:24px;flex:0 0 auto}
 .conn-favicon{border-radius:6px;object-fit:contain;background:rgba(255,255,255,.06)}
-.conn-add-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:88;width:min(92vw,420px);padding:20px;border-radius:18px;
-  background:linear-gradient(180deg,rgba(24,24,28,.99),rgba(14,14,18,.99));border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 80px rgba(0,0,0,.78)}
+.conn-add-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:300;width:min(92vw,420px);padding:20px;border-radius:var(--mf-modal-radius)}
 .conn-add-modal[hidden]{display:none}
 .conn-add-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
 .conn-add-top h3{margin:0;font-size:17px;font-weight:800;line-height:1.25}
 .conn-add-close{width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:14px;font-family:inherit}
-.conn-add-close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.conn-add-close:hover{color:#fff;background:rgba(255,255,255,.10)}
 .conn-mode-lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--dim);margin-bottom:8px}
 .conn-mode-lbl .q{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,.18);display:grid;place-items:center;font-size:10px;color:var(--dim)}
 .conn-mode-tgl{display:flex;gap:0;padding:3px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-bottom:14px}
@@ -730,10 +734,10 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-add-foot .btn-remove:hover{color:#FF6B8A}
 .conn-add-foot .btn-add{padding:10px 18px;border-radius:11px;border:none;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-left:auto}
 .conn-add-foot .btn-add:hover{background:rgba(255,255,255,.18)}
-.conn-pop-backdrop{position:fixed;inset:0;z-index:84;background:rgba(8,9,14,.55);backdrop-filter:blur(6px)}
 /* ===== Modale "Ton lien de partage" ===== */
 .top-btn--link{color:#C7A5FF}
 .top-btn--link:hover{background:rgba(145,70,255,.16);color:#E3D2FF}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
 .link-sub{color:var(--dim);font-size:12.5px;line-height:1.5;margin:0 0 12px}
 .link-input-row{display:flex;align-items:stretch;border-radius:11px;overflow:hidden;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05)}
 .link-input-row[hidden]{display:none}
@@ -758,27 +762,21 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .link-pset-slot--active{border-color:#9146FF;box-shadow:0 0 0 3px rgba(145,70,255,.3)}
 .link-pset-slot .pset-swatch{position:absolute;inset:2px;border-radius:7px;opacity:.9;pointer-events:none}
 .link-pset-slot .pset-num{position:relative;z-index:1;font-size:11px;text-shadow:0 1px 5px rgba(0,0,0,.8)}
-.conn-pop-backdrop{position:fixed;inset:0;z-index:84;background:rgba(8,9,14,.55);backdrop-filter:blur(6px)}
-.conn-pop-backdrop[hidden]{display:none}
 .hide-card #card{opacity:0;pointer-events:none}
 .hide-orbs #orbLayer{opacity:0;pointer-events:none}
 .hide-gifs #stickerLayer{opacity:0;pointer-events:none}
 .hide-photos #photoLayer{opacity:0;pointer-events:none}
 
-/* ===================== SHEET ===================== */
-.sheet{position:fixed;left:50%;bottom:92px;transform:translate(-50%,18px);z-index:39;width:min(94vw,520px);max-height:54vh;overflow:hidden auto;border-radius:20px;padding:16px;
-  background:linear-gradient(180deg, rgb(28,22,58), rgb(18,12,42));border:1px solid var(--stroke-2);
-  backdrop-filter:blur(24px) saturate(150%);box-shadow:0 24px 70px rgba(0,0,0,.65);opacity:0;pointer-events:none;
-  transition:opacity .22s ease, transform .26s cubic-bezier(.2,.8,.3,1)}
+/* ===================== SHEET (panneau outils — au-dessus de la toolbar) ===================== */
+.sheet{position:fixed;left:50%;bottom:92px;transform:translate(-50%,18px);z-index:39;width:min(94vw,520px);max-height:54vh;overflow:hidden auto;border-radius:var(--mf-modal-radius);padding:16px;
+  opacity:0;pointer-events:none;transition:opacity .22s ease, transform .26s cubic-bezier(.2,.8,.3,1)}
 .sheet.open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
 
 /* ===== Panneau "Couleur de la carte" : tiroir gauche + carte glissée à droite ===== */
 .color-panel{position:fixed;left:0;top:0;bottom:0;z-index:41;width:min(84vw,300px);
   padding:72px 20px 26px;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  background:linear-gradient(180deg,rgba(26,21,48,.97),rgba(13,11,24,.98));
-  border-right:1px solid var(--stroke-2);box-shadow:24px 0 70px rgba(0,0,0,.55);
-  transform:translateX(-101%);transition:transform .34s cubic-bezier(.6,.05,.2,1);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  border-right:1px solid var(--mf-modal-border);
+  transform:translateX(-101%);transition:transform .34s cubic-bezier(.6,.05,.2,1)}
 body.color-open #colorPanel{transform:translateX(0)}
 body.orbcolor-open #orbColorPanel{transform:translateX(0)}
 .card-zone{transition:transform .34s cubic-bezier(.6,.05,.2,1)}
@@ -794,7 +792,7 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 }
 .cp-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:9px;border:1px solid var(--stroke-2);
   background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:13px;font-family:inherit}
-.cp-close:hover{color:#fff;background:rgba(255,79,160,.18)}
+.cp-close:hover{color:#fff;background:rgba(255,255,255,.10)}
 .cp-title{font-size:12px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:16px}
 .cp-grad-wrap{display:flex;align-items:stretch;gap:16px;margin-bottom:20px}
 .grad-vert{position:relative;width:92px;min-height:232px;border-radius:22px;flex:0 0 auto;
@@ -819,9 +817,9 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .cp-reset:hover{background:rgba(255,255,255,.1)}
 .cp-div{height:1px;background:var(--stroke-2);margin:18px 0 14px}
 .sheet h3{margin:0 0 12px;padding:16px 16px 12px;margin-left:-16px;margin-right:-16px;margin-top:-16px;font-size:15px;display:flex;align-items:center;justify-content:space-between;font-weight:700;
-  position:sticky;top:-16px;z-index:2;background:rgb(28,22,58);border-bottom:1px solid var(--stroke-2)}
-.sheet h3 .close{width:26px;height:26px;border-radius:8px;border:1px solid var(--stroke);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:12px;font-family:inherit}
-.sheet h3 .close:hover{color:#fff;background:rgba(255,79,160,.18)}
+  position:sticky;top:-16px;z-index:2;background:rgba(18,18,22,.98);border-bottom:1px solid var(--mf-modal-border)}
+.sheet h3 .close{width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:15px;font-family:inherit;display:grid;place-items:center}
+.sheet h3 .close:hover{color:#fff;background:rgba(255,255,255,.10)}
 .sheet h3 .sh-title{display:inline-flex;align-items:center;gap:9px;min-width:0}
 .sheet-count{display:inline-flex;align-items:baseline;gap:3px;padding:3px 11px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.02em;white-space:nowrap;
   background:rgba(145,70,255,.18);border:1px solid rgba(145,70,255,.45);color:#D9C7FF}
@@ -847,29 +845,23 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
 
-/* Bulles déjà placées — édition depuis l'onglet Mes bulles */
-.orb-placed{margin-bottom:12px}
-.orb-placed-hd{font-size:10.5px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.orb-placed-list{display:flex;flex-direction:column;gap:6px}
-.orb-placed-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.04)}
-.orb-placed-thumb{width:34px;height:34px;border-radius:50%;flex:0 0 auto;overflow:hidden;border:2px solid rgba(255,255,255,.35);background:#1c1d22;display:grid;place-items:center;box-shadow:0 3px 10px rgba(0,0,0,.35)}
-.orb-placed-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.orb-placed-thumb .orb-placed-ph{font-size:15px;line-height:1}
-.orb-placed-title{flex:1;font-size:12px;font-weight:700;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.orb-placed-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto}
-.orb-placed-swatch{width:28px;height:28px;border-radius:50%;flex:0 0 auto;border:2.5px solid #fff;cursor:pointer;
-  box-shadow:0 3px 10px rgba(0,0,0,.4);transition:transform .12s ease;padding:0;font:inherit}
-.orb-placed-swatch:hover{transform:scale(1.1)}
-.orb-placed-game{width:28px;height:28px;border-radius:50%;flex:0 0 auto;border:2px solid #0d0b1e;
-  background:linear-gradient(135deg,#5BE9FF,#2F7BD8);color:#072033;font-size:13px;font-weight:800;cursor:pointer;line-height:1;
-  display:grid;place-items:center;box-shadow:0 3px 10px rgba(91,233,255,.55);transition:transform .12s ease}
-.orb-placed-game:hover{transform:scale(1.1)}
+/* Aperçu des bulles actives dans l'en-tête du sheet Mes bulles */
+.sh-head-tools{display:flex;align-items:center;gap:8px;margin-left:auto;margin-right:8px;min-width:0;flex:1 1 auto;justify-content:flex-end}
+.sh-orbs-preview{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;overflow-x:auto;max-width:min(52vw,300px);padding:2px 0;scrollbar-width:none}
+.sh-orbs-preview::-webkit-scrollbar{display:none}
+.sh-orbs-preview:empty{display:none}
+.sh-orb-chip{width:26px;height:26px;border-radius:50%;flex:0 0 auto;overflow:hidden;border:2.5px solid var(--chip-ring,#fff);background:#1c1d22;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer;padding:0;font:inherit;transition:transform .12s ease,opacity .12s ease,filter .12s ease}
+.sh-orb-chip img{width:100%;height:100%;object-fit:cover;display:block}
+.sh-orb-chip .sh-orb-ph{font-size:10px;line-height:1}
+.sh-orb-chip:not(.is-active){opacity:.42;filter:saturate(.45)}
+.sh-orb-chip.is-active{opacity:1;filter:none}
+.sh-orb-chip:hover{transform:scale(1.1)}
 
 /* Bouton "Modifier" (toutes les bulles) dans l'en-tête du sheet Mes bulles */
 .sh-orbstyle-btn{padding:5px 11px;border-radius:999px;border:1px solid rgba(145,70,255,.55);
   background:rgba(145,70,255,.14);color:#C7A5FF;font-size:11.5px;font-weight:800;letter-spacing:.02em;
   cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
-  margin-left:auto;margin-right:8px;transition:.15s ease;font-family:inherit;white-space:nowrap;
+  transition:.15s ease;font-family:inherit;white-space:nowrap;
   box-shadow:0 2px 10px rgba(145,70,255,.18)}
 .sh-orbstyle-btn:hover{color:#fff;background:rgba(145,70,255,.32);border-color:#9146FF}
 
@@ -926,10 +918,8 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .orbstyle-sw:focus-visible{outline:2px solid rgba(145,70,255,.75);outline-offset:2px}
 
 /* Sélecteur de couleur sombre (remplace le picker natif blanc) */
-.dk-pick{position:fixed;z-index:120;width:248px;padding:14px;border-radius:16px;
-  background:linear-gradient(180deg,rgba(28,22,58,.98),rgba(13,11,24,.99));
-  border:1px solid var(--stroke-2);box-shadow:0 24px 70px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.04) inset;
-  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;user-select:none}
+.dk-pick{position:fixed;z-index:120;width:248px;padding:14px;border-radius:var(--mf-modal-radius);
+  touch-action:none;user-select:none}
 .dk-pick[hidden]{display:none!important}
 .dk-pick-sv{position:relative;height:148px;border-radius:12px;cursor:crosshair;overflow:hidden;margin-bottom:10px;
   box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08) inset}
@@ -1074,11 +1064,12 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .set-sheet .ss-danger{border-top:1px solid var(--stroke-2);padding-top:14px}
 .set-sheet .ss-danger .btn{width:100%}
 .set-sheet .ss-danger .btn+.btn{margin-top:8px}
+.settings-pop{width:min(92vw,440px)}
 
 /* ===================== MODALES ===================== */
-.modal{position:fixed;inset:0;z-index:80;display:none;place-items:center;padding:18px;background:rgba(8,9,14,.82);backdrop-filter:blur(14px)}
+.modal{position:fixed;inset:0;z-index:80;display:none;place-items:center;padding:18px;background:var(--mf-backdrop);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 .modal.open{display:grid}
-.modal .box{width:min(94vw,480px);border-radius:22px;padding:20px;background:linear-gradient(180deg, rgba(28,22,58,.97), rgba(18,12,42,.97));border:1px solid var(--stroke-2);box-shadow:0 30px 90px rgba(0,0,0,.8);animation:modalIn .3s cubic-bezier(.2,.8,.3,1.15) both}
+.modal .box{width:min(94vw,480px);border-radius:var(--mf-modal-radius);padding:20px;animation:modalIn .3s cubic-bezier(.2,.8,.3,1.15) both}
 @keyframes modalIn{from{transform:scale(.88) translateY(14px);opacity:0}}
 /* ===== DA popup Matefindr Boost (or premium) ===== */
 .modal .box.boost-gate-box{position:relative;overflow:hidden;text-align:center;padding:28px 24px 20px;width:min(94vw,420px);
@@ -1145,7 +1136,7 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .rec-redo:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}
 .rec-redo svg{width:15px;height:15px}
 
-.toast{position:fixed;left:50%;bottom:104px;transform:translate(-50%,16px);z-index:90;padding:12px 18px;border-radius:14px;font-size:13.5px;font-weight:600;background:linear-gradient(180deg, rgba(28,22,58,.95), rgba(20,16,46,.95));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(140%);box-shadow:0 18px 50px rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:.24s ease}
+.toast{position:fixed;left:50%;bottom:104px;transform:translate(-50%,16px);z-index:90;padding:12px 18px;border-radius:14px;font-size:13.5px;font-weight:600;background:var(--mf-modal-bg);border:1px solid var(--mf-modal-border);box-shadow:var(--mf-modal-shadow);opacity:0;pointer-events:none;transition:.24s ease}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 /* ===== Tutoriel guidé (1er passage) + warning « moins de 4 bulles » ===== */
@@ -1155,9 +1146,8 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 #tourSpot.show{opacity:1}
 #tourSpot.center{box-shadow:0 0 0 9999px rgba(8,6,20,.82)}
 #tourCard{position:fixed;z-index:9001;width:min(92vw,344px);box-sizing:border-box;
-  background:linear-gradient(180deg,rgba(32,24,64,.99),rgba(20,14,44,.99));
-  border:1px solid var(--stroke-2);border-radius:18px;padding:18px 18px 15px;color:#fff;
-  box-shadow:0 24px 70px rgba(0,0,0,.7);opacity:0;transform:translateY(8px);transition:.28s ease;pointer-events:auto}
+  border-radius:var(--mf-modal-radius);padding:18px 18px 15px;color:#fff;
+  opacity:0;transform:translateY(8px);transition:.28s ease;pointer-events:auto}
 #tourCard.show{opacity:1;transform:none}
 #tourCard .tc-step{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:#b89cff;text-transform:uppercase;margin-bottom:6px}
 #tourCard h4{font-family:"Inter",sans-serif;font-weight:800;font-size:17px;margin:0 0 6px}
@@ -1168,11 +1158,11 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 #tourCard .tc-btns{display:flex;gap:8px;align-items:center}
 #tourCard .tc-skip{background:none;border:none;color:#9b97ad;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;padding:8px 2px}
 #tourCard .tc-skip:hover{color:#fff}
-#tourCard .tc-next{margin-left:auto;padding:10px 18px;border-radius:11px;border:none;cursor:pointer;
-  font-family:inherit;font-weight:800;font-size:13.5px;color:#fff;background:linear-gradient(135deg,#9146FF,#6B2BFF);box-shadow:0 8px 22px rgba(107,43,255,.45)}
-#tourCard .tc-next:hover{transform:translateY(-1px)}
-#tourCard .tc-quit{position:absolute;top:9px;right:12px;background:none;border:none;color:#8b88a0;font-size:18px;cursor:pointer;line-height:1}
-#tourCard .tc-quit:hover{color:#fff}
+#tourCard .tc-next{margin-left:auto;padding:10px 18px;border-radius:11px;border:1px solid rgba(255,255,255,.08);cursor:pointer;
+  font-family:inherit;font-weight:800;font-size:13.5px;color:#fff;background:rgba(255,255,255,.12);box-shadow:none}
+#tourCard .tc-next:hover{background:rgba(255,255,255,.18);transform:translateY(-1px)}
+#tourCard .tc-quit{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);font-size:15px;cursor:pointer;line-height:1;display:grid;place-items:center;font-family:inherit}
+#tourCard .tc-quit:hover{color:#fff;background:rgba(255,255,255,.10)}
 /* Ancré en BAS, au-dessus de la toolbar (comme .music-now) — PAS en haut :
    le haut (topbar + sélecteur d'orientation + début de carte) est un espace
    trop étroit pour ce texte long, et top:64px l'y faisait ENTIÈREMENT
@@ -1207,7 +1197,7 @@ html.perf-lite *{
 }
 </style>
 </head>
-<body>
+<body class="editor-page">
 
 <div class="bg-layer bg-default" id="bgLayer">
   <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
@@ -1217,48 +1207,25 @@ html.perf-lite *{
 <header class="topbar">
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
   <span class="crumb">/ éditeur de profil</span>
-  <button class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
-  <button class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
+  <div class="topbar-actions">
+  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
+  <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
+  </div>
 </header>
 
-<!-- Modale : créer/choisir son lien de partage matefindr.com/<slug> -->
-<div class="conn-pop-backdrop" id="linkBackdrop" hidden></div>
-<div class="conn-pop" id="linkPop" hidden>
-  <button type="button" class="cp-close" id="linkClose" aria-label="Fermer">✕</button>
-  <div class="conn-pop-head"><b>Ton lien de partage</b></div>
-  <p class="link-sub">Choisis ton lien perso. Les gens tombent direct sur ton profil et peuvent te <b>liker</b> — ils créent un compte au passage.</p>
-  <div class="link-pset" id="linkPsetRow" hidden>
-    <div class="link-pset-label">Preset affiché par ce lien</div>
-    <div class="link-pset-slots" id="linkPsetSlots"></div>
-  </div>
-  <div class="link-input-row" id="linkInputRow"><span class="link-prefix">matefindr.com/</span><input id="linkSlug" maxlength="40" placeholder="ton-pseudo" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-  <div class="link-status" id="linkStatus"></div>
-  <div class="link-share" id="linkShare" hidden>
-    <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
-    <button type="button" class="btn" id="linkCopy">Copier le lien</button>
-    <button type="button" class="btn primary" id="linkOpen">Ouvrir le lien</button>
-  </div>
-  <div class="conn-pop-actions"><button class="btn primary" id="linkEditSave" disabled>Modifier</button></div>
-</div>
-
-<!-- Presets de profil (Boost) : slot vide = enregistrer l'état actuel ; slot rempli = charger ; × = supprimer.
-     Mobile : replié derrière un bouton toggle (la carte y occupe presque toute la largeur). -->
-<aside class="pset-panel" id="psetPanel" aria-label="Presets de profil">
-  <button class="pset-toggle" id="psetToggle" type="button" aria-label="Presets" title="Presets">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+<!-- Volume musique — haut-gauche (style bouton glass + barre au survol) -->
+<div class="mf-vol" id="mfVol" aria-label="Volume de la musique">
+  <button class="mf-vol-btn" type="button" aria-label="Couper / rétablir le son">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9v6h4l5 4V5L8 9H4z"/>
+      <path class="mf-vol-wave" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
+      <path class="mf-vol-wave" d="M19 6.5a7 7 0 0 1 0 11"/>
+      <path class="mf-vol-slash" d="M3 3l18 18"/>
+    </svg>
   </button>
-  <div class="pset-body">
-    <div class="pset-head">Presets</div>
-    <div class="pset-slots" id="psetSlots"></div>
+  <div class="mf-vol-track">
+    <input class="mf-vol-range" type="range" min="0" max="100" value="50" aria-label="Volume de la musique">
   </div>
-</aside>
-
-<!-- Volume des previews audio de l'éditeur -->
-<div class="ed-vol" id="edVol" aria-label="Volume des previews audio">
-  <button class="ev-ico" id="edVolIco" type="button" aria-label="Couper / rétablir le son">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="ev-w" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="ev-slash" d="M3 3l18 18" style="display:none"/></svg>
-  </button>
-  <input id="edVolRange" type="range" min="0" max="100" value="50" aria-label="Volume des previews">
 </div>
 
 <main class="stage">
@@ -1331,8 +1298,6 @@ html.perf-lite *{
 </nav>
 
 <div class="drop-guide" id="dropGuide" aria-hidden="true"></div>
-
-<button class="disc-fab" id="btnResync" title="Recharger ton profil depuis Discord"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg><span>Mettre à jour le profil Discord</span></button>
 
 <button class="boost-fab" id="btnBoostUpsell" title="Passer à Matefindr Boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg><span>Passez à Matefindr Boost</span></button>
 
@@ -1414,6 +1379,7 @@ html.perf-lite *{
   </div>
   <div class="dk-pick-presets" id="dkPickPresets"></div>
 </div>
+<div class="mf-modal-backdrop" id="sheetBackdrop" hidden></div>
 <div class="sheet" id="sheet"></div>
 
 <div class="modal" id="boostGate"><div class="box boost-gate-box">
@@ -1429,12 +1395,6 @@ html.perf-lite *{
   </div>
   <button class="bg-cta" id="bgateBuy"><span>Passer en Matefindr Boost</span><small>dès 3,79€/mois · résiliable</small></button>
   <button class="bg-later" id="bgateClose">Plus tard — retirer ces éléments</button>
-</div></div>
-
-<div class="modal" id="discModal"><div class="box">
-  <h3>Recharger depuis Discord</h3>
-  <p style="color:var(--dim);font-size:14px;line-height:1.55;margin:0 0 18px">Êtes-vous sûr de vouloir recharger votre profil avec votre profil Discord du moment ?<br>Ça remplacera ton avatar, ta bannière, ta décoration et ton nom par ceux de Discord.</p>
-  <div class="row-end"><button class="btn" id="discCancel">Annuler</button><button class="btn primary" id="discOk">Recharger</button></div>
 </div></div>
 
 <div class="modal" id="cropModal"><div class="box">
@@ -1468,11 +1428,40 @@ html.perf-lite *{
 </div></div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Modales compte (avant les scripts pour que l'init JS les trouve) -->
+<div class="conn-pop-backdrop" id="linkBackdrop" hidden></div>
+<div class="conn-pop" id="linkPop" hidden>
+  <button type="button" class="cp-close" id="linkClose" aria-label="Fermer">✕</button>
+  <div class="conn-pop-head"><b>Ton lien de partage</b></div>
+  <p class="link-sub">Choisis ton lien perso. Les gens tombent direct sur ton profil et peuvent te <b>liker</b> — ils créent un compte au passage.</p>
+  <div class="link-pset" id="linkPsetRow" hidden>
+    <div class="link-pset-label">Preset affiché par ce lien</div>
+    <div class="link-pset-slots" id="linkPsetSlots"></div>
+  </div>
+  <div class="link-input-row" id="linkInputRow"><span class="link-prefix">matefindr.com/</span><input id="linkSlug" maxlength="40" placeholder="ton-pseudo" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  <div class="link-status" id="linkStatus"></div>
+  <div class="link-share" id="linkShare" hidden>
+    <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
+    <button type="button" class="btn" id="linkCopy">Copier le lien</button>
+    <button type="button" class="btn primary" id="linkOpen">Ouvrir le lien</button>
+  </div>
+  <div class="conn-pop-actions"><button type="button" class="btn primary" id="linkEditSave" disabled>Modifier</button></div>
+</div>
+<div class="conn-pop-backdrop" id="settingsBackdrop" hidden></div>
+<div class="conn-pop settings-pop" id="settingsPop" hidden>
+  <button type="button" class="cp-close" id="settingsClose" aria-label="Fermer">✕</button>
+  <div class="conn-pop-head"><b>Paramètres</b></div>
+  <div id="settingsBody"></div>
+</div>
+
 <input type="file" id="fileAvatar" accept="image/*" hidden>
 <input type="file" id="fileBanner" accept="image/*" hidden>
 <input type="file" id="fileBg" accept="image/*,video/*" hidden>
 <input type="file" id="filePhoto" accept="image/*" multiple hidden>
 
+<script src="js/account-modals.js"></script>
+<script src="js/volume.js"></script>
 <script src="js/connections.js"></script>
 <script>
 'use strict';
@@ -1603,6 +1592,21 @@ function showDisabledBanner(reason){
   syncBannerPadding();
 }
 const $ = id => document.getElementById(id);
+function showEditorPop(popId, backdropId){
+  const AM = window.MFAccountModals;
+  if (AM) AM.showPop(popId, backdropId, function(){
+    if (typeof closeSheet === 'function') closeSheet();
+  });
+}
+function hideEditorPop(popId, backdropId){
+  const AM = window.MFAccountModals;
+  if (AM) AM.hidePop(popId, backdropId);
+}
+function closeSettingsSheet(){
+  const AM = window.MFAccountModals;
+  if (AM) AM.closeSettingsPop();
+  else hideEditorPop('settingsPop','settingsBackdrop');
+}
 const fmt = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const esc = s => (s||'').replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
@@ -1891,7 +1895,7 @@ let voiceAudio=null;
 const VMIC_SVG='<span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span>';
 const VPLAY_SVG='<svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>';
 const VPAUSE_SVG='<svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
-function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.innerHTML=VPLAY_SVG;const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.innerHTML=VPLAY_SVG;return;}voiceAudio=new Audio(S.voice.url);voiceAudio.volume=editorVol;voiceAudio.play();play.innerHTML=VPAUSE_SVG;voiceAudio.addEventListener('ended',()=>play.innerHTML=VPLAY_SVG);});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
+function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.innerHTML=VPLAY_SVG;const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.innerHTML=VPLAY_SVG;return;}voiceAudio=new Audio(S.voice.url);voiceAudio.volume=editorEffectiveVol();voiceAudio.play();play.innerHTML=VPAUSE_SVG;voiceAudio.addEventListener('ended',()=>play.innerHTML=VPLAY_SVG);});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
 
 /* ===== SHEET ===== */
 let activeTool=null;
@@ -1899,13 +1903,14 @@ document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener
   // Couleur de la carte : pas de bottom-sheet → tiroir gauche + carte glissée à droite.
   if(tool==='color'){ if(document.body.classList.contains('color-open')){closeColorPanel();} else {closeSheet();openColorPanel();} return; }
   closeColorPanel(); closeOrbStylePanel();
-  if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);$('sheet').classList.add('open');});});
+  if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);const sb=$('sheetBackdrop');if(sb)sb.hidden=false;$('sheet').classList.add('open');});});
 // Sélecteur d'orientation → bascule le mode d'édition (Bureau / Portrait / Paysage).
 document.querySelectorAll('.canvas-mode-btn').forEach(btn=>{btn.addEventListener('click',()=>setCanvasMode(btn.dataset.mode));});
-function closeSheet(){activeTool=null;$('sheet').classList.remove('open');document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
-function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();if(typeof closeOrbStylePanel==='function')closeOrbStylePanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');$('sheet').classList.add('open');}
+function closeSheet(){activeTool=null;$('sheet').classList.remove('open');const sb=$('sheetBackdrop');if(sb)sb.hidden=true;document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
+function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();if(typeof closeOrbStylePanel==='function')closeOrbStylePanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');const sb=$('sheetBackdrop');if(sb)sb.hidden=false;$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='',rightExtra='')=>`<h3><span class="sh-title">${t}${badge}</span>${rightExtra}<button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
+$('sheetBackdrop')?.addEventListener('click',closeSheet);
 function renderSheet(tool){const sh=$('sheet');if(tool==='bubbles')renderBubblesSheet(sh);else if(tool==='gifs')renderGifsSheet(sh);else if(tool==='bg')renderBgSheet(sh);else if(tool==='photos')renderPhotosSheet(sh);}
 
 /* ===== 1. BULLES = orbes d'intérêt (Musique / Jeu / Série·Film), comme le site ===== */
@@ -1925,33 +1930,35 @@ function updateOrbCount(){
 function refreshOrbPlacedIfOpen(){
   if(typeof activeTool==='undefined'||activeTool!=='bubbles') return;
   const sh=$('sheet'); if(!sh||!sh.classList.contains('open')) return;
-  refreshOrbPlacedList(sh);
+  refreshOrbHeaderPreview(sh);
 }
-function refreshOrbPlacedList(sh){
-  const box=sh&&sh.querySelector('#orbPlaced'); if(!box) return;
-  const placed=S.orbs.map((o,i)=>({o,i})).filter(x=>x.o.kind===orbKind);
-  if(!placed.length){ box.hidden=true; box.innerHTML=''; return; }
-  box.hidden=false;
-  const labels={music:'Sur la carte · Musique',game:'Sur la carte · Jeu',film:'Sur la carte · Série·Film'};
-  const rows=placed.map(({o,i})=>{
+function renderOrbHeaderChipsHTML(){
+  if(!S.orbs.length) return '';
+  return S.orbs.map((o,i)=>{
     const col=orbEffColor(o);
-    const thumb=o.cover?`<img src="${esc(o.cover)}" alt="">`:`<span class="orb-placed-ph">${ORB_FALLBACK_ICO[o.kind]||'✨'}</span>`;
-    const gameBtn=o.kind==='game'?`<button type="button" class="orb-placed-game" data-i="${i}" title="Clip + rang" aria-label="Clip et rang">✎</button>`:'';
-    return `<div class="orb-placed-row">
-      <div class="orb-placed-thumb" style="border-color:${hexToRgba(col,.75)}">${thumb}</div>
-      <span class="orb-placed-title">${esc(o.title)}${o.rank?` · ${esc(o.rank)}`:''}${o.clipUrl?' · ▶':''}</span>
-      <div class="orb-placed-actions">
-        <button type="button" class="orb-placed-swatch" data-i="${i}" style="background:${col}" title="Couleur et glow" aria-label="Modifier le style"></button>
-        ${gameBtn}
-      </div>
-    </div>`;
+    const thumb=o.cover?`<img src="${esc(o.cover)}" alt="">`:`<span class="sh-orb-ph">${ORB_FALLBACK_ICO[o.kind]||'✨'}</span>`;
+    return `<button type="button" class="sh-orb-chip${o.kind===orbKind?' is-active':''}" data-i="${i}" style="--chip-ring:${hexToRgba(col,.85)}" title="${esc(o.title)}" aria-label="${esc(o.title)}">${thumb}</button>`;
   }).join('');
-  box.innerHTML=`<div class="orb-placed-hd">${labels[orbKind]||'Sur la carte'}</div><div class="orb-placed-list">${rows}</div>`;
-  box.querySelectorAll('.orb-placed-swatch').forEach(btn=>{
-    btn.addEventListener('click',e=>{ e.stopPropagation(); openOrbStylePanel(+btn.dataset.i); });
-  });
-  box.querySelectorAll('.orb-placed-game').forEach(btn=>{
-    btn.addEventListener('click',e=>{ e.stopPropagation(); const o=S.orbs[+btn.dataset.i]; if(o) openGamePop(o); });
+}
+function refreshOrbHeaderPreview(sh){
+  const box=sh&&sh.querySelector('#orbHeaderPreview'); if(!box) return;
+  box.innerHTML=renderOrbHeaderChipsHTML();
+  box.querySelectorAll('.sh-orb-chip').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const idx=+btn.dataset.i;
+      const o=S.orbs[idx];
+      if(!o) return;
+      if(o.kind!==orbKind){
+        orbKind=o.kind;
+        sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x.dataset.k===orbKind));
+        const input=sh.querySelector('#orbSearch');
+        const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
+        if(input) input.placeholder=ph[orbKind]||'Rechercher…';
+        refreshOrbHeaderPreview(sh);
+      }
+      openOrbStylePanel(idx);
+    });
   });
 }
 function updateGifCount(){
@@ -2115,19 +2122,19 @@ function applyOrbStyleEl(el,o){
 }
 function renderBubblesSheet(sh){
   const allBtn=`<button type="button" class="sh-orbstyle-btn" id="orbStyleAllBtn" title="Modifier toutes les bulles" aria-label="Modifier toutes les bulles">Modifier</button>`;
-  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,allBtn)+`
+  const headTools=`<div class="sh-head-tools"><div class="sh-orbs-preview" id="orbHeaderPreview"></div>${allBtn}</div>`;
+  sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,headTools)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
       <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
       <button data-k="film" class="${orbKind==='film'?'active':''}">Série·Film</button>
     </div>
-    <div class="orb-placed" id="orbPlaced" hidden></div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
     <div class="sugg-list" id="orbSugg"></div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
-  refreshOrbPlacedList(sh);
-  sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];refreshOrbPlacedList(sh);input.focus();runOrbSearch(input.value.trim());}));
+  refreshOrbHeaderPreview(sh);
+  sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];refreshOrbHeaderPreview(sh);input.focus();runOrbSearch(input.value.trim());}));
   const allStyleBtn=sh.querySelector('#orbStyleAllBtn');
   if(allStyleBtn) allStyleBtn.addEventListener('click',e=>{e.stopPropagation();openOrbStyleAllPanel();});
   let deb=null;
@@ -2626,7 +2633,7 @@ function renderPhotosSheet(sh){
       S.photos.map((p,i)=>`<div class="bgp-tile photo-tile" data-i="${i}"><img class="pv" src="${p.url}" alt=""><button type="button" class="photo-del" title="Retirer" aria-label="Retirer">✕</button></div>`).join('')+
       (S.photos.length<PHOTO_MAX?'<button class="bgp-tile bgp-up" data-photo-upload>＋<span>Importer</span></button>':'')+
     '</div>'+
-    `<div class="hint">${isBoost?'Affichées comme des bulles déplaçables sur ta carte':'Réservé à Matefindr Boost'} · 5 Mo max</div>`;
+    `<div class="hint">JPG, PNG, WebP, GIF · 5 Mo max</div>`;
   sh.querySelectorAll('.photo-del').forEach(b=>b.addEventListener('click',e=>{
     e.stopPropagation();
     const i=+b.closest('.photo-tile').dataset.i;
@@ -3064,7 +3071,7 @@ const music={sel:null,startSec:0,audio:null};
 function stopAudition(){if(music.audio){music.audio.pause();music.audio=null;}if(_previewAudio){_previewAudio.pause();_previewAudio=null;}if(typeof _playingOrbEl!=='undefined'&&_playingOrbEl){setOrbPlaying(_playingOrbEl,false);_playingOrbEl=null;}const b=document.getElementById('audBtn');if(b)b.textContent='▶ Écouter l\'extrait';}
 // Lecture d'un extrait au clic (recherche musique : bulles + entrée). Re-clic = stop.
 let _previewAudio=null;
-function playPreview(url){ if(!url)return; try{ if(_previewAudio&&_previewAudio._u===url&&!_previewAudio.paused){_previewAudio.pause();_previewAudio=null;return;} if(_previewAudio)_previewAudio.pause(); _previewAudio=new Audio(url); _previewAudio._u=url; _previewAudio.volume=editorVol; _previewAudio.play().catch(()=>{}); }catch(_){} }
+function playPreview(url){ if(!url)return; try{ if(_previewAudio&&_previewAudio._u===url&&!_previewAudio.paused){_previewAudio.pause();_previewAudio=null;return;} if(_previewAudio)_previewAudio.pause(); _previewAudio=new Audio(url); _previewAudio._u=url; _previewAudio.volume=editorEffectiveVol(); _previewAudio.play().catch(()=>{}); }catch(_){} }
 /* Clic sur une bulle MUSIQUE placée → joue/arrête son extrait (rien ne joue sans ce clic). */
 let _playingOrbEl=null;
 function setOrbPlaying(orbEl,on){ if(!orbEl)return; orbEl.classList.toggle('playing',on); const pb=orbEl.querySelector('.orb-play'); if(pb)pb.textContent=on?'⏸':'▶'; }
@@ -3093,19 +3100,23 @@ function renderMusicSheet(sh){
 }
 function selectTrack(t){stopAudition();music.sel=t;music.startSec=0;const sh=$('sheet');sh.querySelector('#trackList').innerHTML=`<div class="sugg" style="border-color:rgba(145,70,255,.6)"><img src="${t.cover}"><span class="ti"><b>${esc(t.title)}</b><small>${esc(t.artist)}</small></span></div>`;sh.querySelector('#selZone').hidden=false;const audBtn=sh.querySelector('#audBtn');audBtn.onclick=()=>playPreview(t.previewUrl);sh.querySelector('#musicOk').onclick=()=>{S.music=Object.assign({},t,{startSec:0});renderMusicChip();persist();closeSheet();toast('Musique d\'entrée enregistrée');};if(t.previewUrl)playPreview(t.previewUrl);}
 let chipAudio=null;
-function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}stopBubblePreview();chipAudio=new Audio(m.previewUrl);chipAudio.volume=editorVol;chipAudio.play().catch(()=>{});};}
+function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}stopBubblePreview();chipAudio=new Audio(m.previewUrl);chipAudio.volume=editorEffectiveVol();chipAudio.play().catch(()=>{});};}
 /* étiquette « musique d'entrée » au-dessus du bouton Annuler */
 let nowAudio=null;
-/* ===== Volume audio de l'éditeur (previews : bulles, musique d'ambiance, vocal) =====
-   Un seul réglage local (localStorage) appliqué à toutes les lectures de l'éditeur. */
-let editorVol=(function(){try{const v=parseFloat(localStorage.getItem('matefindr_editor_vol'));return (isFinite(v)&&v>=0&&v<=1)?v:.5;}catch(_){return .5;}})();
-function setEditorVol(v){ editorVol=Math.max(0,Math.min(1,+v||0)); try{localStorage.setItem('matefindr_editor_vol',String(editorVol));}catch(_){}
-  [_previewAudio,chipAudio,nowAudio,voiceAudio].forEach(a=>{ if(a){ try{a.volume=editorVol;}catch(_){} } }); }
+/* ===== Volume audio unifié (matefindr_state.user.musicVolume + gain global) ===== */
+function editorEffectiveVol(){
+  const MV=window.MatefindrVolume;
+  return MV?MV.effective(MV.getVol()):(0.5*0.275);
+}
+function applyEditorAudioVol(){
+  const eff=editorEffectiveVol();
+  [_previewAudio,chipAudio,nowAudio,voiceAudio].forEach(a=>{ if(a){ try{a.volume=eff;}catch(_){} } });
+}
 // Coupe les previews de musique d'AMBIANCE (musique d'entrée) — quand une bulle son démarre.
 function stopAmbiencePreview(){ if(nowAudio){nowAudio.pause();nowAudio=null;} if(chipAudio){chipAudio.pause();chipAudio=null;} }
 // Coupe la preview d'une BULLE son — quand la musique d'ambiance démarre.
 function stopBubblePreview(){ if(_previewAudio){_previewAudio.pause();_previewAudio=null;} if(_playingOrbEl){setOrbPlaying(_playingOrbEl,false);_playingOrbEl=null;} }
-function renderMusicNow(){const el=$('musicNow');if(!el)return;if(!S.music){el.classList.remove('show');el.innerHTML='';if(nowAudio){nowAudio.pause();nowAudio=null;}return;}const m=S.music;el.innerHTML=`<span class="cov" style="background-image:url('${m.cover||''}')"></span><span class="mi"><span class="note">Musique d'entrée</span><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><button class="mn-del" title="Supprimer la musique d'entrée"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;el.classList.add('show');el.onclick=e=>{if(e.target.closest('.mn-del')){e.stopPropagation();if(nowAudio){nowAudio.pause();nowAudio=null;}S.music=null;renderMusicNow();renderMusicChip();persist();toast('Musique d\'entrée supprimée');return;}if(nowAudio&&!nowAudio.paused){nowAudio.pause();nowAudio=null;return;}stopBubblePreview();nowAudio=new Audio(m.previewUrl);nowAudio.volume=editorVol;nowAudio.play().catch(()=>{});};}
+function renderMusicNow(){const el=$('musicNow');if(!el)return;if(!S.music){el.classList.remove('show');el.innerHTML='';if(nowAudio){nowAudio.pause();nowAudio=null;}return;}const m=S.music;el.innerHTML=`<span class="cov" style="background-image:url('${m.cover||''}')"></span><span class="mi"><span class="note">Musique d'entrée</span><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><button class="mn-del" title="Supprimer la musique d'entrée"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;el.classList.add('show');el.onclick=e=>{if(e.target.closest('.mn-del')){e.stopPropagation();if(nowAudio){nowAudio.pause();nowAudio=null;}S.music=null;renderMusicNow();renderMusicChip();persist();toast('Musique d\'entrée supprimée');return;}if(nowAudio&&!nowAudio.paused){nowAudio.pause();nowAudio=null;return;}stopBubblePreview();nowAudio=new Audio(m.previewUrl);nowAudio.volume=editorEffectiveVol();nowAudio.play().catch(()=>{});};}
 /* yeux : masquer visuellement carte / bulles / GIFs (éditeur uniquement, pas sauvegardé) */
 const EYE_OPEN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
 const EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.6 10.6 0 0 1 12 19.5C5 19.5 1.5 12 1.5 12a18.5 18.5 0 0 1 5.2-6M9.9 4.7A10.9 10.9 0 0 1 12 4.5c7 0 10.5 7.5 10.5 7.5a18.6 18.6 0 0 1-2.2 3.2M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
@@ -3439,35 +3450,7 @@ $('gamePopClear').addEventListener('click',()=>{if(!_gameOrb)return;delete _game
 $('gamePopClip').addEventListener('keydown',e=>{if(e.key==='Enter')$('gamePopSave').click();});
 $('gameBackdrop').addEventListener('click',closeGamePop);
 
-/* ===== REMETTRE À JOUR LE PROFIL DISCORD (re-fetch via le token stocké) ===== */
-async function resyncDiscord(){
-  const token=localStorage.getItem('matefindr_discord_token');
-  if(!token){ toast('Reconnecte-toi sur le site d\'abord'); return; }
-  const btn=$('btnResync'); btn&&btn.classList.add('spinning');
-  try{
-    const r=await fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bearer '+token}});
-    if(!r.ok){ toast('Échec — reconnecte-toi sur le site'); return; }
-    const d=await r.json();
-    const ext=h=>h&&h.startsWith('a_')?'gif':'png';
-    const st=readSite(); st.user=st.user||{};
-    if(d.id) st.user.discordId=d.id;
-    if(!st.user.nameCustom) st.user.displayName=d.global_name||d.username||st.user.displayName;
-    st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
-    if(d.avatar && !st.user.avatarCustom) st.user.avatarUrl=`https://cdn.discordapp.com/avatars/${d.id}/${d.avatar}.${ext(d.avatar)}?size=256`;
-    if(!st.user.bannerCustom) st.user.bannerUrl=d.banner?`https://cdn.discordapp.com/banners/${d.id}/${d.banner}.${ext(d.banner)}?size=600`:null;
-    st.user.decorationUrl=d.avatar_decoration_data&&d.avatar_decoration_data.asset?`https://cdn.discordapp.com/avatar-decoration-presets/${d.avatar_decoration_data.asset}.png?size=128`:st.user.decorationUrl;
-    localStorage.setItem(STATE_KEY,JSON.stringify(st));
-    // recharge la carte depuis l'état mis à jour
-    S.banner=null; hydrateFromSite();
-    toast('✅ Profil Discord mis à jour');
-  }catch(_){ toast('Erreur réseau'); }
-  finally{ btn&&btn.classList.remove('spinning'); }
-}
-$('btnResync').addEventListener('click',()=>{ $('discModal').classList.add('open'); });
-$('discCancel').addEventListener('click',()=>$('discModal').classList.remove('open'));
-$('discOk').addEventListener('click',()=>{ $('discModal').classList.remove('open'); resyncDiscord(); });
-
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('boostGate').classList.contains('open'))$('bgateClose').click();else if($('discModal').classList.contains('open'))$('discModal').classList.remove('open');else if($('unamePop')&&!$('unamePop').hidden){if(window.closeUnamePop)closeUnamePop();}else if(!$('gamePop').hidden)closeGamePop();else if(!$('connAddModal').hidden||!$('connPickSheet').hidden)closeConnAll();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if($('boostGate').classList.contains('open'))$('bgateClose').click();else if($('linkPop')&&!$('linkPop').hidden){$('linkClose').click();}else if($('settingsPop')&&!$('settingsPop').hidden){closeSettingsSheet();}else if($('unamePop')&&!$('unamePop').hidden){if(window.closeUnamePop)closeUnamePop();}else if(!$('gamePop').hidden)closeGamePop();else if(!$('connAddModal').hidden||!$('connPickSheet').hidden)closeConnAll();else if($('cropModal').classList.contains('open'))$('cropCancel').click();else if($('voiceModal').classList.contains('open'))closeVoiceModal();else closeSheet();});
 
 /* ===================================================================
    PONT avec le vrai profil Matefindr (localStorage matefindr_state, même
@@ -3618,7 +3601,7 @@ function buildDbProfile(st){
     nameColor:u.nameColor||null,
     accentColor:u.accentColor||null, profileVoice:u.profileVoice||null,
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
-    guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>g.id):[]),
+    guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>String(g.id)):[]),
     orbs, orbColors:p.orbColors||null, orbGlow:p.orbGlow||null, publicFlags:u.publicFlags||0, premiumType:u.premiumType||0, socials:u.socials||{},
     gifs:Array.isArray(u.gifs)?u.gifs:[], gifContour:(u.gifContour!==false), photos:Array.isArray(u.photos)?u.photos:[], photoContour:(u.photoContour!==false), bg:u.boostBg||null, bgPos:u.boostBgPos||null, swipeMusic:null,
     connections:(p.connections&&typeof p.connections==='object')?p.connections:{},
@@ -3878,15 +3861,24 @@ window.addEventListener('resize',()=>{ clearTimeout(_canvasSyncResize); _canvasS
 // Désélectionne le sticker (GIF/photo) sélectionné dès qu'on clique ailleurs sur la page.
 document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile')) deselectAllStickers(); });
 
-/* ===== Volume des previews audio : câblage du slider ===== */
+/* ===== Volume musique : câblage du widget ===== */
 (function initEdVol(){
-  const wrap=$('edVol'), range=$('edVolRange'), ico=$('edVolIco');
-  if(!wrap||!range) return;
-  let lastNonZero = editorVol>0 ? editorVol : .5;
-  const paint=()=>{ range.value=Math.round(editorVol*100); wrap.classList.toggle('muted', editorVol<=0); };
-  range.addEventListener('input',()=>{ const v=(+range.value)/100; if(v>0) lastNonZero=v; setEditorVol(v); wrap.classList.toggle('muted', v<=0); });
-  ico.addEventListener('click',()=>{ if(editorVol>0){ lastNonZero=editorVol; setEditorVol(0);} else setEditorVol(lastNonZero||.5); paint(); });
-  paint();
+  const root=$('mfVol'), MV=window.MatefindrVolume;
+  if(!root||!MV) return;
+  try{
+    const old=parseFloat(localStorage.getItem('matefindr_editor_vol'));
+    if(isFinite(old)){
+      const st=readSite();
+      if(!(st.user&&typeof st.user.musicVolume==='number')){
+        st.user=st.user||{}; st.user.musicVolume=old;
+        localStorage.setItem(STATE_KEY,JSON.stringify(st));
+      }
+      localStorage.removeItem('matefindr_editor_vol');
+    }
+  }catch(_){}
+  const widget=MV.bindWidget(root,{ onChange(){ applyEditorAudioVol(); } });
+  window.__mfVolRefresh=()=>widget.refresh();
+  window.addEventListener('mf:volume',()=>applyEditorAudioVol());
 })();
 
 /* ===== Presets de profil (Boost, 5 max) =====
@@ -4079,119 +4071,41 @@ function renderPresets(){
     box.appendChild(add);
   }
 }
-renderPresets();
-/* Toggle mobile : ouvre/ferme le pop-over des slots (desktop = toujours ouvert via CSS). */
-(function initPsetToggle(){
-  const panel=$('psetPanel'), toggle=$('psetToggle');
-  if(!panel||!toggle) return;
-  toggle.addEventListener('click',e=>{ e.stopPropagation(); panel.classList.toggle('open'); });
-  // Ferme au clic en dehors du panneau.
-  document.addEventListener('click',e=>{ if(panel.classList.contains('open') && !panel.contains(e.target)) panel.classList.remove('open'); });
-  // Après une action sur un slot (charger/enregistrer), on referme le pop-over sur mobile.
-  $('psetSlots').addEventListener('click',()=>{ if(window.matchMedia('(max-width:600px)').matches) setTimeout(()=>panel.classList.remove('open'),150); });
-})();
+/* Presets rendus à l'ouverture des Paramètres (renderSettingsSheet). */
 
-/* ===== Lien de partage : matefindr.com/<slug> (choisi par l'utilisateur, unique, ≥2 car.) ===== */
-(function initShareLink(){
-  const btn=$('btnShareLink'), pop=$('linkPop'), back=$('linkBackdrop');
-  const inp=$('linkSlug'), inpRow=$('linkInputRow'), status=$('linkStatus'), share=$('linkShare');
-  const copyBtn=$('linkCopy'), openBtn=$('linkOpen'), closeBtn=$('linkClose'), editSaveBtn=$('linkEditSave');
+/* ===== Lien de partage : matefindr.com/<slug> ===== */
+function renderEditorLinkPresets(){
   const psetRow=$('linkPsetRow'), psetSlots=$('linkPsetSlots');
-  if(!btn||!pop) return;
-  const sanit=s=>String(s||'').toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);
-  const RESERVED_SLUGS=['editor','index','settings','checkout','rules','admin','v2','assets','js','css','supabase','api','favicon'];
-  const isReservedSlug=s=>RESERVED_SLUGS.includes(String(s||'').toLowerCase());
-  let fullHref='';
-  function currentSlug(){ try{ const st=readSite(); return (st.user&&st.user.slug)||''; }catch(_){ return ''; } }
-  function showLink(slug){ fullHref='https://matefindr.com/'+slug; share.hidden=false; }
-  // Le champ est TOUJOURS visible/éditable (plus de mode "édition" séparé) : le
-  // bouton du bas reflète juste si le texte tapé diffère du lien enregistré.
-  function linkStatusForSlug(slug){
-    if(slug.length<2) return {ok:true,text:''};
-    if(isReservedSlug(slug)) return {ok:false,text:'« '+slug+' » est déjà pris, essaie autre chose.'};
-    return {ok:true,text:''};
-  }
-  function refreshDirty(){
-    const slug=sanit(inp.value);
-    const st=linkStatusForSlug(slug);
-    if(!st.ok){
-      status.className='link-status err'; status.textContent=st.text;
-      editSaveBtn.disabled=true; return;
-    }
-    const dirty = slug !== currentSlug();
-    editSaveBtn.textContent = dirty ? 'Sauvegarder' : 'Modifier';
-    editSaveBtn.disabled = !dirty;
-  }
-  // Mini sélecteur de preset DANS la modale du lien : le lien perso pointe
-  // toujours vers le MÊME compte, donc "changer le preset ici" = activer ce
-  // preset comme profil courant (même action que les slots du panneau
-  // principal) -> c'est ce que verront les gens qui visitent le lien.
-  function renderLinkPresets(){
-    if(!psetRow||!psetSlots) return;
-    if(!PRESETS.length){ psetRow.hidden=true; return; }
-    psetRow.hidden=false;
-    psetSlots.innerHTML='';
-    PRESETS.forEach((p,i)=>{
-      const slot=document.createElement('div');
-      slot.className='link-pset-slot'+(i===_activePresetIdx?' link-pset-slot--active':'');
-      slot.title=(i===_activePresetIdx?'Preset actif — ':'Activer ')+'le preset '+(i+1);
-      const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
-      slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>';
-      slot.addEventListener('click',()=>{
-        if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
-        if(i===_activePresetIdx) return;
-        _activePresetIdx=i; saveActivePresetIdx();
-        applyPreset(PRESETS[i]);
-        if(typeof renderPresets==='function') renderPresets();
-        renderLinkPresets();
-        toast('Preset '+(i+1)+' activé — visible sur ton lien');
-      });
-      psetSlots.appendChild(slot);
+  if(!psetRow||!psetSlots) return;
+  if(!PRESETS.length){ psetRow.hidden=true; return; }
+  psetRow.hidden=false;
+  psetSlots.innerHTML='';
+  PRESETS.forEach((p,i)=>{
+    const slot=document.createElement('div');
+    slot.className='link-pset-slot'+(i===_activePresetIdx?' link-pset-slot--active':'');
+    slot.title=(i===_activePresetIdx?'Preset actif — ':'Activer ')+'le preset '+(i+1);
+    const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
+    slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>';
+    slot.addEventListener('click',()=>{
+      if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
+      if(i===_activePresetIdx) return;
+      _activePresetIdx=i; saveActivePresetIdx();
+      applyPreset(PRESETS[i]);
+      if(typeof renderPresets==='function') renderPresets();
+      renderEditorLinkPresets();
+      toast('Preset '+(i+1)+' activé — visible sur ton lien');
     });
-  }
-  function openPop(){
-    const cur=currentSlug();
-    inp.value=cur; status.textContent=''; status.className='link-status';
-    if(cur){ showLink(cur); } else { share.hidden=true; }
-    renderLinkPresets();
-    refreshDirty();
-    back.hidden=false; pop.hidden=false; setTimeout(()=>inp.focus(),60);
-  }
-  function closePop(){ pop.hidden=true; back.hidden=true; }
-  btn.addEventListener('click',openPop);
-  back.addEventListener('click',closePop);
-  closeBtn.addEventListener('click',closePop);
-  inp.addEventListener('input',()=>{ const v=sanit(inp.value); if(v!==inp.value) inp.value=v; refreshDirty(); });
-  copyBtn.addEventListener('click',()=>{ try{ navigator.clipboard.writeText(fullHref); toast('Lien copié 📋'); }catch(_){ toast('Copie impossible'); } });
-  openBtn?.addEventListener('click',()=>{ if(fullHref) window.open(fullHref,'_blank','noopener'); });
-  editSaveBtn.addEventListener('click',async()=>{
-    const slug=sanit(inp.value);
-    if(slug.length<2){ status.className='link-status err'; status.textContent='2 caractères minimum.'; return; }
-    if(isReservedSlug(slug)){ status.className='link-status err'; status.textContent='« '+slug+' » est déjà pris, essaie autre chose.'; return; }
-    const sb=(typeof edSupa==='function')?edSupa():null;
-    if(!sb){ status.className='link-status err'; status.textContent='Connexion requise.'; return; }
-    editSaveBtn.disabled=true; status.className='link-status dim'; status.textContent='Vérification…';
-    try{
-      const { data:{ session } }=await sb.auth.getSession();
-      if(!session){ status.className='link-status err'; status.textContent='Reconnecte-toi pour créer ton lien.'; editSaveBtn.disabled=false; return; }
-      // Déjà pris par quelqu'un d'autre ?
-      const { data:taken }=await sb.from('profiles').select('id').eq('slug',slug).neq('id',session.user.id).limit(1);
-      if(taken && taken.length){ status.className='link-status err'; status.textContent='« '+slug+' » est déjà pris, essaie autre chose.'; editSaveBtn.disabled=false; return; }
-      const { error }=await sb.from('profiles').update({ slug }).eq('id',session.user.id);
-      if(error){
-        console.warn('[link] update slug error', error);
-        const m=((error.message||'')+' '+(error.details||'')+' '+(error.hint||'')).toLowerCase();
-        let msg='Échec — réessaie.';
-        if(/duplicate|unique/.test(m)) msg='« '+slug+' » est déjà pris, essaie autre chose.';
-        else if(/slug|column|schema cache|does not exist/.test(m)) msg='Lien pas encore activé côté serveur (SQL à lancer).';
-        else if(error.message) msg=error.message.slice(0,90);
-        status.className='link-status err'; status.textContent=msg; editSaveBtn.disabled=false; return;
-      }
-      try{ const st=readSite(); st.user=st.user||{}; st.user.slug=slug; localStorage.setItem(STATE_KEY,JSON.stringify(st)); }catch(_){}
-      showLink(slug);
-      refreshDirty();
-      status.className='link-status ok'; status.textContent='✅ Ton lien est prêt !';
-    }catch(e){ console.warn('[link] save error', e); status.className='link-status err'; status.textContent='Erreur — '+((e&&e.message)?e.message.slice(0,80):'réessaie.'); editSaveBtn.disabled=false; }
+    psetSlots.appendChild(slot);
+  });
+}
+(function initEditorShareLink(){
+  const AM=window.MFAccountModals;
+  if(!AM) return;
+  AM.initShareLink({
+    buttons:['btnShareLink'],
+    getSupa:()=>(typeof edSupa==='function')?edSupa():null,
+    toast:(m)=>toast(m),
+    renderLinkPresets:renderEditorLinkPresets
   });
 })();
 
@@ -4231,22 +4145,34 @@ $('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('�
 $('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='/'; }));
 /* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
 $('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); try{sessionStorage.setItem('mf_from_editor','1');}catch(_){}; location.href='/#preview'; }));
-/* Paramètres (haut-droite) : ouvre un panneau (sheet) DANS l'éditeur — ne prend
-   pas tout l'écran, contrairement à l'ancienne page compte d'index.html. */
-$('btnSettings').addEventListener('click',openSettingsSheet);
-
+/* Paramètres (haut-droite) : modale centrée style connexions. */
 function openSettingsSheet(){
   activeTool=null;
   document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));
-  renderSettingsSheet($('sheet'));
-  $('sheet').classList.add('open');
+  renderSettingsSheet($('settingsBody'));
+  showEditorPop('settingsPop','settingsBackdrop');
 }
+(function initEditorSettings(){
+  const AM=window.MFAccountModals;
+  if(!AM) return;
+  AM.initSettings({
+    buttons:['btnSettings'],
+    beforeOpen:()=>{
+      if(typeof closeSheet==='function') closeSheet();
+      activeTool=null;
+      document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));
+    },
+    render:(body)=>renderSettingsSheet(body)
+  });
+})();
 
 function fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(_){ return '—'; } }
 
 function renderSettingsSheet(sh){
+  if(!sh) return;
   const st=readSite(); const u=st.user||{};
-  const vol=(typeof u.musicVolume==='number')?u.musicVolume:50;
+  const MV=window.MatefindrVolume;
+  const volPct=Math.round((MV?MV.getVol():0.5)*100);
   let bill;
   if(u.boost){
     const lifetime = u.boostPlan==='lifetime';
@@ -4256,11 +4182,15 @@ function renderSettingsSheet(sh){
   } else {
     bill = `<b>Gratuit</b><br><small>Aucun abonnement actif</small>`;
   }
-  sh.innerHTML=sheetHeader('Paramètres')+`
+  sh.innerHTML=`
     <div class="set-sheet">
+      <div class="ss-group ss-presets">
+        <div class="pset-head">Presets <span class="pset-boost">Boost</span></div>
+        <div class="pset-slots" id="psetSlots"></div>
+      </div>
       <div class="ss-group">
-        <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${vol}%</span></div>
-        <input type="range" id="ssVol" min="0" max="100" value="${vol}">
+        <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${volPct}%</span></div>
+        <input type="range" id="ssVol" min="0" max="100" value="${volPct}">
       </div>
       <div class="ss-group">
         <div class="ss-lbl">Abonnement &amp; facturation</div>
@@ -4273,11 +4203,15 @@ function renderSettingsSheet(sh){
         <button class="btn ghost-danger" id="ssDelete">Supprimer mon compte</button>
       </div>
     </div>`;
+  renderPresets();
   const vEl=sh.querySelector('#ssVol');
   vEl.addEventListener('input',()=>{
-    sh.querySelector('#ssVolVal').textContent=vEl.value+'%';
-    const s=readSite(); s.user=s.user||{}; s.user.musicVolume=parseInt(vEl.value,10);
-    try{ localStorage.setItem(STATE_KEY,JSON.stringify(s)); }catch(_){}
+    const pct=parseInt(vEl.value,10);
+    sh.querySelector('#ssVolVal').textContent=pct+'%';
+    const v=pct/100;
+    if(MV) MV.setVol(v,true);
+    applyEditorAudioVol();
+    if(typeof window.__mfVolRefresh==='function') window.__mfVolRefresh();
   });
   sh.querySelector('#ssBoost')?.addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
   sh.querySelector('#ssLogout').addEventListener('click',async(e)=>{

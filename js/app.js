@@ -256,6 +256,16 @@
         // entrée en aperçu, qui recharge la page) réécrasait le pseudo custom avec
         // le nom Discord d'origine.
         const keepName = prev.nameCustom && prev.displayName;
+        // Serveurs Discord : ne jamais écraser une liste connue par [] (token OAuth absent/expiré).
+        if ((!user.guilds || !user.guilds.length) && user.discordId && window.__refreshDiscordGuilds) {
+          try {
+            const freshGuilds = await window.__refreshDiscordGuilds(user.discordId);
+            if (freshGuilds && freshGuilds.length) user.guilds = freshGuilds;
+          } catch(_){}
+        }
+        if ((!user.guilds || !user.guilds.length) && sameAccount && Array.isArray(prev.guilds) && prev.guilds.length) {
+          user.guilds = prev.guilds;
+        }
         state.user = Object.assign({}, prev, user);
         if (keepBanner) { state.user.bannerUrl = prev.bannerUrl; state.user.bannerCustom = true; }
         if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
@@ -759,13 +769,27 @@
         ] },
     ];
     let deckIdx = 0;
+    let _guildRefreshPending = false;
+    function refreshMyGuildsIfNeeded(){
+      const u = state.user;
+      if (!u || !u.discordId || (Array.isArray(u.guilds) && u.guilds.length) || _guildRefreshPending || !window.__refreshDiscordGuilds) return;
+      _guildRefreshPending = true;
+      window.__refreshDiscordGuilds(u.discordId).then(g => {
+        _guildRefreshPending = false;
+        if (!g || !g.length) return;
+        state.user.guilds = g;
+        save();
+        try { scheduleCloudSync(); } catch(_){}
+        if (document.body.getAttribute('data-screen') === 'swipe') ensureDeckSync();
+      }).catch(() => { _guildRefreshPending = false; });
+    }
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
     let _previewFromEditor = false; // true = aperçu ouvert depuis editor.html (#preview) → "Quitter" doit y retourner
     let _sharedProfile = null; // profil ouvert via un lien de partage matefindr.com/<slug> (carte + like/dislike)
     // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
-    const ENTRY_MUSIC_GAIN = 0.55;
+    const ENTRY_MUSIC_GAIN = (window.MatefindrVolume && window.MatefindrVolume.GAIN) || 0.275;
     const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
 
     function buildUserProfile(){
@@ -822,7 +846,7 @@
         accentColor: u.accentColor || null,
         profileVoice: u.profileVoice || null,
         // IDs des serveurs Discord → calcul des serveurs en commun chez les autres.
-        guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => g.id) : []),
+        guildIds: (Array.isArray(u.guilds) ? u.guilds.map(g => String(g.id)) : []),
         orbs,
         orbColors: (p.orbColors && typeof p.orbColors === 'object') ? p.orbColors : null,
         orbGlow: (p.orbGlow && typeof p.orbGlow === 'object') ? p.orbGlow : null,
@@ -999,6 +1023,9 @@
       const handle = root.querySelector('.rate-handle');
       const stars = [...root.querySelectorAll('.rate-star')];
       handle.style.left = '0px';
+      handle.classList.remove('show-rate-value');
+      const valueLbl = handle.querySelector('.rate-value');
+      if (valueLbl) valueLbl.textContent = '';
       stars.forEach(s => s.classList.remove('active'));
       handle.setAttribute('aria-valuenow', '0');
       if (mine != null) {
@@ -1024,6 +1051,13 @@
       const valueLbl = handle.querySelector('.rate-value');
       let dragging = false, pending = 0;
       function maxLeft(){ return Math.max(1, root.clientWidth - handle.offsetWidth); }
+      function updateStarsFromHandle(){
+        const handleRight = handle.getBoundingClientRect().right;
+        stars.forEach(s => {
+          const starLeft = s.getBoundingClientRect().left;
+          s.classList.toggle('active', handleRight > starLeft + 2);
+        });
+      }
       function applyFromClientX(clientX){
         const rect = root.getBoundingClientRect();
         const half = handle.offsetWidth / 2;
@@ -1032,15 +1066,16 @@
         const rating = Math.round((left / maxLeft()) * 5 * 10) / 10; // 0.0 à 5.0 -- mais il faut atteindre 1.0 (fin de la 1re étoile) pour valider, cf. onUp()
         pending = rating;
         handle.style.left = left + 'px';
-        valueLbl.textContent = rating >= 1 ? rating.toFixed(1) : ''; // pas de 0.1..0.9 affiché, seulement à partir de 1
-        stars.forEach(s => s.classList.toggle('active', rating >= Number(s.dataset.i)));
+        handle.classList.toggle('show-rate-value', rating >= 1);
+        valueLbl.textContent = rating >= 1 ? rating.toFixed(1) : '';
+        updateStarsFromHandle();
         handle.setAttribute('aria-valuenow', String(rating));
       }
       function onMove(e){ if (dragging) applyFromClientX(e.clientX); }
       function onUp(){
         if (!dragging) return;
         dragging = false;
-        handle.classList.remove('dragging');
+        handle.classList.remove('dragging', 'show-rate-value');
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         const target = getTarget && getTarget();
@@ -1129,9 +1164,22 @@
         const _noGifs = !Array.isArray(my.gifs) || my.gifs.length === 0;
         const _noBio  = !my.bio || /Complète ta bio/.test(my.bio);
         const looksEmpty = _noOrbs && _noGifs && _noBio && !my.age && !my.gender && !my.country && !my.swipeMusic;
+        const guildIds = Array.isArray(my.guildIds) ? my.guildIds : [];
         if (looksEmpty) {
-          const { error } = await window.__supa.from('profiles').upsert(base, { onConflict: 'id' });
-          if (error) console.warn('[Matefindr] sync legacy-only failed', error.message || error);
+          if (guildIds.length) {
+            const { data: row } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
+            const prevData = (row && row.data && typeof row.data === 'object') ? row.data : {};
+            const merged = Object.assign({}, prevData, {
+              name: my.name || prevData.name || null,
+              tag: my.tag || prevData.tag || null,
+              guildIds,
+            });
+            const { error } = await window.__supa.from('profiles').upsert({ ...base, data: merged }, { onConflict: 'id' });
+            if (error) console.warn('[Matefindr] sync guildIds failed', error.message || error);
+          } else {
+            const { error } = await window.__supa.from('profiles').upsert(base, { onConflict: 'id' });
+            if (error) console.warn('[Matefindr] sync legacy-only failed', error.message || error);
+          }
           return;
         }
         // 1) Essai avec la colonne data (profil COMPLET : âge, genre, pays, gifs, fond, etc.)
@@ -1332,6 +1380,7 @@
       });
     }
     function ensureDeckSync(){
+      refreshMyGuildsIfNeeded();
       const wrap = document.getElementById('swipeWrap');
       wrap.innerHTML = '';
       // Lien de partage : on montre UNIQUEMENT ce profil (carte + like/dislike, pas de deck).
@@ -2382,7 +2431,7 @@
       add('.my-status', false, 16);
       add('.acc-discord-fab', false, 16);
       add('.bf-fab', false, 18);
-      add('.swipe-vol', false, 14);
+      add('.mf-vol', false, 14);
       return rects;
     }
 
@@ -4319,10 +4368,12 @@
       const _accAgeEl = document.getElementById('accAge');
       const _ccAcc = (p.country && /^[A-Z]{2}$/i.test(p.country)) ? p.country.toUpperCase() : null;
       _accAgeEl.innerHTML = (p.age ? p.age : '—') + (_ccAcc ? `  <img src="https://flagcdn.com/${_ccAcc.toLowerCase()}.svg" alt="${_ccAcc}" style="width:22px;height:16px;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-left:4px">` : (p.countryFlag ? '  ' + p.countryFlag : ''));
-      const vol = typeof u.musicVolume === 'number' ? u.musicVolume : DEFAULT_MUSIC_VOL;
+      const vol = (window.MatefindrVolume && window.MatefindrVolume.normalizeVol)
+        ? window.MatefindrVolume.normalizeVol(u.musicVolume)
+        : (typeof u.musicVolume === 'number' ? u.musicVolume : DEFAULT_MUSIC_VOL);
       const volSlider = document.getElementById('musicVolume');
       if (volSlider) { volSlider.value = Math.round(vol * 100); document.getElementById('musicVolVal').textContent = Math.round(vol * 100) + '%'; }
-      if (typeof window.__swipeVolRefresh === 'function') window.__swipeVolRefresh();
+      if (typeof window.__mfVolRefresh === 'function') window.__mfVolRefresh();
       const startSec = typeof u.musicStartTime === 'number' ? u.musicStartTime : 0;
       const startSlider = document.getElementById('musicStartTime');
       if (startSlider) { startSlider.value = startSec; document.getElementById('musicStartVal').textContent = startSec + 's'; }
@@ -4851,7 +4902,7 @@
       }
       _swipeMusicAudio = new Audio(sm.previewUrl);
       _swipeMusicAudio.loop = true;
-      _swipeMusicAudio.volume = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : 0.35;
+      _swipeMusicAudio.volume = orbMusicTarget();
       _swipeMusicAudio.play().catch(() => {});
       const box = document.getElementById('swipeMusic');
       document.getElementById('smTitle').textContent = sm.title;
@@ -5408,56 +5459,54 @@
     }
     window.__refreshHeroAvatar = refreshHeroAvatar;
 
-    // Music volume slider — live update + persistence
+    // Music volume slider — live update + persistence (écran compte)
     (function bindMusicVolume(){
       const sl = document.getElementById('musicVolume');
-      if (!sl) return;
+      if (!sl || !window.MatefindrVolume) return;
+      const MV = window.MatefindrVolume;
       sl.addEventListener('input', () => {
         const v = parseInt(sl.value, 10) / 100;
         document.getElementById('musicVolVal').textContent = Math.round(v * 100) + '%';
-        if (_swipeMusicAudio) _swipeMusicAudio.volume = v * ENTRY_MUSIC_GAIN;
-        if (_spotifyAudio) _spotifyAudio.volume = v * ENTRY_MUSIC_GAIN;
+        MV.setVol(v, true);
         state.user = state.user || {};
         state.user.musicVolume = v;
+        const eff = MV.effective(v);
+        if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
+        if (_spotifyAudio) _spotifyAudio.volume = eff;
+        if (typeof window.__mfVolRefresh === 'function') window.__mfVolRefresh();
         save();
+      });
+      window.addEventListener('mf:volume', e => {
+        const v = e.detail.value;
+        sl.value = Math.round(v * 100);
+        const vv = document.getElementById('musicVolVal');
+        if (vv) vv.textContent = Math.round(v * 100) + '%';
+        state.user = state.user || {};
+        state.user.musicVolume = v;
       });
     })();
 
-    // Volume musique — slider rapide sur l'écran swipe (à gauche du FAB cœur)
-    (function bindSwipeVol(){
-      const wrap  = document.getElementById('swipeVol');
-      const range = document.getElementById('swipeVolRange');
-      const ico   = document.getElementById('swipeVolIco');
-      if (!wrap || !range) return;
-      let _preMute = null;
-      const curVol = () => (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
-      // Nb d'ondes sonores selon le volume : <25% = 1, 25–70% = 2, >70% = 3 (0 = muet)
-      function setWaveLevel(v){ wrap.classList.remove('lvl1','lvl2','lvl3'); if (v > 0) wrap.classList.add(v > 0.70 ? 'lvl3' : (v < 0.25 ? 'lvl1' : 'lvl2')); }
-      function apply(v, persistIt){
-        v = Math.max(0, Math.min(1, v));
-        const eff = v * ENTRY_MUSIC_GAIN;
-        if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
-        if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) _spotifyAudio.volume = eff;
-        state.user = state.user || {};
-        state.user.musicVolume = v;
-        range.value = Math.round(v * 100);
-        wrap.classList.toggle('muted', v === 0);
-        setWaveLevel(v);
-        // garde le slider des réglages synchro s'il existe
-        const sl = document.getElementById('musicVolume');
-        if (sl) { sl.value = Math.round(v * 100); const vv = document.getElementById('musicVolVal'); if (vv) vv.textContent = Math.round(v * 100) + '%'; }
-        if (persistIt && typeof save === 'function') save();
-      }
-      range.addEventListener('input', () => apply(parseInt(range.value, 10) / 100, false));
-      range.addEventListener('change', () => { if (typeof save === 'function') save(); });
-      ico && ico.addEventListener('click', () => {
-        const v = curVol();
-        if (v > 0) { _preMute = v; apply(0, true); }
-        else { apply(_preMute || DEFAULT_MUSIC_VOL, true); _preMute = null; }
+    // Volume musique — widget global (swipe, aperçu, lien perso)
+    (function bindMfVol(){
+      const root = document.getElementById('mfVol');
+      const MV = window.MatefindrVolume;
+      if (!root || !MV) return;
+      const widget = MV.bindWidget(root, {
+        onChange(v, eff) {
+          state.user = state.user || {};
+          state.user.musicVolume = v;
+          if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
+          if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) _spotifyAudio.volume = eff;
+          const sl = document.getElementById('musicVolume');
+          if (sl) {
+            sl.value = Math.round(v * 100);
+            const vv = document.getElementById('musicVolVal');
+            if (vv) vv.textContent = Math.round(v * 100) + '%';
+          }
+        },
+        onSave() { if (typeof save === 'function') save(); }
       });
-      // Affichage seul (ne réécrit pas le state) — utilisé à l'init et après chargement du profil
-      window.__swipeVolRefresh = () => { const v = curVol(); range.value = Math.round(v * 100); wrap.classList.toggle('muted', v === 0); setWaveLevel(v); };
-      window.__swipeVolRefresh();
+      window.__mfVolRefresh = () => widget.refresh();
     })();
 
     // Discord resync button — fetches latest Discord profile and merges into state.user
@@ -5628,10 +5677,15 @@
         u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
         u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
         u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
+        if (window.__refreshDiscordGuilds && u.discordId) {
+          const guilds = await window.__refreshDiscordGuilds(u.discordId);
+          if (guilds && guilds.length) u.guilds = guilds;
+        }
         save();
         updateChip();
         renderAccount();
         refreshMyStatusUI();
+        try { if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); } catch(_){}
 
         label.textContent = 'Profil Discord à jour ✓';
         setTimeout(() => { btn.disabled = false; label.textContent = oldLabel; }, 1800);
@@ -6519,6 +6573,104 @@
       // Clic sur « mon compte » → ouvre directement l'éditeur de profil.
       location.href = 'editor.html';
     });
+
+    /* ===== Modales navbar : lien perso + paramètres (même fenêtres que l'éditeur) ===== */
+    (function initAccountModals(){
+      const AM = window.MFAccountModals;
+      if (!AM) return;
+
+      function fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(_){ return '—'; } }
+
+      function renderIndexSettings(body){
+        const st = AM.readSite();
+        const u = Object.assign({}, st.user || {}, state.user || {});
+        const MV = window.MatefindrVolume;
+        const volPct = Math.round((MV ? MV.getVol() : 0.5) * 100);
+        let bill;
+        if (u.boost) {
+          const lifetime = u.boostPlan === 'lifetime';
+          const promo = u.boostPromo;
+          bill = `<b>Matefindr Boost</b> ${promo ? '· <span style="color:#5ee6a0">offert (code)</span>' : ''}<br>`
+            + `<small>${lifetime ? 'Accès à vie — aucun prélèvement' : ('Mensuel · prochain paiement ' + (u.boostNextPayment ? fmtDate(u.boostNextPayment) : '—'))}</small>`;
+        } else {
+          bill = `<b>Gratuit</b><br><small>Aucun abonnement actif</small>`;
+        }
+        body.innerHTML = `
+          <div class="set-sheet">
+            <div class="ss-group">
+              <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${volPct}%</span></div>
+              <input type="range" id="ssVol" min="0" max="100" value="${volPct}">
+            </div>
+            <div class="ss-group">
+              <div class="ss-lbl">Abonnement &amp; facturation</div>
+              <div class="ss-bill">${bill}</div>
+              ${u.boost ? '' : '<button type="button" class="btn primary" id="ssBoost" style="width:100%;margin-top:9px">Passer à Matefindr Boost</button>'}
+            </div>
+            <div class="ss-group ss-danger">
+              <div class="ss-lbl">Zone dangereuse</div>
+              <button type="button" class="btn" id="ssLogout">Se déconnecter</button>
+              <button type="button" class="btn ghost-danger" id="ssDelete">Supprimer mon compte</button>
+            </div>
+          </div>`;
+        const vEl = body.querySelector('#ssVol');
+        vEl.addEventListener('input', () => {
+          const pct = parseInt(vEl.value, 10);
+          body.querySelector('#ssVolVal').textContent = pct + '%';
+          const v = pct / 100;
+          if (MV) MV.setVol(v, true);
+          state.user = state.user || {};
+          state.user.musicVolume = v;
+          if (typeof window.__mfVolRefresh === 'function') window.__mfVolRefresh();
+          save();
+        });
+        body.querySelector('#ssBoost')?.addEventListener('click', () => { location.href = 'checkout.html?plan=monthly'; });
+        body.querySelector('#ssLogout')?.addEventListener('click', async (e) => {
+          const btn = e.currentTarget;
+          try { btn.disabled = true; btn.textContent = 'Déconnexion…'; } catch (_) {}
+          try { if (window.__supa) await window.__supa.auth.signOut(); } catch (_) {}
+          clearDiscordTokenKeys();
+          state = { user: null, profile: null };
+          try { localStorage.removeItem('matefindr_state'); } catch (_) {}
+          save();
+          setAuth(false);
+          AM.closeSettingsPop();
+          setScreen('landing');
+        });
+        body.querySelector('#ssDelete')?.addEventListener('click', () => {
+          if (!confirm('Supprimer définitivement ton compte Matefindr ? Toutes tes données locales seront effacées.')) return;
+          try { localStorage.clear(); } catch (_) {}
+          try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch (_) {}
+          state = { user: null, profile: null };
+          setAuth(false);
+          AM.closeSettingsPop();
+          setScreen('landing');
+        });
+      }
+
+      AM.initShareLink({
+        buttons: ['navShareLink'],
+        getSupa: () => window.__supa,
+        toast: (m) => { if (typeof showToast === 'function') showToast('🔗', m, ''); },
+        onSlugSaved(slug) {
+          state.user = state.user || {};
+          state.user.slug = slug;
+          save();
+        }
+      });
+
+      AM.initSettings({
+        buttons: ['navSettings'],
+        render: renderIndexSettings
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const linkPop = document.getElementById('linkPop');
+        const settingsPop = document.getElementById('settingsPop');
+        if (linkPop && !linkPop.hidden) document.getElementById('linkClose')?.click();
+        else if (settingsPop && !settingsPop.hidden) AM.closeSettingsPop();
+      });
+    })();
     /* Retour depuis l'éditeur :
        #account → écran Paramètres (le SEUL endroit où les réglages apparaissent, accessible uniquement via l'éditeur).
        #preview → aperçu direct du profil (mode aperçu sur le swipe), SANS passer par l'écran Paramètres. */
@@ -6864,6 +7016,7 @@
     if (typeof checkBoostExpiry === 'function') checkBoostExpiry(); // expiration/renouvellement mensuel au chargement
     if (state.user) {
       setAuth(true);
+      refreshMyGuildsIfNeeded();
       if (window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
       // Si l'URL va être reprise par un lien de partage (/<slug>) ou un retour
       // d'éditeur (#preview/#account), on NE révèle PAS encore landing/onboarding
@@ -6931,36 +7084,41 @@
            écrasés). */
         async function autoResyncDiscord(){
           try {
-            const stored = localStorage.getItem('matefindr_discord_token');
-            const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
-            if (!stored || (Date.now() - ts) > 7 * 24 * 3600 * 1000) return;
-            // Relit le localStorage AVANT de merger : si l'éditeur (autre onglet) a modifié
-            // le pseudo/photo/bannière entre-temps, ce tab peut avoir un `state` en mémoire
-            // périmé (nameCustom/avatarCustom/bannerCustom à false) → sans ce refresh, on
-            // écraserait la modif récente avec les valeurs Discord d'origine.
             try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
-            const d = await fetchDiscordProfile(stored);
-            if (!d) return;
             const u = state.user = state.user || {};
-            u.discordId    = d.id || u.discordId;
-            // Pseudo / avatar personnalisés (renommé ou photo importée dans l'éditeur) :
-            // on NE les écrase PAS avec ceux de Discord (sinon « le pseudo/la photo ne se sauvegarde pas »).
-            if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
-            u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
-            if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
-            if (!u.bannerCustom) u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
-            if (!u.decoCustom) {
-              u.decorationUrl = d.avatar_decoration_data?.asset
-                ? discordDecorationUrl(d.avatar_decoration_data.asset)
-                : null;
+            if (!u.discordId) return;
+            const stored = typeof getStoredDiscordToken === 'function' ? getStoredDiscordToken(u.discordId) : null;
+            if (!stored) return;
+            const d = await fetchDiscordProfile(stored);
+            let guildsDirty = false;
+            if (window.__refreshDiscordGuilds) {
+              const guilds = await window.__refreshDiscordGuilds(u.discordId);
+              if (guilds && guilds.length) { u.guilds = guilds; guildsDirty = true; }
             }
-            u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
-            u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
-            u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
+            if (!d && !guildsDirty) return;
+            if (d) {
+              u.discordId    = d.id || u.discordId;
+              // Pseudo / avatar personnalisés (renommé ou photo importée dans l'éditeur) :
+              // on NE les écrase PAS avec ceux de Discord (sinon « le pseudo/la photo ne se sauvegarde pas »).
+              if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
+              u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
+              if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+              if (!u.bannerCustom) u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
+              if (!u.decoCustom) {
+                u.decorationUrl = d.avatar_decoration_data?.asset
+                  ? discordDecorationUrl(d.avatar_decoration_data.asset)
+                  : null;
+              }
+              u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
+              u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
+              u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
+            }
             save();
+            if (guildsDirty && typeof scheduleCloudSync === 'function') scheduleCloudSync();
             if (typeof updateChip === 'function') updateChip();
             if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
-            if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+            if (typeof ensureDeckSync === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeckSync();
+            else if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
             console.log('[Matefindr] auto-resync Discord OK');
           } catch (e) { console.warn('[Matefindr] auto-resync failed', e); }
         }

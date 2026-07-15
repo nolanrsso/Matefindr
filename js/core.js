@@ -64,7 +64,10 @@
       const r = await fetch('https://discord.com/api/v10/users/@me/guilds', {
         headers: { Authorization: 'Bearer ' + accessToken },
       });
-      if (!r.ok) return [];
+      if (!r.ok) {
+        console.warn('[Matefindr] Discord guilds fetch failed:', r.status);
+        return [];
+      }
       const list = await r.json();
       // Keep what we need: id, name, icon hash → URL
       return (list || []).map(g => ({
@@ -73,6 +76,21 @@
         iconUrl: g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${g.icon.startsWith('a_') ? 'gif' : 'png'}?size=64` : null,
       }));
     } catch { return []; }
+  }
+  const DISCORD_TOKEN_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+  function getStoredDiscordToken(discordId){
+    const stored = localStorage.getItem('matefindr_discord_token');
+    const storedUid = localStorage.getItem('matefindr_discord_token_uid');
+    const ts = parseInt(localStorage.getItem('matefindr_discord_token_ts') || '0', 10);
+    if (!stored || !discordId || storedUid !== String(discordId)) return null;
+    if ((Date.now() - ts) > DISCORD_TOKEN_MAX_AGE_MS) return null;
+    return stored;
+  }
+  async function refreshDiscordGuildsForUser(discordId){
+    const token = getStoredDiscordToken(discordId);
+    if (!token) return null;
+    const guilds = await fetchDiscordGuilds(token);
+    return guilds.length ? guilds : null;
   }
   function discordBannerUrl(id, hash){
     if (!id || !hash) return null;
@@ -123,7 +141,7 @@
       // pas nettoyée à la déconnexion) ne doit JAMAIS être réutilisé ici — sinon on
       // récupère l'identité Discord de l'ancien compte et on l'attribue au nouveau
       // (fuite de profil entre comptes).
-      if (stored && storedUid === id && (Date.now() - ts) < 24 * 3600 * 1000) token = stored;
+      if (stored && storedUid === id && (Date.now() - ts) < DISCORD_TOKEN_MAX_AGE_MS) token = stored;
     }
     let guilds = [];
     if (token) {
@@ -173,6 +191,8 @@
     });
   }
   window.signInWithDiscord = signInWithDiscord;
+  window.__refreshDiscordGuilds = refreshDiscordGuildsForUser;
+  window.getStoredDiscordToken = getStoredDiscordToken;
 
   /* Slugs réservés pour matefindr.com/<slug> — routes système, jamais assignables. */
   window.__mfReservedSlugs = [
