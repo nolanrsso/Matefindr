@@ -869,6 +869,7 @@
         bgPos: u.boostBgPos || null,
         swipeMusic: u.swipeMusic || null,
         connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
+        titlesData: global.MatefindrTitlesQuests ? global.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         isMe: true,
         views: _myViewsCache,
       };
@@ -1208,7 +1209,7 @@
     function rowToProfile(r){
       if (!r) return null;
       // Profil complet stocké dans data → on l'utilise tel quel
-      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; p._showViews = true; return p; }
+      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; p._showViews = true; if (r.data.titlesData) p.titlesData = r.data.titlesData; return p; }
       // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
       if (!r.display_name && !r.avatar_url) return null;
       const subByKind = {music:'musique', game:'jeu', anime:'série', film:'film'};
@@ -1662,6 +1663,7 @@
       if(s < 604800) return `il y a ${Math.floor(s / 86400)} j`;
       return new Date(iso).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
     }
+    window.__mfFmtRelativeFr = fmtRelativeFr;
 
     function discordActivityArt(act){
       const img = act.assets?.large_image || act.assets?.small_image;
@@ -1910,6 +1912,10 @@
       </div>` : '';
       const bioText = cardBioText(p.bio);
       const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';
+      const TQ = window.MatefindrTitlesQuests;
+      const titleHtml = TQ ? TQ.cardTitleHtml(p, escapeHtmlMini) : '';
+      const discordFloorHtml = TQ ? TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr }) : '';
+      const hasDiscordFloor = !!discordFloorHtml;
       const joinedHtml = p.joinedOn ? `<div class="joined">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
               ${tx('joined_on')} ${p.joinedOn}
@@ -1962,9 +1968,11 @@
             <div class="name-row">
               <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
-            <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
+            <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel && !hasDiscordFloor ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
+            ${titleHtml}
           </div>
           <hr class="div"/>
+          ${discordFloorHtml}
           ${p.profileVoice ? `
             <div class="card-voice" data-voice="${escapeHtmlMini(p.profileVoice)}">
               <button type="button" class="card-voice-play" aria-label="Lecture vocal">
@@ -1977,11 +1985,11 @@
               </div>
               <span class="card-voice-time">0:00</span>
             </div>
-          ` : cardPresenceHtml(p)}
+          ` : (hasDiscordFloor ? '' : cardPresenceHtml(p))}
           ${bioHtml}
           ${joinedHtml}
           ${connectionsBlock}
-          ${cardDiscordLastSeenHtml(p)}
+          ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
         </div>
       `;
@@ -6690,6 +6698,13 @@
         buttons: ['navSettings'],
         render: renderIndexSettings
       });
+
+      if (window.MatefindrTitlesQuests) {
+        window.MatefindrTitlesQuests.init({
+          questButtons: ['navQuests'],
+          getRatingRec: () => (_myUidCache && _reactionsCache[_myUidCache]) ? _reactionsCache[_myUidCache] : null,
+        });
+      }
 
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;

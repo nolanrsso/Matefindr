@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matefindr — Éditeur de profil</title>
+<link rel="stylesheet" href="css/titles-quests.css">
 <!-- Perf : mode allégé auto pour machines faibles. Exécuté AVANT tout rendu. -->
 <script>
 (function(){
@@ -1246,6 +1247,7 @@ html.perf-lite *{
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
   <span class="crumb">/ éditeur de profil</span>
   <div class="topbar-actions">
+  <button type="button" class="top-btn top-btn--quests" id="btnQuests" title="Quêtes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8c1.1 0 2 .9 2 2v11.5c0 .8-.6 1.5-1.4 1.5H7.4C6.6 18 6 17.3 6 16.5V5c0-1.1.9-2 2-2z"/><path d="M9 3v2.5c0 .8.7 1.5 1.5 1.5h3c.8 0 1.5-.7 1.5-1.5V3"/><path d="M8.5 9h7M8.5 12h5.5M8.5 15h4"/><path d="M16.5 4.5 19 7l-5.5 5.5-2-.5-.5-2L16.5 4.5z"/></svg><span>Quêtes</span></button>
   <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
   <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
   </div>
@@ -1302,7 +1304,9 @@ html.perf-lite *{
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
         <div class="tag">@matefindr · en ligne sur Matefindr</div>
+        <div id="edProfileTitle"></div>
         <div class="divider"></div>
+        <div id="edDiscordFloor"></div>
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
         <div class="voice editable" id="voiceSlot"><span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span><span class="empty">Clique pour enregistrer un vocal</span></div>
@@ -1376,6 +1380,8 @@ html.perf-lite *{
       <label><span>Afficher le statut (en ligne / hors ligne)</span><input type="checkbox" id="connDiscordStatus" checked></label>
       <label><span>Afficher le username au survol</span><input type="checkbox" id="connShowLabel" checked></label>
     </div>
+    <p class="conn-discord-preview-label">Aperçu sur ta carte</p>
+    <div id="connDiscordPreview"></div>
   </div>
   <div id="connAddLinkPanel">
     <div class="conn-url-field">
@@ -1509,6 +1515,7 @@ html.perf-lite *{
 <input type="file" id="fileBg" accept="image/*,video/*" hidden>
 <input type="file" id="filePhoto" accept="image/*" multiple hidden>
 
+<script src="js/titles-quests.js"></script>
 <script src="js/account-modals.js"></script>
 <script src="js/volume.js"></script>
 <script src="js/connections.js"></script>
@@ -3271,9 +3278,8 @@ function renderConnections(){
     });
     box.appendChild(b);
   });
+  if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
 }
-
-function openConnPick(){
   const grid=$('connPickGrid'); if(!grid||!MC()) return;
   grid.innerHTML='';
   MC().CONN_APPS.forEach(app=>{
@@ -3312,6 +3318,7 @@ function syncConnAddUi(){
     $('connDiscordActivity').checked=cur?cur.showActivity!==false:true;
     $('connDiscordStatus').checked=cur?cur.showStatus!==false:true;
     $('connShowLabel').checked=cur?cur.showLabel!==false:true;
+    if(window.MatefindrTitlesQuests) MatefindrTitlesQuests.updateDiscordPreview($('connDiscordPreview'));
     return;
   }
   const cur=MC().connGet(S.connections,app.id);
@@ -3673,6 +3680,7 @@ function buildDbProfile(st){
     lastEditedAt:p.lastEditedAt||null,
     staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
     discordLive:u.discordLive||null,
+    titlesData:u.titlesData||null,
     slugChangedAt:u.slugChangedAt||null,
   };
 }
@@ -3792,6 +3800,26 @@ function applyAvatarDeco(){
   // Décorations Discord retirées du site — on ne garde que le point de statut.
   const dot=document.createElement('span'); dot.className='status-dot'; dot.title='En ligne'; layer.appendChild(dot);
 }
+function renderEditorCardMeta(){
+  const TQ=window.MatefindrTitlesQuests;
+  const titleBox=$('edProfileTitle');
+  const discBox=$('edDiscordFloor');
+  if(!titleBox||!discBox||!TQ) return;
+  const st=readSite(); const u=st.user||{}, p=st.profile||{};
+  const prof={
+    name:u.displayName||'Moi', tag:u.discordTag||'moi', initial:(u.displayName||'T').charAt(0).toUpperCase(),
+    avatarUrl:u.avatarUrl||null, connections:p.connections||{}, discordLive:u.discordLive||null,
+    lastSeenAt:u.lastSeenAt||null, isMe:true, titlesData:TQ.getTitlesData(u),
+  };
+  titleBox.innerHTML=TQ.cardTitleHtml(prof, esc);
+  discBox.innerHTML=TQ.discordFloorHtml(prof, { esc, fmtRelative: window.__mfFmtRelativeFr || (iso=>{
+    if(!iso) return '';
+    const s=Math.floor((Date.now()-new Date(iso).getTime())/1000);
+    if(s<3600) return `il y a ${Math.floor(s/60)} min`;
+    if(s<86400) return `il y a ${Math.floor(s/3600)} h`;
+    return `il y a ${Math.floor(s/86400)} j`;
+  })});
+}
 function hydrateFromSite(){
   const st=readSite(); const u=st.user||{}, p=st.profile||{};
   const note=document.querySelector('.note'); // peut ne plus exister (topbar simplifiée)
@@ -3903,6 +3931,7 @@ function hydrateFromSite(){
   }
   if(u.profileVoice){ S.voice={url:u.profileVoice,dur:5}; renderVoice(); }
   if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); if(typeof renderConnections==='function') renderConnections(); }
+  if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
 }
 
 document.body.classList.add('not-boost'); // par défaut non-Boost (hydrate corrige si Boost)
@@ -4237,6 +4266,9 @@ function openSettingsSheet(){
     },
     render:(body)=>renderSettingsSheet(body)
   });
+  if(window.MatefindrTitlesQuests){
+    MatefindrTitlesQuests.init({ questButtons:['btnQuests'] });
+  }
 })();
 
 function fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(_){ return '—'; } }

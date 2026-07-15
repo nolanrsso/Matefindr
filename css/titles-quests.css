@@ -1,0 +1,118 @@
+/* Discord floor — étage entier carte profil */
+.swipe-card .discord-floor{
+  display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;margin:0 0 10px;
+  border-radius:10px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.08);
+  box-sizing:border-box;
+}
+.swipe-card .discord-floor-avi{position:relative;flex:0 0 44px;width:44px;height:44px}
+.swipe-card .discord-floor-avi-inner{
+  width:44px;height:44px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  background:rgba(255,255,255,.08);font-weight:700;font-size:16px;color:#fff;
+}
+.swipe-card .discord-floor-avi-inner img{width:100%;height:100%;object-fit:cover}
+.swipe-card .discord-floor-dot{
+  position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-radius:50%;
+  border:3px solid rgba(20,18,36,.95);background:#747f8d;box-sizing:border-box;
+}
+.swipe-card .discord-floor-dot.online{background:#23a559}
+.swipe-card .discord-floor-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.swipe-card .discord-floor-name{
+  font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:-.01em;
+}
+.swipe-card .discord-floor-sub{
+  font-size:12px;color:#b5bac1;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* Titre de profil */
+.swipe-card .card-profile-title{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;margin:4px 0 2px;padding:4px 12px;
+  border:none;border-radius:999px;background:transparent;cursor:default;font:inherit;
+  color:var(--title-color,#C7A5FF);font-weight:800;font-size:12.5px;letter-spacing:.02em;
+  max-width:100%;overflow:visible;
+}
+.swipe-card .card-profile-title--clickable{cursor:pointer}
+.swipe-card .card-profile-title--clickable:hover{filter:brightness(1.08)}
+.swipe-card .card-profile-title-text{position:relative;z-index:2}
+.swipe-card .card-profile-title-aura{
+  position:absolute;inset:-4px -8px;border-radius:999px;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,var(--title-color,#C7A5FF) 0%,transparent 72%);
+  opacity:.22;filter:blur(6px);
+}
+.swipe-card .card-profile-title[data-rarity="1"] .card-profile-title-aura{opacity:.12;inset:-2px -4px;filter:blur(4px)}
+.swipe-card .card-profile-title[data-rarity="2"] .card-profile-title-aura{opacity:.16;filter:blur(5px)}
+.swipe-card .card-profile-title[data-rarity="3"] .card-profile-title-aura{opacity:.2}
+.swipe-card .card-profile-title[data-rarity="4"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="5"] .card-profile-title-aura{opacity:.28;inset:-5px -10px;filter:blur(8px)}
+.swipe-card .card-profile-title[data-rarity="6"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="7"] .card-profile-title-aura{opacity:.34;inset:-6px -12px;filter:blur(10px)}
+.swipe-card .card-profile-title[data-rarity="8"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="9"] .card-profile-title-aura{opacity:.42;inset:-8px -14px;filter:blur(12px)}
+.swipe-card .card-profile-title[data-rarity="10"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="11"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="12"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="13"] .card-profile-title-aura,
+.swipe-card .card-profile-title[data-rarity="14"] .card-profile-title-aura{
+  opacity:.55;inset:-10px -18px;filter:blur(16px);
+}
+
+/* Preview Discord (modale connexion éditeur) */
+.discord-floor--preview{margin:0 0 14px;background:rgba(0,0,0,.38)}
+.conn-discord-preview-label{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px}
+
+/* Quêtes & titres modales */
+.tq-modal{width:min(94vw,480px);max-height:min(86vh,640px);display:flex;flex-direction:column;padding:18px 18px 16px}
+.tq-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.tq-scroll{overflow-y:auto;flex:1;min-height:0;padding-right:4px;scrollbar-width:thin}
+.tq-group-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:14px 0 8px}
+.tq-group-title:first-child{margin-top:0}
+.tq-mission{
+  padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);margin-bottom:8px;
+}
+.tq-mission--ready{border-color:rgba(145,70,255,.45);background:rgba(145,70,255,.1)}
+.tq-mission--done{opacity:.72}
+.tq-mission-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tq-mission-title{font-weight:800;font-size:13.5px;color:#fff}
+.tq-mission-rarity{font-size:11px;color:#FFD15C;font-weight:700}
+.tq-mission-desc{font-size:12px;color:var(--dim);margin:4px 0 8px;line-height:1.35}
+.tq-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+.tq-bar span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#9146FF,#FF7EB6)}
+.tq-mission-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;font-size:11.5px;color:var(--dim)}
+.tq-collect{
+  padding:5px 12px;border-radius:999px;border:none;cursor:pointer;font:inherit;font-size:12px;font-weight:800;
+  background:linear-gradient(135deg,#9146FF,#FF7EB6);color:#fff;
+}
+.tq-collect:hover{filter:brightness(1.06)}
+.tq-done-lbl{color:#23a559;font-weight:700;font-size:11px}
+.tq-titles-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px;color:#fff}
+.tq-titles-toolbar input[type=color]{width:36px;height:28px;padding:0;border:none;background:transparent;cursor:pointer}
+.tq-titles-list{display:flex;flex-direction:column;gap:6px}
+.tq-title-pick{
+  position:relative;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#fff;font:inherit;
+  font-weight:700;font-size:13px;text-align:left;cursor:pointer;overflow:hidden;
+}
+.tq-title-pick:disabled{opacity:.45;cursor:not-allowed}
+.tq-title-pick.owned{border-color:rgba(145,70,255,.35)}
+.tq-title-pick.soon:not(:disabled){border-color:rgba(255,209,92,.4);opacity:.85}
+.tq-title-aura{
+  position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(circle at 20% 50%,rgba(145,70,255,.25),transparent 65%);opacity:0;
+}
+.tq-title-pick[data-rarity="5"] .tq-title-aura,
+.tq-title-pick[data-rarity="6"] .tq-title-aura{opacity:.35}
+.tq-title-pick[data-rarity="7"] .tq-title-aura,
+.tq-title-pick[data-rarity="8"] .tq-title-aura{opacity:.5}
+.tq-title-pick[data-rarity="9"] .tq-title-aura,
+.tq-title-pick[data-rarity="10"] .tq-title-aura,
+.tq-title-pick[data-rarity="11"] .tq-title-aura,
+.tq-title-pick[data-rarity="12"] .tq-title-aura,
+.tq-title-pick[data-rarity="13"] .tq-title-aura,
+.tq-title-pick[data-rarity="14"] .tq-title-aura{opacity:.75}
+.tq-title-label{position:relative;z-index:1}
+.tq-soon{font-size:10px;font-weight:800;color:#FFD15C;margin-left:auto;position:relative;z-index:1}
+
+/* Éditeur — titre + discord floor preview */
+.editor-page .card .discord-floor{margin:8px 0 10px;background:rgba(0,0,0,.38)}
+.editor-page .card .card-profile-title{margin:2px 0 6px}
