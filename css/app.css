@@ -1264,8 +1264,15 @@
       0 0 62px 16px var(--orb-hc,rgba(47,123,216,.55)),
       0 14px 30px rgba(0,0,0,.55);
   }
-  /* Contour désactivé : retire bordure + anneau net (glow diffus seulement, pas de liseré) */
-  .swipe-stage .orbit .orb.orb--no-contour{border:none!important}
+  /* Contour désactivé : pas de bordure/anneau. Avec pochette, fond neutre sinon le
+     dégradé couleur fuit en liseré anti-alias autour du clip circulaire. */
+  .swipe-stage .orbit .orb.orb--no-contour{
+    border:none!important;
+    outline:none!important;
+  }
+  .swipe-stage .orbit .orb.orb--no-contour:has(.orb-cover){
+    background:#0c0c10!important;
+  }
   .swipe-stage .orbit .orb.orb--no-contour.orb--no-glow[data-kind="music"],
   .swipe-stage .orbit .orb.orb--no-contour.orb--no-glow[data-kind="game"],
   .swipe-stage .orbit .orb.orb--no-contour.orb--no-glow[data-kind="film"]{
@@ -1279,6 +1286,10 @@
   }
   .swipe-stage .orbit .orb.orb--no-contour:not(.orb--no-glow)[data-kind="film"]{
     box-shadow:0 0 40px 14px var(--orb-gc,rgba(199,165,255,.45)),0 0 70px 20px var(--orb-hc,rgba(139,92,246,.28)),0 14px 30px rgba(0,0,0,.5)!important;
+  }
+  /* Pochette légèrement oversized pour masquer le fringe 1px du clip circulaire */
+  .swipe-stage .orbit .orb.orb--no-contour > .orb-cover{
+    inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px);
   }
   .swipe-stage .orbit .orb[data-kind="voice"].playing{animation:voicePulse 1s ease-in-out infinite}
   @keyframes voicePulse{

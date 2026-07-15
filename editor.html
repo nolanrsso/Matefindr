@@ -246,14 +246,16 @@ body[data-canvas="portrait"] .card-frame::before{
 html.perf-lite .orb[data-kind="music"] img{animation:none}
 .orb[data-kind="game"]{border-color:var(--orb-bc,rgba(141,203,255,.9));box-shadow:0 0 0 2px var(--orb-rc,rgba(47,123,216,.5)),0 0 22px 4px var(--orb-gc,rgba(141,203,255,.7)),0 12px 30px rgba(0,0,0,.5)}
 .orb[data-kind="film"]{border-color:var(--orb-bc,rgba(199,165,255,.85));box-shadow:0 0 0 2px var(--orb-rc,rgba(139,92,246,.5)),0 0 22px 4px var(--orb-gc,rgba(199,165,255,.7)),0 12px 30px rgba(0,0,0,.5)}
-/* Contour désactivé : retire bordure + anneau net (glow éventuel reste diffus, pas un liseré) */
-.orb.orb--no-contour{border:none!important}
+/* Contour désactivé : pas de bordure/anneau ; fond neutre si pochette (évite liseré). */
+.orb.orb--no-contour{border:none!important;outline:none!important}
+.orb.orb--no-contour:has(img){background:#0c0c10!important}
 .orb.orb--no-contour[data-kind="music"]{box-shadow:0 0 36px 12px var(--orb-gc,rgba(30,215,96,.45)),0 12px 30px rgba(0,0,0,.5)!important}
 .orb.orb--no-contour[data-kind="game"]{box-shadow:0 0 36px 12px var(--orb-gc,rgba(141,203,255,.45)),0 12px 30px rgba(0,0,0,.5)!important}
 .orb.orb--no-contour[data-kind="film"]{box-shadow:0 0 36px 12px var(--orb-gc,rgba(199,165,255,.45)),0 12px 30px rgba(0,0,0,.5)!important}
 .orb.orb--no-contour.orb--no-glow[data-kind="music"],
 .orb.orb--no-contour.orb--no-glow[data-kind="game"],
 .orb.orb--no-contour.orb--no-glow[data-kind="film"]{box-shadow:0 12px 30px rgba(0,0,0,.5)!important}
+.orb.orb--no-contour > img{inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px)}
 /* Bulle flottante "+" : invite à ajouter une nouvelle bulle (visible tant qu'on est sous la limite) */
 .orb-wrap--add{cursor:pointer}
 .orb--add{cursor:pointer;background:rgba(145,70,255,.10);border:2.5px dashed rgba(145,70,255,.6);
