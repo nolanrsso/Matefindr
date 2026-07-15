@@ -2149,11 +2149,12 @@
         ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
         : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
       const guildsHtml = commonGuilds.length > 0 ? `
-        <div class="card-guilds card-guilds--corner">
+        <div class="card-guilds card-guilds--head" title="${commonGuilds.length} serveur${commonGuilds.length > 1 ? 's' : ''} Discord en commun">
           <div class="cg-icons">
-            ${commonGuilds.map(guildIconHtml).join('')}
+            ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
+            ${commonGuilds.length > 5 ? `<span class="cg-more">+${commonGuilds.length - 5}</span>` : ''}
           </div>
-          <span class="cg-label"><b>${commonGuilds.length}</b> serveur${commonGuilds.length > 1 ? 's' : ''} en commun</span>
+          <span class="cg-label"><b>${commonGuilds.length}</b> en commun</span>
         </div>
       ` : '';
       const viewsHtml = (p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : '';
@@ -2178,12 +2179,16 @@
       }).join('');
       const connectionsBlock = connKeys.length
         ? `<div class="card-connections-wrap"><div class="card-connections${connDensity}">${connectionsInner}</div></div>` : '';
-      const bottomLeftHtml = (guildsHtml || viewsHtml)
-        ? `<div class="card-bottom-left">${guildsHtml}${viewsHtml}</div>` : '';
+      // Vues seules en bas à gauche (serveurs en commun → zone titre, à droite)
+      const bottomLeftHtml = viewsHtml
+        ? `<div class="card-bottom-left">${viewsHtml}</div>` : '';
       if (commonGuilds.length > 0) c.classList.add('has-common-guilds');
       if (connKeys.length > 0) c.classList.add('has-card-connections');
       if (hasDiscordFloor) c.classList.add('has-discord-floor');
-      if (guildsHtml || viewsHtml) c.classList.add('has-bottom-stack');
+      if (viewsHtml) c.classList.add('has-bottom-stack');
+      const titleGuildsRow = (titleHtml || guildsHtml)
+        ? `<div class="card-title-guilds-row">${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}${guildsHtml}</div>`
+        : '';
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
       const igH = cleanHandle(s.instagram), ttH = cleanHandle(s.tiktok), spH = cleanHandle(s.spotify);
@@ -2250,7 +2255,7 @@
               <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
             <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel && !hasDiscordFloor ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
-            ${titleHtml}
+            ${titleGuildsRow}
           </div>
           <hr class="div"/>
           ${p.profileVoice ? `

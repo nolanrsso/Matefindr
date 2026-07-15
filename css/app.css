@@ -1575,9 +1575,7 @@
     flex:1 1 auto;padding:96px 18px 54px;display:flex;flex-direction:column;gap:10px;
     overflow:hidden;position:relative;
   }
-  .swipe-card.has-common-guilds .body,
   .swipe-card.has-card-connections .body{padding-bottom:200px}
-  .swipe-card.has-bottom-stack.has-common-guilds.has-card-connections .body{padding-bottom:200px}
   .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
   .swipe-card .joined svg{opacity:.7}
 
@@ -1882,19 +1880,34 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
-  /* Discord servers in common — icons row + count label */
+  /* Discord servers in common — à droite du titre (sous le badge âge) */
+  .swipe-card .card-title-guilds-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:6px;min-height:0;width:100%;
+  }
+  .swipe-card .card-title-guilds-row .card-title-slot{flex:1 1 auto;min-width:0}
+  .swipe-card .card-title-guilds-row .card-title-slot--empty{flex:1 1 auto;min-width:0;display:block}
   .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
-  .swipe-card .card-guilds--corner{
-    margin-top:0;flex-direction:column;align-items:flex-start;gap:6px;
-    padding:8px 10px;border-radius:12px;
+  .swipe-card .card-guilds--head{
+    margin-top:0;flex:0 0 auto;flex-direction:column;align-items:flex-end;gap:4px;
+    padding:5px 8px;border-radius:10px;max-width:min(48%,180px);
     background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.10);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    box-shadow:0 6px 18px rgba(0,0,0,.35);
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+    pointer-events:none;
   }
-  .swipe-card .card-guilds--corner .cg-icons{
-    display:flex;flex-wrap:wrap;align-items:center;gap:5px;max-width:min(72vw,300px);
+  .swipe-card .card-guilds--head .cg-icons{
+    display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:0;max-width:100%;
   }
-  .swipe-card .card-guilds--corner .cg-icon{margin-left:0}
+  .swipe-card .card-guilds--head .cg-icon{
+    width:22px;height:22px;margin-left:-6px;border-width:1.5px;
+  }
+  .swipe-card .card-guilds--head .cg-icon:first-child{margin-left:0}
+  .swipe-card .card-guilds--head .cg-more{
+    margin-left:-6px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;font-size:9px;
+  }
+  .swipe-card .card-guilds--head .cg-label{font-size:10.5px;color:#b9bbbe;line-height:1;white-space:nowrap}
+  .swipe-card .card-guilds--head .cg-label b{color:#fff;font-weight:700}
   .swipe-card .cg-icons{display:flex;align-items:center}
   .swipe-card .cg-icon{
     width:26px;height:26px;border-radius:50%;
@@ -1916,7 +1929,7 @@
   .swipe-card.light-bg .cg-more{background:rgba(0,0,0,.10);color:#101014;border-color:rgba(255,255,255,.65)}
   .swipe-card.light-bg .cg-label,
   .swipe-card.light-bg .cg-label b{color:#101014 !important}
-  .swipe-card.light-bg .card-guilds--corner{background:rgba(255,255,255,.72);border-color:rgba(0,0,0,.08)}
+  .swipe-card.light-bg .card-guilds--head{background:rgba(255,255,255,.72);border-color:rgba(0,0,0,.08)}
 
   /* Auto-contrast — when profile color is too light, switch text to dark */
   .swipe-card.light-bg .name,
@@ -2051,8 +2064,10 @@
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}
-    .swipe-card .card-guilds--corner{padding:6px 8px;gap:5px}
-    .swipe-card .card-guilds--corner .cg-icons{gap:4px;max-width:min(68vw,240px)}
+    .swipe-card .card-guilds--head{padding:4px 6px;gap:3px;max-width:min(46%,150px)}
+    .swipe-card .card-guilds--head .cg-icon{width:18px;height:18px}
+    .swipe-card .card-guilds--head .cg-more{min-width:18px;height:18px;font-size:8px}
+    .swipe-card .card-guilds--head .cg-label{font-size:9.5px}
     .swipe-card .card-guilds{gap:8px}
     .swipe-card .cg-icon,
     .swipe-card .cg-more{width:22px;height:22px;font-size:10px}
