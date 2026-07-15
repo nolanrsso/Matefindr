@@ -914,6 +914,27 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .ed-stretch-pop label{display:flex;align-items:center;gap:8px;margin:8px 0}
 .ed-stretch-pop input{flex:1}
 .ed-stretch-ok{margin-top:6px;width:100%;padding:7px;border-radius:8px;border:none;background:#9146FF;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+/* Poignées rogner / étirer (8 handles blancs sur les bords) */
+.sticker.transform-crop,.sticker.transform-stretch{overflow:visible;z-index:100!important}
+.sticker.transform-crop .sk-handle,.sticker.transform-stretch .sk-handle{opacity:0!important;pointer-events:none!important}
+.sticker.transform-crop .sticker-inner,.sticker.transform-stretch .sticker-inner{outline:none}
+.ed-xform{position:absolute;inset:0;border:2px solid #9146FF;border-radius:12px;pointer-events:none;z-index:7;box-sizing:border-box}
+.ed-xh{position:absolute;background:#fff;pointer-events:auto;z-index:8;box-shadow:0 2px 8px rgba(0,0,0,.45);touch-action:none}
+.ed-xh-n,.ed-xh-s{width:30px;height:11px;border-radius:999px;left:50%;transform:translateX(-50%);cursor:ns-resize}
+.ed-xh-n{top:-6px}
+.ed-xh-s{bottom:-6px}
+.ed-xh-e,.ed-xh-w{width:11px;height:30px;border-radius:999px;top:50%;transform:translateY(-50%);cursor:ew-resize}
+.ed-xh-e{right:-6px}
+.ed-xh-w{left:-6px}
+.ed-xh-nw,.ed-xh-ne,.ed-xh-sw,.ed-xh-se{width:14px;height:14px;border-radius:50%;border:2px solid #9146FF;background:#fff;cursor:nwse-resize}
+.ed-xh-nw{top:-7px;left:-7px}
+.ed-xh-ne{top:-7px;right:-7px;cursor:nesw-resize}
+.ed-xh-sw{bottom:-7px;left:-7px;cursor:nesw-resize}
+.ed-xh-se{bottom:-7px;right:-7px}
+.sticker.transform-stretch .ed-xh-n,.sticker.transform-stretch .ed-xh-s{cursor:ns-resize}
+.sticker.transform-stretch .ed-xh-e,.sticker.transform-stretch .ed-xh-w{cursor:ew-resize}
+.sticker.transform-crop .ed-xh-n,.sticker.transform-crop .ed-xh-s{cursor:ns-resize}
+.sticker.transform-crop .ed-xh-e,.sticker.transform-crop .ed-xh-w{cursor:ew-resize}
 .ed-marquee{position:fixed;z-index:25;border:1.5px dashed rgba(145,70,255,.85);background:rgba(145,70,255,.12);pointer-events:none;border-radius:4px}
 .ed-marquee[hidden]{display:none!important}
 .sticker.selected .sticker-inner{outline:2px dashed rgba(145,70,255,.75);outline-offset:3px}
@@ -2541,9 +2562,8 @@ function renderGifsSheet(sh){
 let _lastGifPlace=null;
 function addGif(url){
   if(S.gifs.length>=GIF_MAX){toast('Limite : '+GIF_MAX+' GIFs');return;}
-  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-18,y:58,w:48};
-  const dy=S.gifs.length?6:0;
-  const g={url,x:spawn.x,y:spawn.y+dy,w:spawn.w,rot:0,scaleX:1,scaleY:1};
+  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:105,y:50,w:48};
+  const g={url,x:spawn.x,y:spawn.y,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.gifs.push(g);
   _lastGifPlace={x:g.x,y:g.y,w:g.w};
   renderGifs();
@@ -2660,9 +2680,8 @@ function renderPhotosSheet(sh){
 let _lastPhotoPlace=null;
 function addPhotoFile(f){
   if(f.size>PHOTO_MAX_BYTES){ toast('⚠️ '+f.name+' trop lourde — 5 Mo max'); return; }
-  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-18,y:58,w:48};
-  const dy=S.photos.length?6:0;
-  const p={url:URL.createObjectURL(f),x:spawn.x,y:spawn.y+dy,w:spawn.w,rot:0,scaleX:1,scaleY:1};
+  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:105,y:50,w:48};
+  const p={url:URL.createObjectURL(f),x:spawn.x,y:spawn.y,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.photos.push(p);
   _lastPhotoPlace={x:p.x,y:p.y,w:p.w};
   renderPhotos(); updatePhotoCount();
@@ -4044,7 +4063,7 @@ applyCanvasMode(); // pose data-canvas + état actif du sélecteur (défaut : bu
 syncCanvasModeToRealDevice();
 let _canvasSyncResize=null;
 window.addEventListener('resize',()=>{ clearTimeout(_canvasSyncResize); _canvasSyncResize=setTimeout(syncCanvasModeToRealDevice,150); });
-document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile,.ed-ctx,.ed-stretch-pop') && !e.shiftKey) deselectAllStickers(); });
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile,.ed-ctx,.ed-xform,.ed-xh') && !e.shiftKey) deselectAllStickers(); });
 
 if(window.__EditorStickers){
   const _stickerLast={gif:null,photo:null};

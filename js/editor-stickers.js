@@ -11,9 +11,19 @@
   let selected = new Set();
   let marquee = null;
   let ctxEl = null;
-  let stretchPop = null;
+  let activeTransform = null;
 
   function $(id) { return document.getElementById(id); }
+
+  function clampN(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function layerEl() { return $('photoLayer') || $('stickerLayer'); }
+
+  function pxOffsetPct(pxX, pxY) {
+    const lr = layerEl()?.getBoundingClientRect();
+    if (!lr) return { dx: 1.5, dy: 1.5 };
+    return { dx: (pxX / lr.width) * 100, dy: (pxY / lr.height) * 100 };
+  }
 
   function normalizeItem(item) {
     if (!item) return item;
@@ -28,14 +38,13 @@
 
   function defaultSpawnPos() {
     const card = $('card');
-    const layer = $('photoLayer') || $('stickerLayer');
-    if (!card || !layer) return { x: -18, y: 58, w: W_DEFAULT };
+    const layer = layerEl();
+    if (!card || !layer) return { x: 105, y: 50, w: W_DEFAULT };
     const cr = card.getBoundingClientRect();
     const lr = layer.getBoundingClientRect();
-    const cardCenterX = cr.left + cr.width / 2;
-    const spawnScreenX = cardCenterX / 2;
+    const spawnScreenX = cr.right + cr.width * 0.12;
     const x = ((spawnScreenX - lr.left) / Math.max(1, lr.width)) * 100;
-    return { x: Math.round(x * 10) / 10, y: 58, w: W_DEFAULT };
+    return { x: Math.round(clampN(x, 0, 130) * 10) / 10, y: 50, w: W_DEFAULT };
   }
 
   function getKind(el) {
@@ -82,6 +91,7 @@
   }
 
   function deselectAll() {
+    exitTransformMode();
     selected.forEach(el => el.classList.remove('selected'));
     selected.clear();
   }
@@ -144,7 +154,19 @@
     api.toast('Copié');
   }
 
-  function pasteClip(offset) {
+  function pushToFront(arr, item) {
+    const i = arr.indexOf(item);
+    if (i >= 0) { arr.splice(i, 1); arr.push(item); }
+  }
+
+  function pasteExternalImage(file) {
+    const isBoost = !document.body.classList.contains('not-boost');
+    if (!isBoost) { api.openBoostGate(null, true); return; }
+    if (!api.addPhotoFile) return;
+    api.addPhotoFile(file);
+  }
+
+  function pasteClip() {
     if (!clip || !clip.data) { api.toast('Rien à coller'); return; }
     const isBoost = !document.body.classList.contains('not-boost');
     if (clip.kind === 'photo' && !isBoost) { api.openBoostGate(null, true); return; }
@@ -153,11 +175,12 @@
     if (arr.length >= max) { api.toast('Limite atteinte'); return; }
     const spawn = defaultSpawnPos();
     const dup = JSON.parse(JSON.stringify(clip.data));
-    dup.x = spawn.x + (offset || 0);
-    dup.y = spawn.y + (offset || 0);
-    dup.w = dup.w || W_DEFAULT;
+    dup.x = spawn.x;
+    dup.y = spawn.y;
+    dup.w = spawn.w || dup.w || W_DEFAULT;
     normalizeItem(dup);
     arr.push(dup);
+    pushToFront(arr, dup);
     if (clip.kind === 'photo') { api.renderPhotos(); api.updatePhotoCount(); }
     else { api.renderGifs(); api.updateGifCount(); }
     api.persist();
@@ -165,8 +188,25 @@
   }
 
   function duplicateSelection() {
-    copySelection();
-    pasteClip(4);
+    const t = primaryTarget();
+    if (!t) return;
+    const isBoost = !document.body.classList.contains('not-boost');
+    if (t.kind === 'photo' && !isBoost) { api.openBoostGate(null, true); return; }
+    const arr = getArray(t.kind);
+    const max = t.kind === 'photo' ? api.PHOTO_MAX : api.GIF_MAX;
+    if (arr.length >= max) { api.toast('Limite atteinte'); return; }
+    const off = pxOffsetPct(10, 10);
+    const dup = JSON.parse(JSON.stringify(t.item));
+    delete dup.posByMode;
+    dup.x = (t.item.x || 50) + off.dx;
+    dup.y = (t.item.y || 50) + off.dy;
+    normalizeItem(dup);
+    arr.push(dup);
+    pushToFront(arr, dup);
+    if (t.kind === 'photo') { api.renderPhotos(); api.updatePhotoCount(); }
+    else { api.renderGifs(); api.updateGifCount(); }
+    api.persist();
+    api.toast('Dupliqué');
   }
 
   function deleteSelection() {
@@ -184,57 +224,119 @@
     api.toast('Supprimé');
   }
 
-  function cropSelection() {
-    const t = primaryTarget();
-    if (!t || !api.openCrop) return;
-    api.openCrop(t.item.url, 'banner', 'Rogner l\'image', d => {
-      t.item.posX = d.posX;
-      t.item.posY = d.posY;
-      t.item.scale = d.scale;
-      if (t.kind === 'photo') api.renderPhotos();
-      else api.renderGifs();
-      api.persist();
-      api.toast('Rogne appliqué');
-    });
+  function ensureCropFields(item) {
+    if (item.posX == null) item.posX = 50;
+    if (item.posY == null) item.posY = 50;
+    if (item.scale == null) item.scale = 1;
   }
 
-  function openStretchPop(anchor, item, kind) {
-    closeStretchPop();
-    stretchPop = document.createElement('div');
-    stretchPop.className = 'ed-stretch-pop';
-    stretchPop.innerHTML =
-      '<div class="ed-stretch-title">Étirer l\'image</div>' +
-      '<label>X <input type="range" min="50" max="200" value="' + Math.round((item.scaleX || 1) * 100) + '" data-axis="x"></label>' +
-      '<label>Y <input type="range" min="50" max="200" value="' + Math.round((item.scaleY || 1) * 100) + '" data-axis="y"></label>' +
-      '<button type="button" class="ed-stretch-ok">OK</button>';
-    document.body.appendChild(stretchPop);
-    const r = anchor.getBoundingClientRect();
-    stretchPop.style.left = Math.min(window.innerWidth - 220, r.right + 8) + 'px';
-    stretchPop.style.top = Math.max(8, r.top) + 'px';
-    stretchPop.querySelectorAll('input').forEach(inp => {
-      inp.addEventListener('input', () => {
-        const ax = inp.dataset.axis;
-        const v = parseInt(inp.value, 10) / 100;
-        if (ax === 'x') item.scaleX = v;
-        else item.scaleY = v;
-        const img = anchor.querySelector('img');
-        if (img) applyImgStyles(img, item);
+  function refreshTransformImg(el, item) {
+    const img = el.querySelector('.sticker-inner img');
+    if (img) applyImgStyles(img, item);
+  }
+
+  function exitTransformMode() {
+    if (!activeTransform) return;
+    activeTransform.el.classList.remove('transform-crop', 'transform-stretch');
+    activeTransform.el.querySelector('.ed-xform')?.remove();
+    activeTransform = null;
+  }
+
+  function bindXformHandles(el, item, kind, mode) {
+    const xform = el.querySelector('.ed-xform');
+    if (!xform) return;
+    xform.querySelectorAll('.ed-xh').forEach(handle => {
+      handle.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const h = handle.dataset.h;
+        try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+        if (mode === 'crop') ensureCropFields(item);
+        else { item.scaleX = item.scaleX || 1; item.scaleY = item.scaleY || 1; }
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const s = {
+          posX: item.posX || 50,
+          posY: item.posY || 50,
+          scale: item.scale || 1,
+          scaleX: item.scaleX || 1,
+          scaleY: item.scaleY || 1,
+        };
+        const mv = ev => {
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          if (mode === 'crop') {
+            if (h === 'n') item.posY = clampN(s.posY - dy * 0.18, 0, 100);
+            else if (h === 's') item.posY = clampN(s.posY + dy * 0.18, 0, 100);
+            else if (h === 'w') item.posX = clampN(s.posX - dx * 0.18, 0, 100);
+            else if (h === 'e') item.posX = clampN(s.posX + dx * 0.18, 0, 100);
+            else item.scale = clampN(s.scale + (dx + dy) * 0.004, 0.5, 4);
+          } else {
+            if (h === 'e') item.scaleX = clampN(s.scaleX + dx * 0.004, 0.25, 3);
+            else if (h === 'w') item.scaleX = clampN(s.scaleX - dx * 0.004, 0.25, 3);
+            else if (h === 's') item.scaleY = clampN(s.scaleY + dy * 0.004, 0.25, 3);
+            else if (h === 'n') item.scaleY = clampN(s.scaleY - dy * 0.004, 0.25, 3);
+            else {
+              const delta = (dx + dy) * 0.004;
+              item.scaleX = clampN(s.scaleX + delta, 0.25, 3);
+              item.scaleY = clampN(s.scaleY + delta, 0.25, 3);
+            }
+          }
+          refreshTransformImg(el, item);
+        };
+        const up = () => {
+          handle.removeEventListener('pointermove', mv);
+          handle.removeEventListener('pointerup', up);
+          handle.removeEventListener('pointercancel', up);
+          try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (kind === 'photo') api.renderPhotos();
+          else api.renderGifs();
+          api.persist();
+        };
+        handle.addEventListener('pointermove', mv);
+        handle.addEventListener('pointerup', up);
+        handle.addEventListener('pointercancel', up);
       });
     });
-    stretchPop.querySelector('.ed-stretch-ok').addEventListener('click', () => {
-      closeStretchPop();
-      if (kind === 'photo') api.renderPhotos();
-      else api.renderGifs();
-      api.persist();
-    });
   }
 
-  function closeStretchPop() {
-    if (stretchPop) { stretchPop.remove(); stretchPop = null; }
+  function enterTransformMode(el, item, kind, mode) {
+    exitTransformMode();
+    selectEl(el, false);
+    activeTransform = { el, item, kind, mode };
+    if (mode === 'crop') ensureCropFields(item);
+    else { item.scaleX = item.scaleX || 1; item.scaleY = item.scaleY || 1; }
+    const box = document.createElement('div');
+    box.className = 'ed-xform';
+    ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].forEach(h => {
+      const d = document.createElement('div');
+      d.className = 'ed-xh ed-xh-' + h;
+      d.dataset.h = h;
+      box.appendChild(d);
+    });
+    el.appendChild(box);
+    el.classList.add(mode === 'crop' ? 'transform-crop' : 'transform-stretch');
+    bindXformHandles(el, item, kind, mode);
+    refreshTransformImg(el, item);
+  }
+
+  function cropSelection() {
+    const t = primaryTarget();
+    if (!t) return;
+    enterTransformMode(t.el, t.item, t.kind, 'crop');
+    api.toast('Rogner — tire les poignées blanches');
+  }
+
+  function stretchSelection() {
+    const t = primaryTarget();
+    if (!t) return;
+    enterTransformMode(t.el, t.item, t.kind, 'stretch');
+    api.toast('Étirer — tire les poignées blanches');
   }
 
   function resetSelection() {
-    selectedItems().forEach(({ item, kind }) => {
+    exitTransformMode();
+    selectedItems().forEach(({ item }) => {
       resetItem(item);
     });
     api.renderGifs();
@@ -292,11 +394,11 @@
       const t = primaryTarget();
       closeCtx();
       if (act === 'copy') copySelection();
-      else if (act === 'paste') pasteClip(4);
+      else if (act === 'paste') pasteClip();
       else if (act === 'dup') duplicateSelection();
       else if (act === 'del') deleteSelection();
       else if (act === 'crop') cropSelection();
-      else if (act === 'stretch' && t) openStretchPop(t.el, t.item, t.kind);
+      else if (act === 'stretch') stretchSelection();
       else if (act === 'reset') resetSelection();
       else if (act === 'layer-front' && t) moveLayer(t.kind, t.idx, 'front');
       else if (act === 'layer-fwd' && t) moveLayer(t.kind, t.idx, 'forward');
@@ -311,7 +413,6 @@
       ctxEl.hidden = true;
       ctxEl.querySelector('.ed-ctx-sub')?.classList.remove('open');
     }
-    closeStretchPop();
   }
 
   function openCtx(x, y, el) {
@@ -370,7 +471,7 @@
 
     let drag = null;
     el.addEventListener('pointerdown', e => {
-      if (e.target.closest('.sk-handle')) return;
+      if (e.target.closest('.sk-handle, .ed-xh')) return;
       if (e.button !== 0) return;
       e.preventDefault();
       selectEl(el, e.shiftKey);
@@ -529,30 +630,38 @@
     document.addEventListener('keydown', e => {
       if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
       if (e.ctrlKey && e.key === 'c') { e.preventDefault(); copySelection(); }
-      else if (e.ctrlKey && e.key === 'v') { e.preventDefault(); pasteClip(4); }
       else if (e.ctrlKey && e.key === 'd') { e.preventDefault(); duplicateSelection(); }
       else if (e.key === 'Delete') { deleteSelection(); }
-      else if (e.key === 'Escape') closeCtx();
+      else if (e.key === 'Escape') { closeCtx(); exitTransformMode(); }
     });
   }
 
   function bindPaste() {
     document.addEventListener('paste', e => {
       if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
-      if (clip && clip.data) { e.preventDefault(); pasteClip(4); return; }
       const items = e.clipboardData && e.clipboardData.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') === 0) {
-          e.preventDefault();
-          const f = items[i].getAsFile();
-          if (f) {
-            const isBoost = !document.body.classList.contains('not-boost');
-            if (!isBoost) { api.openBoostGate(null, true); return; }
-            api.addPhotoFile(f);
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') === 0) {
+            e.preventDefault();
+            const f = items[i].getAsFile();
+            if (f) { pasteExternalImage(f); return; }
           }
-          return;
         }
+      }
+      const files = e.clipboardData && e.clipboardData.files;
+      if (files && files.length) {
+        for (let i = 0; i < files.length; i++) {
+          if (files[i].type.startsWith('image/')) {
+            e.preventDefault();
+            pasteExternalImage(files[i]);
+            return;
+          }
+        }
+      }
+      if (clip && clip.data) {
+        e.preventDefault();
+        pasteClip();
       }
     });
   }
@@ -577,13 +686,15 @@
 
   function bindGlobalClose() {
     document.addEventListener('pointerdown', e => {
-      if (!e.target.closest('.ed-ctx, .ed-stretch-pop')) closeCtx();
-      if (!e.target.closest('.ed-ctx, .ed-stretch-pop, .sticker, .photo-tile') && !e.shiftKey && !marquee) deselectAll();
+      if (e.target.closest('.ed-xh')) return;
+      if (!e.target.closest('.ed-ctx')) closeCtx();
+      if (e.target.closest('.ed-ctx')) return;
+      if (activeTransform && !e.target.closest('.ed-xform, .ed-xh')) exitTransformMode();
+      if (!e.target.closest('.sticker, .photo-tile') && !e.shiftKey && !marquee) deselectAll();
     });
     document.addEventListener('contextmenu', e => {
       if (!e.target.closest('.sticker')) closeCtx();
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtx(); });
   }
 
   function stickerFields(item) {
