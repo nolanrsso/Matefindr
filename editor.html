@@ -578,21 +578,37 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 
 /* Volume musique — bouton glass + barre blanche au survol (haut-gauche) */
 .mf-vol{position:fixed;top:70px;left:14px;z-index:39;display:flex;align-items:center;gap:0}
-.mf-vol-btn{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease}
+.mf-vol-btn{width:29px;height:29px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease}
 .mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(255,255,255,.12)}
-.mf-vol-btn svg{width:20px;height:20px;display:block}
+.mf-vol-btn svg{width:13px;height:13px;display:block}
 .mf-vol-slash{display:none}
 .mf-vol.muted .mf-vol-wave{display:none}
 .mf-vol.muted .mf-vol-slash{display:block}
 .mf-vol.muted .mf-vol-btn{color:rgba(255,126,182,.92)}
 .mf-vol-track{width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;transition:width .22s ease,opacity .18s ease,margin-left .22s ease}
-.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:96px;opacity:1;margin-left:10px}
-.mf-vol-range{-webkit-appearance:none;appearance:none;width:96px;height:4px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
-.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:10px;height:10px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-.mf-vol-range::-moz-range-thumb{width:10px;height:10px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:72px}.mf-vol-range{width:72px}}
+.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:64px;opacity:1;margin-left:7px}
+.mf-vol-range{-webkit-appearance:none;appearance:none;width:64px;height:3px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
+.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:7px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
+.mf-vol-range::-moz-range-thumb{width:7px;height:7px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
+@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:48px}.mf-vol-range{width:48px}}
 
-/* Presets de profil (Boost) — dans Paramètres */
+/* Presets de profil (Boost) — bas-gauche */
+.pset-panel{position:fixed;left:22px;bottom:26px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.45)}
+.pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;padding:0 2px 1px}
+.pset-toggle{display:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;place-items:center}
+.pset-toggle svg{width:20px;height:20px}
+.pset-toggle:hover{background:rgba(145,70,255,.16)}
+@media(max-width:600px){
+  .pset-panel{left:10px;bottom:18px;padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .pset-toggle{display:grid;background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(18,12,42,.92));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 28px rgba(0,0,0,.45)}
+  .pset-panel.open .pset-toggle{border-color:rgba(179,128,255,.9);background:rgba(145,70,255,.22)}
+  .pset-body{display:none;position:absolute;bottom:46px;left:0;padding:8px;border-radius:14px;
+    background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(18,12,42,.94));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 14px 40px rgba(0,0,0,.5)}
+  .pset-panel.open .pset-body{display:block}
+  .pset-head{display:none}
+}
+/* Presets aussi dans Paramètres (optionnel) */
 /* Bouton upsell "Passez à Matefindr Boost" — bas-droite, doré (non-Boost uniquement) */
 .boost-fab{position:fixed;right:22px;bottom:26px;z-index:41;display:none;align-items:center;gap:9px;padding:13px 20px;border-radius:16px;border:none;cursor:pointer;
   background:linear-gradient(180deg,#FFD15C,#F5A623);color:#3d1e00;font-family:inherit;font-weight:800;font-size:14px;
@@ -1298,6 +1314,17 @@ html.perf-lite *{
 </nav>
 
 <div class="drop-guide" id="dropGuide" aria-hidden="true"></div>
+
+<!-- Presets de profil (Boost) — bas-gauche -->
+<aside class="pset-panel" id="psetPanel" aria-label="Presets de profil">
+  <button class="pset-toggle" id="psetToggle" type="button" aria-label="Presets" title="Presets">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+  </button>
+  <div class="pset-body">
+    <div class="pset-head">Presets <span class="pset-boost">Boost</span></div>
+    <div class="pset-slots" id="psetSlots"></div>
+  </div>
+</aside>
 
 <button class="boost-fab" id="btnBoostUpsell" title="Passer à Matefindr Boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg><span>Passez à Matefindr Boost</span></button>
 
@@ -4071,7 +4098,14 @@ function renderPresets(){
     box.appendChild(add);
   }
 }
-/* Presets rendus à l'ouverture des Paramètres (renderSettingsSheet). */
+renderPresets();
+(function initPsetToggle(){
+  const panel=$('psetPanel'), toggle=$('psetToggle');
+  if(!panel||!toggle) return;
+  toggle.addEventListener('click',e=>{ e.stopPropagation(); panel.classList.toggle('open'); });
+  document.addEventListener('click',e=>{ if(panel.classList.contains('open') && !panel.contains(e.target)) panel.classList.remove('open'); });
+  $('psetSlots')?.addEventListener('click',()=>{ if(window.matchMedia('(max-width:600px)').matches) setTimeout(()=>panel.classList.remove('open'),150); });
+})();
 
 /* ===== Lien de partage : matefindr.com/<slug> ===== */
 function renderEditorLinkPresets(){
@@ -4184,10 +4218,6 @@ function renderSettingsSheet(sh){
   }
   sh.innerHTML=`
     <div class="set-sheet">
-      <div class="ss-group ss-presets">
-        <div class="pset-head">Presets <span class="pset-boost">Boost</span></div>
-        <div class="pset-slots" id="psetSlots"></div>
-      </div>
       <div class="ss-group">
         <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${volPct}%</span></div>
         <input type="range" id="ssVol" min="0" max="100" value="${volPct}">
@@ -4203,7 +4233,6 @@ function renderSettingsSheet(sh){
         <button class="btn ghost-danger" id="ssDelete">Supprimer mon compte</button>
       </div>
     </div>`;
-  renderPresets();
   const vEl=sh.querySelector('#ssVol');
   vEl.addEventListener('input',()=>{
     const pct=parseInt(vEl.value,10);

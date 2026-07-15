@@ -1237,6 +1237,7 @@
         accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
         orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null, _showViews: true,
         disabled: !!(r.data && r.data.disabled),
+        handleBlur: !!(r.data && r.data.handleBlur),
       };
     }
 
@@ -3158,6 +3159,12 @@
     const msgInputField = document.getElementById('msgInputField');
     let activeConvo = null;
 
+    function convoTagLabel(c){
+      if (!c) return '';
+      if (c.handleBlur) return 'Pseudo Discord masqué';
+      return c.tag ? '@' + c.tag : '';
+    }
+
     function renderMsgList(){
       const unread = CONVOS.filter(c => c.unread).length;
       if (unread > 0) { fabBadge.textContent = unread; fabBadge.style.display = 'grid'; }
@@ -3198,7 +3205,9 @@
       chatAvi.style.overflow = 'hidden';
       chatAvi.innerHTML = c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : escapeHtml(c.initial || '');
       document.getElementById('msgChatName').textContent = c.name;
-      document.getElementById('msgChatSub').textContent = '@' + c.tag;
+      const subEl = document.getElementById('msgChatSub');
+      subEl.textContent = convoTagLabel(c);
+      subEl.classList.toggle('msg-chat-sub--hidden', !!c.handleBlur);
       // Clic sur l'avatar / le nom → ouvre le profil de la personne.
       const openProf = (e) => { if (e) e.stopPropagation(); openConvoProfile(c); };
       chatAvi.onclick = openProf;
@@ -3216,7 +3225,7 @@
       if (!c) return;
       let p = null;
       try { if (c.uid && typeof rtProfile === 'function') p = await rtProfile(c.uid); } catch(_){}
-      if (!p) p = { name:c.name, tag:c.tag, c1:c.c1, c2:c.c2, initial:c.initial, avatarUrl:c.avatarUrl, age:'', orbs:[] };
+      if (!p) p = { name:c.name, tag:c.handleBlur ? '' : c.tag, c1:c.c1, c2:c.c2, initial:c.initial, avatarUrl:c.avatarUrl, age:'', orbs:[], handleBlur:!!c.handleBlur };
       if (typeof openProfilePreview === 'function') openProfilePreview(p);
     }
     function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
@@ -3356,7 +3365,8 @@
            || (p && CONVOS.find(x => (p.tag && x.tag === p.tag) || (otherId && x.uid === otherId)));
       if (!c) {
         c = { id:'m_'+matchId, matchId, uid:otherId,
-              name:(p&&p.name)||'Match', tag:(p&&p.tag)||'',
+              name:(p&&p.name)||'Match', tag:(p&&p.handleBlur)?'':((p&&p.tag)||''),
+              handleBlur:!!(p&&p.handleBlur),
               c1:(p&&p.c1)||'#5865F2', c2:(p&&p.c2)||'#404EED',
               initial:(p&&p.initial)||(((p&&p.name)||'?').charAt(0)), avatarUrl:(p&&p.avatarUrl)||null,
               t:"à l'instant", unread:!!opts.unread,
@@ -3365,7 +3375,16 @@
         CONVOS.unshift(c);
       } else {
         c.matchId = matchId; if (otherId) c.uid = otherId;
-        if (p) { if(p.name)c.name=p.name; if(p.tag)c.tag=p.tag; if(p.avatarUrl)c.avatarUrl=p.avatarUrl; if(p.c1)c.c1=p.c1; if(p.c2)c.c2=p.c2; if(p.initial)c.initial=p.initial; }
+        if (p) {
+          if (p.name) c.name = p.name;
+          if (typeof p.handleBlur === 'boolean') c.handleBlur = p.handleBlur;
+          if (p.tag && !p.handleBlur) c.tag = p.tag;
+          else if (p.handleBlur) c.tag = '';
+          if (p.avatarUrl) c.avatarUrl = p.avatarUrl;
+          if (p.c1) c.c1 = p.c1;
+          if (p.c2) c.c2 = p.c2;
+          if (p.initial) c.initial = p.initial;
+        }
         if (opts.unread) c.unread = true;
       }
       RT.convoByMatch.set(matchId, c);
@@ -3382,7 +3401,7 @@
       if (!c) { // fallback hors-ligne / sans uid
         const id = 'm_' + Date.now();
         c = CONVOS.find(x => p && p.tag && x.tag === p.tag);
-        if (!c) { c = { id, name:p.name, tag:p.tag, uid:p.uid||null, c1:p.c1||'#5865F2', c2:p.c2||'#404EED',
+        if (!c) { c = { id, name:p.name, tag:p.handleBlur?'':p.tag, handleBlur:!!p.handleBlur, uid:p.uid||null, c1:p.c1||'#5865F2', c2:p.c2||'#404EED',
               initial:p.initial||(p.name||'?').charAt(0), avatarUrl:p.avatarUrl||null,
               t:"à l'instant", unread:!!opts.unread, last:'Vous venez de matcher 🎉',
               msgs:[{ who:'system', text:`🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }] }; CONVOS.unshift(c); }

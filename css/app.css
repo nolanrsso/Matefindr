@@ -638,20 +638,27 @@
   }
   /* Volume musique — bouton glass + barre blanche au survol (à droite) */
   .mf-vol{
-    position:fixed;top:14px;left:14px;z-index:45;display:none;align-items:center;gap:0;
+    position:fixed;z-index:45;display:none;align-items:center;gap:0;
+    top:auto;bottom:18px;left:14px;
   }
-  body[data-auth="in"] .mf-vol,
+  body[data-auth="in"][data-screen="swipe"] .mf-vol,
   body[data-preview="true"] .mf-vol,
   body[data-shared="true"] .mf-vol{display:flex}
-  body[data-screen="account"] .mf-vol{display:none !important}
-  body[data-shared="true"] .mf-vol{top:auto;bottom:18px;left:14px}
+  body[data-screen="account"] .mf-vol,
+  body[data-auth="in"][data-screen="landing"] .mf-vol,
+  body[data-auth="in"][data-screen="onboarding"] .mf-vol{display:none !important}
+  /* Swipe : juste à droite du bouton Messages */
+  body[data-auth="in"][data-screen="swipe"]:not([data-preview="true"]) .mf-vol{
+    left:calc(18px + 60px + 10px);
+  }
+  body[data-shared="true"] .mf-vol{left:14px}
   .mf-vol-btn{
-    width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+    width:29px;height:29px;border-radius:8px;border:1px solid rgba(255,255,255,.1);
     background:rgba(255,255,255,.08);backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);
     color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease;
   }
   .mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(255,255,255,.12)}
-  .mf-vol-btn svg{width:20px;height:20px;display:block}
+  .mf-vol-btn svg{width:13px;height:13px;display:block}
   .mf-vol-slash{display:none}
   .mf-vol.muted .mf-vol-wave{display:none}
   .mf-vol.muted .mf-vol-slash{display:block}
@@ -660,18 +667,20 @@
     width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;
     transition:width .22s ease,opacity .18s ease,margin-left .22s ease;
   }
-  .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:96px;opacity:1;margin-left:10px}
+  .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:64px;opacity:1;margin-left:7px}
   .mf-vol-range{
-    -webkit-appearance:none;appearance:none;width:96px;height:4px;border-radius:999px;outline:none;cursor:pointer;display:block;
+    -webkit-appearance:none;appearance:none;width:64px;height:3px;border-radius:999px;outline:none;cursor:pointer;display:block;
     background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%));
   }
-  .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:10px;height:10px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-  .mf-vol-range::-moz-range-thumb{width:10px;height:10px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+  .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:7px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
+  .mf-vol-range::-moz-range-thumb{width:7px;height:7px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
   @media(max-width:520px){
-    .mf-vol{top:8px;left:10px}
-    body[data-shared="true"] .mf-vol{bottom:14px;left:10px}
-    .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:72px}
-    .mf-vol-range{width:72px}
+    .mf-vol{bottom:10px}
+    body[data-auth="in"][data-screen="swipe"]:not([data-preview="true"]) .mf-vol{left:calc(12px + 52px + 8px)}
+    body[data-preview="true"] .mf-vol,
+    body[data-shared="true"] .mf-vol{left:10px}
+    .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:48px}
+    .mf-vol-range{width:48px}
   }
 
   /* Messages panel — slide-out drawer */
@@ -814,8 +823,9 @@
   body[data-auth="in"] .nav-ico{display:inline-flex}
   .nav-ico:hover{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
   .nav-ico svg{width:18px;height:18px;display:block}
-  #navShareLink{color:#C7A5FF}
-  #navShareLink:hover{background:rgba(145,70,255,.16);color:#E3D2FF}
+  #navShareLink{color:#fff}
+  #navShareLink:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.22)}
+  .msg-chat-sub--hidden{color:var(--ink-dim);font-style:italic}
 
   /* Modales compte (lien + paramètres) — même DA que l'éditeur */
   .conn-pop-backdrop{
