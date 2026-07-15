@@ -5,7 +5,7 @@
   const W_MIN = 6;
   const W_MAX = 98;
   const W_DEFAULT = 48;
-  const PX_MIN = 50;
+  const PX_MIN = 20;
 
   let api = null;
   let clip = null;
