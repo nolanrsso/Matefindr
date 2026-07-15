@@ -914,7 +914,9 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 /* Poignées rogner / étirer (8 handles blancs sur les bords) */
 .sticker.transform-crop,.sticker.transform-stretch{overflow:visible;z-index:100!important}
 .sticker.transform-crop .sk-handle,.sticker.transform-stretch .sk-handle{opacity:0!important;pointer-events:none!important}
-.sticker.transform-crop .sticker-inner,.sticker.transform-stretch .sticker-inner{outline:none}
+.sticker.transform-crop .sticker-inner,.sticker.transform-stretch .sticker-inner{outline:none;overflow:visible}
+.sticker.transform-crop .sticker-inner img{pointer-events:none}
+.ed-crop-shade{position:absolute;z-index:5;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,.52);border-radius:2px}
 .ed-xform{position:absolute;left:0;top:0;width:0;height:0;border:2px solid #9146FF;border-radius:12px;pointer-events:none;z-index:7;box-sizing:border-box}
 .ed-xh{position:absolute;background:#fff;pointer-events:auto;z-index:8;box-shadow:0 2px 8px rgba(0,0,0,.45);touch-action:none}
 .ed-xh-n,.ed-xh-s{width:30px;height:11px;border-radius:999px;left:50%;transform:translateX(-50%)}

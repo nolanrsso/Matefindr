@@ -71,22 +71,42 @@
     return api.clamp(w, W_MIN, W_MAX);
   }
 
-  function stickerAspect(el) {
+  function stickerAspect(el, item) {
+    if (item && item._imgAspect > 0) return item._imgAspect;
     const img = el && el.querySelector('.sticker-inner img');
     if (img && img.naturalWidth > 0) return img.naturalHeight / img.naturalWidth;
     if (img && img.offsetWidth > 0 && img.offsetHeight > 0) return img.offsetHeight / img.offsetWidth;
     return 1;
   }
 
-  /** Largeur de base (image non rognée) en px, dérivée de item.w — pas du DOM visible. */
-  function baseFrameSize(el, item) {
+  /** Métriques rogne/étire — item.w = largeur pleine image (non rognée) en %. */
+  function cropMetrics(el, item) {
     const layer = layerEl();
     const lr = layer && layer.getBoundingClientRect();
     const layerW = lr ? lr.width : 1;
-    const aspect = stickerAspect(el);
-    const bw = Math.max(PX_MIN, (item.w / 100) * layerW);
-    const bh = Math.max(PX_MIN, bw * aspect);
-    return { bw, bh, aspect, layerW };
+    const aspect = stickerAspect(el, item);
+    const fullW = Math.max(PX_MIN, (item.w / 100) * layerW);
+    const fullH = Math.max(PX_MIN, fullW * aspect);
+    const cl = item.cropL || 0;
+    const cr = item.cropR || 0;
+    const ct = item.cropT || 0;
+    const cb = item.cropB || 0;
+    const sx = item.scaleX || 1;
+    const sy = item.scaleY || 1;
+    const coreW = fullW * (1 - cl / 100 - cr / 100);
+    const coreH = fullH * (1 - ct / 100 - cb / 100);
+    return {
+      fullW, fullH, coreW, coreH,
+      visW: Math.max(PX_MIN, coreW * sx),
+      visH: Math.max(PX_MIN, coreH * sy),
+      cl, cr, ct, cb, sx, sy, aspect, layerW,
+    };
+  }
+
+  /** Largeur de base (image non rognée) en px, dérivée de item.w — pas du DOM visible. */
+  function baseFrameSize(el, item) {
+    const m = cropMetrics(el, item);
+    return { bw: m.fullW, bh: m.fullH, aspect: m.aspect, layerW: m.layerW };
   }
 
   function minWPct(layerW, aspect) {
@@ -152,7 +172,7 @@
   function frameSize(el, item) {
     if (item) return baseFrameSize(el, item);
     const bw = Math.max(PX_MIN, el.getBoundingClientRect().width);
-    return { bw, bh: bw * stickerAspect(el) };
+    return { bw, bh: bw * stickerAspect(el, null) };
   }
 
   function normDeg(d) {
@@ -207,15 +227,36 @@
     });
   }
 
-  function syncXformFrame(el, rot) {
-    const inner = el && el.querySelector('.sticker-inner');
+  function syncXformFrame(el, item) {
     const xform = el && el.querySelector('.ed-xform');
-    if (!inner || !xform) return;
-    xform.style.left = inner.offsetLeft + 'px';
-    xform.style.top = inner.offsetTop + 'px';
-    xform.style.width = inner.offsetWidth + 'px';
-    xform.style.height = inner.offsetHeight + 'px';
-    if (typeof rot === 'number') syncXformCursors(el, rot);
+    if (!xform || !item) return;
+    const rot = item.rot || 0;
+    const inCrop = el.classList.contains('transform-crop');
+    const m = cropMetrics(el, item);
+    if (inCrop) {
+      xform.style.left = (m.fullW * m.cl / 100) + 'px';
+      xform.style.top = (m.fullH * m.ct / 100) + 'px';
+      xform.style.width = m.coreW + 'px';
+      xform.style.height = m.coreH + 'px';
+      syncCropShade(el, m);
+    } else {
+      const inner = el.querySelector('.sticker-inner');
+      if (!inner) return;
+      xform.style.left = inner.offsetLeft + 'px';
+      xform.style.top = inner.offsetTop + 'px';
+      xform.style.width = inner.offsetWidth + 'px';
+      xform.style.height = inner.offsetHeight + 'px';
+    }
+    syncXformCursors(el, rot);
+  }
+
+  function syncCropShade(el, m) {
+    const shade = el && el.querySelector('.ed-crop-shade');
+    if (!shade) return;
+    shade.style.left = (m.fullW * m.cl / 100) + 'px';
+    shade.style.top = (m.fullH * m.ct / 100) + 'px';
+    shade.style.width = m.coreW + 'px';
+    shade.style.height = m.coreH + 'px';
   }
 
   function placeHandle(node, left, top) {
@@ -242,15 +283,17 @@
     if (size && item) size.style.cursor = cursorForResizeHandle('se', item.rot || 0);
   }
 
-  function cropObjectPos(cl, cr, ct, cb) {
-    const spanX = Math.max(1, 100 - cl - cr);
-    const spanY = Math.max(1, 100 - ct - cb);
-    return {
-      x: cl + spanX / 2,
-      y: ct + spanY / 2,
-      zx: 100 / spanX,
-      zy: 100 / spanY,
-    };
+  function finalizeCropPosition(item, m) {
+    const ox = (m.fullW * (m.cl - m.cr) / 100) / 2;
+    const oy = (m.fullH * (m.ct - m.cb) / 100) / 2;
+    if (Math.abs(ox) < 0.5 && Math.abs(oy) < 0.5) return;
+    const r = (item.rot || 0) * Math.PI / 180;
+    const wx = ox * Math.cos(r) - oy * Math.sin(r);
+    const wy = ox * Math.sin(r) + oy * Math.cos(r);
+    const lr = layerEl()?.getBoundingClientRect();
+    if (!lr) return;
+    item.x += (wx / lr.width) * 100;
+    item.y += (wy / lr.height) * 100;
   }
 
   function applyStickerVisual(el, item) {
@@ -258,89 +301,88 @@
     const img = inner && inner.querySelector('img');
     if (!inner || !img) return;
     normalizeItem(item);
-    enforceMinW(item, el);
+    const inCropMode = el.classList.contains('transform-crop');
+    if (!inCropMode) enforceMinW(item, el);
+
     inner.style.transform = '';
     inner.style.clipPath = '';
-    inner.style.overflow = 'hidden';
+    inner.style.overflow = inCropMode ? 'visible' : 'hidden';
     inner.style.position = 'relative';
+    inner.style.marginLeft = '0';
+    inner.style.marginTop = '0';
+    inner.style.width = '100%';
+    inner.style.height = '100%';
+
+    let m = cropMetrics(el, item);
+    sanitizeCrop(item, m.fullW, m.fullH);
+    m = cropMetrics(el, item);
+
+    const hasCrop = m.cl || m.cr || m.ct || m.cb;
+    const hasStretch = m.sx !== 1 || m.sy !== 1;
+
+    if (inCropMode) {
+      el.style.width = m.fullW + 'px';
+      el.style.height = m.fullH + 'px';
+      inner.style.width = m.fullW + 'px';
+      inner.style.height = m.fullH + 'px';
+      img.style.position = 'absolute';
+      img.style.left = '0';
+      img.style.top = '0';
+      img.style.width = m.fullW + 'px';
+      img.style.height = m.fullH + 'px';
+      img.style.objectFit = 'cover';
+      img.style.objectPosition = '50% 50%';
+      img.style.clipPath = 'none';
+      img.style.transform = 'none';
+    } else if (hasStretch && hasCrop) {
+      el.style.width = m.visW + 'px';
+      el.style.height = m.visH + 'px';
+      img.style.position = 'absolute';
+      img.style.left = '0';
+      img.style.top = '0';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'fill';
+      img.style.clipPath = 'inset(' + m.ct + '% ' + m.cr + '% ' + m.cb + '% ' + m.cl + '%)';
+      img.style.transform = '';
+    } else if (hasCrop || hasStretch) {
+      el.style.width = m.visW + 'px';
+      el.style.height = m.visH + 'px';
+      img.style.position = 'absolute';
+      img.style.width = m.fullW + 'px';
+      img.style.height = m.fullH + 'px';
+      img.style.left = (-m.cl / 100 * m.fullW) + 'px';
+      img.style.top = (-m.ct / 100 * m.fullH) + 'px';
+      img.style.objectFit = hasStretch ? 'fill' : 'cover';
+      img.style.clipPath = 'none';
+      img.style.transform = '';
+    } else {
+      el.style.width = m.visW + 'px';
+      el.style.height = m.visH + 'px';
+      img.style.position = 'absolute';
+      img.style.left = '0';
+      img.style.top = '0';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.clipPath = 'none';
+      img.style.transform = '';
+    }
+
     img.style.margin = '0';
     img.style.maxWidth = 'none';
     img.style.display = 'block';
-
-    const cl = item.cropL || 0;
-    const cr = item.cropR || 0;
-    const ct = item.cropT || 0;
-    const cb = item.cropB || 0;
-    const sx = item.scaleX || 1;
-    const sy = item.scaleY || 1;
-
-    const { bw, bh } = baseFrameSize(el, item);
-    sanitizeCrop(item, bw, bh);
-    const cl2 = item.cropL || 0;
-    const cr2 = item.cropR || 0;
-    const ct2 = item.cropT || 0;
-    const cb2 = item.cropB || 0;
-    const hasCrop2 = cl2 || cr2 || ct2 || cb2;
-
-    const coreW = bw * (1 - cl2 / 100 - cr2 / 100);
-    const coreH = bh * (1 - ct2 / 100 - cb2 / 100);
-    const visW = Math.max(PX_MIN, coreW * sx);
-    const visH = Math.max(PX_MIN, coreH * sy);
-
-    el.style.width = visW + 'px';
-    el.style.height = visH + 'px';
-
-    inner.style.width = '100%';
-    inner.style.height = '100%';
-    inner.style.marginLeft = '0';
-    inner.style.marginTop = '0';
-
-    img.style.position = 'absolute';
-    img.style.margin = '0';
-    img.style.maxWidth = 'none';
-    img.style.transform = '';
     img.style.transformOrigin = '';
-    img.style.objectPosition = '50% 50%';
-    img.style.clipPath = 'none';
     img.style.right = 'auto';
     img.style.bottom = 'auto';
 
-    const hasStretch = sx !== 1 || sy !== 1;
-
-    if (hasCrop2 && hasStretch) {
-      img.style.top = '0';
-      img.style.left = '0';
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'fill';
-      img.style.clipPath = 'inset(' + ct2 + '% ' + cr2 + '% ' + cb2 + '% ' + cl2 + '%)';
-    } else if (hasCrop2) {
-      img.style.width = bw + 'px';
-      img.style.height = bh + 'px';
-      img.style.left = (-cl2 / 100 * bw) + 'px';
-      img.style.top = (-ct2 / 100 * bh) + 'px';
-      img.style.objectFit = 'cover';
-    } else if (hasStretch) {
-      img.style.top = '0';
-      img.style.left = '0';
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'fill';
-    } else {
-      img.style.top = '0';
-      img.style.left = '0';
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-    }
-
-    if (item.posX != null && item.posY != null && (item.scale || 1) !== 1) {
+    if (!inCropMode && item.posX != null && item.posY != null && (item.scale || 1) !== 1) {
       img.style.objectPosition = item.posX + '% ' + item.posY + '%';
       img.style.transformOrigin = item.posX + '% ' + item.posY + '%';
       img.style.transform = 'scale(' + (item.scale || 1) + ')';
     }
 
-    syncXformFrame(el, item.rot || 0);
+    syncXformFrame(el, item);
     syncHandlePositions(el);
   }
 
@@ -497,22 +539,6 @@
     item.cropL = item.cropL || 0;
   }
 
-  function shiftItemForCropAnchor(item, h, dW, dH, rot, x0, y0) {
-    let lx = 0;
-    let ly = 0;
-    if (h === 'n' || h === 'nw' || h === 'ne') ly += -dH / 2;
-    if (h === 's' || h === 'sw' || h === 'se') ly += dH / 2;
-    if (h === 'w' || h === 'nw' || h === 'sw') lx += -dW / 2;
-    if (h === 'e' || h === 'ne' || h === 'se') lx += dW / 2;
-    const r = (rot || 0) * Math.PI / 180;
-    const wx = lx * Math.cos(r) - ly * Math.sin(r);
-    const wy = lx * Math.sin(r) + ly * Math.cos(r);
-    const lr = layerEl()?.getBoundingClientRect();
-    if (!lr) return;
-    item.x = x0 + (wx / lr.width) * 100;
-    item.y = y0 + (wy / lr.height) * 100;
-  }
-
   function refreshTransformImg(el, item) {
     el.style.left = item.x + '%';
     el.style.top = item.y + '%';
@@ -521,11 +547,19 @@
 
   function exitTransformMode() {
     if (!activeTransform) return;
-    const { el, item } = activeTransform;
+    const { el, item, mode } = activeTransform;
+    if (mode === 'crop') {
+      const m = cropMetrics(el, item);
+      finalizeCropPosition(item, m);
+    }
     el.classList.remove('transform-crop', 'transform-stretch');
     el.querySelector('.ed-xform')?.remove();
+    el.querySelector('.ed-crop-shade')?.remove();
     activeTransform = null;
+    el.style.left = item.x + '%';
+    el.style.top = item.y + '%';
     applyStickerVisual(el, item);
+    api.persist();
   }
 
   function bindXformHandles(el, item, kind, mode) {
@@ -552,8 +586,6 @@
           scaleY: item.scaleY || 1,
           fullBw: fs.bw,
           fullBh: fs.bh,
-          x0: item.x,
-          y0: item.y,
         };
         const mv = ev => {
           const dx = ev.clientX - startX;
@@ -583,13 +615,6 @@
               item.cropB = clampN(s.cropB - (ldy / s.fullBh) * 100, 0, maxB);
               item.cropR = clampN(s.cropR - (ldx / s.fullBw) * 100, 0, maxR);
             }
-            const sx = item.scaleX || 1;
-            const sy = item.scaleY || 1;
-            const visW0 = s.fullBw * (1 - s.cropL / 100 - s.cropR / 100) * sx;
-            const visH0 = s.fullBh * (1 - s.cropT / 100 - s.cropB / 100) * sy;
-            const visW1 = s.fullBw * (1 - (item.cropL || 0) / 100 - (item.cropR || 0) / 100) * sx;
-            const visH1 = s.fullBh * (1 - (item.cropT || 0) / 100 - (item.cropB || 0) / 100) * sy;
-            shiftItemForCropAnchor(item, h, visW1 - visW0, visH1 - visH0, rot, s.x0, s.y0);
           } else {
             const coreW = Math.max(PX_MIN, s.fullBw * (1 - s.cropL / 100 - s.cropR / 100));
             const coreH = Math.max(PX_MIN, s.fullBh * (1 - s.cropT / 100 - s.cropB / 100));
@@ -621,11 +646,22 @@
   }
 
   function enterTransformMode(el, item, kind, mode) {
+    if (activeTransform && activeTransform.el === el && activeTransform.mode === mode) return;
     exitTransformMode();
     selectEl(el, false);
     activeTransform = { el, item, kind, mode };
-    if (mode === 'crop') ensureCropFields(item);
-    else { item.scaleX = item.scaleX || 1; item.scaleY = item.scaleY || 1; }
+    if (mode === 'crop') {
+      ensureCropFields(item);
+      const inner = el.querySelector('.sticker-inner');
+      if (inner && !inner.querySelector('.ed-crop-shade')) {
+        const shade = document.createElement('div');
+        shade.className = 'ed-crop-shade';
+        inner.appendChild(shade);
+      }
+    } else {
+      item.scaleX = item.scaleX || 1;
+      item.scaleY = item.scaleY || 1;
+    }
     const box = document.createElement('div');
     box.className = 'ed-xform';
     ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].forEach(h => {
@@ -769,7 +805,12 @@
     apply();
     const imgEl = el.querySelector('.sticker-inner img');
     if (imgEl && !imgEl.complete) {
-      imgEl.addEventListener('load', () => applyStickerVisual(el, item), { once: true });
+      imgEl.addEventListener('load', () => {
+        if (imgEl.naturalWidth > 0) item._imgAspect = imgEl.naturalHeight / imgEl.naturalWidth;
+        applyStickerVisual(el, item);
+      }, { once: true });
+    } else if (imgEl && imgEl.naturalWidth > 0) {
+      item._imgAspect = imgEl.naturalHeight / imgEl.naturalWidth;
     }
 
     const center = () => {
