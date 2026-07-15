@@ -457,7 +457,9 @@
     return null;
   }
 
-  /** Calques partagés entre photos et GIFs : chaque item a un item.z global (indépendant du tableau qui le contient). */
+  /** Calques partagés entre photos et GIFs : chaque item a un item.z global (indépendant du tableau qui le contient).
+   *  Capé sous la carte éditeur (z=60) pour qu'un GIF/photo ne passe jamais devant le profil. */
+  const STICKER_Z_MAX = 35;
   function allStickerItems() {
     return [].concat(api.S.photos || [], api.S.gifs || []);
   }
@@ -465,19 +467,24 @@
   function ensureZOrder() {
     const all = allStickerItems();
     let maxZ = 0;
-    all.forEach(it => { if (typeof it.z === 'number' && it.z > maxZ) maxZ = it.z; });
+    all.forEach(it => {
+      if (typeof it.z === 'number') {
+        if (it.z > STICKER_Z_MAX) it.z = STICKER_Z_MAX;
+        if (it.z > maxZ) maxZ = it.z;
+      }
+    });
     const missingGifs = (api.S.gifs || []).filter(it => typeof it.z !== 'number');
     const missingPhotos = (api.S.photos || []).filter(it => typeof it.z !== 'number');
     let z = maxZ;
-    missingGifs.forEach(it => { it.z = ++z; });
-    missingPhotos.forEach(it => { it.z = ++z; });
+    missingGifs.forEach(it => { it.z = Math.min(++z, STICKER_Z_MAX); });
+    missingPhotos.forEach(it => { it.z = Math.min(++z, STICKER_Z_MAX); });
   }
 
   function nextZOrder() {
     ensureZOrder();
     let maxZ = 0;
     allStickerItems().forEach(it => { if (it.z > maxZ) maxZ = it.z; });
-    return maxZ + 1;
+    return Math.min(maxZ + 1, STICKER_Z_MAX);
   }
 
   function renumberZOrder(items) {
@@ -866,7 +873,7 @@
     el.dataset.stickerKind = kind;
     el.dataset.stickerIdx = String(idx);
     ensureZOrder();
-    el.style.zIndex = String(item.z || (idx + 1));
+    el.style.zIndex = String(Math.min(item.z || (idx + 1), STICKER_Z_MAX));
 
     el.innerHTML =
       '<div class="sticker-inner"><img src="' + item.url + '" alt="" draggable="false"></div>' +
@@ -923,7 +930,8 @@
       const er = el.getBoundingClientRect();
       drag = { mx: e.clientX, my: e.clientY, sx0: er.left + er.width / 2, sy0: er.top + er.height / 2 };
       el.classList.add('dragging');
-      el.style.zIndex = '100';
+      // Sous la carte (z=60) : un GIF/photo ne doit jamais passer devant le profil
+      el.style.zIndex = '35';
       api.showGuide(kind === 'photo' ? 'photo' : 'gif');
     });
     el.addEventListener('pointermove', e => {
