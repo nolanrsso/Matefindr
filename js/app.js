@@ -1689,12 +1689,11 @@
       const hasCrop = cl || cr || ct || cb;
 
       if (hasCrop && hasStretch) {
-        img.style.top = '0';
-        img.style.left = '0';
-        img.style.width = '100%';
-        img.style.height = '100%';
+        img.style.width = (bw * sx) + 'px';
+        img.style.height = (bh * sy) + 'px';
+        img.style.left = (-cl / 100 * bw * sx) + 'px';
+        img.style.top = (-ct / 100 * bh * sy) + 'px';
         img.style.objectFit = 'fill';
-        img.style.clipPath = 'inset(' + ct + '% ' + cr + '% ' + cb + '% ' + cl + '%)';
       } else if (hasCrop) {
         img.style.width = bw + 'px';
         img.style.height = bh + 'px';

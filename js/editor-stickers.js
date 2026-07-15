@@ -360,12 +360,12 @@
       el.style.width = m.visW + 'px';
       el.style.height = m.visH + 'px';
       img.style.position = 'absolute';
-      img.style.left = '0';
-      img.style.top = '0';
-      img.style.width = '100%';
-      img.style.height = '100%';
+      img.style.width = (m.fullW * m.sx) + 'px';
+      img.style.height = (m.fullH * m.sy) + 'px';
+      img.style.left = (-m.cl / 100 * m.fullW * m.sx) + 'px';
+      img.style.top = (-m.ct / 100 * m.fullH * m.sy) + 'px';
       img.style.objectFit = 'fill';
-      img.style.clipPath = 'inset(' + m.ct + '% ' + m.cr + '% ' + m.cb + '% ' + m.cl + '%)';
+      img.style.clipPath = 'none';
       img.style.transform = '';
     } else if (hasCrop) {
       el.style.width = m.visW + 'px';
