@@ -903,9 +903,10 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .ed-ctx-sub{position:relative}
 .ed-ctx-sub-btn{width:100%}
 .ed-ctx-arr{color:var(--dim);font-size:14px}
-.ed-ctx-sub-menu{position:absolute;left:100%;top:0;margin-left:4px;min-width:210px;padding:6px;border-radius:12px;
-  background:linear-gradient(180deg,rgba(32,32,36,.98),rgba(22,22,26,.99));border:1px solid rgba(255,255,255,.12);
-  box-shadow:0 18px 50px rgba(0,0,0,.65);display:none;flex-direction:column;gap:2px}
+.ed-ctx-sub-menu{position:absolute;left:100%;top:0;margin-left:-6px;padding-left:10px;min-width:220px;display:none;flex-direction:column;gap:2px;background:transparent;border:none;box-shadow:none;padding-top:0;padding-bottom:0;padding-right:0}
+.ed-ctx-sub-menu::before{content:'';position:absolute;left:0;top:0;width:14px;height:100%}
+.ed-ctx-sub-menu-inner{padding:6px;border-radius:12px;background:linear-gradient(180deg,rgba(32,32,36,.98),rgba(22,22,26,.99));border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(0,0,0,.65);display:flex;flex-direction:column;gap:2px}
+.ed-ctx-sub.open .ed-ctx-sub-menu{display:flex}
 .ed-ctx-sub:hover .ed-ctx-sub-menu{display:flex}
 .ed-stretch-pop{position:fixed;z-index:321;width:200px;padding:12px;border-radius:12px;
   background:linear-gradient(180deg,rgba(32,32,36,.98),rgba(22,22,26,.99));border:1px solid rgba(255,255,255,.12);
@@ -1287,8 +1288,8 @@ html.perf-lite *{
 
 <header class="topbar">
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
-  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
   <span class="crumb">/ éditeur de profil</span>
+  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
   <div class="topbar-actions">
   <button type="button" class="top-btn top-btn--quests" id="btnQuests" title="Quêtes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8c1.1 0 2 .9 2 2v11.5c0 .8-.6 1.5-1.4 1.5H7.4C6.6 18 6 17.3 6 16.5V5c0-1.1.9-2 2-2z"/><path d="M9 3v2.5c0 .8.7 1.5 1.5 1.5h3c.8 0 1.5-.7 1.5-1.5V3"/><path d="M8.5 9h7M8.5 12h5.5M8.5 15h4"/><path d="M16.5 4.5 19 7l-5.5 5.5-2-.5-.5-2L16.5 4.5z"/></svg><span>Quêtes</span></button>
   <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>

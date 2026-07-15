@@ -261,13 +261,29 @@
       '<div class="ed-ctx-sub">' +
         '<button type="button" class="ed-ctx-sub-btn"><span>Calque</span><span class="ed-ctx-arr">›</span></button>' +
         '<div class="ed-ctx-sub-menu">' +
+          '<div class="ed-ctx-sub-menu-inner">' +
           '<button type="button" data-act="layer-front">Mettre au premier plan</button>' +
           '<button type="button" data-act="layer-fwd">Faire avancer d\'un niveau</button>' +
           '<button type="button" data-act="layer-back">Faire reculer d\'un niveau</button>' +
           '<button type="button" data-act="layer-rear">Mettre à l\'arrière-plan</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(ctxEl);
+    const ctxSub = ctxEl.querySelector('.ed-ctx-sub');
+    let ctxSubTimer = null;
+    function openCtxSub() {
+      clearTimeout(ctxSubTimer);
+      ctxSub.classList.add('open');
+    }
+    function scheduleCloseCtxSub() {
+      clearTimeout(ctxSubTimer);
+      ctxSubTimer = setTimeout(() => ctxSub.classList.remove('open'), 160);
+    }
+    ctxSub.addEventListener('mouseenter', openCtxSub);
+    ctxSub.addEventListener('mouseleave', scheduleCloseCtxSub);
+    ctxEl.querySelector('.ed-ctx-sub-menu').addEventListener('mouseenter', openCtxSub);
+    ctxEl.querySelector('.ed-ctx-sub-menu').addEventListener('mouseleave', scheduleCloseCtxSub);
     ctxEl.addEventListener('click', e => {
       const btn = e.target.closest('[data-act]');
       if (!btn) return;
@@ -291,13 +307,17 @@
   }
 
   function closeCtx() {
-    if (ctxEl) ctxEl.hidden = true;
+    if (ctxEl) {
+      ctxEl.hidden = true;
+      ctxEl.querySelector('.ed-ctx-sub')?.classList.remove('open');
+    }
     closeStretchPop();
   }
 
   function openCtx(x, y, el) {
     ensureCtxMenu();
     selectEl(el, false);
+    ctxEl.querySelector('.ed-ctx-sub')?.classList.remove('open');
     ctxEl.style.left = Math.min(x, window.innerWidth - 240) + 'px';
     ctxEl.style.top = Math.min(y, window.innerHeight - 320) + 'px';
     ctxEl.hidden = false;
@@ -557,9 +577,11 @@
 
   function bindGlobalClose() {
     document.addEventListener('pointerdown', e => {
-      if (e.target.closest('.ed-ctx, .ed-stretch-pop, .sticker')) return;
-      closeCtx();
-      if (!e.target.closest('.sticker, .photo-tile') && !e.shiftKey && !marquee) deselectAll();
+      if (!e.target.closest('.ed-ctx, .ed-stretch-pop')) closeCtx();
+      if (!e.target.closest('.ed-ctx, .ed-stretch-pop, .sticker, .photo-tile') && !e.shiftKey && !marquee) deselectAll();
+    });
+    document.addEventListener('contextmenu', e => {
+      if (!e.target.closest('.sticker')) closeCtx();
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtx(); });
   }
