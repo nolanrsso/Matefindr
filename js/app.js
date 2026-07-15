@@ -2485,11 +2485,28 @@
         el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
       }
     }
-    /* Hint centre bulle : note (musique) / clic (jeu+clip). Cycle CSS 9s (2s on / 7s off). */
+    /* Hint centre bulle : note (musique) / clic (jeu+clip).
+       Cycle JS 9s (2s on / 7s off) — fiable même avec prefers-reduced-motion. */
     const ORB_HINT_SRC = {
       music: 'assets/orb-hint-music.png',
       clip: 'assets/orb-hint-click.png',
     };
+    const ORB_HINT_ON_MS = 2000;
+    const ORB_HINT_PERIOD_MS = 9000; // 2s visible + 7s caché
+    let _orbHintCycleTimer = null;
+    let _orbHintHideTimer = null;
+    function ensureOrbHintCycle(){
+      if (_orbHintCycleTimer) return;
+      const show = () => {
+        document.documentElement.classList.add('orb-hints-on');
+        clearTimeout(_orbHintHideTimer);
+        _orbHintHideTimer = setTimeout(() => {
+          document.documentElement.classList.remove('orb-hints-on');
+        }, ORB_HINT_ON_MS);
+      };
+      show();
+      _orbHintCycleTimer = setInterval(show, ORB_HINT_PERIOD_MS);
+    }
     function appendOrbClickHint(btn, kind){
       if (!btn || btn.querySelector('.orb-click-hint')) return;
       const src = ORB_HINT_SRC[kind];
@@ -2499,6 +2516,7 @@
       hint.setAttribute('aria-hidden', 'true');
       hint.innerHTML = '<img class="orb-click-hint__ico" src="' + src + '" alt="" draggable="false">';
       btn.appendChild(hint);
+      ensureOrbHintCycle();
     }
 
     function renderOrbs(p){

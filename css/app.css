@@ -1385,26 +1385,24 @@
   .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:clamp(28px,3vw,44px);height:clamp(28px,3vw,44px)}
   .orbit .orb-label,.orbit.orbit--dynamic .orb-label{font-size:clamp(9.5px,1vw,11px)}
 
-  /* Hint bulle : icône centre (note / clic) — 2s visible / 7s cachée (cycle 9s), sync */
+  /* Hint bulle : icône centre — taille +50% ; cycle 2s on / 7s off via JS (classe html) */
   .orb-click-hint{
     position:absolute;inset:0;display:grid;place-items:center;
     pointer-events:none;z-index:8;color:#fff;
-    opacity:0;animation:orbHintPulse 9s linear infinite;
+    opacity:0;visibility:hidden;
+  }
+  html.orb-hints-on .orb-click-hint{
+    opacity:.9;visibility:visible;
   }
   .swipe-stage .orbit .orb .orb-click-hint__ico,
   .orbit .orb .orb-click-hint__ico{
-    width:42%;height:42%;max-width:44px;max-height:44px;min-width:22px;min-height:22px;
+    width:63%;height:63%;max-width:66px;max-height:66px;min-width:33px;min-height:33px;
     display:block;object-fit:contain;pointer-events:none;
     filter:drop-shadow(0 1px 4px rgba(0,0,0,.75));
   }
-  @keyframes orbHintPulse{
-    /* 2s visibles (~22%) puis 7s totalement invisibles */
-    0%{opacity:0}
-    1.5%,20.5%{opacity:.9}
-    22.2%,100%{opacity:0}
-  }
   @media (prefers-reduced-motion:reduce){
-    .orb-click-hint{animation:none;opacity:.75}
+    /* Le show/hide reste actif (pas une anim décorative) — seulement pas de fade */
+    .orb-click-hint,html.orb-hints-on .orb-click-hint{transition:none}
   }
 
   /* Sound-wave ripple when clicking a music orb */
