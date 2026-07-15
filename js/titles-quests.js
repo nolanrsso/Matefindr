@@ -323,6 +323,14 @@
     </button>`;
   }
 
+  /** Zone réservée sous le @tag et au-dessus du séparateur — titre équipé ou emplacement vide (aperçu perso). */
+  function cardTitleSlotHtml(p, escFn) {
+    const inner = cardTitleHtml(p, escFn);
+    if (inner) return `<div class="card-title-slot">${inner}</div>`;
+    if (p.isMe) return '<div class="card-title-slot card-title-slot--empty" aria-hidden="true"></div>';
+    return '';
+  }
+
   function discordTagLabel(p) {
     const MC = global.MatefindrConnections;
     if (!MC || !p.connections || !MC.connIsSet(p.connections, 'discord')) return '';
@@ -713,6 +721,7 @@
     refreshPending,
     collectMission,
     cardTitleHtml,
+    cardTitleSlotHtml,
     discordFloorHtml,
     discordCardHeadHtml,
     discordCardActivityHtml,

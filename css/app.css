@@ -1624,7 +1624,14 @@
   .swipe-card .handle{color:#b9bbbe;font-size:13px;display:flex;align-items:center;gap:6px;margin-top:-6px}
   .swipe-card .handle .sep{opacity:.6}
   .swipe-card .handle .handle-tag--blur{filter:blur(5px);user-select:none;pointer-events:none}
-  .swipe-card hr.div{border:none;border-top:1px solid rgba(255,255,255,.08);margin:2px 0}
+  .swipe-card hr.div{border:none;border-top:1px solid rgba(255,255,255,.08);margin:4px 0 2px}
+
+  /* Discord + connexions — espacement réduit (~75 % de moins entre preview et icônes) */
+  .swipe-card .card-discord-conn-stack{
+    display:flex;flex-direction:column;gap:2px;margin-top:0;
+  }
+  .swipe-card.has-discord-floor .card-discord-conn-stack .discord-floor{margin-bottom:0}
+  .swipe-card.has-discord-floor .card-discord-conn-stack .card-connections-wrap{margin-top:0;min-height:72px}
 
   .swipe-card .activity{
     background:#2b2d31;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;

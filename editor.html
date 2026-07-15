@@ -3909,7 +3909,7 @@ function renderEditorCardMeta(){
     name:u.displayName||'Moi', tag:u.discordTag||'moi',
     isMe:true, titlesData:TQ.getTitlesData(u),
   };
-  titleBox.innerHTML=TQ.cardTitleHtml(prof, esc);
+  titleBox.innerHTML=TQ.cardTitleSlotHtml(prof, esc);
 }
 async function refreshDiscordFromOAuth(btn){
   const u=connReadUser();

@@ -5,7 +5,7 @@
   box-sizing:border-box;
 }
 .discord-floor--head{margin:6px 0 4px;background:rgba(0,0,0,.32)}
-.discord-floor--activity{margin:0 0 8px;padding:0;background:transparent;border:none}
+.discord-floor--activity{margin:0;padding:0;background:transparent;border:none}
 .discord-floor--activity .discord-activity{margin:0}
 .discord-floor-head{display:flex;align-items:center;gap:12px;width:100%}
 .discord-floor-avi{position:relative;flex:0 0 44px;width:44px;height:44px}
@@ -64,7 +64,13 @@
 .discord-floor .discord-activity-times,
 .swipe-card .discord-activity-times{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.55);margin-top:4px}
 
-/* Titre de profil */
+/* Titre de profil — sous le @tag, au-dessus du séparateur */
+.swipe-card .card-title-slot{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  min-height:24px;margin:2px 0 4px;padding:2px 0;
+}
+.swipe-card .card-title-slot--empty{min-height:20px}
+.swipe-card .card-title-slot .card-profile-title{margin:0}
 .swipe-card .card-profile-title{
   position:relative;display:inline-flex;align-items:center;justify-content:center;margin:4px 0 2px;padding:4px 12px;
   border:none;border-radius:999px;background:transparent;cursor:default;font:inherit;
@@ -162,5 +168,6 @@
 /* Éditeur — titre + discord floor preview */
 .editor-page .card .discord-floor{margin:8px 0 10px;background:rgba(0,0,0,.38)}
 .editor-page .card .discord-floor--head{margin:4px 0 6px}
-.editor-page .card .discord-floor--activity{margin:0 0 8px}
+.editor-page .card .discord-floor--activity{margin:0 0 2px}
 .editor-page .card .card-profile-title{margin:2px 0 6px}
+.editor-page .card .card-title-slot{min-height:24px;margin:2px 0 4px}

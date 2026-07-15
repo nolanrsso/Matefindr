@@ -1976,7 +1976,7 @@
       const TQ = window.MatefindrTitlesQuests;
       const discHelpers = { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr };
       const discordFloorHtml = TQ ? TQ.discordFloorHtml(p, discHelpers) : '';
-      const titleHtml = TQ ? TQ.cardTitleHtml(p, escapeHtmlMini) : '';
+      const titleHtml = TQ ? TQ.cardTitleSlotHtml(p, escapeHtmlMini) : '';
       const hasDiscordFloor = !!discordFloorHtml;
       let connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
       if (hasDiscordFloor) connKeys = connKeys.filter(k => k !== 'discord');
@@ -1995,6 +1995,7 @@
         ? `<div class="card-bottom-left">${guildsHtml}${viewsHtml}</div>` : '';
       if (commonGuilds.length > 0) c.classList.add('has-common-guilds');
       if (connKeys.length > 0) c.classList.add('has-card-connections');
+      if (hasDiscordFloor) c.classList.add('has-discord-floor');
       if (guildsHtml || viewsHtml) c.classList.add('has-bottom-stack');
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
@@ -2080,8 +2081,7 @@
           ` : (hasDiscordFloor ? '' : cardPresenceHtml(p))}
           ${bioHtml}
           ${joinedHtml}
-          ${discordFloorHtml}
-          ${connectionsBlock}
+          ${(discordFloorHtml || connectionsBlock) ? `<div class="card-discord-conn-stack">${discordFloorHtml}${connectionsBlock}</div>` : ''}
           ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
         </div>
