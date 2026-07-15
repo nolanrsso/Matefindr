@@ -949,7 +949,7 @@
       if (!drag) return;
       drag = null;
       el.classList.remove('dragging');
-      el.style.zIndex = String(item.z || (idx + 1));
+      el.style.zIndex = String(Math.min(item.z || (idx + 1), STICKER_Z_MAX));
       api.hideGuide();
       try { el.releasePointerCapture(e.pointerId); } catch (_) {}
       if (kind === 'photo') api._lastPhotoPlace = { x: item.x, y: item.y, w: item.w };
