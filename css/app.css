@@ -3186,7 +3186,8 @@
     border:2px solid rgba(255,255,255,.20);
     transform-origin:center center;
   }
-  .swipe-gifs-bg .swipe-gif img{width:100%;height:auto;display:block}
+  .swipe-gifs-bg .swipe-gif-inner{position:relative;width:100%;overflow:hidden;line-height:0}
+  .swipe-gifs-bg .swipe-gif-inner img{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;object-position:center center}
   /* Contour désactivable sur les PHOTOS perso (pas les GIFs) — cf. renderSwipePhotos.
      Retire aussi l'ombre portée : sans ça le rectangle d'ombre trahit encore "une
      image collée" même sans bordure visible. */

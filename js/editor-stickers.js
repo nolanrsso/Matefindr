@@ -79,7 +79,33 @@
     return { bw, bh: bw * aspect };
   }
 
-  function syncXformFrame(el) {
+  function normDeg(d) {
+    d = d % 360;
+    return d < 0 ? d + 360 : d;
+  }
+
+  /** Curseur resize le plus proche pour un axe de drag (angle écran, 0° = horizontal). */
+  function resizeCursorForAxis(deg) {
+    const mod = normDeg(deg) % 180;
+    if (mod <= 22.5 || mod >= 157.5) return 'ew-resize';
+    if (mod >= 67.5 && mod < 112.5) return 'ns-resize';
+    if (mod >= 22.5 && mod < 67.5) return 'nesw-resize';
+    return 'nwse-resize';
+  }
+
+  const XH_DRAG_AXIS = { n: 90, s: 90, e: 0, w: 0, se: 45, sw: 135, ne: -45, nw: -135 };
+
+  function syncXformCursors(el, rot) {
+    const xform = el && el.querySelector('.ed-xform');
+    if (!xform) return;
+    xform.querySelectorAll('.ed-xh').forEach(handle => {
+      const off = XH_DRAG_AXIS[handle.dataset.h];
+      if (off == null) return;
+      handle.style.cursor = resizeCursorForAxis(rot + off);
+    });
+  }
+
+  function syncXformFrame(el, rot) {
     const inner = el && el.querySelector('.sticker-inner');
     const xform = el && el.querySelector('.ed-xform');
     if (!inner || !xform) return;
@@ -87,6 +113,42 @@
     xform.style.top = inner.offsetTop + 'px';
     xform.style.width = inner.offsetWidth + 'px';
     xform.style.height = inner.offsetHeight + 'px';
+    if (typeof rot === 'number') syncXformCursors(el, rot);
+  }
+
+  function placeHandle(node, left, top) {
+    if (!node) return;
+    node.style.left = left + 'px';
+    node.style.top = top + 'px';
+    node.style.right = 'auto';
+    node.style.bottom = 'auto';
+  }
+
+  function syncHandlePositions(el) {
+    const inner = el && el.querySelector('.sticker-inner');
+    if (!inner) return;
+    const il = inner.offsetLeft;
+    const it = inner.offsetTop;
+    const iw = inner.offsetWidth;
+    const ih = inner.offsetHeight;
+    const r = 13;
+    placeHandle(el.querySelector('.sk-del'), il - r, it - r);
+    placeHandle(el.querySelector('.sk-rot'), il + iw - r, it - r);
+    placeHandle(el.querySelector('.sk-size'), il + iw - r, it + ih - r);
+    const item = getItem(el);
+    const size = el.querySelector('.sk-size');
+    if (size && item) size.style.cursor = resizeCursorForAxis((item.rot || 0) + 45);
+  }
+
+  function cropObjectPos(cl, cr, ct, cb) {
+    const spanX = Math.max(1, 100 - cl - cr);
+    const spanY = Math.max(1, 100 - ct - cb);
+    return {
+      x: cl + spanX / 2,
+      y: ct + spanY / 2,
+      zx: 100 / spanX,
+      zy: 100 / spanY,
+    };
   }
 
   function applyStickerVisual(el, item) {
@@ -97,12 +159,10 @@
     inner.style.transform = '';
     inner.style.clipPath = '';
     inner.style.overflow = 'hidden';
-    img.style.transform = '';
-    img.style.objectPosition = '';
-    img.style.transformOrigin = '';
-    img.style.position = 'relative';
-    img.style.display = 'block';
+    inner.style.position = 'relative';
+    img.style.margin = '0';
     img.style.maxWidth = 'none';
+    img.style.display = 'block';
 
     const cl = item.cropL || 0;
     const cr = item.cropR || 0;
@@ -113,30 +173,37 @@
     const hasCrop = cl || cr || ct || cb;
     const hasStretch = sx !== 1 || sy !== 1;
 
-    if (hasCrop || hasStretch) {
-      const { bw, bh } = frameSize(el);
-      const coreW = bw * (1 - cl / 100 - cr / 100);
-      const coreH = bh * (1 - ct / 100 - cb / 100);
-      const visW = Math.max(4, coreW * sx);
-      const visH = Math.max(4, coreH * sy);
-      inner.style.width = visW + 'px';
-      inner.style.height = visH + 'px';
-      inner.style.marginLeft = (bw * cl / 100) + 'px';
-      inner.style.marginTop = (bh * ct / 100) + 'px';
-      img.style.width = bw + 'px';
-      img.style.height = bh + 'px';
-      img.style.marginLeft = (-bw * cl / 100) + 'px';
-      img.style.marginTop = (-bh * ct / 100) + 'px';
-      img.style.objectFit = hasStretch ? 'fill' : 'cover';
+    const { bw, bh } = frameSize(el);
+    const coreW = bw * (1 - cl / 100 - cr / 100);
+    const coreH = bh * (1 - ct / 100 - cb / 100);
+    const visW = Math.max(4, coreW * sx);
+    const visH = Math.max(4, coreH * sy);
+
+    inner.style.width = visW + 'px';
+    inner.style.height = visH + 'px';
+    inner.style.marginLeft = hasCrop ? (bw * cl / 100) + 'px' : '0';
+    inner.style.marginTop = hasCrop ? (bh * ct / 100) + 'px' : '0';
+
+    img.style.position = 'absolute';
+    img.style.top = '0';
+    img.style.left = '0';
+    img.style.right = '0';
+    img.style.bottom = '0';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.transform = '';
+    img.style.transformOrigin = '';
+    img.style.objectPosition = '50% 50%';
+
+    if (hasCrop) {
+      const cp = cropObjectPos(cl, cr, ct, cb);
+      img.style.objectFit = 'cover';
+      img.style.objectPosition = cp.x + '% ' + cp.y + '%';
+      img.style.transformOrigin = cp.x + '% ' + cp.y + '%';
+      img.style.transform = 'scale(' + cp.zx + ', ' + cp.zy + ')';
+    } else if (hasStretch) {
+      img.style.objectFit = 'fill';
     } else {
-      inner.style.width = '';
-      inner.style.height = '';
-      inner.style.marginLeft = '';
-      inner.style.marginTop = '';
-      img.style.width = '100%';
-      img.style.height = 'auto';
-      img.style.marginLeft = '';
-      img.style.marginTop = '';
       img.style.objectFit = 'cover';
     }
 
@@ -146,7 +213,8 @@
       img.style.transform = 'scale(' + (item.scale || 1) + ')';
     }
 
-    syncXformFrame(el);
+    syncXformFrame(el, item.rot || 0);
+    syncHandlePositions(el);
   }
 
   function applyImgStyles(img, item) {
@@ -165,6 +233,10 @@
     if (!el.classList.contains('selected')) {
       el.classList.add('selected');
       selected.add(el);
+      const item = getItem(el);
+      if (item) {
+        requestAnimationFrame(() => applyStickerVisual(el, item));
+      }
     }
   }
 
@@ -402,6 +474,7 @@
     el.classList.add(mode === 'crop' ? 'transform-crop' : 'transform-stretch');
     bindXformHandles(el, item, kind, mode);
     refreshTransformImg(el, item);
+    syncXformCursors(el, item.rot || 0);
   }
 
   function cropSelection() {
@@ -516,6 +589,12 @@
     el.dataset.stickerIdx = String(idx);
     el.style.zIndex = String(idx + 1);
 
+    el.innerHTML =
+      '<div class="sticker-inner"><img src="' + item.url + '" alt="" draggable="false"></div>' +
+      '<button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' +
+      '<div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>' +
+      '<div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>';
+
     const apply = () => {
       el.style.left = item.x + '%';
       el.style.top = item.y + '%';
@@ -525,12 +604,6 @@
     };
 
     apply();
-    el.innerHTML =
-      '<div class="sticker-inner"><img src="' + item.url + '" alt="" draggable="false"></div>' +
-      '<button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' +
-      '<div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>' +
-      '<div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>';
-    applyStickerVisual(el, item);
     const imgEl = el.querySelector('.sticker-inner img');
     if (imgEl && !imgEl.complete) {
       imgEl.addEventListener('load', () => applyStickerVisual(el, item), { once: true });
@@ -631,6 +704,7 @@
         const a = Math.atan2(ev.clientY - c.y, ev.clientX - c.x) * 180 / Math.PI;
         item.rot = Math.round(r0 + (a - a0));
         apply();
+        if (activeTransform && activeTransform.el === el) syncXformCursors(el, item.rot);
       };
       const up = ev => {
         ro.removeEventListener('pointermove', mv);
