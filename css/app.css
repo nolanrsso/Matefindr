@@ -640,7 +640,7 @@
   .mf-vol{
     --mf-vol-btn-size:53px;
     --mf-vol-bar:78px;
-    --mf-vol-bg:rgba(255,255,255,.06);
+    --mf-vol-bg:rgba(8,6,20,.13);
     position:fixed;z-index:45;display:none;align-items:center;gap:0;
     top:auto;bottom:18px;left:14px;
     border:1px solid transparent;border-radius:18px;box-sizing:border-box;
