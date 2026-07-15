@@ -379,6 +379,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
   display:inline-flex;align-items:center;gap:8px;align-self:flex-start;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4);
 }
 .username input{font:inherit;color:#fff;background:rgba(0,0,0,.25);border:1.5px solid rgba(255,255,255,.6);border-radius:10px;padding:2px 10px;outline:none;max-width:240px}
+.editor-page .card .body > .tag{margin-bottom:-4px}
 .tag{color:rgba(255,255,255,.7);font-size:13px;margin-top:-8px}
 .tag--clickable{cursor:pointer;border-radius:7px;transition:background .15s ease,filter .2s ease;padding:1px 4px;margin-left:-4px;display:inline-block}
 .tag--clickable:hover{background:rgba(255,255,255,.08)}
@@ -1242,44 +1243,27 @@ html.perf-lite *{
   .orb[data-kind="music"] img{ animation:none !important; }
 }
 
-/* ---- Titre profil (éditeur) : rendu = carte swipe + cadre « modifiable » ---- */
-#edProfileTitle{display:flex;align-items:flex-start;margin:0;padding:8px 0 0;min-height:0;overflow:visible}
-#edProfileTitle .ed-title-frame{
-  all:unset;box-sizing:border-box;
-  position:relative;display:inline-flex;align-items:center;gap:10px;
-  margin:2px 0 8px;padding:7px 11px 7px 7px;max-width:100%;overflow:visible;
-  border:1.5px dashed rgba(199,165,255,.52);border-radius:16px;
-  background:rgba(145,70,255,.08);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 0 rgba(145,70,255,.18);
-  cursor:pointer;font:inherit;text-align:left;
-  transition:border-color .16s ease,background .16s ease,box-shadow .18s ease,transform .12s ease;
+/* ---- Titre profil (éditeur) : texte brut + petit bouton edit ---- */
+#edProfileTitle{margin:-10px 0 -8px;padding:0;min-height:0;line-height:1;display:block}
+.ed-title-inline{display:inline-flex;align-items:center;gap:5px;max-width:100%}
+.ed-title-text{
+  font-family:var(--title-font,"Cinzel Decorative",serif);
+  font-weight:var(--title-weight,700);
+  font-size:11px;letter-spacing:var(--title-spacing,.14em);
+  text-transform:var(--title-transform,uppercase);
+  color:var(--title-color,#C7A5FF);
+  line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:min(100%,240px);
+  background:none;border:none;padding:0;margin:0;
+  -webkit-text-fill-color:currentColor;filter:none;
 }
-#edProfileTitle .ed-title-frame:hover{
-  border-color:rgba(199,165,255,.9);
-  background:rgba(145,70,255,.15);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 4px rgba(145,70,255,.14),0 10px 28px rgba(0,0,0,.24);
-  transform:translateY(-1px);
+.ed-title-edit-btn{
+  flex:0 0 auto;width:20px;height:20px;padding:0;border:none;border-radius:6px;
+  background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);
+  font-size:10px;font-weight:900;line-height:1;cursor:pointer;
+  display:grid;place-items:center;transition:background .14s ease,color .14s ease;
 }
-#edProfileTitle .ed-title-frame:focus-visible{
-  outline:2px solid rgba(145,70,255,.7);outline-offset:3px;
-}
-#edProfileTitle .ed-title-frame .card-profile-title{margin:0;pointer-events:none;flex:0 1 auto;min-width:0}
-#edProfileTitle .ed-title-frame-edit{
-  flex:0 0 auto;width:27px;height:27px;border-radius:50%;
-  display:grid;place-items:center;
-  background:linear-gradient(135deg,#FF7EB6,#9146FF);
-  color:#fff;font-size:11px;font-weight:900;line-height:1;
-  box-shadow:0 3px 12px rgba(145,70,255,.5);
-  opacity:.95;transition:transform .14s ease,opacity .14s ease;
-}
-#edProfileTitle .ed-title-frame:hover .card-profile-title{filter:brightness(1.12) saturate(1.08)}
-#edProfileTitle .ed-title-frame:hover .ed-title-frame-edit{transform:scale(1.08);opacity:1}
-#edProfileTitle .ed-title-frame-label{
-  position:absolute;left:10px;top:-8px;padding:1px 7px;border-radius:999px;
-  font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  color:rgba(255,255,255,.88);background:rgba(28,29,34,.92);
-  border:1px solid rgba(199,165,255,.35);pointer-events:none;line-height:1.35;
-}
+.ed-title-edit-btn:hover{background:rgba(145,70,255,.22);color:#fff}
 </style>
 <link rel="stylesheet" href="css/titles-quests.css">
 </head>
@@ -2915,7 +2899,7 @@ function applyBg(bg){
 }
 
 /* ===== 4. COULEURS (carte + pseudo) — sélecteur simplifié ===== */
-// 12 dégradés (Haut = c1, Bas = c2), affichés en grille 4×3. Estimés d'après tes captures.
+// 12 dégradés (Haut = c1, Bas = c2), affichés en grille 4×2 dans le panneau.
 const SWATCH_PAIRS=[
   ['#C3C9EA','#2C2E86'], // lavande → indigo
   ['#F6D9E8','#D01E86'], // rose pâle → magenta
@@ -2930,7 +2914,6 @@ const SWATCH_PAIRS=[
   ['#CDE9C4','#1F5A2A'], // vert menthe → vert forêt
   ['#DAD2A0','#6E6A1E'], // kaki clair → or foncé
 ];
-const NAME_COLORS=['#FFFFFF','#FFD83D','#FF7EB6','#FF4FA0','#9146FF','#5BE9FF','#3BD17C','#FFB66E','#FF5555','#5865F2'];
 const GRAD_SWAP_SVG='<svg class="gv-swap-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path transform="translate(7.75 2)" d="M0 0L4 5.5H1.4V12.6H-1.4V5.5H-4Z"/><path transform="translate(16.25 22) rotate(180)" d="M0 0L4 5.5H1.4V12.6H-1.4V5.5H-4Z"/></svg>';
 /* Panneau "Couleur de la carte" : dégradé vertical à 2 poignées (haut = c1, bas = c2),
    chaque poignée ouvre le picker natif. + dégradés 1 clic + reset Discord. */
@@ -2941,6 +2924,13 @@ function renderColorPanel(){
   const connCol=connUniformSwatchColor();
   p.innerHTML=`
     <button class="cp-close" id="cpClose" aria-label="Fermer">✕</button>
+    <div class="cp-title">Couleur du pseudo</div>
+    <div class="uname-color" style="margin-top:2px">
+      <button type="button" class="uname-color-swatch" id="cpNameColor" style="background:${ncVal}" data-hex="${ncVal}"></button>
+      <span class="uname-color-lbl">${esc(S.username||'Pseudo')}</span>
+      <button type="button" class="uname-color-def" id="cpNameDef">Défaut</button>
+    </div>
+    <div class="cp-div"></div>
     <div class="cp-title">Pseudo Discord (@tag)</div>
     <div class="cp-toggle-row">
       <button type="button" class="sh-contour-tgl${!S.handleBlur?' on':''}" id="cpTagVisible" title="Afficher ou masquer ton @username sur la carte"><span>Afficher le @username</span><span class="sw"></span></button>
@@ -2960,17 +2950,8 @@ function renderColorPanel(){
       </div>
     </div>
     <div class="cp-sub">Dégradés en 1 clic</div>
-    <div class="cp-swatches">${SWATCH_PAIRS.map(pr=>`<button data-c1="${pr[0]}" data-c2="${pr[1]}" title="${pr[0]} → ${pr[1]}" style="background:linear-gradient(180deg,${pr[0]},${pr[1]})"></button>`).join('')}</div>
+    <div class="cp-swatches">${SWATCH_PAIRS.slice(0,8).map(pr=>`<button data-c1="${pr[0]}" data-c2="${pr[1]}" title="${pr[0]} → ${pr[1]}" style="background:linear-gradient(180deg,${pr[0]},${pr[1]})"></button>`).join('')}</div>
     <button class="cp-reset" id="colReset">↺ Couleur par défaut</button>
-    <div class="cp-div"></div>
-    <div class="cp-title">Couleur du pseudo</div>
-    <div class="uname-color" style="margin-top:2px">
-      <button type="button" class="uname-color-swatch" id="cpNameColor" style="background:${ncVal}" data-hex="${ncVal}"></button>
-      <span class="uname-color-lbl">${esc(S.username||'Pseudo')}</span>
-      <button type="button" class="uname-color-def" id="cpNameDef">Défaut</button>
-    </div>
-    <div class="cp-sub">Couleurs rapides</div>
-    <div class="cp-swatches cp-name-swatches">${NAME_COLORS.map(c=>`<button type="button" data-nc="${c}" class="${(S.nameColor||'').toLowerCase()===c.toLowerCase()?'on':''}" title="${c}" style="background:${c}"></button>`).join('')}</div>
     <div class="cp-div"></div>
     <div class="cp-title">Connexions</div>
     <div class="cp-toggle-row">
@@ -2979,7 +2960,6 @@ function renderColorPanel(){
     <div class="uname-color" id="cpConnColorRow" style="margin-top:10px"${connOn?'':' hidden'}>
       <button type="button" class="uname-color-swatch" id="cpConnColor" style="background:${connCol}" data-hex="${connCol}"></button>
       <span class="uname-color-lbl">Icônes</span>
-      <button type="button" class="uname-color-def" id="cpConnColorDef">Marques</button>
     </div>
     <p class="cp-hint">Une seule teinte pour tous les réseaux (les favicons URL perso restent inchangés).</p>`;
   const sync=()=>{ const g=p.querySelector('#gradVert'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
@@ -2999,15 +2979,9 @@ function renderColorPanel(){
     toast(S.handleBlur?'Pseudo Discord flouté 🔒':'Pseudo Discord visible');
   });
   const cpNC=p.querySelector('#cpNameColor');
-  if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>{ applyNameColorVal(hex); DarkColorPicker.setSwatchBg(cpNC,hex); p.querySelectorAll('[data-nc]').forEach(b=>b.classList.toggle('on',b.dataset.nc.toLowerCase()===hex.toLowerCase())); });
+  if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>{ applyNameColorVal(hex); DarkColorPicker.setSwatchBg(cpNC,hex); });
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(cpNC,'#FFFFFF'); p.querySelectorAll('[data-nc]').forEach(b=>b.classList.toggle('on',b.dataset.nc==='#FFFFFF')); toast('Pseudo remis en blanc'); });
-  p.querySelectorAll('[data-nc]').forEach(b=>b.addEventListener('click',()=>{
-    applyNameColorVal(b.dataset.nc);
-    DarkColorPicker.setSwatchBg(cpNC,b.dataset.nc);
-    p.querySelectorAll('[data-nc]').forEach(x=>x.classList.toggle('on',x===b));
-    toast('Couleur du pseudo appliquée');
-  }));
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(cpNC,'#FFFFFF'); toast('Pseudo remis en blanc'); });
   const cpConnTgl=p.querySelector('#cpConnUniformTgl');
   const cpConnRow=p.querySelector('#cpConnColorRow');
   const cpConnSw=p.querySelector('#cpConnColor');
@@ -3026,14 +3000,6 @@ function renderColorPanel(){
     toast(enabling?'Couleur uniforme activée':'Couleurs marque restaurées');
   });
   if(cpConnSw) DarkColorPicker.bindSwatch(cpConnSw,()=>connUniformSwatchColor(),hex=>{ applyConnUniformColor(hex); DarkColorPicker.setSwatchBg(cpConnSw,hex); });
-  const cpConnDef=p.querySelector('#cpConnColorDef');
-  if(cpConnDef) cpConnDef.addEventListener('click',()=>{
-    S.connUniformColor=null;
-    cpConnTgl.classList.remove('on');
-    cpConnRow.hidden=true;
-    renderConnections(); persist();
-    toast('Couleurs marque restaurées');
-  });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ closeOrbStylePanel(); renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
@@ -3811,6 +3777,7 @@ function buildDbProfile(st){
     staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
     discordLive:u.discordLive||null,
     titlesData:u.titlesData||null,
+    coins:typeof u.coins==='number'?u.coins:1000,
     slugChangedAt:u.slugChangedAt||null,
   };
 }
@@ -3955,6 +3922,7 @@ async function edEnsureLocalProfile(){
       if(typeof d.handleBlur==='boolean') su.handleBlur=d.handleBlur;
       if(d.profileVoice) su.profileVoice=d.profileVoice;
       if(d.titlesData) su.titlesData=d.titlesData;
+      if(typeof d.coins==='number') su.coins=d.coins;
       if(d.discordLive) su.discordLive=d.discordLive;
     }
     if(!su.avatarUrl && row?.avatar_url) su.avatarUrl=row.avatar_url;

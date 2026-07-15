@@ -167,7 +167,7 @@
         ratingMin: r.min,
         ratingMax: r.max,
         threshold: r.min,
-        title: r.label,
+        title: r.label.charAt(0).toUpperCase() + r.label.slice(1),
         rarity: r.rarity,
         noTranslate: true,
         desc: `Note moyenne entre ${r.min} et ${r.max} (min. 10 votants).`,
@@ -336,6 +336,61 @@
     } catch (_) { return { count: 0, pct: 0 }; }
   }
 
+  function titleDisplay(m) {
+    if (!m) return '';
+    const t = m.title || '';
+    if (m.noTranslate) return t.charAt(0).toUpperCase() + t.slice(1);
+    return t;
+  }
+
+  function isRatingTitle(m) {
+    return !!(m && (m.stat === 'rating' || String(m.id || '').startsWith('rt_')));
+  }
+
+  function titleCoinPrice(m) {
+    if (!m || isRatingTitle(m) || m.id === BETA_TESTER_ID) return null;
+    const table = { 2: 150, 3: 200, 4: 275, 5: 350, 6: 450, 7: 550, 8: 675, 9: 800, 10: 950, 11: 1100, 12: 1300, 13: 1500, 14: 1750 };
+    return table[m.rarity] || 250;
+  }
+
+  function getCoins() {
+    const u = readSite().user || {};
+    return typeof u.coins === 'number' ? u.coins : 1000;
+  }
+
+  function setCoins(n) {
+    const s = readSite();
+    s.user = s.user || {};
+    s.user.coins = Math.max(0, Math.floor(n));
+    writeSite(s);
+    if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
+  }
+
+  function tqToast(m) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = m;
+    t.classList.add('show');
+    clearTimeout(tqToast._t);
+    tqToast._t = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function buyTitle(id) {
+    const m = getMission(id);
+    const price = titleCoinPrice(m);
+    if (!m || !price) return false;
+    const td = getTitlesData();
+    if (td.collected.includes(id)) return false;
+    const coins = getCoins();
+    if (coins < price) return false;
+    setCoins(coins - price);
+    const collected = td.collected.slice();
+    collected.push(id);
+    saveTitlesData({ collected });
+    bumpGlobalStat(id);
+    return true;
+  }
+
   function equippedTitleMeta(td) {
     if (!td?.equipped) return null;
     return getMission(td.equipped) || null;
@@ -432,7 +487,7 @@
     if (!meta) return '';
     const color = td.color || '#C7A5FF';
     const rarity = meta.rarity || 3;
-    const inner = titleBadgeInnerHtml(meta.title, rarity, escH);
+    const inner = titleBadgeInnerHtml(titleDisplay(meta), rarity, escH);
     const typo = titleTypoCss(meta);
     if (opts.asSpan) {
       return `<span class="card-profile-title" data-rarity="${rarity}" data-title-id="${escH(meta.id)}" style="--title-color:${escH(color)};${typo}" title="${escH(meta.title)}">${inner}</span>`;
@@ -447,17 +502,18 @@
     return cardTitleBadgeHtml(td, escH, { clickable: !!p.isMe });
   }
 
-  /** Éditeur : cadre modifiable + badge identique à l'aperçu swipe. */
+  /** Éditeur : texte brut + petit bouton edit (pas de badge pill). */
   function editorTitleSlotHtml(p, escFn) {
     const escH = escFn || esc;
     const td = titlesDataForCard(p);
-    const badge = cardTitleBadgeHtml(td, escH, { asSpan: true });
-    if (!badge) return '';
-    return `<button type="button" class="ed-title-frame card-title-slot--clickable" aria-label="Changer de titre">
-      <span class="ed-title-frame-label">Titre</span>
-      ${badge}
-      <span class="ed-title-frame-edit" aria-hidden="true">✎</span>
-    </button>`;
+    const meta = equippedTitleMeta(td);
+    if (!meta) return '';
+    const color = td.color || '#C7A5FF';
+    const typo = titleTypoCss(meta);
+    return `<div class="ed-title-inline">
+      <span class="ed-title-text" style="--title-color:${escH(color)};${typo}">${escH(titleDisplay(meta))}</span>
+      <button type="button" class="ed-title-edit-btn" aria-label="Changer de titre">✎</button>
+    </div>`;
   }
 
   function cardTitleSlotHtml(p, escFn) {
@@ -709,16 +765,24 @@
     });
   }
 
-  function renderTitlePickRow(meta, td, soonIds) {
+  function renderTitlePickRow(meta, td, soonIds, opts) {
+    opts = opts || {};
     const owned = td.collected.includes(meta.id);
     const soon = !owned && soonIds.has(meta.id);
     const pending = td.pending.includes(meta.id);
-    const badge = pending ? '<span class="tq-soon tq-soon--ready">Quête prête</span>' : (soon ? '<span class="tq-soon">Bientôt</span>' : '');
+    const price = opts.shop ? titleCoinPrice(meta) : null;
+    let badge = '';
+    if (owned) badge = '';
+    else if (price != null) badge = `<span class="tq-price"><span class="tq-price-ico" aria-hidden="true">🪙</span>${price}</span>`;
+    else if (pending) badge = '<span class="tq-soon tq-soon--ready">Quête prête</span>';
+    else if (soon) badge = '<span class="tq-soon">Bientôt</span>';
     const typo = titleTypoCss(meta);
-    return `<button type="button" class="tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}" ${owned ? '' : 'disabled'}>
+    const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}`;
+    const canBuy = opts.shop && price != null && getCoins() >= price;
+    return `<button type="button" class="${cls}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" data-price="${price || ''}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}" ${owned || canBuy ? '' : 'disabled'}>
         <span class="tq-title-glow" aria-hidden="true"></span>
         <span class="tq-title-aura" aria-hidden="true"></span>
-        <span class="tq-title-label">${esc(meta.title)}</span>
+        <span class="tq-title-label">${esc(titleDisplay(meta))}</span>
         ${badge}
       </button>`;
   }
@@ -726,10 +790,19 @@
   function renderTitlesModal(body, stats) {
     refreshPending(stats);
     const td = getTitlesData();
+    const coins = getCoins();
     const soonIds = computeSoonTitleIds(stats, td);
     const ownedList = MISSIONS.filter(m => td.collected.includes(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
     const soonList = MISSIONS.filter(m => !td.collected.includes(m.id) && soonIds.has(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
+    const shopList = MISSIONS.filter(m => {
+      if (td.collected.includes(m.id)) return false;
+      if (isRatingTitle(m)) return false;
+      if (m.id === BETA_TESTER_ID) return false;
+      if (soonIds.has(m.id)) return false;
+      return titleCoinPrice(m) != null;
+    }).sort((a, b) => (a.rarity || 0) - (b.rarity || 0));
     let html = `<div class="tq-titles-toolbar">
+      <div class="tq-coins" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
       <label>Couleur du titre
         <input type="color" id="tqTitleColor" value="${esc(td.color || '#C7A5FF')}">
       </label>
@@ -742,7 +815,11 @@
       html += '<div class="tq-section-label">Bientôt débloqués</div>';
       soonList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
     }
-    if (!ownedList.length && !soonList.length) {
+    if (shopList.length) {
+      html += '<div class="tq-section-label">Boutique</div>';
+      shopList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds, { shop: true }); });
+    }
+    if (!ownedList.length && !soonList.length && !shopList.length) {
       html += '<p class="tq-titles-empty">Aucun titre pour l’instant — complète des quêtes pour en débloquer.</p>';
     }
     html += '</div>';
@@ -759,6 +836,21 @@
       btn.addEventListener('mouseenter', () => {
         const st = globalTitleStats(btn.getAttribute('data-id'));
         btn.title = `${st.count} joueurs · ${st.pct}%`;
+      });
+    });
+    body.querySelectorAll('.tq-title-pick.shop').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const price = parseInt(btn.getAttribute('data-price'), 10);
+        if (!id || !price) return;
+        if (getCoins() < price) {
+          tqToast('Pas assez de pièces');
+          return;
+        }
+        if (buyTitle(id)) {
+          tqToast('Titre acheté');
+          renderTitlesModal(body, stats);
+        }
       });
     });
   }
@@ -816,7 +908,7 @@
     });
     bindButtons(opts.titleTriggers || [], () => {});
     document.addEventListener('click', e => {
-      const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable, .ed-title-frame');
+      const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable, .ed-title-edit-btn');
       if (t) {
         e.preventDefault();
         openTitles();
