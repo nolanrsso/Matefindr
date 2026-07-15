@@ -463,7 +463,7 @@
           // c'est handleSharedLink()/openSharedProfile() qui décident de l'écran, pas nous
           // (sinon ça flashe landing avant que le profil partagé s'affiche).
           const wantShared = !_hadPendingShared && typeof getSharedSlug === 'function' && !!getSharedSlug();
-          if (wantPreview && state.profile && typeof enterPreviewMode === 'function') {
+          if (wantPreview && typeof enterPreviewMode === 'function') {
             _previewFromEditor = true;
             enterPreviewMode();
             try { history.replaceState(null, '', location.pathname); } catch(_){}
@@ -824,6 +824,51 @@
     const ENTRY_MUSIC_GAIN = (window.MatefindrVolume && window.MatefindrVolume.GAIN) || 0.275;
     const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
 
+    function buildMinimalProfile(){
+      const u = state.user || {};
+      const p = state.profile || {};
+      return {
+        name: u.displayName || u.email?.split('@')[0] || 'Mon profil',
+        tag: u.discordTag || 'moi',
+        age: p.age || '',
+        gender: p.gender || '',
+        country: p.country || '',
+        countryFlag: p.countryFlag || '',
+        looking: p.looking || 'game',
+        status: 'online',
+        nitro: false,
+        fakeDeco: null,
+        boost: !!u.boost,
+        showBoostName: u.boostShowName !== false,
+        nameColor: u.nameColor || null,
+        handleBlur: !!u.handleBlur,
+        joinedOn: '',
+        games: [],
+        bio: p.bio || '',
+        common: { friends:0, servers:0 },
+        c1:'#242429', c2:'#1c1d22',
+        initial: (u.displayName || u.email || 'M').charAt(0).toUpperCase(),
+        avatarUrl: u.avatarUrl || null,
+        avatarPos: normalizeAvatarPos(u.avatarPos),
+        bannerUrl: u.bannerUrl || null,
+        profileColor: u.profileColor || '#393a41',
+        profileColor2: u.profileColor2 || '#393a41',
+        accentColor: u.accentColor || null,
+        profileVoice: u.profileVoice || null,
+        guildIds: [],
+        orbs: [],
+        gifs: Array.isArray(u.gifs) ? u.gifs : [],
+        photos: Array.isArray(u.photos) ? u.photos : [],
+        bg: u.boostBg || null,
+        bgPos: u.boostBgPos || null,
+        connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
+        titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
+        discordLive: u.discordLive || null,
+        isMe: true,
+        views: _myViewsCache,
+      };
+    }
+
     function buildUserProfile(){
       const u = state.user || {};
       const p = state.profile || {};
@@ -900,7 +945,7 @@
         bgPos: u.boostBgPos || null,
         swipeMusic: u.swipeMusic || null,
         connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
-        titlesData: global.MatefindrTitlesQuests ? global.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
+        titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         isMe: true,
         views: _myViewsCache,
       };
@@ -1391,6 +1436,9 @@
       try { const pool = genderFilteredProfiles(); shownUid = (pool[deckIdx] && pool[deckIdx].uid) || null; } catch(_){}
       fetchOtherProfiles(force).then(() => {
         if (document.body.getAttribute('data-screen') !== 'swipe') return;
+        // Mode aperçu : une seule carte figée — ne jamais re-rendre le deck quand
+        // les profils distants arrivent (sinon on remplace l'aperçu par le deck normal).
+        if (_previewMode) return;
         // On re-rend si le deck était vide (nouveaux profils arrivés), OU si le profil
         // affiché à l'écran a disparu du pool entre-temps (désactivé/supprimé).
         if (wasEmpty) { ensureDeckSync(); return; }
@@ -1436,7 +1484,7 @@
         } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
         return;
       }
-      const myP = buildUserProfile();
+      const myP = buildUserProfile() || (_previewMode ? buildMinimalProfile() : null);
       // La carte affichée en mode APERÇU (endroit dédié, figé) : SOIT un profil
       // tiers explicite (_previewProfile, ouvert depuis un chat/qui-t'a-liké),
       // SOIT ma propre carte par défaut (comportement historique).
@@ -1455,11 +1503,18 @@
         renderSwipeGifs(null);              // retire les GIFs (plus de carte)
         renderSwipePhotos(null);            // retire les photos (plus de carte)
         playProfileEntryMusic(null);        // coupe la musique d'entrée
+        if (typeof applyBgChoice === 'function') applyBgChoice(null);
         document.body.setAttribute('data-swipe-empty', 'true'); // revert le fond perso
         return;
       }
       document.body.removeAttribute('data-swipe-empty');
       const p = inPreview ? previewP : pool[deckIdx];
+      if (!p) {
+        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        if (typeof applyBgChoice === 'function') applyBgChoice(null);
+        document.body.setAttribute('data-swipe-empty', 'true');
+        return;
+      }
       // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
       if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
       // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
@@ -1476,6 +1531,7 @@
       } catch (err) {
         console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
         wrap.innerHTML = '';
+        if (typeof applyBgChoice === 'function') applyBgChoice(null);
         if (deckIdx < total - 1) { deckIdx++; ensureDeckSync(); return; }
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
         document.body.setAttribute('data-swipe-empty', 'true');

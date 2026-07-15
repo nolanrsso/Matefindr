@@ -338,7 +338,7 @@
     const tag = discordTagLabel(p);
     const avi = p.avatarUrl || '';
     const aviInner = avi
-      ? `<img src="${escH(avi)}" alt="" loading="lazy">`
+      ? `<img src="${escH(avi)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">`
       : `<span>${escH((p.initial || '?').charAt(0))}</span>`;
 
     let sub = '';
@@ -375,7 +375,7 @@
     const sub = online && act ? discordActivityLine(act) : (online ? 'En ligne' : (live?.lastOnlineAt ? `last seen ${helpers.fmtRelative ? helpers.fmtRelative(live.lastOnlineAt) : ''}` : 'Hors ligne'));
     return `<div class="discord-floor discord-floor--preview">
       <div class="discord-floor-avi">
-        <div class="discord-floor-avi-inner">${avi ? `<img src="${escH(avi)}" alt="">` : '<span>?</span>'}</div>
+        <div class="discord-floor-avi-inner">${avi ? `<img src="${escH(avi)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '<span>?</span>'}</div>
         <span class="discord-floor-dot ${online ? 'online' : 'offline'}"></span>
       </div>
       <div class="discord-floor-meta">
