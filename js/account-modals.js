@@ -4,8 +4,24 @@
 
   function $(id) { return document.getElementById(id); }
 
+  const SLUG_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
   function readSite() {
     try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch (_) { return {}; }
+  }
+
+  function fmtSlugDate(iso) {
+    try {
+      return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (_) { return ''; }
+  }
+
+  function slugCooldownInfo(changedAtIso) {
+    if (!changedAtIso) return { locked: false, nextAt: null };
+    const changedAt = new Date(changedAtIso).getTime();
+    if (Number.isNaN(changedAt)) return { locked: false, nextAt: null };
+    const nextAt = changedAt + SLUG_COOLDOWN_MS;
+    return { locked: Date.now() < nextAt, nextAt: new Date(nextAt).toISOString() };
   }
 
   function reservedSlugs() {
@@ -60,9 +76,55 @@
     const sanit = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40); };
     const isReserved = function (s) { return reservedSlugs().includes(String(s || '').toLowerCase()); };
     let fullHref = '';
+    let slugChangedAt = '';
+    let slugInputLocked = false;
 
     function currentSlug() {
       try { const st = readSite(); return (st.user && st.user.slug) || ''; } catch (_) { return ''; }
+    }
+
+    function currentSlugChangedAt() {
+      if (slugChangedAt) return slugChangedAt;
+      try { const st = readSite(); return (st.user && st.user.slugChangedAt) || ''; } catch (_) { return ''; }
+    }
+
+    async function loadSlugMeta() {
+      slugChangedAt = currentSlugChangedAt();
+      const getSupa = opts.getSupa || function () { return global.__supa || null; };
+      const sb = getSupa();
+      if (!sb) return;
+      try {
+        const sessionRes = await sb.auth.getSession();
+        const session = sessionRes && sessionRes.data && sessionRes.data.session;
+        if (!session) return;
+        const rowRes = await sb.from('profiles').select('slug, data').eq('id', session.user.id).maybeSingle();
+        const row = rowRes && rowRes.data;
+        if (!row) return;
+        if (row.slug) {
+          try {
+            const st = readSite();
+            st.user = st.user || {};
+            st.user.slug = row.slug;
+            localStorage.setItem(STATE_KEY, JSON.stringify(st));
+          } catch (_) {}
+        }
+        const d = row.data && typeof row.data === 'object' ? row.data : {};
+        if (d.slugChangedAt) slugChangedAt = d.slugChangedAt;
+        else if (row.slug) slugChangedAt = '';
+      } catch (_) {}
+    }
+
+    function applySlugLockUi() {
+      const cur = currentSlug();
+      const row = $('linkInputRow');
+      const cooldown = slugCooldownInfo(slugChangedAt);
+      slugInputLocked = !!(cur && cooldown.locked);
+      inp.readOnly = slugInputLocked;
+      if (row) row.classList.toggle('is-locked', slugInputLocked);
+      if (slugInputLocked && status) {
+        status.className = 'link-status dim';
+        status.textContent = 'Modification possible à partir du ' + fmtSlugDate(cooldown.nextAt) + ' (1 changement / 7 jours).';
+      }
     }
 
     function showLink(slug) {
@@ -87,9 +149,30 @@
         editSaveBtn.disabled = true;
         return;
       }
-      const dirty = slug !== currentSlug();
+      const prev = currentSlug();
+      const dirty = slug !== prev;
+      if (slugInputLocked) {
+        editSaveBtn.textContent = 'Modifier';
+        editSaveBtn.disabled = true;
+        return;
+      }
+      if (prev && dirty) {
+        const cooldown = slugCooldownInfo(slugChangedAt);
+        if (cooldown.locked) {
+          if (status) {
+            status.className = 'link-status err';
+            status.textContent = 'Tu pourras changer ton lien le ' + fmtSlugDate(cooldown.nextAt) + '.';
+          }
+          editSaveBtn.disabled = true;
+          return;
+        }
+      }
       editSaveBtn.textContent = dirty ? 'Sauvegarder' : 'Modifier';
       editSaveBtn.disabled = !dirty;
+      if (status && status.className.indexOf('err') === -1 && !slugInputLocked) {
+        status.textContent = '';
+        status.className = 'link-status';
+      }
     }
 
     function renderLinkPresets() {
@@ -103,13 +186,20 @@
     function openPop() {
       const cur = currentSlug();
       inp.value = cur;
+      inp.readOnly = false;
+      slugInputLocked = false;
+      $('linkInputRow')?.classList.remove('is-locked');
       if (status) { status.textContent = ''; status.className = 'link-status'; }
       if (cur) showLink(cur);
       else if (share) share.hidden = true;
       renderLinkPresets();
       refreshDirty();
       showPop('linkPop', 'linkBackdrop', opts.beforeOpen);
-      setTimeout(function () { inp.focus(); }, 60);
+      loadSlugMeta().then(function () {
+        applySlugLockUi();
+        refreshDirty();
+      });
+      setTimeout(function () { if (!inp.readOnly) inp.focus(); }, 60);
     }
 
     function closePop() { hidePop('linkPop', 'linkBackdrop'); }
@@ -133,6 +223,7 @@
     });
     editSaveBtn && editSaveBtn.addEventListener('click', async function () {
       const slug = sanit(inp.value);
+      const prev = currentSlug();
       if (slug.length < 2) {
         if (status) { status.className = 'link-status err'; status.textContent = '2 caractères minimum.'; }
         return;
@@ -140,6 +231,25 @@
       if (isReserved(slug)) {
         if (status) { status.className = 'link-status err'; status.textContent = '« ' + slug + ' » est déjà pris, essaie autre chose.'; }
         return;
+      }
+      if (slugInputLocked || (prev && slug !== prev && slugCooldownInfo(slugChangedAt).locked)) {
+        const cooldown = slugCooldownInfo(slugChangedAt);
+        if (status) {
+          status.className = 'link-status err';
+          status.textContent = 'Tu pourras changer ton lien le ' + fmtSlugDate(cooldown.nextAt) + '.';
+        }
+        return;
+      }
+      if (!prev) {
+        const ok = global.confirm(
+          'Une fois ton lien enregistré, tu ne pourras le modifier qu\'une fois tous les 7 jours.\n\nContinuer avec matefindr.com/' + slug + ' ?'
+        );
+        if (!ok) return;
+      } else if (slug !== prev) {
+        const ok = global.confirm(
+          'Tu ne pourras plus changer ton lien avant 7 jours.\n\nPasser de matefindr.com/' + prev + ' à matefindr.com/' + slug + ' ?'
+        );
+        if (!ok) return;
       }
       const getSupa = opts.getSupa || function () { return global.__supa || null; };
       const sb = getSupa();
@@ -164,7 +274,16 @@
           editSaveBtn.disabled = false;
           return;
         }
-        const upd = await sb.from('profiles').update({ slug: slug }).eq('id', session.user.id);
+        const nowIso = new Date().toISOString();
+        let dataPatch = {};
+        try {
+          const rowRes = await sb.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
+          const row = rowRes && rowRes.data;
+          dataPatch = Object.assign({}, (row && row.data && typeof row.data === 'object') ? row.data : {}, { slugChangedAt: nowIso });
+        } catch (_) {
+          dataPatch = { slugChangedAt: nowIso };
+        }
+        const upd = await sb.from('profiles').update({ slug: slug, data: dataPatch }).eq('id', session.user.id);
         if (upd.error) {
           const err = upd.error;
           const m = ((err.message || '') + ' ' + (err.details || '') + ' ' + (err.hint || '')).toLowerCase();
@@ -176,16 +295,22 @@
           editSaveBtn.disabled = false;
           return;
         }
+        slugChangedAt = nowIso;
         try {
           const st = readSite();
           st.user = st.user || {};
           st.user.slug = slug;
+          st.user.slugChangedAt = nowIso;
           localStorage.setItem(STATE_KEY, JSON.stringify(st));
         } catch (_) {}
-        if (typeof opts.onSlugSaved === 'function') opts.onSlugSaved(slug);
+        if (typeof opts.onSlugSaved === 'function') opts.onSlugSaved(slug, nowIso);
         showLink(slug);
+        applySlugLockUi();
         refreshDirty();
-        if (status) { status.className = 'link-status ok'; status.textContent = '✅ Ton lien est prêt !'; }
+        if (status) {
+          status.className = 'link-status ok';
+          status.textContent = prev ? '✅ Lien mis à jour — prochain changement dans 7 jours.' : '✅ Ton lien est prêt ! Prochain changement possible dans 7 jours.';
+        }
       } catch (e) {
         if (status) {
           status.className = 'link-status err';

@@ -578,19 +578,19 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 
 /* Volume musique — bouton glass + barre blanche au survol (haut-gauche) */
 .mf-vol{position:fixed;top:70px;left:14px;z-index:39;display:flex;align-items:center;gap:0}
-.mf-vol-btn{width:29px;height:29px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.08);backdrop-filter:blur(12px) saturate(140%);-webkit-backdrop-filter:blur(12px) saturate(140%);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease}
-.mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(255,255,255,.12)}
-.mf-vol-btn svg{width:13px;height:13px;display:block}
+.mf-vol-btn{width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.24);background:rgba(10,8,24,.72);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease;box-shadow:0 4px 18px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.12)}
+.mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(10,8,24,.86)}
+.mf-vol-btn svg{width:22px;height:22px;display:block}
 .mf-vol-slash{display:none}
 .mf-vol.muted .mf-vol-wave{display:none}
 .mf-vol.muted .mf-vol-slash{display:block}
 .mf-vol.muted .mf-vol-btn{color:rgba(255,126,182,.92)}
 .mf-vol-track{width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;transition:width .22s ease,opacity .18s ease,margin-left .22s ease}
-.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:64px;opacity:1;margin-left:7px}
-.mf-vol-range{-webkit-appearance:none;appearance:none;width:64px;height:3px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
-.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:7px;height:7px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
-.mf-vol-range::-moz-range-thumb{width:7px;height:7px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:pointer}
-@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:48px}.mf-vol-range{width:48px}}
+.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:120px;opacity:1;margin-left:12px}
+.mf-vol-range{-webkit-appearance:none;appearance:none;width:120px;height:5px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
+.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+.mf-vol-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:90px}.mf-vol-range{width:90px}}
 
 /* Presets de profil (Boost) — bas-gauche */
 .pset-panel{position:fixed;left:22px;bottom:26px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
@@ -709,8 +709,18 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-pick-close{width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);cursor:pointer;font-size:15px;font-family:inherit;flex:0 0 auto}
 .conn-pick-close:hover,.conn-add-close:hover{color:#fff;background:rgba(255,255,255,.10)}
 .conn-pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px}
-.conn-pick-tile{aspect-ratio:1;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;padding:0;transition:transform .12s ease,background .12s ease,border-color .12s ease}
+.conn-pick-tile{position:relative;aspect-ratio:1;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);cursor:pointer;display:grid;place-items:center;padding:0;transition:transform .12s ease,background .12s ease,border-color .12s ease}
 .conn-pick-tile:hover{transform:translateY(-2px);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
+.conn-pick-tile:disabled{opacity:.72;cursor:not-allowed;transform:none}
+.conn-pick-tile--done{border-color:rgba(59,209,124,.45);background:rgba(59,209,124,.08)}
+.conn-pick-tile--done:disabled{opacity:1}
+.conn-pick-done{
+  position:absolute;top:4px;right:4px;z-index:2;
+  font-size:8px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  padding:2px 5px;border-radius:6px;line-height:1.2;
+  background:linear-gradient(180deg,#4ade80,#22c55e);color:#fff;
+  box-shadow:0 2px 8px rgba(34,197,94,.45);pointer-events:none;
+}
 .conn-pick-tile img,.conn-pick-tile .conn-ico-svg{width:26px;height:26px;object-fit:contain}
 .conn-pick-tile .conn-ico-svg{display:grid;place-items:center;color:#fff}
 .conn-pick-tile .conn-ico-svg svg{width:24px;height:24px}
@@ -751,12 +761,14 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-add-foot .btn-add{padding:10px 18px;border-radius:11px;border:none;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-left:auto}
 .conn-add-foot .btn-add:hover{background:rgba(255,255,255,.18)}
 /* ===== Modale "Ton lien de partage" ===== */
-.top-btn--link{color:#C7A5FF}
-.top-btn--link:hover{background:rgba(145,70,255,.16);color:#E3D2FF}
+.top-btn--link{color:#fff}
+.top-btn--link:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.22)}
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
 .link-sub{color:var(--dim);font-size:12.5px;line-height:1.5;margin:0 0 12px}
 .link-input-row{display:flex;align-items:stretch;border-radius:11px;overflow:hidden;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05)}
 .link-input-row[hidden]{display:none}
+.link-input-row.is-locked{opacity:.72;border-color:rgba(255,255,255,.12)}
+.link-input-row.is-locked input{color:var(--dim);cursor:not-allowed}
 .link-input-row:focus-within{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
 .link-prefix{display:flex;align-items:center;padding:0 4px 0 12px;color:var(--dim);font-size:13.5px;white-space:nowrap;background:rgba(255,255,255,.04)}
 .link-input-row input{flex:1;min-width:0;padding:11px 12px 11px 2px;border:none!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;color:#fff;font:inherit}
@@ -768,10 +780,10 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .link-share[hidden]{display:none}
 .link-full{flex:1;min-width:0;color:#8CE5B0;font-weight:700;font-size:13px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .link-full:hover{text-decoration:underline}
-.link-pset{margin-top:12px}
+.link-pset{margin-top:12px;margin-bottom:22px}
 .link-pset[hidden]{display:none}
-.link-pset-label{font-size:11.5px;font-weight:700;color:var(--dim);margin-bottom:7px}
-.link-pset-slots{display:flex;gap:8px;flex-wrap:wrap}
+.link-pset-label{font-size:11.5px;font-weight:700;color:var(--dim);margin-bottom:10px}
+.link-pset-slots{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
 .link-pset-slot{position:relative;width:32px;height:32px;border-radius:9px;cursor:pointer;display:grid;place-items:center;
   border:2px solid var(--stroke-2);color:#fff;overflow:visible;transition:transform .15s ease,border-color .15s ease}
 .link-pset-slot:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.9)}
@@ -3252,14 +3264,15 @@ function openConnPick(){
     const taken=MC().connIsSet(S.connections,app.id);
     const b=document.createElement('button');
     b.type='button';
-    b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'');
+    b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'')+(taken?' conn-pick-tile--done':'');
     b.disabled=taken && app.id!=='custom';
-    b.title=taken?`${app.name} déjà ajouté`:app.name;
+    b.title=taken?`${app.name} — déjà ajouté`:app.name;
+    const doneBadge=taken?'<span class="conn-pick-done">Validé</span>':'';
     if(app.wide){
       const entry=app.id==='custom'?MC().connGet(S.connections,'custom'):null;
-      b.innerHTML=MC().connIconHtml(app,24,entry)+`<span>${esc(app.name)}</span>`;
+      b.innerHTML=doneBadge+MC().connIconHtml(app,24,entry)+`<span>${esc(app.name)}</span>`;
     }
-    else b.innerHTML=MC().connIconHtml(app,26);
+    else b.innerHTML=doneBadge+MC().connIconHtml(app,26);
     b.addEventListener('click',()=>{ if(b.disabled) return; closeConnPick(); openConnAdd(app); });
     grid.appendChild(b);
   });
@@ -3644,6 +3657,7 @@ function buildDbProfile(st){
     lastEditedAt:p.lastEditedAt||null,
     staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
     discordLive:u.discordLive||null,
+    slugChangedAt:u.slugChangedAt||null,
   };
 }
 let _dbSyncT=null, _dbSyncing=false;
@@ -4139,7 +4153,16 @@ function renderEditorLinkPresets(){
     buttons:['btnShareLink'],
     getSupa:()=>(typeof edSupa==='function')?edSupa():null,
     toast:(m)=>toast(m),
-    renderLinkPresets:renderEditorLinkPresets
+    renderLinkPresets:renderEditorLinkPresets,
+    onSlugSaved(slug, changedAt){
+      try{
+        const st=readSite();
+        st.user=st.user||{};
+        st.user.slug=slug;
+        if(changedAt) st.user.slugChangedAt=changedAt;
+        localStorage.setItem(STATE_KEY,JSON.stringify(st));
+      }catch(_){}
+    }
   });
 })();
 
