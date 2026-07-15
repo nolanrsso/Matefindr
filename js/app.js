@@ -849,6 +849,7 @@
         c1:'#242429', c2:'#1c1d22',
         initial: (u.displayName || u.email || 'M').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
+        discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl || null,
         avatarPos: normalizeAvatarPos(u.avatarPos),
         bannerUrl: u.bannerUrl || null,
         profileColor: u.profileColor || '#393a41',
@@ -914,6 +915,7 @@
         c1:'#393a41', c2:'#393a41',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
+        discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl || null,
         avatarPos: normalizeAvatarPos(u.avatarPos),
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
@@ -931,8 +933,9 @@
         // remplace TOUTE la colonne data à chaque sync : sans ce passthrough, se reconnecter
         // effacerait silencieusement le message du staff / le flag disabled / le compteur.
         disabled: !!u.disabled, disabledReason: u.disabledReason || null, disabledCount: u.disabledCount || 0,
-        staffMessage: u.staffMessage || null, lastSeenAt: u.lastSeenAt || null,
-    discordLive: u.discordLive || null,
+        lastSeenAt: u.lastSeenAt || null,
+        discordLive: u.discordLive || null,
+        discordTag: u.discordTag || null,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
         socials: u.socials || {},
@@ -1970,7 +1973,13 @@
       // Connexions — sous « A rejoint Matefindr », zone flexible jusqu'à ~200px du bas.
       const MC = window.MatefindrConnections;
       const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
-      const connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
+      const TQ = window.MatefindrTitlesQuests;
+      const discHelpers = { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr };
+      const discordHeadHtml = TQ ? TQ.discordCardHeadHtml(p, discHelpers) : '';
+      const discordActHtml = TQ ? TQ.discordCardActivityHtml(p, discHelpers) : '';
+      const hasDiscordFloor = !!(discordHeadHtml || discordActHtml);
+      let connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
+      if (hasDiscordFloor) connKeys = connKeys.filter(k => k !== 'discord');
       const connDensity = connKeys.length >= 9 ? ' card-connections--dense' : connKeys.length >= 6 ? ' card-connections--many' : '';
       const connectionsInner = connKeys.map(k => {
         const app = MC ? MC.connApp(k) : null;
@@ -2000,10 +2009,6 @@
       </div>` : '';
       const bioText = cardBioText(p.bio);
       const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';
-      const TQ = window.MatefindrTitlesQuests;
-      const titleHtml = TQ ? TQ.cardTitleHtml(p, escapeHtmlMini) : '';
-      const discordFloorHtml = TQ ? TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr }) : '';
-      const hasDiscordFloor = !!discordFloorHtml;
       const joinedHtml = p.joinedOn ? `<div class="joined">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
               ${tx('joined_on')} ${p.joinedOn}
@@ -2057,10 +2062,9 @@
               <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
             <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel && !hasDiscordFloor ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
-            ${titleHtml}
+            ${discordHeadHtml}
           </div>
           <hr class="div"/>
-          ${discordFloorHtml}
           ${p.profileVoice ? `
             <div class="card-voice" data-voice="${escapeHtmlMini(p.profileVoice)}">
               <button type="button" class="card-voice-play" aria-label="Lecture vocal">
@@ -2076,6 +2080,7 @@
           ` : (hasDiscordFloor ? '' : cardPresenceHtml(p))}
           ${bioHtml}
           ${joinedHtml}
+          ${discordActHtml}
           ${connectionsBlock}
           ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
@@ -5790,6 +5795,7 @@
         if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
         u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
         if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+        if (d.avatar) u.discordAvatarUrl = discordAvatarUrl(d.id, d.avatar);
         // Bannière : si l'utilisateur a importé sa propre bannière (bannerCustom), on la garde
         if (!u.bannerCustom) {
           u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
@@ -7257,6 +7263,7 @@
               if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
               u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
               if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
+              if (d.avatar) u.discordAvatarUrl = discordAvatarUrl(d.id, d.avatar);
               if (!u.bannerCustom) u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
               if (!u.decoCustom) {
                 u.decorationUrl = d.avatar_decoration_data?.asset

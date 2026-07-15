@@ -1304,12 +1304,12 @@ html.perf-lite *{
       <div class="body">
         <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
         <div class="tag">@matefindr · en ligne sur Matefindr</div>
-        <div id="edProfileTitle"></div>
+        <div id="edDiscordHead"></div>
         <div class="divider"></div>
-        <div id="edDiscordFloor"></div>
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
         <div class="voice editable" id="voiceSlot"><span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span><span class="empty">Clique pour enregistrer un vocal</span></div>
+        <div id="edDiscordAct"></div>
         <div class="label-mini">Connexions</div>
         <div class="connections" id="connections"></div>
       </div>
@@ -1382,6 +1382,7 @@ html.perf-lite *{
     </div>
     <p class="conn-discord-preview-label">Aperçu sur ta carte</p>
     <div id="connDiscordPreview"></div>
+    <button type="button" class="conn-discord-refresh" id="connDiscordRefresh">Actualiser avatar &amp; statut Discord</button>
   </div>
   <div id="connAddLinkPanel">
     <div class="conn-url-field">
@@ -1515,6 +1516,8 @@ html.perf-lite *{
 <input type="file" id="fileBg" accept="image/*,video/*" hidden>
 <input type="file" id="filePhoto" accept="image/*" multiple hidden>
 
+<script src="js/core.js"></script>
+<script src="js/discord-presence.js"></script>
 <script src="js/titles-quests.js"></script>
 <script src="js/account-modals.js"></script>
 <script src="js/volume.js"></script>
@@ -3230,7 +3233,12 @@ function renderConnections(){
   const box=$('connections'); if(!box||!MC()) return;
   box.innerHTML='';
   MC().connEnsureOrder(S.connections);
-  const connIds=MC().connOrderedIds(S.connections);
+  let connIds=MC().connOrderedIds(S.connections);
+  const hasDiscFloor=MC().connIsSet(S.connections,'discord') && (()=>{
+    const e=MC().connGet(S.connections,'discord');
+    return e && (e.showActivity!==false || e.showStatus!==false);
+  })();
+  if(hasDiscFloor) connIds=connIds.filter(id=>id!=='discord');
   const add=document.createElement('button');
   add.type='button';
   add.className='conn-add-btn'+(connIds.length?' conn-add-btn--icon':'');
@@ -3403,6 +3411,12 @@ $('connAddRemove').addEventListener('click',()=>{
 });
 $('connAddInput').addEventListener('input',()=>{ if(_connApp&&_connApp.id==='custom') updateCustomConnIconPreview(); });
 $('connAddInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveConnAdd(); });
+['connDiscordActivity','connDiscordStatus','connShowLabel'].forEach(id=>{
+  const el=$(id); if(!el) return;
+  el.addEventListener('change',()=>{
+    if(window.MatefindrTitlesQuests) MatefindrTitlesQuests.updateDiscordPreview($('connDiscordPreview'));
+  });
+});
 renderConnections();
 
 /* ===== Popover bulle JEU : clip + rang ===== */
@@ -3899,24 +3913,65 @@ function applyAvatarDeco(){
 }
 function renderEditorCardMeta(){
   const TQ=window.MatefindrTitlesQuests;
-  const titleBox=$('edProfileTitle');
-  const discBox=$('edDiscordFloor');
-  if(!titleBox||!discBox||!TQ) return;
+  const headBox=$('edDiscordHead');
+  const actBox=$('edDiscordAct');
+  if(!headBox||!actBox||!TQ) return;
   const st=readSite(); const u=st.user||{}, p=st.profile||{};
   const prof={
-    name:u.displayName||'Moi', tag:u.discordTag||'moi', initial:(u.displayName||'T').charAt(0).toUpperCase(),
-    avatarUrl:u.avatarUrl||null, connections:p.connections||{}, discordLive:u.discordLive||null,
+    name:u.displayName||'Moi', tag:u.discordTag||'moi', discordTag:u.discordTag||'moi',
+    initial:(u.displayName||'T').charAt(0).toUpperCase(),
+    avatarUrl:u.avatarUrl||null, discordAvatarUrl:u.discordAvatarUrl||u.avatarUrl||null,
+    connections:p.connections||{}, discordLive:u.discordLive||null,
     lastSeenAt:u.lastSeenAt||null, isMe:true, titlesData:TQ.getTitlesData(u),
   };
-  titleBox.innerHTML=TQ.cardTitleHtml(prof, esc);
-  discBox.innerHTML=TQ.discordFloorHtml(prof, { esc, fmtRelative: window.__mfFmtRelativeFr || (iso=>{
+  const helpers={ esc, fmtRelative: window.__mfFmtRelativeFr || (iso=>{
     if(!iso) return '';
     const s=Math.floor((Date.now()-new Date(iso).getTime())/1000);
+    if(s<45) return 'à l\'instant';
     if(s<3600) return `il y a ${Math.floor(s/60)} min`;
     if(s<86400) return `il y a ${Math.floor(s/3600)} h`;
     return `il y a ${Math.floor(s/86400)} j`;
-  })});
+  })};
+  headBox.innerHTML=TQ.discordCardHeadHtml(prof, helpers);
+  actBox.innerHTML=TQ.discordCardActivityHtml(prof, helpers);
 }
+async function refreshDiscordFromOAuth(btn){
+  const u=connReadUser();
+  if(!u.discordId){ toast('Connecte-toi avec Discord d\'abord'); return; }
+  const el=btn||$('connDiscordRefresh');
+  const old=el?el.textContent:'';
+  if(el){ el.disabled=true; el.textContent='Synchronisation…'; }
+  try{
+    let token=typeof getStoredDiscordToken==='function'?getStoredDiscordToken(u.discordId):null;
+    if(!token){
+      token=localStorage.getItem('matefindr_discord_token');
+      const uid=localStorage.getItem('matefindr_discord_token_uid');
+      const ts=parseInt(localStorage.getItem('matefindr_discord_token_ts')||'0',10);
+      if(!token||uid!==String(u.discordId)||(Date.now()-ts)>7*24*3600*1000) token=null;
+    }
+    if(!token||typeof fetchDiscordProfile!=='function'){
+      toast('Reconnecte-toi avec Discord pour actualiser');
+      return;
+    }
+    const d=await fetchDiscordProfile(token);
+    if(!d){ toast('Token expiré — reconnecte Discord'); return; }
+    const st=readSite();
+    st.user=st.user||{};
+    if(d.avatar&&typeof discordAvatarUrl==='function'){
+      st.user.discordAvatarUrl=discordAvatarUrl(d.id,d.avatar);
+      if(!st.user.avatarCustom) st.user.avatarUrl=st.user.discordAvatarUrl;
+    }
+    if(!st.user.nameCustom) st.user.displayName=d.global_name||d.username||st.user.displayName;
+    st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
+    try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
+    if(window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
+    if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
+    if(window.MatefindrTitlesQuests) MatefindrTitlesQuests.updateDiscordPreview($('connDiscordPreview'));
+    toast('Profil Discord actualisé');
+  }catch(_){ toast('Échec de la synchronisation Discord'); }
+  finally{ if(el){ el.disabled=false; el.textContent=old||'Actualiser avatar & statut Discord'; } }
+}
+if($('connDiscordRefresh')) $('connDiscordRefresh').addEventListener('click',function(){ refreshDiscordFromOAuth(this); });
 function hydrateFromSite(){
   const st=readSite(); const u=st.user||{}, p=st.profile||{};
   const note=document.querySelector('.note'); // peut ne plus exister (topbar simplifiée)

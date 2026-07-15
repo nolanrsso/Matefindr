@@ -120,6 +120,7 @@
 
     // Defaults from Supabase metadata (always present)
     let avatar_url = m.avatar_url || null;
+    let discord_avatar_url = avatar_url;
     let banner_url = discordBannerUrl(id, m.banner);
     let deco = m.avatar_decoration_data || m.custom_claims?.avatar_decoration_data;
     let decoration_url = discordDecorationUrl(deco?.asset);
@@ -150,7 +151,10 @@
       console.log('[Matefindr] Discord profile:', d);
       if (d) {
         id = d.id || id;
-        if (d.avatar) avatar_url = discordAvatarUrl(d.id, d.avatar);
+        if (d.avatar) {
+          avatar_url = discordAvatarUrl(d.id, d.avatar);
+          discord_avatar_url = avatar_url;
+        }
         if (d.banner) banner_url = discordBannerUrl(d.id, d.banner);
         if (d.avatar_decoration_data?.asset) decoration_url = discordDecorationUrl(d.avatar_decoration_data.asset);
         public_flags = (typeof d.public_flags === 'number') ? d.public_flags : public_flags;
@@ -169,6 +173,7 @@
       discordId:   id,
       email:       u.email || m.email || null,
       avatarUrl:   avatar_url,
+      discordAvatarUrl: discord_avatar_url,
       bannerUrl:   banner_url,
       decorationUrl: decoration_url,
       publicFlags: public_flags,
@@ -193,6 +198,8 @@
   window.signInWithDiscord = signInWithDiscord;
   window.__refreshDiscordGuilds = refreshDiscordGuildsForUser;
   window.getStoredDiscordToken = getStoredDiscordToken;
+  window.fetchDiscordProfile = fetchDiscordProfile;
+  window.discordAvatarUrl = discordAvatarUrl;
 
   /* Slugs réservés pour matefindr.com/<slug> — routes système, jamais assignables. */
   window.__mfReservedSlugs = [

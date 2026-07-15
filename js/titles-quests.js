@@ -166,20 +166,22 @@
     const s = readSite();
     const u = s.user || {};
     const views = typeof opts.views === 'number' ? opts.views : (u.profileViews || s.profile?.views || 0);
-    let matches = 0, likesGiven = 0, votesGiven = 0, votesReceived = 0, newChats = 0;
+    let matches = 0, likesGiven = 0, likesReceived = 0, votesGiven = 0, votesReceived = 0, newChats = 0;
     const sb = opts.supa || global.__supa;
     const uid = opts.uid || u.uid;
     if (sb && uid) {
       try {
-        const [{ count: mC }, { count: lC }, { count: vC }, { count: vrC }, { count: cC }] = await Promise.all([
+        const [{ count: mC }, { count: lC }, { count: lrC }, { count: vC }, { count: vrC }, { count: cC }] = await Promise.all([
           sb.from('matches').select('*', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
           sb.from('likes').select('*', { count: 'exact', head: true }).eq('liker_id', uid),
+          sb.from('likes').select('*', { count: 'exact', head: true }).eq('liked_id', uid),
           sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('reactor_id', uid),
           sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('profile_id', uid),
           sb.from('matches').select('*', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
         ]);
         matches = mC || 0;
         likesGiven = lC || 0;
+        likesReceived = lrC || 0;
         votesGiven = vC || 0;
         votesReceived = vrC || 0;
         newChats = cC || matches;
@@ -188,7 +190,7 @@
     const ratingRec = opts.ratingRec || null;
     const rating = avgRating(ratingRec);
     const ratingVotes = ratingRec?.ratings?.length || 0;
-    return { views, matches, likesGiven, votesGiven, votesReceived, newChats, rating, ratingVotes };
+    return { views, matches, likesGiven, likesReceived, votesGiven, votesReceived, newChats, rating, ratingVotes };
   }
 
   function syncStatsLocal(stats) {
@@ -311,8 +313,166 @@
     const MC = global.MatefindrConnections;
     if (!MC || !p.connections || !MC.connIsSet(p.connections, 'discord')) return '';
     const e = MC.connGet(p.connections, 'discord');
-    const tag = (e?.label || p.tag || '').replace(/^@+/, '');
-    return tag ? (tag.startsWith('.') ? tag : '.' + tag) : '';
+    const tag = (e?.label || p.discordTag || p.tag || '').replace(/^@+/, '').replace(/^\.+/, '');
+    return tag || '';
+  }
+
+  const DISCORD_STATUS_LABEL = {
+    online: 'En ligne', idle: 'Inactif', dnd: 'Ne pas déranger', offline: 'Hors ligne', invisible: 'Hors ligne',
+  };
+
+  const CARD_QUEST_DEFS = [
+    { group: 'interaction', label: 'Matchs', prefix: 'matches' },
+    { group: 'interaction', label: 'Votes sur les autres profils', prefix: 'votes' },
+    { group: 'interaction', label: 'Conversations avec de nouvelles personnes', prefix: 'conversations' },
+    { group: 'profil', label: 'Beauté', prefix: 'rt_', isRating: true },
+    { group: 'profil', label: 'Visionnage', prefix: 'views' },
+    { group: 'profil', label: 'Likes sur votre profil', prefix: null, statKey: 'likesReceived' },
+  ];
+
+  function questRowValue(td, def, stats) {
+    if (def.statKey) {
+      const n = stats?.[def.statKey] || 0;
+      if (n > 0) return `${n} like${n > 1 ? 's' : ''}`;
+      return '—';
+    }
+    const meta = bestTitleForQuest(td, def);
+    return meta ? meta.title : '—';
+  }
+
+  function bestTitleForQuest(td, def) {
+    if (!def.prefix) return null;
+    const collected = td?.collected || [];
+    if (def.isRating) {
+      const hit = collected.filter(id => String(id).startsWith('rt_')).pop();
+      return hit ? getMission(hit) : null;
+    }
+    let best = null;
+    let bestTh = -1;
+    collected.forEach(id => {
+      if (!String(id).startsWith(def.prefix + '_') && id !== def.prefix) return;
+      const m = getMission(id);
+      if (!m) return;
+      const th = m.threshold || 0;
+      if (th >= bestTh) { bestTh = th; best = m; }
+    });
+    return best;
+  }
+
+  function cardQuestStripHtml(p, escFn) {
+    const escH = escFn || esc;
+    const td = p.titlesData || (p.isMe ? getTitlesData(p) : null);
+    if (!td) return '';
+    const stats = p.questStats || (p.isMe ? (readSite().user?.questStats || null) : null);
+    const groups = [
+      { id: 'interaction', title: 'Interaction' },
+      { id: 'profil', title: 'Profil' },
+    ];
+    let html = '<div class="discord-floor-quests">';
+    groups.forEach(g => {
+      const items = CARD_QUEST_DEFS.filter(d => d.group === g.id);
+      if (!items.length) return;
+      html += `<div class="discord-floor-quest-group"><span class="discord-floor-quest-head">${escH(g.title)}</span><ul class="discord-floor-quest-list">`;
+      items.forEach(def => {
+        const lbl = questRowValue(td, def, stats);
+        html += `<li><span class="discord-floor-quest-lbl">${escH(def.label)}</span><span class="discord-floor-quest-val">${escH(lbl)}</span></li>`;
+      });
+      html += '</ul></div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function discordFloorAvatar(p) {
+    return p.discordAvatarUrl || p.avatarUrl || '';
+  }
+
+  function pickBestActivity(activities) {
+    const list = (activities || []).filter(Boolean);
+    if (!list.length) return null;
+    return list.find(a => a.type === 2) || list.find(a => a.type === 0) || list[0];
+  }
+
+  function discordActivityArt(act) {
+    const img = act.assets?.large_image || act.assets?.small_image;
+    if (!img) return null;
+    if (String(img).startsWith('mp:external/')) {
+      try {
+        const encoded = String(img).split('/').slice(2).join('/');
+        return decodeURIComponent(encoded);
+      } catch (_) { return null; }
+    }
+    if (act.application_id) return `https://cdn.discordapp.com/app-assets/${act.application_id}/${img}.png?size=128`;
+    return null;
+  }
+
+  function discordActivityHeader(act) {
+    const t = typeof act.type === 'number' ? act.type : 0;
+    const name = act.name || '';
+    if (t === 2) return /spotify/i.test(name) ? 'Écoute Spotify' : (name ? `Écoute ${name}` : 'Écoute');
+    if (t === 0) return name ? `Joue à ${name}` : 'En jeu';
+    if (t === 3) return name ? `Regarde ${name}` : 'Regarde';
+    if (t === 5) return name ? `En compétition sur ${name}` : 'En compétition';
+    if (t === 1) return name ? `Stream ${name}` : 'En stream';
+    return name || 'Activité';
+  }
+
+  function discordActivityProgress(act) {
+    const ts = act.timestamps;
+    if (!ts || ts.start == null || ts.end == null) return null;
+    const start = Number(ts.start), end = Number(ts.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    const now = Date.now();
+    const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+    const fmt = (ms) => {
+      const sec = Math.max(0, Math.floor(ms / 1000));
+      return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+    };
+    return { pct, current: fmt(now - start), total: fmt(end - start) };
+  }
+
+  function discordActivityCardHtml(act, escH) {
+    if (!act) return '';
+    const art = discordActivityArt(act);
+    const title = act.details || act.name || '';
+    const sub = act.state || (act.details ? act.name : '') || '';
+    const prog = discordActivityProgress(act);
+    const isSpotify = /spotify/i.test(act.name || '');
+    const brand = isSpotify ? 'https://cdn.simpleicons.org/spotify/1DB954' : '';
+    return `<div class="discord-activity${isSpotify ? ' discord-activity--spotify' : ''}">
+      <div class="discord-activity-head">
+        <span class="discord-activity-kind">${escH(discordActivityHeader(act))}</span>
+        ${brand ? `<img class="discord-activity-brand" src="${brand}" alt="" width="16" height="16" loading="lazy">` : ''}
+      </div>
+      <div class="discord-activity-body">
+        ${art ? `<img class="discord-activity-cover" src="${escH(art)}" alt="" loading="lazy">` : '<span class="discord-activity-cover discord-activity-cover--ph"></span>'}
+        <div class="discord-activity-meta">
+          ${title ? `<b>${escH(title)}</b>` : ''}
+          ${sub ? `<span>${escH(sub)}</span>` : ''}
+          ${prog ? `<div class="discord-activity-progress"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
+          <div class="discord-activity-times"><span>${prog.current}</span><span>${prog.total}</span></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function discordStatusLine(live, showStatus, fmtRelative) {
+    if (!showStatus) return '';
+    const status = live?.status || 'offline';
+    const online = status && !['offline', 'invisible'].includes(status);
+    if (online) return DISCORD_STATUS_LABEL[status] || DISCORD_STATUS_LABEL.online;
+    const at = live?.lastOnlineAt || live?.updatedAt || null;
+    if (!at) return DISCORD_STATUS_LABEL.offline;
+    const rel = fmtRelative ? fmtRelative(at) : '';
+    return rel ? `Vu ${rel}` : DISCORD_STATUS_LABEL.offline;
+  }
+
+  function discordDotClass(live) {
+    const status = live?.status || 'offline';
+    if (status === 'online') return 'online';
+    if (status === 'idle') return 'idle';
+    if (status === 'dnd') return 'dnd';
+    return 'offline';
   }
 
   function discordActivityLine(act) {
@@ -322,67 +482,77 @@
   }
 
   function discordFloorHtml(p, helpers) {
+    const head = discordCardHeadHtml(p, helpers);
+    const act = discordCardActivityHtml(p, helpers);
+    if (!head && !act) return '';
+    return `${head}${act}`;
+  }
+
+  function discordCardHeadHtml(p, helpers) {
     helpers = helpers || {};
     const escH = helpers.esc || esc;
     const MC = global.MatefindrConnections;
     if (!MC || !p.connections || !MC.connIsSet(p.connections, 'discord')) return '';
     const e = MC.connGet(p.connections, 'discord');
     if (!e) return '';
-    const showActivity = e.showActivity !== false;
     const showStatus = e.showStatus !== false;
+    const showActivity = e.showActivity !== false;
     if (!showActivity && !showStatus) return '';
 
     const live = p.discordLive;
-    const online = live?.status && !['offline', 'invisible'].includes(live.status);
-    const act = online && showActivity ? live?.activities?.[0] : null;
     const tag = discordTagLabel(p);
-    const avi = p.avatarUrl || '';
+    const avi = discordFloorAvatar(p);
     const aviInner = avi
       ? `<img src="${escH(avi)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">`
-      : `<span>${escH((p.initial || '?').charAt(0))}</span>`;
+      : `<span>${escH((p.initial || tag || '?').charAt(0).toUpperCase())}</span>`;
 
-    let sub = '';
-    if (online && act) sub = discordActivityLine(act);
-    else if (online && showStatus) sub = 'En ligne';
-    else if (showStatus) {
-      const at = live?.lastOnlineAt || live?.updatedAt || p.lastSeenAt;
-      sub = at ? `last seen ${helpers.fmtRelative ? helpers.fmtRelative(at) : ''}` : 'Hors ligne';
-    }
+    const sub = discordStatusLine(live, showStatus, helpers.fmtRelative);
+    const dotCls = discordDotClass(live);
+    const questsHtml = cardQuestStripHtml(p, escH);
 
-    const dotCls = online ? 'online' : 'offline';
-
-    return `<div class="discord-floor" aria-label="Discord">
-      <div class="discord-floor-avi">
-        <div class="discord-floor-avi-inner">${aviInner}</div>
-        <span class="discord-floor-dot ${dotCls}" aria-hidden="true"></span>
+    return `<div class="discord-floor discord-floor--head" aria-label="Discord">
+      <div class="discord-floor-head">
+        <div class="discord-floor-avi">
+          <div class="discord-floor-avi-inner">${aviInner}</div>
+          ${showStatus ? `<span class="discord-floor-dot ${dotCls}" aria-hidden="true"></span>` : ''}
+        </div>
+        <div class="discord-floor-meta">
+          <b class="discord-floor-name">${escH(tag || p.discordTag || p.tag || 'discord')}</b>
+          ${sub ? `<span class="discord-floor-sub">${escH(sub)}</span>` : ''}
+        </div>
       </div>
-      <div class="discord-floor-meta">
-        <b class="discord-floor-name">${escH(tag || '@' + (p.tag || 'user'))}</b>
-        ${sub ? `<span class="discord-floor-sub">${escH(sub)}</span>` : ''}
-      </div>
+      ${questsHtml}
     </div>`;
+  }
+
+  function discordCardActivityHtml(p, helpers) {
+    helpers = helpers || {};
+    const escH = helpers.esc || esc;
+    const MC = global.MatefindrConnections;
+    if (!MC || !p.connections || !MC.connIsSet(p.connections, 'discord')) return '';
+    const e = MC.connGet(p.connections, 'discord');
+    if (!e || e.showActivity === false) return '';
+    const act = pickBestActivity(p.discordLive?.activities);
+    if (!act) return '';
+    return `<div class="discord-floor discord-floor--activity">${discordActivityCardHtml(act, escH)}</div>`;
   }
 
   function discordPreviewHtml(user, helpers) {
     helpers = helpers || {};
     const escH = helpers.esc || esc;
     const u = user || readSite().user || {};
-    const live = u.discordLive;
-    const online = live?.status && !['offline', 'invisible'].includes(live.status);
-    const act = online ? live?.activities?.[0] : null;
-    const tag = (u.discordTag || 'discord').replace(/^@+/, '');
-    const avi = u.avatarUrl || '';
-    const sub = online && act ? discordActivityLine(act) : (online ? 'En ligne' : (live?.lastOnlineAt ? `last seen ${helpers.fmtRelative ? helpers.fmtRelative(live.lastOnlineAt) : ''}` : 'Hors ligne'));
-    return `<div class="discord-floor discord-floor--preview">
-      <div class="discord-floor-avi">
-        <div class="discord-floor-avi-inner">${avi ? `<img src="${escH(avi)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : '<span>?</span>'}</div>
-        <span class="discord-floor-dot ${online ? 'online' : 'offline'}"></span>
-      </div>
-      <div class="discord-floor-meta">
-        <b class="discord-floor-name">.${escH(tag.replace(/^\.+/, ''))}</b>
-        <span class="discord-floor-sub">${escH(sub)}</span>
-      </div>
-    </div>`;
+    const p = {
+      connections: { discord: { v: u.discordId, showActivity: true, showStatus: true, label: u.discordTag } },
+      discordLive: u.discordLive,
+      discordTag: u.discordTag,
+      tag: u.discordTag,
+      avatarUrl: u.avatarUrl,
+      discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl,
+      initial: (u.displayName || 'T').charAt(0),
+      titlesData: getTitlesData(u),
+      isMe: true,
+    };
+    return discordFloorHtml(p, helpers);
   }
 
   function missionsForDisplay(stats) {
@@ -552,7 +722,29 @@
   function updateDiscordPreview(root) {
     const box = root || $('connDiscordPreview');
     if (!box) return;
-    box.innerHTML = discordPreviewHtml(readSite().user, {
+    const st = readSite();
+    const u = st.user || {};
+    const actEl = global.document && global.document.getElementById('connDiscordActivity');
+    const statEl = global.document && global.document.getElementById('connDiscordStatus');
+    const p = {
+      connections: {
+        discord: {
+          v: u.discordId,
+          showActivity: actEl ? actEl.checked : true,
+          showStatus: statEl ? statEl.checked : true,
+          label: u.discordTag,
+        },
+      },
+      discordLive: u.discordLive,
+      discordTag: u.discordTag,
+      tag: u.discordTag,
+      avatarUrl: u.avatarUrl,
+      discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl,
+      initial: (u.displayName || 'T').charAt(0),
+      titlesData: getTitlesData(u),
+      isMe: true,
+    };
+    box.innerHTML = discordFloorHtml(p, {
       fmtRelative: global.__mfFmtRelativeFr,
       esc,
     });
@@ -568,7 +760,10 @@
     refreshPending,
     collectMission,
     cardTitleHtml,
+    cardQuestStripHtml,
     discordFloorHtml,
+    discordCardHeadHtml,
+    discordCardActivityHtml,
     discordPreviewHtml,
     updateDiscordPreview,
     init,
