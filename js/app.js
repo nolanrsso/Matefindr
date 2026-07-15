@@ -2495,14 +2495,16 @@
       }
     }
     /* Hint centre bulle : note (musique) / clic (jeu+clip).
-       Dès l'affichage d'un profil : 1s fade-in → 1s fade-out → 7s off (cycle 9s). */
+       Dès l'affichage d'un profil : 1s fade-in → 1s hold max → 1s fade-out → 5s off. */
     const ORB_HINT_SRC = {
       music: 'assets/orb-hint-music.png',
       clip: 'assets/orb-hint-click.png',
     };
     const ORB_HINT_MAX_OP = 0.48;
     const ORB_HINT_FADE_MS = 1000;
-    const ORB_HINT_PERIOD_MS = 9000; // 1s in + 1s out + 7s off
+    const ORB_HINT_HOLD_MS = 1000; // 1s à opacité max avant fade-out
+    const ORB_HINT_OFF_MS = 5000;  // 5s caché avant réapparition
+    const ORB_HINT_PERIOD_MS = ORB_HINT_FADE_MS + ORB_HINT_HOLD_MS + ORB_HINT_FADE_MS + ORB_HINT_OFF_MS; // 8s
     let _orbHintCycleTimer = null;
     let _orbHintPhaseTimers = [];
     function clearOrbHintPhaseTimers(){
@@ -2528,14 +2530,14 @@
         h.style.transition = 'opacity ' + ORB_HINT_FADE_MS + 'ms linear';
         h.style.opacity = String(ORB_HINT_MAX_OP);
       });
-      // À 1s (opacité max) : fade-out 1s — visibility reste visible pendant la transition
+      // Après fade-in + hold 1s : fade-out 1s
       _orbHintPhaseTimers.push(setTimeout(() => {
         orbHintNodes().forEach(h => {
           h.style.visibility = 'visible';
           h.style.transition = 'opacity ' + ORB_HINT_FADE_MS + 'ms linear';
           h.style.opacity = '0';
         });
-      }, ORB_HINT_FADE_MS));
+      }, ORB_HINT_FADE_MS + ORB_HINT_HOLD_MS));
       // Après fade-out : caché totalement
       _orbHintPhaseTimers.push(setTimeout(() => {
         orbHintNodes().forEach(h => {
@@ -2543,7 +2545,7 @@
           h.style.opacity = '0';
           h.style.visibility = 'hidden';
         });
-      }, ORB_HINT_FADE_MS * 2));
+      }, ORB_HINT_FADE_MS + ORB_HINT_HOLD_MS + ORB_HINT_FADE_MS));
     }
     /** Relance le cycle dès qu'un profil (ses bulles) est affiché. */
     function restartOrbHintCycle(){
