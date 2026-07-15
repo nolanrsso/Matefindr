@@ -1680,14 +1680,15 @@
       const inner = img.parentElement;
       const wrap = inner && inner.parentElement;
       if (!inner || !wrap) return;
-      const PX_MIN = 50;
+      // Aligné sur js/editor-stickers.js (PX_MIN + même math crop/stretch).
+      const PX_MIN = 20;
 
       inner.style.transform = '';
       inner.style.clipPath = '';
       inner.style.overflow = 'hidden';
       inner.style.position = 'relative';
-      inner.style.marginLeft = '';
-      inner.style.marginTop = '';
+      inner.style.marginLeft = '0';
+      inner.style.marginTop = '0';
       img.style.margin = '0';
       img.style.maxWidth = 'none';
       img.style.display = 'block';
@@ -1702,6 +1703,7 @@
       const bw = Math.max(PX_MIN, baseWpx || wrap.getBoundingClientRect().width || PX_MIN);
       let aspect = 1;
       if (img.naturalWidth > 0) aspect = img.naturalHeight / img.naturalWidth;
+      else if (m._imgAspect > 0) aspect = m._imgAspect;
       else if (img.offsetWidth > 0 && img.offsetHeight > 0) aspect = img.offsetHeight / img.offsetWidth;
       const bh = Math.max(PX_MIN, bw * aspect);
       const coreW = bw * (1 - cl / 100 - cr / 100);
@@ -1754,11 +1756,30 @@
         img.style.objectFit = 'cover';
       }
 
-      if (m.posX != null && m.posY != null && m.scale) {
+      // Même règle que l'éditeur : zoom legacy seulement si scale ≠ 1.
+      if (m.posX != null && m.posY != null && (m.scale || 1) !== 1) {
         img.style.objectPosition = m.posX + '% ' + m.posY + '%';
         img.style.transformOrigin = m.posX + '% ' + m.posY + '%';
         img.style.transform = 'scale(' + (m.scale || 1) + ')';
       }
+    }
+    /** Position sticker : x/y/w/rot par mode, crop/stretch/zoom hérités du root (partagés). */
+    function swipeStickerPos(g) {
+      const mode = activeLayoutMode();
+      const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
+              : (mode === 'landscape' && g.landscape) ? g.landscape
+              : g;
+      const pick = (k) => (m[k] != null ? m[k] : g[k]);
+      return {
+        x: (typeof m.x === 'number') ? m.x : 50,
+        y: (typeof m.y === 'number') ? m.y : 30,
+        w: (typeof m.w === 'number') ? m.w : 32,
+        rot: m.rot || 0,
+        posX: pick('posX'), posY: pick('posY'), scale: pick('scale'),
+        scaleX: pick('scaleX'), scaleY: pick('scaleY'),
+        cropT: pick('cropT'), cropR: pick('cropR'), cropB: pick('cropB'), cropL: pick('cropL'),
+        _imgAspect: g._imgAspect,
+      };
     }
     let _swipeGifsResize = null;
     function renderSwipeGifs(p){
@@ -1787,34 +1808,26 @@
       });
       reorderSwipeStickersLayer();
       // Position d'un GIF selon l'orientation courante (portrait/paysage/bureau).
-      function gifPos(g){
-        const mode = activeLayoutMode();
-        const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
-                : (mode === 'landscape' && g.landscape) ? g.landscape
-                : g;
-        return {
-          x: (typeof m.x === 'number') ? m.x : 50,
-          y: (typeof m.y === 'number') ? m.y : 30,
-          w: (typeof m.w === 'number') ? m.w : 32,
-          rot: m.rot || 0,
-          posX: m.posX, posY: m.posY, scale: m.scale,
-          scaleX: m.scaleX, scaleY: m.scaleY,
-          cropT: m.cropT, cropR: m.cropR, cropB: m.cropB, cropL: m.cropL,
-        };
+      function layoutOne(el, g) {
+        const wr = wrap.getBoundingClientRect();
+        const p = swipeStickerPos(g);
+        const wpx = (p.w / 100) * wr.width;
+        const cx = wr.left + (p.x / 100) * wr.width;
+        const cy = wr.top  + (p.y / 100) * wr.height;
+        el.style.left = cx + 'px';
+        el.style.top  = cy + 'px';
+        el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
+        const img = el.querySelector('img');
+        if (!img) return;
+        if (img.naturalWidth > 0) g._imgAspect = img.naturalHeight / img.naturalWidth;
+        applySwipeStickerImg(img, swipeStickerPos(g), wpx);
+        if (!(img.complete && img.naturalWidth) && !img.dataset.mfCropBound) {
+          img.dataset.mfCropBound = '1';
+          img.addEventListener('load', () => layoutOne(el, g), { once: true });
+        }
       }
       function reposition(){
-        const wr = wrap.getBoundingClientRect();
-        items.forEach(({ el, g }) => {
-          const p = gifPos(g);
-          const wpx = (p.w / 100) * wr.width;
-          const cx = wr.left + (p.x / 100) * wr.width;
-          const cy = wr.top  + (p.y / 100) * wr.height;
-          el.style.left = cx + 'px';
-          el.style.top  = cy + 'px';
-          el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
-          const img = el.querySelector('img');
-          if (img) applySwipeStickerImg(img, p, wpx);
-        });
+        items.forEach(({ el, g }) => layoutOne(el, g));
       }
       reposition();
       _swipeGifsResize = () => reposition();
@@ -1848,34 +1861,26 @@
         return { el, g: ph };
       });
       reorderSwipeStickersLayer();
-      function photoPos(g){
-        const mode = activeLayoutMode();
-        const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
-                : (mode === 'landscape' && g.landscape) ? g.landscape
-                : g;
-        return {
-          x: (typeof m.x === 'number') ? m.x : 50,
-          y: (typeof m.y === 'number') ? m.y : 30,
-          w: (typeof m.w === 'number') ? m.w : 32,
-          rot: m.rot || 0,
-          posX: m.posX, posY: m.posY, scale: m.scale,
-          scaleX: m.scaleX, scaleY: m.scaleY,
-          cropT: m.cropT, cropR: m.cropR, cropB: m.cropB, cropL: m.cropL,
-        };
+      function layoutOne(el, g) {
+        const wr = wrap.getBoundingClientRect();
+        const p2 = swipeStickerPos(g);
+        const wpx = (p2.w / 100) * wr.width;
+        const cx = wr.left + (p2.x / 100) * wr.width;
+        const cy = wr.top  + (p2.y / 100) * wr.height;
+        el.style.left = cx + 'px';
+        el.style.top  = cy + 'px';
+        el.style.transform = `translate(-50%,-50%) rotate(${p2.rot}deg)`;
+        const img = el.querySelector('img');
+        if (!img) return;
+        if (img.naturalWidth > 0) g._imgAspect = img.naturalHeight / img.naturalWidth;
+        applySwipeStickerImg(img, swipeStickerPos(g), wpx);
+        if (!(img.complete && img.naturalWidth) && !img.dataset.mfCropBound) {
+          img.dataset.mfCropBound = '1';
+          img.addEventListener('load', () => layoutOne(el, g), { once: true });
+        }
       }
       function reposition(){
-        const wr = wrap.getBoundingClientRect();
-        items.forEach(({ el, g }) => {
-          const p2 = photoPos(g);
-          const wpx = (p2.w / 100) * wr.width;
-          const cx = wr.left + (p2.x / 100) * wr.width;
-          const cy = wr.top  + (p2.y / 100) * wr.height;
-          el.style.left = cx + 'px';
-          el.style.top  = cy + 'px';
-          el.style.transform = `translate(-50%,-50%) rotate(${p2.rot}deg)`;
-          const img = el.querySelector('img');
-          if (img) applySwipeStickerImg(img, p2, wpx);
-        });
+        items.forEach(({ el, g }) => layoutOne(el, g));
       }
       reposition();
       _swipePhotosResize = () => reposition();
