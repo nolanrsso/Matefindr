@@ -1875,24 +1875,26 @@
         </div>
       ` : '';
       const viewsHtml = (p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : '';
-      // Connexions (éditeur) : réseaux sociaux — empilées au-dessus des serveurs en commun (bas-gauche).
+      // Connexions — sous « A rejoint Matefindr », zone flexible jusqu'à ~200px du bas.
       const MC = window.MatefindrConnections;
       const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
       const connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
       const connDensity = connKeys.length >= 9 ? ' card-connections--dense' : connKeys.length >= 6 ? ' card-connections--many' : '';
-      const connectionsHtml = connKeys.length ? `<div class="card-connections${connDensity}">${connKeys.map(k => {
+      const connectionsInner = connKeys.map(k => {
         const app = MC ? MC.connApp(k) : null;
         const entry = MC ? MC.connGet(conns, k) : { v: String(conns[k]), mode: 'link' };
         if (!entry) return '';
         if (MC && app) return MC.connCardHtml(app, entry, p.tag, escapeHtmlMini);
         const label = String(entry.v || conns[k]);
         return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
-      }).join('')}</div>` : '';
-      const bottomLeftHtml = (connectionsHtml || guildsHtml || viewsHtml)
-        ? `<div class="card-bottom-left">${connectionsHtml}${guildsHtml}${viewsHtml}</div>` : '';
+      }).join('');
+      const connectionsBlock = connKeys.length
+        ? `<div class="card-connections-wrap"><div class="card-connections${connDensity}">${connectionsInner}</div></div>` : '';
+      const bottomLeftHtml = (guildsHtml || viewsHtml)
+        ? `<div class="card-bottom-left">${guildsHtml}${viewsHtml}</div>` : '';
       if (commonGuilds.length > 0) c.classList.add('has-common-guilds');
       if (connKeys.length > 0) c.classList.add('has-card-connections');
-      if (connectionsHtml || guildsHtml || viewsHtml) c.classList.add('has-bottom-stack');
+      if (guildsHtml || viewsHtml) c.classList.add('has-bottom-stack');
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
       const igH = cleanHandle(s.instagram), ttH = cleanHandle(s.tiktok), spH = cleanHandle(s.spotify);
@@ -1904,7 +1906,6 @@
         ${ttUrl ? `<a href="${ttUrl}" target="_blank" rel="noopener" class="card-social" data-kind="tiktok" title="Voir le profil TikTok"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 7.5a6.5 6.5 0 0 1-3.8-1.2v8.3a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a2.9 2.9 0 1 0 2 2.7V2h3a3.5 3.5 0 0 0 3.8 3.5v2z"/></svg><span>@${escapeHtmlMini(ttH)}</span></a>` : ''}
         ${spUrl ? `<a href="${spUrl}" target="_blank" rel="noopener" class="card-social" data-kind="spotify" title="Voir le profil Spotify"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Z"/></svg><span>${escapeHtmlMini(spH)}</span></a>` : ''}
       </div>` : '';
-      // Connexions rendues dans card-bottom-left (voir plus haut).
       const bioText = cardBioText(p.bio);
       const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';
       const joinedHtml = p.joinedOn ? `<div class="joined">
@@ -1977,6 +1978,7 @@
           ` : cardPresenceHtml(p)}
           ${bioHtml}
           ${joinedHtml}
+          ${connectionsBlock}
           ${cardDiscordLastSeenHtml(p)}
           ${socialHtml}
         </div>

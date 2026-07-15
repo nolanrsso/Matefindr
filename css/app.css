@@ -647,18 +647,18 @@
   body[data-screen="account"] .mf-vol,
   body[data-auth="in"][data-screen="landing"] .mf-vol,
   body[data-auth="in"][data-screen="onboarding"] .mf-vol{display:none !important}
-  /* Swipe : juste à droite du bouton Messages */
+  /* Swipe : aligné verticalement avec le bouton Messages (60×60) */
   body[data-auth="in"][data-screen="swipe"]:not([data-preview="true"]) .mf-vol{
-    left:calc(18px + 60px + 10px);
+    left:calc(18px + 60px + 10px);bottom:18px;align-items:center;
   }
   body[data-shared="true"] .mf-vol{left:14px}
   .mf-vol-btn{
-    width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.24);
-    background:rgba(10,8,24,.72);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
+    width:60px;height:60px;border-radius:20px;border:1px solid rgba(255,255,255,.24);
+    background:rgba(10,8,24,.58);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
     color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease;
     box-shadow:0 4px 18px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.12);
   }
-  .mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(10,8,24,.86)}
+  .mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(10,8,24,.68)}
   .mf-vol-btn svg{width:22px;height:22px;display:block}
   .mf-vol-slash{display:none}
   .mf-vol.muted .mf-vol-wave{display:none}
@@ -668,9 +668,9 @@
     width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;
     transition:width .22s ease,opacity .18s ease,margin-left .22s ease;
   }
-  .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:120px;opacity:1;margin-left:12px}
+  .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:80px;opacity:1;margin-left:10px}
   .mf-vol-range{
-    -webkit-appearance:none;appearance:none;width:120px;height:5px;border-radius:999px;outline:none;cursor:pointer;display:block;
+    -webkit-appearance:none;appearance:none;width:80px;height:5px;border-radius:999px;outline:none;cursor:pointer;display:block;
     background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%));
   }
   .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
@@ -680,8 +680,9 @@
     body[data-auth="in"][data-screen="swipe"]:not([data-preview="true"]) .mf-vol{left:calc(12px + 52px + 8px)}
     body[data-preview="true"] .mf-vol,
     body[data-shared="true"] .mf-vol{left:10px}
-    .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:90px}
-    .mf-vol-range{width:90px}
+    .mf-vol-btn{width:52px;height:52px;border-radius:18px}
+    .mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:60px}
+    .mf-vol-range{width:60px}
   }
 
   /* Messages panel — slide-out drawer */
@@ -817,8 +818,8 @@
 
   /* Boutons navbar : lien perso + paramètres */
   .nav-ico{
-    display:none;align-items:center;justify-content:center;width:38px;height:38px;padding:0;
-    border-radius:11px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;
+    display:none;align-items:center;justify-content:center;width:60px;height:60px;padding:0;
+    border-radius:16px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;
     cursor:pointer;transition:.18s ease;flex:0 0 auto;
   }
   body[data-auth="in"] .nav-ico{display:inline-flex}
@@ -1499,10 +1500,9 @@
     overflow-y:auto;overflow-x:hidden;position:relative;
     -webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;
   }
-  .swipe-card.has-common-guilds .body{padding-bottom:min(32vh,200px)}
-  .swipe-card.has-bottom-stack .body{padding-bottom:min(34vh,210px)}
-  .swipe-card.has-bottom-stack.has-common-guilds .body{padding-bottom:min(38vh,240px)}
-  .swipe-card.has-bottom-stack.has-card-connections:not(.has-common-guilds) .body{padding-bottom:min(30vh,180px)}
+  .swipe-card.has-common-guilds .body,
+  .swipe-card.has-card-connections .body{padding-bottom:200px}
+  .swipe-card.has-bottom-stack.has-common-guilds.has-card-connections .body{padding-bottom:200px}
   .swipe-card .body::-webkit-scrollbar{width:5px}
   .swipe-card .body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px}
   .swipe-card .body::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.32)}
@@ -1678,20 +1678,6 @@
     display:flex;flex-direction:column;align-items:flex-start;gap:8px;
     max-width:calc(100% - 110px);pointer-events:none;
   }
-  .swipe-card .card-bottom-left .card-connections,
-  .swipe-card .card-bottom-left .card-conn{pointer-events:auto}
-  .swipe-card .card-bottom-left .card-connections{
-    display:flex;flex-wrap:wrap;align-content:flex-end;align-items:flex-end;
-    gap:10px;margin:0;width:100%;max-width:min(72vw,300px);
-    max-height:min(calc(36vh - 52px),168px);overflow:hidden;
-  }
-  .swipe-card.has-common-guilds .card-bottom-left .card-connections{
-    max-height:min(calc(32vh - 72px),148px);
-  }
-  .swipe-card .card-bottom-left .card-connections--many{gap:8px;max-height:min(calc(36vh - 48px),176px)}
-  .swipe-card.has-common-guilds .card-bottom-left .card-connections--many{max-height:min(calc(32vh - 68px),156px)}
-  .swipe-card .card-bottom-left .card-connections--dense{gap:7px;max-height:min(calc(36vh - 44px),184px)}
-  .swipe-card.has-common-guilds .card-bottom-left .card-connections--dense{max-height:min(calc(32vh - 64px),164px)}
   .swipe-card .card-bottom-left .card-views{
     position:static;left:auto;bottom:auto;
   }
@@ -1757,11 +1743,17 @@
     50%     { filter: drop-shadow(0 0 14px rgba(145,70,255,.55)) drop-shadow(0 0 4px rgba(91,233,255,.30)); }
   }
 
-  /* Connexions (éditeur) — logos d'apps + pseudo ; zone bas-gauche au-dessus des serveurs communs */
-  .swipe-card .card-connections{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;position:relative;z-index:6}
-  .swipe-card .card-bottom-left .card-connections{margin-top:0;position:static;z-index:auto}
-  .swipe-card .card-conn{position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;width:36px;flex:0 0 36px;padding:0;border:none;background:transparent;text-decoration:none;color:#fff}
-  .swipe-card .card-conn-ico{display:grid;place-items:center;width:34px;height:34px;flex:0 0 auto;overflow:hidden}
+  /* Connexions (profil swipe) — sous « A rejoint Matefindr », zone remplie jusqu'à ~200px du bas */
+  .swipe-card .card-connections-wrap{
+    flex:1 1 auto;min-height:72px;margin-top:6px;margin-bottom:4px;
+    display:flex;flex-direction:column;position:relative;z-index:6;
+  }
+  .swipe-card .card-connections{
+    display:flex;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;
+    gap:12px;flex:1 1 auto;width:100%;
+  }
+  .swipe-card .card-conn{position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;width:50px;flex:0 0 50px;padding:0;border:none;background:transparent;text-decoration:none;color:#fff}
+  .swipe-card .card-conn-ico{display:grid;place-items:center;width:48px;height:48px;flex:0 0 auto;overflow:hidden}
   .swipe-card .card-conn-ico > img,
   .swipe-card .card-conn-ico > .conn-ico-svg{width:100%;height:100%;object-fit:contain;flex:0 0 auto;display:grid;place-items:center}
   .swipe-card .card-conn .conn-favicon{object-fit:cover;border-radius:7px;background:transparent;transform:scale(1.14)}
@@ -1771,14 +1763,14 @@
     font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;
     max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
   }
-  .swipe-card .card-connections--many{gap:8px}
-  .swipe-card .card-connections--many .card-conn{width:30px;flex-basis:30px}
-  .swipe-card .card-connections--many .card-conn-ico{width:28px;height:28px}
-  .swipe-card .card-connections--many .card-conn-user{font-size:10px;max-width:64px}
-  .swipe-card .card-connections--dense{gap:7px}
-  .swipe-card .card-connections--dense .card-conn{width:26px;flex-basis:26px}
-  .swipe-card .card-connections--dense .card-conn-ico{width:24px;height:24px}
-  .swipe-card .card-connections--dense .card-conn-user{font-size:9px;max-width:56px}
+  .swipe-card .card-connections--many{gap:10px}
+  .swipe-card .card-connections--many .card-conn{width:42px;flex-basis:42px}
+  .swipe-card .card-connections--many .card-conn-ico{width:39px;height:39px}
+  .swipe-card .card-connections--many .card-conn-user{font-size:10px;max-width:76px}
+  .swipe-card .card-connections--dense{gap:8px}
+  .swipe-card .card-connections--dense .card-conn{width:36px;flex-basis:36px}
+  .swipe-card .card-connections--dense .card-conn-ico{width:34px;height:34px}
+  .swipe-card .card-connections--dense .card-conn-user{font-size:9px;max-width:68px}
   .swipe-card .card-connections--dense .card-conn .conn-favicon{transform:scale(1.08)}
   .swipe-card .card-conn--show-label .card-conn-user{opacity:0;max-height:0;overflow:hidden;margin:0;transform:translateX(-50%) translateY(4px);transition:opacity .16s ease, transform .16s ease, max-height .16s ease}
   @media (hover:hover){
@@ -1966,13 +1958,13 @@
     .swipe-card .chip{font-size:11px;padding:4px 9px}
     .swipe-card .me-chip{font-size:9px;padding:2px 7px;top:8px;left:10px}
 
-    .swipe-card .card-conn{width:32px;flex-basis:32px}
-    .swipe-card .card-conn-user{font-size:10px;max-width:56px}
-    .swipe-card .card-conn-ico{width:30px;height:30px}
-    .swipe-card .card-connections--many .card-conn{width:28px;flex-basis:28px}
-    .swipe-card .card-connections--many .card-conn-ico{width:26px;height:26px}
-    .swipe-card .card-connections--dense .card-conn{width:24px;flex-basis:24px}
-    .swipe-card .card-connections--dense .card-conn-ico{width:22px;height:22px}
+    .swipe-card .card-conn{width:45px;flex-basis:45px}
+    .swipe-card .card-conn-user{font-size:10px;max-width:68px}
+    .swipe-card .card-conn-ico{width:42px;height:42px}
+    .swipe-card .card-connections--many .card-conn{width:39px;flex-basis:39px}
+    .swipe-card .card-connections--many .card-conn-ico{width:36px;height:36px}
+    .swipe-card .card-connections--dense .card-conn{width:34px;flex-basis:34px}
+    .swipe-card .card-connections--dense .card-conn-ico{width:31px;height:31px}
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}
@@ -2073,7 +2065,7 @@
   body[data-preview="true"] .swipe-btn--no,
   body[data-preview="true"] .swipe-btn--yes{display:none !important}
   body[data-preview="true"] .preview-exit-btn{
-    display:inline-flex;align-items:center;gap:9px;padding:14px 26px;border-radius:999px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:60px;padding:0 26px;border-radius:20px;cursor:pointer;
     background:linear-gradient(135deg,#2f3136,#1c1d22);color:#fff;border:1.5px solid rgba(255,255,255,.18);
     font-family:inherit;font-size:15px;font-weight:700;
     box-shadow:0 14px 40px rgba(0,0,0,.55);transition:transform .15s ease, background .15s ease;
