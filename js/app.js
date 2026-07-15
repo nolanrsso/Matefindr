@@ -2486,26 +2486,50 @@
       }
     }
     /* Hint centre bulle : note (musique) / clic (jeu+clip).
-       Cycle JS 9s (2s on / 7s off) — fiable même avec prefers-reduced-motion. */
+       1s fade-in → opacité max → 1s fade-out → 7s caché (cycle 9s). */
     const ORB_HINT_SRC = {
       music: 'assets/orb-hint-music.png',
       clip: 'assets/orb-hint-click.png',
     };
-    const ORB_HINT_ON_MS = 2000;
-    const ORB_HINT_PERIOD_MS = 9000; // 2s visible + 7s caché
+    const ORB_HINT_MAX_OP = 0.48;
+    const ORB_HINT_FADE_MS = 1000;
+    const ORB_HINT_PERIOD_MS = 9000; // 1s in + 1s out + 7s off
     let _orbHintCycleTimer = null;
-    let _orbHintHideTimer = null;
+    let _orbHintPhaseTimers = [];
+    function clearOrbHintPhaseTimers(){
+      _orbHintPhaseTimers.forEach(t => clearTimeout(t));
+      _orbHintPhaseTimers = [];
+    }
+    function orbHintNodes(){
+      return document.querySelectorAll('.orb-click-hint');
+    }
+    function setOrbHintsOpacity(op, withFade){
+      orbHintNodes().forEach(h => {
+        h.style.visibility = op > 0.01 ? 'visible' : 'hidden';
+        h.style.transition = withFade ? ('opacity ' + ORB_HINT_FADE_MS + 'ms linear') : 'none';
+        h.style.opacity = String(op);
+      });
+    }
+    function runOrbHintPulse(){
+      clearOrbHintPhaseTimers();
+      // Start at 0, then fade in to max over 1s
+      setOrbHintsOpacity(0, false);
+      // force reflow so the transition from 0 → max actually runs
+      orbHintNodes().forEach(h => { void h.offsetWidth; });
+      setOrbHintsOpacity(ORB_HINT_MAX_OP, true);
+      // At 1s (max reached): start fading out over 1s
+      _orbHintPhaseTimers.push(setTimeout(() => {
+        setOrbHintsOpacity(0, true);
+      }, ORB_HINT_FADE_MS));
+      // After fade-out: keep fully hidden
+      _orbHintPhaseTimers.push(setTimeout(() => {
+        setOrbHintsOpacity(0, false);
+      }, ORB_HINT_FADE_MS * 2));
+    }
     function ensureOrbHintCycle(){
       if (_orbHintCycleTimer) return;
-      const show = () => {
-        document.documentElement.classList.add('orb-hints-on');
-        clearTimeout(_orbHintHideTimer);
-        _orbHintHideTimer = setTimeout(() => {
-          document.documentElement.classList.remove('orb-hints-on');
-        }, ORB_HINT_ON_MS);
-      };
-      show();
-      _orbHintCycleTimer = setInterval(show, ORB_HINT_PERIOD_MS);
+      runOrbHintPulse();
+      _orbHintCycleTimer = setInterval(runOrbHintPulse, ORB_HINT_PERIOD_MS);
     }
     function appendOrbClickHint(btn, kind){
       if (!btn || btn.querySelector('.orb-click-hint')) return;
@@ -3180,20 +3204,35 @@
       // Streamable
       m = u.match(/streamable\.com\/([\w-]+)/i);
       if (m) return { type:'iframe', src:`https://streamable.com/e/${encodeURIComponent(m[1])}?autoplay=1` };
-      // Medal.tv — share (/clips/) ou embed (/clip/) ; on force le chemin embed /clip/
+      // Medal.tv — pas d'autoplay : leur player autoplay empile souvent 2 flux audio.
+      // L'overlay s'ouvre, l'utilisateur lance Play une fois → son unique.
       m = u.match(/medal\.tv\/clip\/([A-Za-z0-9_-]+)(?:\/([A-Za-z0-9_-]+))?/i);
       if (m) {
         const path = m[2] ? (m[1] + '/' + m[2]) : m[1];
-        return { type:'iframe', src:`https://medal.tv/clip/${path}?autoplay=1`, externalUrl:u.split(/[?#]/)[0] };
+        return { type:'iframe', src:`https://medal.tv/clip/${path}?autoplay=0&muted=0&cta=0&loop=0`, externalUrl:u.split(/[?#]/)[0], provider:'medal' };
       }
       m = u.match(/medal\.tv\/(?:games\/[^/?#]+\/)?clips\/([A-Za-z0-9_-]+)/i);
-      if (m) return { type:'iframe', src:`https://medal.tv/clip/${encodeURIComponent(m[1])}?autoplay=1`, externalUrl:u.split(/[?#]/)[0] };
+      if (m) return { type:'iframe', src:`https://medal.tv/clip/${encodeURIComponent(m[1])}?autoplay=0&muted=0&cta=0&loop=0`, externalUrl:u.split(/[?#]/)[0], provider:'medal' };
       return null;
     }
+    let _clipOpenLockUntil = 0;
     function openClipOverlay(orb){
       const overlay = document.getElementById('clipOverlay');
       const content = document.getElementById('clipContent');
       if (!overlay || !content) return;
+      const now = Date.now();
+      if (now < _clipOpenLockUntil) return;
+      _clipOpenLockUntil = now + 500;
+      // Coupe musique d'entrée / preview bulle pour ne pas empiler avec le clip
+      try {
+        if (_spotifyAudio) {
+          _spotifyAudio._userStopped = true;
+          fadeOutAndStop(_spotifyAudio);
+          _spotifyAudio = null;
+          document.querySelectorAll('.orb.playing').forEach(el => el.classList.remove('playing'));
+        }
+        pauseProfileMusicForOrb();
+      } catch(_){}
       const url = orb && orb.clipUrl;
       const embed = clipUrlToEmbed(url);
       const safeTitle = escapeHtmlMini((orb && orb.title) || 'cette bulle');
@@ -3207,9 +3246,14 @@
         content.appendChild(div);
       } else {
         const f = document.createElement('iframe');
+        // Medal : un seul play — pas de reload auto, allow autoplay sans piège muted/unmute
         f.src = embed.src;
         f.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture');
         f.setAttribute('allowfullscreen', '');
+        if (embed.provider === 'medal') {
+          f.setAttribute('scrolling', 'no');
+          f.setAttribute('frameborder', '0');
+        }
         // PAS de referrerpolicy no-referrer : YouTube a besoin du referrer pour valider
         // le domaine, sinon erreur 153. On garde origin-when-cross-origin (défaut sûr).
         content.appendChild(f);
@@ -3225,13 +3269,17 @@
         }
       }
       overlay.setAttribute('data-show', 'true');
+      overlay.setAttribute('aria-hidden', 'false');
     }
     function closeClipOverlay(){
       const overlay = document.getElementById('clipOverlay');
       if (!overlay) return;
       overlay.setAttribute('data-show', 'false');
-      // Stop the video by emptying the iframe
-      document.getElementById('clipContent').innerHTML = '';
+      overlay.setAttribute('aria-hidden', 'true');
+      // Stop the video by emptying the iframe (coupe aussi le double flux Medal)
+      const content = document.getElementById('clipContent');
+      if (content) content.innerHTML = '';
+      try { resumeProfileMusicAfterOrb(); } catch(_){}
     }
     (function bindClipOverlay(){
       const overlay = document.getElementById('clipOverlay');
