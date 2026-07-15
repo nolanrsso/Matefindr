@@ -3119,6 +3119,10 @@
         const editedOrb = _editingGameOrb; // capture before close nulls the ref
         const rank = document.getElementById('gmmRankSelect').value.trim();
         const clip = document.getElementById('gmmClipInput').value.trim();
+        if (clip && !clipUrlToEmbed(clip)) {
+          showToast('⚠️', 'Lien non supporté', 'YouTube, Twitch, Streamable ou Medal uniquement');
+          return;
+        }
         if (rank) editedOrb.rank = rank; else delete editedOrb.rank;
         if (clip) editedOrb.clipUrl = clip; else delete editedOrb.clipUrl;
         save();
@@ -3138,7 +3142,7 @@
 
     /* ===== Clip overlay (plays when a game orb is clicked) ===== */
     /* Whitelist d'embeds — bloque les URL malicieuses (javascript:, data:, etc.)
-       Seuls les hosts trusted YouTube/Twitch/Streamable + fichiers vidéo directs (https only) sont acceptés. */
+       Seuls YouTube / Twitch / Streamable / Medal (HTTPS) sont acceptés. */
     function clipUrlToEmbed(url){
       if (!url) return null;
       const u = String(url).trim();
@@ -3160,9 +3164,6 @@
       }
       m = u.match(/medal\.tv\/(?:games\/[^/?#]+\/)?clips\/([A-Za-z0-9_-]+)/i);
       if (m) return { type:'iframe', src:`https://medal.tv/clip/${encodeURIComponent(m[1])}?autoplay=1`, externalUrl:u.split(/[?#]/)[0] };
-      // Direct video file — HTTPS only, no javascript: or data: URLs
-      if (/^https:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(u)) return { type:'video', src:u };
-      // Unknown source → reject (was previously a fallback that allowed any URL)
       return null;
     }
     function openClipOverlay(orb){
@@ -3180,11 +3181,6 @@
         div.className = 'clip-empty';
         div.innerHTML = `Pas de clip associé à ${safeTitle}.<br><small>Le propriétaire du profil n'a rien partagé pour le moment.</small>`;
         content.appendChild(div);
-      } else if (embed.type === 'video') {
-        const v = document.createElement('video');
-        v.src = embed.src;
-        v.autoplay = true; v.controls = true; v.playsInline = true;
-        content.appendChild(v);
       } else {
         const f = document.createElement('iframe');
         f.src = embed.src;
