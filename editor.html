@@ -3634,6 +3634,7 @@ const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1',
 function visualFingerprint(){ try{ return JSON.stringify(VISUAL_KEYS.map(k=>S[k])); }catch(_){ return ''; } }
 let _lastVisualFingerprint=null; // posé juste après l'hydratation initiale (cf. boot plus bas)
 function writeState(){
+  if(typeof trackEditorUndo==='function') trackEditorUndo();
   const st=readSite(); st.user=st.user||{}; st.profile=st.profile||{};
   st.user.displayName=S.username;
   if(S.nameCustom) st.user.nameCustom=true;  // pseudo renommé → Discord ne l'écrase plus
@@ -3721,6 +3722,69 @@ function writeState(){
 function persist(){ clearTimeout(_persistT); _persistT=setTimeout(writeState,400); }
 function saveNow(){ clearTimeout(_persistT); writeState(); syncToDb(); }
 window.__persist = persist;
+
+/* ===== Undo / Redo (Ctrl+Z / Ctrl+Y) ===== */
+const EDITOR_UNDO_MAX=40;
+let _undoStack=[], _redoStack=[], _undoPrevSnap=null, _undoLastFp=null, _undoLock=false;
+function cloneEditorSnap(){
+  if(typeof snapshotProfile==='function') return snapshotProfile();
+  try{ return JSON.parse(JSON.stringify(Object.fromEntries(VISUAL_KEYS.map(k=>[k,S[k]])))); }catch(_){ return null; }
+}
+function resetUndoBaseline(){
+  _undoPrevSnap=cloneEditorSnap();
+  _undoLastFp=visualFingerprint();
+}
+function trackEditorUndo(){
+  if(_undoLock) return;
+  const fp=visualFingerprint();
+  if(_undoLastFp!==null && fp!==_undoLastFp && _undoPrevSnap){
+    _undoStack.push(_undoPrevSnap);
+    if(_undoStack.length>EDITOR_UNDO_MAX) _undoStack.shift();
+    _redoStack.length=0;
+  }
+  _undoPrevSnap=cloneEditorSnap();
+  _undoLastFp=fp;
+}
+function undoEditor(){
+  if(!_undoStack.length){ toast('Rien à annuler'); return; }
+  _undoLock=true;
+  try{
+    const cur=cloneEditorSnap();
+    const prev=_undoStack.pop();
+    if(cur){ _redoStack.push(cur); if(_redoStack.length>EDITOR_UNDO_MAX) _redoStack.shift(); }
+    applyPreset(prev,{persist:false});
+    clearTimeout(_persistT);
+    writeState();
+    resetUndoBaseline();
+    toast('↩ Annulé');
+  }catch(e){ console.warn('[editor] undo', e); }
+  finally{ _undoLock=false; }
+}
+function redoEditor(){
+  if(!_redoStack.length){ toast('Rien à rétablir'); return; }
+  _undoLock=true;
+  try{
+    const cur=cloneEditorSnap();
+    const next=_redoStack.pop();
+    if(cur){ _undoStack.push(cur); if(_undoStack.length>EDITOR_UNDO_MAX) _undoStack.shift(); }
+    applyPreset(next,{persist:false});
+    clearTimeout(_persistT);
+    writeState();
+    resetUndoBaseline();
+    toast('↪ Rétabli');
+  }catch(e){ console.warn('[editor] redo', e); }
+  finally{ _undoLock=false; }
+}
+document.addEventListener('keydown',e=>{
+  if(e.target.closest('input, textarea, [contenteditable="true"]')) return;
+  const mod=e.ctrlKey||e.metaKey;
+  if(!mod) return;
+  const k=e.key.toLowerCase();
+  if(k==='z' && !e.shiftKey){ e.preventDefault(); undoEditor(); }
+  else if(k==='y' || (k==='z' && e.shiftKey)){ e.preventDefault(); redoEditor(); }
+});
+window.__editorUndo=undoEditor;
+window.__editorRedo=redoEditor;
 
 /* ===================================================================
    SAUVEGARDE DIRECTE EN BASE (Supabase) — à chaque modification.
@@ -4299,6 +4363,7 @@ async function edBootProfile(){
   renderOrbs();
   if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes);
   _lastVisualFingerprint=visualFingerprint();
+  if(typeof resetUndoBaseline==='function') resetUndoBaseline();
 }
 edBootProfile();
 /* Garde multi-onglets : si un AUTRE onglet (ex: cet éditeur laissé ouvert ailleurs)
@@ -4328,8 +4393,9 @@ function syncActivePreset(){
   if(box){ const sw=box.children[_activePresetIdx]?.querySelector('.pset-swatch'); if(sw) sw.style.background='linear-gradient(180deg,'+S.c1+' 0%,'+S.c2+' 100%)'; }
 }
 // Applique un snapshot en réinitialisant TOUT (hydrateFromSite n'écrase pas l'absent → inutilisable ici).
-function applyPreset(snap){
+function applyPreset(snap, opts){
   if(!snap) return;
+  opts=opts||{};
   try{
     const c=JSON.parse(JSON.stringify(snap));
     S.username=c.username||S.username; S.bio=c.bio||'';
@@ -4363,7 +4429,7 @@ function applyPreset(snap){
     if(typeof updateOrbCount==='function') updateOrbCount();
     if(typeof updateGifCount==='function') updateGifCount();
     updatePhotoCount();
-    persist();
+    if(opts.persist!==false) persist();
   }catch(e){ console.warn('[editor] applyPreset', e); }
 }
 /* Affichage progressif : au départ un seul slot « + » (transparent). À chaque

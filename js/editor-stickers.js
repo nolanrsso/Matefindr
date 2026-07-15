@@ -1087,6 +1087,7 @@
       else if (e.ctrlKey && e.key === 'd') { e.preventDefault(); duplicateSelection(); }
       else if (e.key === 'Delete') { deleteSelection(); }
       else if (e.key === 'Escape') { closeCtx(); exitTransformMode(); }
+      // Ctrl+Z / Ctrl+Y : gérés par editor.html (undoEditor / redoEditor)
     });
   }
 
