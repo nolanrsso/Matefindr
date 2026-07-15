@@ -2462,6 +2462,27 @@
         el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
       }
     }
+    /* Hint souris clignotante sur bulles musique / jeu-avec-clip (1× par session jusqu'au 1er clic). */
+    function shouldShowOrbClickHint(kind){
+      try { return sessionStorage.getItem('mf_orb_hint_' + kind) !== '1'; } catch (_) { return true; }
+    }
+    function markOrbClickHintSeen(kind){
+      try { sessionStorage.setItem('mf_orb_hint_' + kind, '1'); } catch (_) {}
+      document.querySelectorAll('.orb-click-hint--' + kind).forEach(n => n.remove());
+    }
+    function appendOrbClickHint(btn, kind){
+      if (!btn || btn.querySelector('.orb-click-hint')) return;
+      const hint = document.createElement('span');
+      hint.className = 'orb-click-hint orb-click-hint--' + kind;
+      hint.setAttribute('aria-hidden', 'true');
+      hint.title = kind === 'music' ? 'Clique pour écouter' : 'Clique pour voir le clip';
+      hint.innerHTML =
+        '<svg class="orb-click-hint__cursor" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+          '<path d="M5.5 3.2 18.8 11a1.1 1.1 0 0 1-.15 2L12.2 15l-2.7 5.6a1.1 1.1 0 0 1-2-.05L5.5 3.2Z"/>' +
+        '</svg><span class="orb-click-hint__ring"></span>';
+      btn.appendChild(hint);
+    }
+
     function renderOrbs(p){
       _swipeCurrentP = p;
       _swipeRenderedMode = activeLayoutMode();
@@ -2541,6 +2562,7 @@
       }
       function pickPos(orbR, idx){ return relToPx(orbRel.get(list[idx]), orbR); }
 
+      let musicHintPlaced = false;
       list.forEach((o, i) => {
         const locked = unlockedSet ? !unlockedSet.has(i) : false;
         // Pas de highlight "en commun" (halo doré) sur un lien perso : comparer les
@@ -2558,7 +2580,7 @@
           btn.title = 'Bulle verrouillée';
           btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
         } else {
-          btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}`;
+          btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}${o.kind === 'music' ? ' · Clique pour écouter' : (o.kind === 'game' && o.clipUrl ? ' · Clique pour le clip' : '')}`;
           btn.innerHTML = orbInner(o);
         }
         // Rank as a round mini-bubble (with the tier icon) orbiting around the game orb
@@ -2573,14 +2595,24 @@
           rk.innerHTML = `<span class="orb-rank-ball${iconUrl ? ' orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}">${iconHtml}</span>`;
           btn.appendChild(rk);
         }
+        // Hint souris : 1re bulle musique (écouter) + chaque bulle jeu avec clip
+        if (!locked) {
+          if (o.kind === 'music' && !musicHintPlaced && shouldShowOrbClickHint('music')) {
+            appendOrbClickHint(btn, 'music');
+            musicHintPlaced = true;
+          } else if (o.kind === 'game' && o.clipUrl && shouldShowOrbClickHint('clip')) {
+            appendOrbClickHint(btn, 'clip');
+          }
+        }
         // (Le "+" pour ajouter rank/clip n'apparaît PLUS sur la carte de swipe —
         // il reste accessible uniquement via l'overlay d'édition des bulles.
         // Empêche le clic accidentel "+" en bord de bulle pendant le swipe.)
         btn.addEventListener('click', (ev) => {
           ev.stopPropagation();
           if (locked) { showLockPopup(ownCount); return; }
-          // Sound-wave ripple on music orbs only
           if (o.kind === 'music') {
+            markOrbClickHintSeen('music');
+            btn.querySelectorAll('.orb-click-hint').forEach(n => n.remove());
             for (let r = 0; r < 3; r++) {
               const ripple = document.createElement('span');
               ripple.className = 'orb-sound-ripple';
@@ -2588,6 +2620,9 @@
               btn.appendChild(ripple);
               setTimeout(() => ripple.remove(), 1500);
             }
+          } else if (o.kind === 'game' && o.clipUrl) {
+            markOrbClickHintSeen('clip');
+            btn.querySelectorAll('.orb-click-hint').forEach(n => n.remove());
           }
           playOrb(o, btn);
         });
@@ -3115,6 +3150,14 @@
       // Streamable
       m = u.match(/streamable\.com\/([\w-]+)/i);
       if (m) return { type:'iframe', src:`https://streamable.com/e/${encodeURIComponent(m[1])}?autoplay=1` };
+      // Medal.tv — share (/clips/) ou embed (/clip/) ; on force le chemin embed /clip/
+      m = u.match(/medal\.tv\/clip\/([A-Za-z0-9_-]+)(?:\/([A-Za-z0-9_-]+))?/i);
+      if (m) {
+        const path = m[2] ? (m[1] + '/' + m[2]) : m[1];
+        return { type:'iframe', src:`https://medal.tv/clip/${path}?autoplay=1`, externalUrl:u.split(/[?#]/)[0] };
+      }
+      m = u.match(/medal\.tv\/(?:games\/[^/?#]+\/)?clips\/([A-Za-z0-9_-]+)/i);
+      if (m) return { type:'iframe', src:`https://medal.tv/clip/${encodeURIComponent(m[1])}?autoplay=1`, externalUrl:u.split(/[?#]/)[0] };
       // Direct video file — HTTPS only, no javascript: or data: URLs
       if (/^https:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(u)) return { type:'video', src:u };
       // Unknown source → reject (was previously a fallback that allowed any URL)

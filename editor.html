@@ -1465,8 +1465,8 @@ html.perf-lite *{
   <label class="gp-l" id="gamePopRankLabel" hidden>Rang</label>
   <div class="gp-rank-grid" id="gamePopRankGrid" hidden></div>
   <input id="gamePopRank" type="hidden">
-  <label class="gp-l">Clip (lien YouTube)</label>
-  <input id="gamePopClip" maxlength="400" placeholder="https://youtube.com/… ou https://youtu.be/…" autocomplete="off">
+  <label class="gp-l">Clip (YouTube, Twitch, Streamable, Medal, MP4)</label>
+  <input id="gamePopClip" maxlength="400" placeholder="https://youtube.com/… · medal.tv/… · twitch…" autocomplete="off">
   <div class="conn-pop-actions"><button class="btn ghost-danger" id="gamePopClear">Tout effacer</button><button class="btn primary" id="gamePopSave">Enregistrer</button></div>
 </div>
 
@@ -3492,11 +3492,20 @@ function renderRankGrid(o){
 let _gameOrb=null;
 function openGamePop(o){_gameOrb=o;$('gamePopName').textContent=o.title;$('gamePopRank').value=o.rank||'';$('gamePopClip').value=o.clipUrl||'';renderRankGrid(o);$('gameBackdrop').hidden=false;$('gamePop').hidden=false;}
 function closeGamePop(){$('gameBackdrop').hidden=true;$('gamePop').hidden=true;_gameOrb=null;}
-function isYouTubeUrl(u){return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com)\//i.test(u);}
+function isSupportedClipUrl(u){
+  if(!u) return false;
+  const s=String(u).trim();
+  if(/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com)\//i.test(s)) return true;
+  if(/clips\.twitch\.tv\//i.test(s) || /twitch\.tv\/\w+\/clip\//i.test(s)) return true;
+  if(/streamable\.com\//i.test(s)) return true;
+  if(/medal\.tv\//i.test(s)) return true;
+  if(/^https:\/\/.+\.(mp4|webm|mov)(\?.*)?$/i.test(s)) return true;
+  return false;
+}
 $('gamePopSave').addEventListener('click',()=>{
   if(!_gameOrb)return;
   const rk=$('gamePopRank').value.trim(), cl=$('gamePopClip').value.trim();
-  if(cl&&!isYouTubeUrl(cl)){toast('Mets un lien YouTube valide (youtube.com / youtu.be)');return;}
+  if(cl&&!isSupportedClipUrl(cl)){toast('Lien non supporté — YouTube, Twitch, Streamable, Medal ou MP4');return;}
   if(rk)_gameOrb.rank=rk;else delete _gameOrb.rank;
   if(cl)_gameOrb.clipUrl=cl;else delete _gameOrb.clipUrl;
   renderOrbs(); persist(); refreshOrbPlacedIfOpen(); closeGamePop(); toast('Bulle de jeu mise à jour');
