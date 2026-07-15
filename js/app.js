@@ -1676,28 +1676,42 @@
       inner.style.height = '100%';
 
       img.style.position = 'absolute';
-      img.style.top = '0';
-      img.style.left = '0';
-      img.style.right = '0';
-      img.style.bottom = '0';
-      img.style.width = '100%';
-      img.style.height = '100%';
+      img.style.margin = '0';
+      img.style.maxWidth = 'none';
       img.style.transform = '';
       img.style.transformOrigin = '';
       img.style.objectPosition = '50% 50%';
+      img.style.clipPath = 'none';
+      img.style.right = 'auto';
+      img.style.bottom = 'auto';
 
-      if (cl || cr || ct || cb) {
-        const spanX = Math.max(1, 100 - cl - cr);
-        const spanY = Math.max(1, 100 - ct - cb);
-        const px = cl + spanX / 2;
-        const py = ct + spanY / 2;
+      const hasStretch = sx !== 1 || sy !== 1;
+      const hasCrop = cl || cr || ct || cb;
+
+      if (hasCrop && hasStretch) {
+        img.style.top = '0';
+        img.style.left = '0';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'fill';
+        img.style.clipPath = 'inset(' + ct + '% ' + cr + '% ' + cb + '% ' + cl + '%)';
+      } else if (hasCrop) {
+        img.style.width = bw + 'px';
+        img.style.height = bh + 'px';
+        img.style.left = (-cl / 100 * bw) + 'px';
+        img.style.top = (-ct / 100 * bh) + 'px';
         img.style.objectFit = 'cover';
-        img.style.objectPosition = px + '% ' + py + '%';
-        img.style.transformOrigin = px + '% ' + py + '%';
-        img.style.transform = 'scale(' + (100 / spanX) + ', ' + (100 / spanY) + ')';
-      } else if (sx !== 1 || sy !== 1) {
+      } else if (hasStretch) {
+        img.style.top = '0';
+        img.style.left = '0';
+        img.style.width = '100%';
+        img.style.height = '100%';
         img.style.objectFit = 'fill';
       } else {
+        img.style.top = '0';
+        img.style.left = '0';
+        img.style.width = '100%';
+        img.style.height = '100%';
         img.style.objectFit = 'cover';
       }
 

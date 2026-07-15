@@ -94,10 +94,50 @@
     return (minBw / Math.max(1, layerW)) * 100;
   }
 
-  function enforceMinW(item, el) {
+  /** % largeur minimale pour que le cadre visible (après rogne/étire) fasse ≥ PX_MIN px. */
+  function minWPctVisible(item, el) {
     const { layerW, aspect } = baseFrameSize(el, item);
-    const floor = minWPct(layerW, aspect);
+    const cl = item.cropL || 0;
+    const cr = item.cropR || 0;
+    const ct = item.cropT || 0;
+    const cb = item.cropB || 0;
+    const sx = item.scaleX || 1;
+    const sy = item.scaleY || 1;
+    const spanX = Math.max(0.01, (1 - cl / 100 - cr / 100) * sx);
+    const spanY = Math.max(0.01, (1 - ct / 100 - cb / 100) * sy);
+    const minBw = Math.max(PX_MIN, PX_MIN / spanX, PX_MIN / (spanY * Math.max(0.05, aspect)));
+    return (minBw / Math.max(1, layerW)) * 100;
+  }
+
+  function visibleSize(item, el) {
+    const { bw, bh } = baseFrameSize(el, item);
+    const cl = item.cropL || 0;
+    const cr = item.cropR || 0;
+    const ct = item.cropT || 0;
+    const cb = item.cropB || 0;
+    const sx = item.scaleX || 1;
+    const sy = item.scaleY || 1;
+    const coreW = bw * (1 - cl / 100 - cr / 100);
+    const coreH = bh * (1 - ct / 100 - cb / 100);
+    return {
+      bw,
+      bh,
+      visW: Math.max(PX_MIN, coreW * sx),
+      visH: Math.max(PX_MIN, coreH * sy),
+    };
+  }
+
+  function enforceMinW(item, el) {
+    const floor = minWPctVisible(item, el);
     if (item.w < floor) item.w = Math.round(floor * 10) / 10;
+  }
+
+  function screenDeltaToLocal(dx, dy, rotDeg) {
+    const r = (-rotDeg * Math.PI) / 180;
+    return {
+      dx: dx * Math.cos(r) - dy * Math.sin(r),
+      dy: dx * Math.sin(r) + dy * Math.cos(r),
+    };
   }
 
   function sanitizeCrop(item, bw, bh) {
@@ -207,7 +247,6 @@
     const cb = item.cropB || 0;
     const sx = item.scaleX || 1;
     const sy = item.scaleY || 1;
-    const hasCrop = cl || cr || ct || cb;
 
     const { bw, bh } = baseFrameSize(el, item);
     sanitizeCrop(item, bw, bh);
@@ -231,25 +270,41 @@
     inner.style.marginTop = '0';
 
     img.style.position = 'absolute';
-    img.style.top = '0';
-    img.style.left = '0';
-    img.style.right = '0';
-    img.style.bottom = '0';
-    img.style.width = '100%';
-    img.style.height = '100%';
+    img.style.margin = '0';
+    img.style.maxWidth = 'none';
     img.style.transform = '';
     img.style.transformOrigin = '';
     img.style.objectPosition = '50% 50%';
+    img.style.clipPath = 'none';
+    img.style.right = 'auto';
+    img.style.bottom = 'auto';
 
-    if (hasCrop2) {
-      const cp = cropObjectPos(cl2, cr2, ct2, cb2);
+    const hasStretch = sx !== 1 || sy !== 1;
+
+    if (hasCrop2 && hasStretch) {
+      img.style.top = '0';
+      img.style.left = '0';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'fill';
+      img.style.clipPath = 'inset(' + ct2 + '% ' + cr2 + '% ' + cb2 + '% ' + cl2 + '%)';
+    } else if (hasCrop2) {
+      img.style.width = bw + 'px';
+      img.style.height = bh + 'px';
+      img.style.left = (-cl2 / 100 * bw) + 'px';
+      img.style.top = (-ct2 / 100 * bh) + 'px';
       img.style.objectFit = 'cover';
-      img.style.objectPosition = cp.x + '% ' + cp.y + '%';
-      img.style.transformOrigin = cp.x + '% ' + cp.y + '%';
-      img.style.transform = 'scale(' + cp.zx + ', ' + cp.zy + ')';
-    } else if (sx !== 1 || sy !== 1) {
+    } else if (hasStretch) {
+      img.style.top = '0';
+      img.style.left = '0';
+      img.style.width = '100%';
+      img.style.height = '100%';
       img.style.objectFit = 'fill';
     } else {
+      img.style.top = '0';
+      img.style.left = '0';
+      img.style.width = '100%';
+      img.style.height = '100%';
       img.style.objectFit = 'cover';
     }
 
@@ -416,7 +471,25 @@
     item.cropL = item.cropL || 0;
   }
 
+  function shiftItemForCropAnchor(item, h, dW, dH, rot, x0, y0) {
+    let lx = 0;
+    let ly = 0;
+    if (h === 'n' || h === 'nw' || h === 'ne') ly += -dH / 2;
+    if (h === 's' || h === 'sw' || h === 'se') ly += dH / 2;
+    if (h === 'w' || h === 'nw' || h === 'sw') lx += -dW / 2;
+    if (h === 'e' || h === 'ne' || h === 'se') lx += dW / 2;
+    const r = (rot || 0) * Math.PI / 180;
+    const wx = lx * Math.cos(r) - ly * Math.sin(r);
+    const wy = lx * Math.sin(r) + ly * Math.cos(r);
+    const lr = layerEl()?.getBoundingClientRect();
+    if (!lr) return;
+    item.x = x0 + (wx / lr.width) * 100;
+    item.y = y0 + (wy / lr.height) * 100;
+  }
+
   function refreshTransformImg(el, item) {
+    el.style.left = item.x + '%';
+    el.style.top = item.y + '%';
     applyStickerVisual(el, item);
   }
 
@@ -443,6 +516,7 @@
         const fs = baseFrameSize(el, item);
         const startX = e.clientX;
         const startY = e.clientY;
+        const rot = item.rot || 0;
         const s = {
           cropT: item.cropT || 0,
           cropR: item.cropR || 0,
@@ -452,44 +526,56 @@
           scaleY: item.scaleY || 1,
           fullBw: fs.bw,
           fullBh: fs.bh,
+          x0: item.x,
+          y0: item.y,
         };
         const mv = ev => {
           const dx = ev.clientX - startX;
           const dy = ev.clientY - startY;
+          const local = screenDeltaToLocal(dx, dy, rot);
+          const ldx = local.dx;
+          const ldy = local.dy;
           if (mode === 'crop') {
             const maxT = Math.max(0, 100 - s.cropB - (PX_MIN / s.fullBh) * 100);
             const maxB = Math.max(0, 100 - s.cropT - (PX_MIN / s.fullBh) * 100);
             const maxL = Math.max(0, 100 - s.cropR - (PX_MIN / s.fullBw) * 100);
             const maxR = Math.max(0, 100 - s.cropL - (PX_MIN / s.fullBw) * 100);
-            if (h === 'n') item.cropT = clampN(s.cropT + (dy / s.fullBh) * 100, 0, maxT);
-            else if (h === 's') item.cropB = clampN(s.cropB - (dy / s.fullBh) * 100, 0, maxB);
-            else if (h === 'w') item.cropL = clampN(s.cropL + (dx / s.fullBw) * 100, 0, maxL);
-            else if (h === 'e') item.cropR = clampN(s.cropR - (dx / s.fullBw) * 100, 0, maxR);
+            if (h === 'n') item.cropT = clampN(s.cropT + (ldy / s.fullBh) * 100, 0, maxT);
+            else if (h === 's') item.cropB = clampN(s.cropB - (ldy / s.fullBh) * 100, 0, maxB);
+            else if (h === 'w') item.cropL = clampN(s.cropL + (ldx / s.fullBw) * 100, 0, maxL);
+            else if (h === 'e') item.cropR = clampN(s.cropR - (ldx / s.fullBw) * 100, 0, maxR);
             else if (h === 'nw') {
-              item.cropT = clampN(s.cropT + (dy / s.fullBh) * 100, 0, maxT);
-              item.cropL = clampN(s.cropL + (dx / s.fullBw) * 100, 0, maxL);
+              item.cropT = clampN(s.cropT + (ldy / s.fullBh) * 100, 0, maxT);
+              item.cropL = clampN(s.cropL + (ldx / s.fullBw) * 100, 0, maxL);
             } else if (h === 'ne') {
-              item.cropT = clampN(s.cropT + (dy / s.fullBh) * 100, 0, maxT);
-              item.cropR = clampN(s.cropR - (dx / s.fullBw) * 100, 0, maxR);
+              item.cropT = clampN(s.cropT + (ldy / s.fullBh) * 100, 0, maxT);
+              item.cropR = clampN(s.cropR - (ldx / s.fullBw) * 100, 0, maxR);
             } else if (h === 'sw') {
-              item.cropB = clampN(s.cropB - (dy / s.fullBh) * 100, 0, maxB);
-              item.cropL = clampN(s.cropL + (dx / s.fullBw) * 100, 0, maxL);
+              item.cropB = clampN(s.cropB - (ldy / s.fullBh) * 100, 0, maxB);
+              item.cropL = clampN(s.cropL + (ldx / s.fullBw) * 100, 0, maxL);
             } else if (h === 'se') {
-              item.cropB = clampN(s.cropB - (dy / s.fullBh) * 100, 0, maxB);
-              item.cropR = clampN(s.cropR - (dx / s.fullBw) * 100, 0, maxR);
+              item.cropB = clampN(s.cropB - (ldy / s.fullBh) * 100, 0, maxB);
+              item.cropR = clampN(s.cropR - (ldx / s.fullBw) * 100, 0, maxR);
             }
+            const sx = item.scaleX || 1;
+            const sy = item.scaleY || 1;
+            const visW0 = s.fullBw * (1 - s.cropL / 100 - s.cropR / 100) * sx;
+            const visH0 = s.fullBh * (1 - s.cropT / 100 - s.cropB / 100) * sy;
+            const visW1 = s.fullBw * (1 - (item.cropL || 0) / 100 - (item.cropR || 0) / 100) * sx;
+            const visH1 = s.fullBh * (1 - (item.cropT || 0) / 100 - (item.cropB || 0) / 100) * sy;
+            shiftItemForCropAnchor(item, h, visW1 - visW0, visH1 - visH0, rot, s.x0, s.y0);
           } else {
             const coreW = Math.max(PX_MIN, s.fullBw * (1 - s.cropL / 100 - s.cropR / 100));
             const coreH = Math.max(PX_MIN, s.fullBh * (1 - s.cropT / 100 - s.cropB / 100));
             const minSx = PX_MIN / coreW;
             const minSy = PX_MIN / coreH;
-            if (h === 'e') item.scaleX = clampN(s.scaleX + dx / coreW, minSx, 4);
-            else if (h === 'w') item.scaleX = clampN(s.scaleX - dx / coreW, minSx, 4);
-            else if (h === 's') item.scaleY = clampN(s.scaleY + dy / coreH, minSy, 4);
-            else if (h === 'n') item.scaleY = clampN(s.scaleY - dy / coreH, minSy, 4);
+            if (h === 'e') item.scaleX = clampN(s.scaleX + ldx / coreW, minSx, 4);
+            else if (h === 'w') item.scaleX = clampN(s.scaleX - ldx / coreW, minSx, 4);
+            else if (h === 's') item.scaleY = clampN(s.scaleY + ldy / coreH, minSy, 4);
+            else if (h === 'n') item.scaleY = clampN(s.scaleY - ldy / coreH, minSy, 4);
             else {
-              item.scaleX = clampN(s.scaleX + dx / coreW, minSx, 4);
-              item.scaleY = clampN(s.scaleY + dy / coreH, minSy, 4);
+              item.scaleX = clampN(s.scaleX + ldx / coreW, minSx, 4);
+              item.scaleY = clampN(s.scaleY + ldy / coreH, minSy, 4);
             }
           }
           refreshTransformImg(el, item);
@@ -727,7 +813,7 @@
       const c = center();
       const d0 = Math.max(8, Math.hypot(e.clientX - c.x, e.clientY - c.y));
       const w0 = item.w;
-      const floorW = minWPct(layer.getBoundingClientRect().width, stickerAspect(el));
+      const floorW = minWPctVisible(item, el);
       const mv = ev => {
         item.w = clampW(Math.max(floorW, w0 * (Math.hypot(ev.clientX - c.x, ev.clientY - c.y) / d0)));
         apply();
