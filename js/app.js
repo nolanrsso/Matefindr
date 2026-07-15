@@ -422,7 +422,13 @@
                 if (d.connUniformColor && /^#[0-9a-f]{6}$/i.test(d.connUniformColor)) su.connUniformColor = d.connUniformColor;
                 else if (d.connUniformColor === null) su.connUniformColor = null;
                 if (d.profileVoice) su.profileVoice = d.profileVoice;
+                if (Array.isArray(d.presets)) su.presets = d.presets;
+                if (typeof d.sharePresetIdx === 'number') su.sharePresetIdx = d.sharePresetIdx;
                 console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
+              } else if (dRaw) {
+                // Même si le profil local existe déjà, ne pas perdre presets / sharePresetIdx
+                if (Array.isArray(dRaw.presets) && !Array.isArray(state.user.presets)) state.user.presets = dRaw.presets;
+                if (typeof dRaw.sharePresetIdx === 'number' && typeof state.user.sharePresetIdx !== 'number') state.user.sharePresetIdx = dRaw.sharePresetIdx;
               }
             }
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
@@ -964,6 +970,9 @@
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         isMe: true,
         views: _myViewsCache,
+        // Presets + preset du lien perso (indépendant du profil équipé / deck swipe)
+        presets: Array.isArray(u.presets) ? u.presets : null,
+        sharePresetIdx: (typeof u.sharePresetIdx === 'number') ? u.sharePresetIdx : null,
       };
     }
 
@@ -1301,7 +1310,15 @@
     function rowToProfile(r){
       if (!r) return null;
       // Profil complet stocké dans data → on l'utilise tel quel
-      if (r.data && typeof r.data === 'object' && r.data.name) { const p = Object.assign({}, r.data); p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; p._showViews = true; if (r.data.titlesData) p.titlesData = r.data.titlesData; return p; }
+      if (r.data && typeof r.data === 'object' && r.data.name) {
+        const p = Object.assign({}, r.data);
+        p.isMe = false; p.uid = r.id; p.views = r.views || 0; p.slug = r.slug || null; p._showViews = true;
+        if (r.data.titlesData) p.titlesData = r.data.titlesData;
+        // Conserver presets / sharePresetIdx pour openSharedProfile (lien perso seulement)
+        if (Array.isArray(r.data.presets)) p.presets = r.data.presets;
+        if (typeof r.data.sharePresetIdx === 'number') p.sharePresetIdx = r.data.sharePresetIdx;
+        return p;
+      }
       // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
       if (!r.display_name && !r.avatar_url) return null;
       const subByKind = {music:'musique', game:'jeu', anime:'série', film:'film'};
@@ -7061,6 +7078,103 @@
         return true;
       } catch(_) { try { localStorage.removeItem('matefindr_pending_action'); } catch(_){} return false; }
     }
+    /* Applique le preset choisi pour le LIEN PERSO (indépendant du profil équipé
+       visible dans le deck). Snapshots éditeur → champs carte swipe. */
+    function applySharePresetOverlay(prof){
+      if (!prof || !Array.isArray(prof.presets)) return prof;
+      const idx = prof.sharePresetIdx;
+      if (typeof idx !== 'number' || idx < 0 || idx >= prof.presets.length) return prof;
+      const snap = prof.presets[idx];
+      if (!snap || typeof snap !== 'object') return prof;
+      try {
+        if (snap.username) { prof.name = snap.username; prof.initial = String(snap.username).charAt(0).toUpperCase(); }
+        if (typeof snap.bio === 'string') prof.bio = snap.bio;
+        if (snap.avatar && snap.avatar.url) {
+          prof.avatarUrl = snap.avatar.url;
+          prof.avatarPos = { posX: snap.avatar.posX, posY: snap.avatar.posY, scale: snap.avatar.scale };
+        } else if (snap.avatar === null) {
+          prof.avatarUrl = null; prof.avatarPos = null;
+        }
+        if (snap.banner && snap.banner.url) {
+          prof.bannerUrl = snap.banner.url;
+          prof.bannerPos = { posX: snap.banner.posX, posY: snap.banner.posY, scale: snap.banner.scale };
+        } else if (snap.banner === null) {
+          prof.bannerUrl = null; prof.bannerPos = null;
+        }
+        if (snap.voice && snap.voice.url) prof.profileVoice = snap.voice.url;
+        else if (snap.voice === null) prof.profileVoice = null;
+        if (snap.c1) prof.profileColor = snap.c1;
+        if (snap.c2) prof.profileColor2 = snap.c2;
+        if (snap.nameColor && /^#[0-9a-f]{6}$/i.test(snap.nameColor)) prof.nameColor = snap.nameColor;
+        else if (snap.nameColor === null) prof.nameColor = null;
+        if (snap.connUniformColor && /^#[0-9a-f]{6}$/i.test(snap.connUniformColor)) prof.connUniformColor = snap.connUniformColor;
+        else if (snap.connUniformColor === null) prof.connUniformColor = null;
+        prof.handleBlur = !!snap.handleBlur;
+        if (snap.boostShowName === false) prof.showBoostName = false;
+        else if (snap.boostShowName === true) prof.showBoostName = true;
+        if (snap.bg) {
+          if (snap.bg.type === 'preset') { prof.bg = snap.bg.value; prof.bgPos = null; }
+          else if (snap.bg.type === 'custom' && snap.bg.value) {
+            prof.bg = snap.bg.value;
+            prof.bgPos = (!snap.bg.video && typeof snap.bg.posX === 'number')
+              ? { posX: snap.bg.posX, posY: snap.bg.posY, scale: snap.bg.scale } : null;
+          }
+        }
+        if (snap.orbColors && typeof snap.orbColors === 'object') prof.orbColors = snap.orbColors;
+        if (snap.orbGlow && typeof snap.orbGlow === 'object') prof.orbGlow = snap.orbGlow;
+        if (snap.connections && typeof snap.connections === 'object') prof.connections = snap.connections;
+        prof.gifContour = (snap.gifContour !== false);
+        prof.photoContour = (snap.photoContour !== false);
+        const subByKind = { music:'musique', game:'jeu', anime:'série', film:'film' };
+        const emoByKind = { music:'🎵', game:'🎮', anime:'📺', film:'🎬' };
+        if (Array.isArray(snap.orbs)) {
+          prof.orbs = snap.orbs.map(o => {
+            const out = {
+              kind: o.kind, title: o.title,
+              sub: (o.kind === 'game' && o.rank) ? o.rank : (o.sub || subByKind[o.kind] || ''),
+              emoji: emoByKind[o.kind] || '✨',
+              cover: o.cover || null, previewUrl: o.previewUrl || null,
+              rank: o.rank || null, clipUrl: o.clipUrl || null,
+            };
+            if (o.color && /^#[0-9a-f]{6}$/i.test(o.color)) out.color = o.color;
+            if (o.glow === false) out.glow = false;
+            if (o.contour === false) out.contour = false;
+            if (typeof o.customX === 'number') { out.customX = o.customX; out.customY = o.customY; }
+            else {
+              const pm = o.posByMode || {};
+              const d = pm.desktop || ((typeof o.x === 'number' && typeof o.y === 'number') ? { x: o.x, y: o.y } : null);
+              if (d && typeof d.x === 'number') { out.customX = (d.x - 50) / 100; out.customY = (d.y - 50) / 100; }
+            }
+            if (o.posPortrait) out.posPortrait = o.posPortrait;
+            else if (o.posByMode && o.posByMode.portrait && typeof o.posByMode.portrait.x === 'number') {
+              out.posPortrait = { x: (o.posByMode.portrait.x - 50) / 100, y: (o.posByMode.portrait.y - 50) / 100 };
+            }
+            if (o.posLandscape) out.posLandscape = o.posLandscape;
+            else if (o.posByMode && o.posByMode.landscape && typeof o.posByMode.landscape.x === 'number') {
+              out.posLandscape = { x: (o.posByMode.landscape.x - 50) / 100, y: (o.posByMode.landscape.y - 50) / 100 };
+            }
+            return out;
+          });
+        }
+        const mapSticker = (g, urlKey) => {
+          const pm = g.posByMode || {};
+          const d = pm.desktop || { x: g.x, y: g.y, w: g.w, rot: g.rot };
+          const url = g[urlKey] || g.url || g.preview || g.full || '';
+          const out = Object.assign({
+            preview: url, full: url, url,
+            x: d.x, y: d.y, w: d.w, rot: d.rot,
+          }, g.crop ? { crop: g.crop } : {}, g.z != null ? { z: g.z } : {});
+          if (pm.portrait) out.portrait = Object.assign({ x: pm.portrait.x, y: pm.portrait.y, w: pm.portrait.w, rot: pm.portrait.rot }, pm.portrait.crop ? { crop: pm.portrait.crop } : {});
+          if (pm.landscape) out.landscape = Object.assign({ x: pm.landscape.x, y: pm.landscape.y, w: pm.landscape.w, rot: pm.landscape.rot }, pm.landscape.crop ? { crop: pm.landscape.crop } : {});
+          if (g.portrait) out.portrait = g.portrait;
+          if (g.landscape) out.landscape = g.landscape;
+          return out;
+        };
+        if (Array.isArray(snap.gifs)) prof.gifs = snap.gifs.map(g => mapSticker(g, 'url'));
+        if (Array.isArray(snap.photos)) prof.photos = snap.photos.map(p => mapSticker(p, 'url'));
+      } catch (e) { console.warn('[Matefindr] applySharePresetOverlay', e); }
+      return prof;
+    }
     async function openSharedProfile(slug){
       // Nettoyage défensif : un lien de partage ne doit jamais s'ouvrir en mode aperçu.
       _previewMode = false;
@@ -7072,7 +7186,7 @@
       let prof = null;
       try {
         const { data } = await window.__supa.from('profiles').select('*').eq('slug', slug).limit(1);
-        if (data && data[0]) prof = rowToProfile(data[0]);
+        if (data && data[0]) prof = applySharePresetOverlay(rowToProfile(data[0]));
       } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
       if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
       if (prof.disabled === true) { try { history.replaceState(null,'','/'); } catch(_){} showAccountDisabledMessage(); return; }
@@ -7287,6 +7401,7 @@
         localStorage.removeItem('matefindr_discord_token_uid');
         localStorage.removeItem('matefindr_presets');
         localStorage.removeItem('matefindr_active_preset');
+        localStorage.removeItem('matefindr_share_preset');
       } catch(_){}
     }
     document.getElementById('accSaveReset')?.addEventListener('click', () => {

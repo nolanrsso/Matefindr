@@ -1621,7 +1621,7 @@ html.perf-lite *{
   </div>
 
   <div class="link-pset" id="linkPsetRow" hidden>
-    <div class="link-pset-label">Preset affiché sur ce lien</div>
+    <div class="link-pset-label">Preset affiché sur ce lien <span style="font-weight:600;opacity:.7">(indépendant de celui équipé)</span></div>
     <div class="link-pset-slots" id="linkPsetSlots"></div>
   </div>
 
@@ -3686,6 +3686,9 @@ function writeState(){
   // l'ancienne URL dans l'état → repoussée en DB → toujours visible par les autres.
   st.user.profileVoice = S.voice ? S.voice.url : null;
   st.profile.connections=Object.assign({},S.connections);
+  // Presets + preset du lien (indépendant de l'équipé) → cloud via buildDbProfile
+  if(typeof PRESETS!=='undefined') st.user.presets=PRESETS.slice(0,PSET_MAX);
+  if(typeof _sharePresetIdx!=='undefined') st.user.sharePresetIdx=_sharePresetIdx;
   const _fp=visualFingerprint();
   if(_lastVisualFingerprint!==null && _fp!==_lastVisualFingerprint) st.profile.lastEditedAt=new Date().toISOString();
   _lastVisualFingerprint=_fp;
@@ -3769,6 +3772,9 @@ function buildDbProfile(st){
     coins:typeof u.coins==='number'?u.coins:0,
     questCoinClaims:Array.isArray(u.questCoinClaims)?u.questCoinClaims:[],
     slugChangedAt:u.slugChangedAt||null,
+    // Presets + index affiché sur le lien perso (≠ preset équipé dans l'éditeur)
+    presets:Array.isArray(u.presets)?u.presets:(typeof PRESETS!=='undefined'&&Array.isArray(PRESETS)?PRESETS:[]),
+    sharePresetIdx:(typeof u.sharePresetIdx==='number')?u.sharePresetIdx:(typeof _sharePresetIdx==='number'?_sharePresetIdx:null),
   };
 }
 let _dbSyncT=null, _dbSyncing=false;
@@ -3915,6 +3921,18 @@ async function edEnsureLocalProfile(){
       if(typeof d.coins==='number') su.coins=d.coins;
       if(Array.isArray(d.questCoinClaims)) su.questCoinClaims=d.questCoinClaims;
       if(d.discordLive) su.discordLive=d.discordLive;
+      if(Array.isArray(d.presets)) su.presets=d.presets;
+      if(typeof d.sharePresetIdx==='number') su.sharePresetIdx=d.sharePresetIdx;
+      // Restaure les presets locaux vides depuis le cloud (autre appareil / nouveau navigateur)
+      try{
+        if(Array.isArray(d.presets)&&d.presets.length&&typeof PRESETS!=='undefined'&&!PRESETS.length){
+          PRESETS=d.presets.filter(Boolean).slice(0,PSET_MAX);
+          savePresetsLS();
+        }
+        if(typeof d.sharePresetIdx==='number'&&typeof _sharePresetIdx!=='undefined'&&_sharePresetIdx===null){
+          _sharePresetIdx=d.sharePresetIdx; saveSharePresetIdx();
+        }
+      }catch(_){}
     }
     if(!su.avatarUrl && row?.avatar_url) su.avatarUrl=row.avatar_url;
     if(!su.bannerUrl && row?.banner_url) su.bannerUrl=row.banner_url;
@@ -4193,11 +4211,21 @@ if(window.__EditorStickers){
    Cliquer un slot rempli = le charge ET le rend actif (tes futures modifs s'y
    sauvegardent). Cliquer « + » = crée un preset TOTALEMENT VIERGE, l'active,
    et vide l'éditeur pour repartir de zéro. */
-const PSET_KEY='matefindr_presets', PSET_MAX=5, ACTIVE_PSET_KEY='matefindr_active_preset';
+const PSET_KEY='matefindr_presets', PSET_MAX=5, ACTIVE_PSET_KEY='matefindr_active_preset', SHARE_PSET_KEY='matefindr_share_preset';
 // Liste COMPACTE (sans trous) : 0 à 5 presets enregistrés, dans l'ordre.
 function loadPresets(){ try{ const a=JSON.parse(localStorage.getItem(PSET_KEY)||'[]'); return (Array.isArray(a)?a:[]).filter(Boolean).slice(0,PSET_MAX); }catch(_){ return []; } }
 function savePresetsLS(){ try{ localStorage.setItem(PSET_KEY, JSON.stringify(PRESETS.slice(0,PSET_MAX))); }catch(_){} }
 let PRESETS=loadPresets();
+function loadSharePresetIdx(){ try{ const v=localStorage.getItem(SHARE_PSET_KEY); const n=v===null?NaN:parseInt(v,10); return Number.isInteger(n)&&n>=0?n:null; }catch(_){ return null; } }
+function saveSharePresetIdx(){ try{ if(_sharePresetIdx===null) localStorage.removeItem(SHARE_PSET_KEY); else localStorage.setItem(SHARE_PSET_KEY,String(_sharePresetIdx)); }catch(_){} }
+let _sharePresetIdx=loadSharePresetIdx();
+function clampSharePresetIdx(){
+  if(!PRESETS.length){ _sharePresetIdx=null; saveSharePresetIdx(); return; }
+  if(_sharePresetIdx===null || _sharePresetIdx>=PRESETS.length || _sharePresetIdx<0){
+    _sharePresetIdx=(_activePresetIdx!==null && _activePresetIdx<PRESETS.length)?_activePresetIdx:0;
+    saveSharePresetIdx();
+  }
+}
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
@@ -4240,6 +4268,7 @@ async function edBootProfile(){
   } else {
     applyPreset(PRESETS[_activePresetIdx]);
   }
+  clampSharePresetIdx();
   renderOrbs();
   if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes);
   _lastVisualFingerprint=visualFingerprint();
@@ -4256,7 +4285,7 @@ edBootProfile();
    si l'autre onglet sauvegarde en continu. */
 let _lastTabSyncToast=0;
 window.addEventListener('storage', e=>{
-  if(e.key!==PSET_KEY && e.key!==ACTIVE_PSET_KEY) return;
+  if(e.key!==PSET_KEY && e.key!==ACTIVE_PSET_KEY && e.key!==SHARE_PSET_KEY) return;
   const now=Date.now(); if(now-_lastTabSyncToast<8000) return; _lastTabSyncToast=now;
   toast('⚠️ Profil modifié dans un autre onglet — recharge la page pour voir la dernière version');
 });
@@ -4345,7 +4374,12 @@ function renderPresets(){
       } else {
         _activePresetIdx=null;
       }
-      savePresetsLS(); saveActivePresetIdx(); renderPresets(); toast('Preset supprimé');
+      if(_sharePresetIdx!==null){
+        if(_sharePresetIdx===i) _sharePresetIdx=PRESETS.length?Math.max(0,i-1):null;
+        else if(_sharePresetIdx>i) _sharePresetIdx--;
+      }
+      savePresetsLS(); saveActivePresetIdx(); saveSharePresetIdx(); clampSharePresetIdx();
+      renderPresets(); toast('Preset supprimé');
     });
     slot.addEventListener('click',()=>{
       if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
@@ -4390,22 +4424,32 @@ function renderEditorLinkPresets(){
   const psetRow=$('linkPsetRow'), psetSlots=$('linkPsetSlots');
   if(!psetRow||!psetSlots) return;
   if(!PRESETS.length){ psetRow.hidden=true; return; }
+  clampSharePresetIdx();
   psetRow.hidden=false;
   psetSlots.innerHTML='';
   PRESETS.forEach((p,i)=>{
     const slot=document.createElement('div');
-    slot.className='link-pset-slot'+(i===_activePresetIdx?' link-pset-slot--active':'');
-    slot.title=(i===_activePresetIdx?'Preset actif — ':'Activer ')+'le preset '+(i+1);
+    const isShare=i===_sharePresetIdx;
+    slot.className='link-pset-slot'+(isShare?' link-pset-slot--active':'');
+    slot.title=isShare
+      ?('Preset '+(i+1)+' — affiché sur ton lien'+(i===_activePresetIdx?' (aussi équipé)':''))
+      :('Afficher le preset '+(i+1)+' sur ton lien'+(i===_activePresetIdx?' (équipé dans l\'éditeur)':''));
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
     slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>';
     slot.addEventListener('click',()=>{
       if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
-      if(i===_activePresetIdx) return;
-      _activePresetIdx=i; saveActivePresetIdx();
-      applyPreset(PRESETS[i]);
-      if(typeof renderPresets==='function') renderPresets();
+      if(i===_sharePresetIdx) return;
+      // Change UNIQUEMENT le preset du lien — n'équipe PAS l'éditeur
+      _sharePresetIdx=i; saveSharePresetIdx();
+      try{
+        const st=readSite(); st.user=st.user||{};
+        st.user.presets=PRESETS.slice(0,PSET_MAX);
+        st.user.sharePresetIdx=_sharePresetIdx;
+        localStorage.setItem(STATE_KEY,JSON.stringify(st));
+      }catch(_){}
+      scheduleDbSync();
       renderEditorLinkPresets();
-      toast('Preset '+(i+1)+' activé — visible sur ton lien');
+      toast('Preset '+(i+1)+' affiché sur ton lien');
     });
     psetSlots.appendChild(slot);
   });
@@ -4559,7 +4603,7 @@ function renderSettingsSheet(sh){
     // AUTRE compte sur le même navigateur rouvrait l'éditeur avec les presets (couleurs,
     // bulles, GIFs, fond…) du compte précédent, jusqu'à écraser le profil Supabase du
     // nouveau compte avec ces données périmées.
-    try{ localStorage.removeItem('matefindr_presets'); localStorage.removeItem('matefindr_active_preset'); }catch(_){}
+    try{ localStorage.removeItem('matefindr_presets'); localStorage.removeItem('matefindr_active_preset'); localStorage.removeItem('matefindr_share_preset'); }catch(_){}
     location.href='/';
   });
   sh.querySelector('#ssDelete').addEventListener('click',()=>{
