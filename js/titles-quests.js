@@ -71,6 +71,8 @@
     title: 'Voix du Public', rarity: 2,
   };
 
+  const BETA_TESTER_ID = 'beta_tester';
+
   function $(id) { return document.getElementById(id); }
   function readSite() { try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch (_) { return {}; } }
   function writeSite(s) { try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (_) {} }
@@ -85,7 +87,27 @@
     const td = u.titlesData && typeof u.titlesData === 'object' ? u.titlesData : defaultTitlesData();
     if (!Array.isArray(td.collected)) td.collected = [];
     if (!Array.isArray(td.pending)) td.pending = [];
+    return normalizeTitlesData(td);
+  }
+
+  function normalizeTitlesData(td) {
+    td = td || defaultTitlesData();
+    if (!Array.isArray(td.collected)) td.collected = [];
+    if (!Array.isArray(td.pending)) td.pending = [];
+    if (!td.collected.includes(BETA_TESTER_ID)) td.collected.push(BETA_TESTER_ID);
+    if (!td.equipped) td.equipped = BETA_TESTER_ID;
     return td;
+  }
+
+  function titlesDataForCard(p) {
+    const raw = p.titlesData || (p.isMe ? getTitlesData(p) : null);
+    if (!raw) return normalizeTitlesData(defaultTitlesData());
+    return normalizeTitlesData({
+      collected: Array.isArray(raw.collected) ? [...raw.collected] : [],
+      pending: Array.isArray(raw.pending) ? [...raw.pending] : [],
+      equipped: raw.equipped,
+      color: raw.color,
+    });
   }
 
   function saveTitlesData(patch) {
@@ -102,6 +124,15 @@
 
   function buildMissionCatalog() {
     const list = [];
+    list.push({
+      id: BETA_TESTER_ID,
+      group: 'profil',
+      label: 'Beta Tester',
+      title: 'Beta Tester',
+      rarity: 4,
+      desc: 'Titre exclusif pour les testeurs de la beta Matefindr.',
+      stat: 'beta',
+    });
     list.push({
       id: VOTES_UNLOCK.id,
       group: VOTES_UNLOCK.group,
@@ -309,26 +340,40 @@
     return getMission(td.equipped) || null;
   }
 
-  function cardTitleHtml(p, escFn) {
-    const escH = escFn || esc;
-    const td = p.titlesData || (p.isMe ? getTitlesData(p) : null);
+  function cardTitleBadgeHtml(td, escH, opts) {
+    opts = opts || {};
     const meta = equippedTitleMeta(td);
     if (!meta) return '';
     const color = td.color || '#C7A5FF';
     const rarity = meta.rarity || 3;
-    const cls = p.isMe ? 'card-profile-title card-profile-title--clickable' : 'card-profile-title';
-    return `<button type="button" class="${cls}" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}"${p.isMe ? '' : ' tabindex="-1"'}>
+    if (opts.asSpan) {
+      return `<span class="card-profile-title" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}">
+        <span class="card-profile-title-aura" aria-hidden="true"></span>
+        <span class="card-profile-title-text">${escH(meta.title)}</span>
+      </span>`;
+    }
+    const cls = opts.clickable ? 'card-profile-title card-profile-title--clickable' : 'card-profile-title';
+    return `<button type="button" class="${cls}" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}"${opts.clickable ? '' : ' tabindex="-1"'}>
       <span class="card-profile-title-aura" aria-hidden="true"></span>
       <span class="card-profile-title-text">${escH(meta.title)}</span>
     </button>`;
   }
 
-  /** Zone réservée sous le @tag et au-dessus du séparateur — titre équipé ou emplacement vide (aperçu perso). */
+  function cardTitleHtml(p, escFn) {
+    const escH = escFn || esc;
+    const td = titlesDataForCard(p);
+    return cardTitleBadgeHtml(td, escH, { clickable: !!p.isMe });
+  }
+
+  /** Zone sous le @tag, au-dessus du séparateur — clic ouvre le sélecteur de titres (aperçu perso). */
   function cardTitleSlotHtml(p, escFn) {
-    const inner = cardTitleHtml(p, escFn);
-    if (inner) return `<div class="card-title-slot">${inner}</div>`;
-    if (p.isMe) return '<div class="card-title-slot card-title-slot--empty" aria-hidden="true"></div>';
-    return '';
+    const escH = escFn || esc;
+    const td = titlesDataForCard(p);
+    const inner = cardTitleBadgeHtml(td, escH, { asSpan: true });
+    if (p.isMe) {
+      return `<button type="button" class="card-title-slot card-title-slot--clickable" aria-label="Changer de titre">${inner}</button>`;
+    }
+    return inner ? `<div class="card-title-slot">${cardTitleBadgeHtml(td, escH, { clickable: false })}</div>` : '';
   }
 
   function discordTagLabel(p) {
@@ -661,12 +706,18 @@
     });
     bindButtons(opts.titleTriggers || [], () => {});
     document.addEventListener('click', e => {
-      const t = e.target.closest('.card-profile-title--clickable');
+      const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable');
       if (t) {
         e.preventDefault();
         openTitles();
       }
     });
+    const u = readSite().user || {};
+    const prev = u.titlesData;
+    const td = getTitlesData(u);
+    if (!prev?.collected?.includes(BETA_TESTER_ID) || !prev?.equipped) {
+      saveTitlesData({ collected: td.collected, equipped: td.equipped, pending: td.pending || [] });
+    }
   }
 
   async function openQuests(o) {

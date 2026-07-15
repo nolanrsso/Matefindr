@@ -66,11 +66,16 @@
 
 /* Titre de profil — sous le @tag, au-dessus du séparateur */
 .swipe-card .card-title-slot{
-  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
-  min-height:24px;margin:2px 0 4px;padding:2px 0;
+  display:flex;align-items:center;flex-wrap:wrap;gap:2px;
+  min-height:12px;margin:1px 0 2px;padding:1px 0;
 }
-.swipe-card .card-title-slot--empty{min-height:20px}
-.swipe-card .card-title-slot .card-profile-title{margin:0}
+.swipe-card .card-title-slot--clickable{
+  border:none;background:transparent;cursor:pointer;font:inherit;text-align:left;
+  width:auto;max-width:100%;padding:1px 0;margin:1px 0 2px;
+  display:inline-flex;align-items:center;
+}
+.swipe-card .card-title-slot--clickable:hover .card-profile-title{filter:brightness(1.08)}
+.swipe-card .card-title-slot .card-profile-title{margin:0;pointer-events:none}
 .swipe-card .card-profile-title{
   position:relative;display:inline-flex;align-items:center;justify-content:center;margin:4px 0 2px;padding:4px 12px;
   border:none;border-radius:999px;background:transparent;cursor:default;font:inherit;
@@ -170,4 +175,5 @@
 .editor-page .card .discord-floor--head{margin:4px 0 6px}
 .editor-page .card .discord-floor--activity{margin:0 0 2px}
 .editor-page .card .card-profile-title{margin:2px 0 6px}
-.editor-page .card .card-title-slot{min-height:24px;margin:2px 0 4px}
+.editor-page .card .card-title-slot{min-height:12px;margin:1px 0 2px}
+.editor-page .card .card-title-slot--clickable{cursor:pointer}
