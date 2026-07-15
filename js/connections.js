@@ -40,11 +40,12 @@
 
   function connApp(id){ return CONN_BY_ID[id] || null; }
 
-  function connLogo(app){
+  function connLogo(app, colorOverride){
     if(typeof app === 'string') app = connApp(app);
     if(!app) return '';
     if(app.icon && ICON_SVG[app.icon]) return '';
-    return `https://cdn.simpleicons.org/${app.id}/${app.color}`;
+    const col = colorOverride ? String(colorOverride).replace('#','') : app.color;
+    return `https://cdn.simpleicons.org/${app.id}/${col}`;
   }
 
   function connSiteHost(url){
@@ -69,18 +70,23 @@
     return connFaviconUrl(e.v);
   }
 
-  function connIconHtml(app, size, entry){
+  function connIconHtml(app, size, entry, uniformColor){
     if(typeof app === 'string') app = connApp(app);
     if(!app) return '';
     const px = size || 22;
     const dim = size ? ` width="${px}" height="${px}"` : '';
+    const uCol = (uniformColor && /^#[0-9a-f]{6}$/i.test(uniformColor)) ? uniformColor : null;
+    const sizeStyle = size ? `width:${px}px;height:${px}px` : '';
     if(app.id === 'custom'){
       const fav=connFaviconForEntry(entry);
       if(fav) return `<img src="${fav}" alt=""${dim} loading="lazy" class="conn-favicon">`;
     }
-    if(app.icon && ICON_SVG[app.icon])
-      return `<span class="conn-ico-svg"${size ? ` style="width:${px}px;height:${px}px"` : ''}>${ICON_SVG[app.icon]}</span>`;
-    const logo = connLogo(app);
+    if(app.icon && ICON_SVG[app.icon]){
+      const style = [uCol ? `color:${uCol}` : '', sizeStyle].filter(Boolean).join(';');
+      const cls = uCol ? ' conn-ico-uniform' : '';
+      return `<span class="conn-ico-svg${cls}"${style ? ` style="${style}"` : ''}>${ICON_SVG[app.icon]}</span>`;
+    }
+    const logo = connLogo(app, uCol ? uCol.replace('#','') : null);
     return logo ? `<img src="${logo}" alt=""${dim} loading="lazy">` : '';
   }
 
@@ -195,14 +201,14 @@
     return cleanHandle(e.v) || '';
   }
 
-  function connCardHtml(app, entry, profileTag, esc){
+  function connCardHtml(app, entry, profileTag, esc, uniformColor){
     const e = connNormalize(entry);
     if(!e) return '';
     if(typeof app === 'string') app = connApp(app);
     const escFn = typeof esc === 'function' ? esc : s => String(s);
     const href = buildConnUrl(app, entry);
     const user = connProfileLabel(app, entry, profileTag);
-    const iconHtml = connIconHtml(app, null, e);
+    const iconHtml = connIconHtml(app, null, e, uniformColor);
     const labelHtml = user ? `<span class="card-conn-user">${escFn(user)}</span>` : '';
     const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
     const name = app ? app.name : 'Connexion';

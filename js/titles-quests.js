@@ -118,6 +118,7 @@
     if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
     if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
     if (typeof global.__matefindrRefreshCard === 'function') global.__matefindrRefreshCard();
+    if (typeof global.renderEditorCardMeta === 'function') global.renderEditorCardMeta();
   }
 
   function missionId(statId, threshold) { return `${statId}_${threshold}`; }
@@ -340,23 +341,23 @@
     return getMission(td.equipped) || null;
   }
 
+  function titleBadgeInnerHtml(title, rarity, escH) {
+    const shine = (rarity >= 8) ? '<span class="card-profile-title-shine" aria-hidden="true"></span>' : '';
+    return `<span class="card-profile-title-glow" aria-hidden="true"></span><span class="card-profile-title-aura" aria-hidden="true"></span>${shine}<span class="card-profile-title-text">${escH(title)}</span>`;
+  }
+
   function cardTitleBadgeHtml(td, escH, opts) {
     opts = opts || {};
     const meta = equippedTitleMeta(td);
     if (!meta) return '';
     const color = td.color || '#C7A5FF';
     const rarity = meta.rarity || 3;
+    const inner = titleBadgeInnerHtml(meta.title, rarity, escH);
     if (opts.asSpan) {
-      return `<span class="card-profile-title" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}">
-        <span class="card-profile-title-aura" aria-hidden="true"></span>
-        <span class="card-profile-title-text">${escH(meta.title)}</span>
-      </span>`;
+      return `<span class="card-profile-title" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}">${inner}</span>`;
     }
     const cls = opts.clickable ? 'card-profile-title card-profile-title--clickable' : 'card-profile-title';
-    return `<button type="button" class="${cls}" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}"${opts.clickable ? '' : ' tabindex="-1"'}>
-      <span class="card-profile-title-aura" aria-hidden="true"></span>
-      <span class="card-profile-title-text">${escH(meta.title)}</span>
-    </button>`;
+    return `<button type="button" class="${cls}" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}"${opts.clickable ? '' : ' tabindex="-1"'}>${inner}</button>`;
   }
 
   function cardTitleHtml(p, escFn) {
@@ -366,6 +367,19 @@
   }
 
   /** Zone sous le @tag, au-dessus du séparateur — clic ouvre le sélecteur de titres (aperçu perso). */
+  /** Zone sous le @tag — éditeur : cadre modifiable + badge identique à l'aperçu swipe. */
+  function editorTitleSlotHtml(p, escFn) {
+    const escH = escFn || esc;
+    const td = titlesDataForCard(p);
+    const badge = cardTitleBadgeHtml(td, escH, { asSpan: true });
+    if (!badge) return '';
+    return `<button type="button" class="ed-title-frame card-title-slot--clickable" aria-label="Changer de titre">
+      <span class="ed-title-frame-label">Titre</span>
+      ${badge}
+      <span class="ed-title-frame-edit" aria-hidden="true">✎</span>
+    </button>`;
+  }
+
   function cardTitleSlotHtml(p, escFn) {
     const escH = escFn || esc;
     const td = titlesDataForCard(p);
@@ -629,8 +643,9 @@
       const owned = td.collected.includes(m.id);
       const soon = !owned && eligible.includes(m.id);
       const locked = !owned && !soon;
-      html += `<button type="button" class="tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${locked ? ' locked' : ''}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" ${owned ? '' : 'disabled'}>
-        <span class="tq-title-aura"></span>
+      html += `<button type="button" class="tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${locked ? ' locked' : ''}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" style="--title-color:${esc(td.color || '#C7A5FF')}" ${owned ? '' : 'disabled'}>
+        <span class="tq-title-glow" aria-hidden="true"></span>
+        <span class="tq-title-aura" aria-hidden="true"></span>
         <span class="tq-title-label">${esc(meta.title)}</span>
         ${soon ? '<span class="tq-soon">Bientôt</span>' : ''}
       </button>`;
@@ -706,7 +721,7 @@
     });
     bindButtons(opts.titleTriggers || [], () => {});
     document.addEventListener('click', e => {
-      const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable');
+      const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable, .ed-title-frame');
       if (t) {
         e.preventDefault();
         openTitles();
@@ -773,6 +788,7 @@
     collectMission,
     cardTitleHtml,
     cardTitleSlotHtml,
+    editorTitleSlotHtml,
     discordFloorHtml,
     discordCardHeadHtml,
     discordCardActivityHtml,

@@ -420,6 +420,8 @@
                 if (d.swipeMusic) su.swipeMusic = d.swipeMusic;
                 if (d.socials && typeof d.socials === 'object') su.socials = d.socials;
                 if (typeof d.handleBlur === 'boolean') su.handleBlur = d.handleBlur;
+                if (d.connUniformColor && /^#[0-9a-f]{6}$/i.test(d.connUniformColor)) su.connUniformColor = d.connUniformColor;
+                else if (d.connUniformColor === null) su.connUniformColor = null;
                 if (d.profileVoice) su.profileVoice = d.profileVoice;
                 console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
               }
@@ -842,6 +844,7 @@
         showBoostName: u.boostShowName !== false,
         nameColor: u.nameColor || null,
         handleBlur: !!u.handleBlur,
+        connUniformColor: (u.connUniformColor && /^#[0-9a-f]{6}$/i.test(u.connUniformColor)) ? u.connUniformColor : null,
         joinedOn: '',
         games: [],
         bio: p.bio || '',
@@ -908,6 +911,7 @@
         showBoostName: u.boostShowName !== false,
         nameColor: u.nameColor || null,
         handleBlur: !!u.handleBlur,
+        connUniformColor: (u.connUniformColor && /^#[0-9a-f]{6}$/i.test(u.connUniformColor)) ? u.connUniformColor : null,
         joinedOn: new Date().toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'}),
         games: [p.game].filter(Boolean),
         bio: p.bio || '',
@@ -1985,7 +1989,7 @@
         const app = MC ? MC.connApp(k) : null;
         const entry = MC ? MC.connGet(conns, k) : { v: String(conns[k]), mode: 'link' };
         if (!entry) return '';
-        if (MC && app) return MC.connCardHtml(app, entry, p.tag, escapeHtmlMini);
+        if (MC && app) return MC.connCardHtml(app, entry, p.tag, escapeHtmlMini, p.connUniformColor);
         const label = String(entry.v || conns[k]);
         return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
       }).join('');

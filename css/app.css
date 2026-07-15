@@ -1784,6 +1784,11 @@
   .swipe-card .card-conn-ico > .conn-ico-svg{width:100%;height:100%;object-fit:contain;flex:0 0 auto;display:grid;place-items:center}
   .swipe-card .card-conn .conn-favicon{object-fit:cover;border-radius:7px;background:transparent;transform:scale(1.14)}
   .swipe-card .card-conn .conn-ico-svg svg{width:88%;height:88%}
+  .swipe-card .card-conn .conn-ico-uniform svg path,
+  .swipe-card .card-conn .conn-ico-uniform svg circle,
+  .swipe-card .card-conn .conn-ico-uniform svg rect{fill:currentColor !important}
+  .swipe-card .card-conn .conn-ico-uniform svg path[stroke],
+  .swipe-card .card-conn .conn-ico-uniform svg rect[stroke]{fill:none !important;stroke:currentColor}
   .swipe-card .card-conn-user{
     position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%) translateY(4px);
     font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;

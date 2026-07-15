@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matefindr — Éditeur de profil</title>
-<link rel="stylesheet" href="css/titles-quests.css">
 <!-- Perf : mode allégé auto pour machines faibles. Exécuté AVANT tout rendu. -->
 <script>
 (function(){
@@ -38,6 +37,7 @@
 <link rel="prefetch" href="checkout.html" as="document">
 <link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ====== DA Matefindr (reprise du site) ====== */
@@ -654,6 +654,8 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn.dragging{opacity:.45;transform:scale(.94)}
 .conn.drag-over{border-color:rgba(145,70,255,.75);box-shadow:0 0 0 2px rgba(145,70,255,.28)}
 .conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
+.conn .conn-ico-uniform svg path,.conn .conn-ico-uniform svg circle,.conn .conn-ico-uniform svg rect{fill:currentColor !important}
+.conn .conn-ico-uniform svg path[stroke],.conn .conn-ico-uniform svg rect[stroke]{fill:none !important;stroke:currentColor}
 .conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
 .conn .conn-ico-svg svg{width:20px;height:20px}
 .conn-add-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease;flex:0 0 auto;width:max-content;max-width:100%;order:-1}
@@ -846,6 +848,11 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .gv-swap:hover{transform:scale(1.06);filter:brightness(1.1)}
 .gv-swap-ico{display:block;width:22px;height:22px}
 .cp-sub{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 11px}
+.cp-hint{font-size:11px;color:var(--dim);line-height:1.45;margin:8px 0 0}
+.cp-toggle-row{margin:0 0 4px}
+.cp-name-swatches{margin-bottom:4px}
+.cp-name-swatches button{border:2px solid transparent}
+.cp-name-swatches button.on{border-color:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .cp-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:18px}
 .cp-swatches button{height:42px;border-radius:12px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);transition:transform .12s ease}
 .cp-swatches button:hover{transform:scale(1.07)}
@@ -1234,7 +1241,47 @@ html.perf-lite *{
   .blob{ animation:none !important; transform:none !important; }
   .orb[data-kind="music"] img{ animation:none !important; }
 }
+
+/* ---- Titre profil (éditeur) : rendu = carte swipe + cadre « modifiable » ---- */
+#edProfileTitle{display:flex;align-items:flex-start;margin:0;padding:8px 0 0;min-height:0;overflow:visible}
+#edProfileTitle .ed-title-frame{
+  all:unset;box-sizing:border-box;
+  position:relative;display:inline-flex;align-items:center;gap:10px;
+  margin:2px 0 8px;padding:7px 11px 7px 7px;max-width:100%;overflow:visible;
+  border:1.5px dashed rgba(199,165,255,.52);border-radius:16px;
+  background:rgba(145,70,255,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 0 0 rgba(145,70,255,.18);
+  cursor:pointer;font:inherit;text-align:left;
+  transition:border-color .16s ease,background .16s ease,box-shadow .18s ease,transform .12s ease;
+}
+#edProfileTitle .ed-title-frame:hover{
+  border-color:rgba(199,165,255,.9);
+  background:rgba(145,70,255,.15);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 0 4px rgba(145,70,255,.14),0 10px 28px rgba(0,0,0,.24);
+  transform:translateY(-1px);
+}
+#edProfileTitle .ed-title-frame:focus-visible{
+  outline:2px solid rgba(145,70,255,.7);outline-offset:3px;
+}
+#edProfileTitle .ed-title-frame .card-profile-title{margin:0;pointer-events:none;flex:0 1 auto;min-width:0}
+#edProfileTitle .ed-title-frame-edit{
+  flex:0 0 auto;width:27px;height:27px;border-radius:50%;
+  display:grid;place-items:center;
+  background:linear-gradient(135deg,#FF7EB6,#9146FF);
+  color:#fff;font-size:11px;font-weight:900;line-height:1;
+  box-shadow:0 3px 12px rgba(145,70,255,.5);
+  opacity:.95;transition:transform .14s ease,opacity .14s ease;
+}
+#edProfileTitle .ed-title-frame:hover .card-profile-title{filter:brightness(1.12) saturate(1.08)}
+#edProfileTitle .ed-title-frame:hover .ed-title-frame-edit{transform:scale(1.08);opacity:1}
+#edProfileTitle .ed-title-frame-label{
+  position:absolute;left:10px;top:-8px;padding:1px 7px;border-radius:999px;
+  font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.88);background:rgba(28,29,34,.92);
+  border:1px solid rgba(199,165,255,.35);pointer-events:none;line-height:1.35;
+}
 </style>
+<link rel="stylesheet" href="css/titles-quests.css">
 </head>
 <body class="editor-page">
 
@@ -1683,6 +1730,7 @@ const S = {
   canvasMode:'desktop', // 'desktop' ("Paysage" à l'écran) | 'portrait' — orientation en cours d'édition
   connections:{}, // {appId: pseudo}
   handleBlur:false,   // floute le pseudo Discord (@tag) pour éviter les ajouts
+  connUniformColor:null, // couleur unique pour toutes les icônes connexions (null = couleurs marque)
   boostShowName:true, // style doré Boost sur le pseudo Matefindr
   nameCustom:false,   // pseudo renommé manuellement → Discord ne l'écrase plus
   avatarCustom:false, // photo importée manuellement → Discord ne l'écrase plus
@@ -1738,6 +1786,15 @@ function applyNameColorVal(v){
   applyUsernameBoostStyle();
   if(typeof persist==='function') persist();
 }
+function connUniformSwatchColor(){
+  return (S.connUniformColor && /^#[0-9a-f]{6}$/i.test(S.connUniformColor)) ? S.connUniformColor : '#ffffff';
+}
+function applyConnUniformColor(hex){
+  S.connUniformColor = (hex && /^#[0-9a-f]{6}$/i.test(hex)) ? hex : null;
+  renderConnections();
+  if(typeof persist==='function') persist();
+  if(document.body.classList.contains('color-open')) renderColorPanel();
+}
 function applyTagBlur(){
   const tag=document.querySelector('.tag'); if(!tag) return;
   tag.classList.toggle('tag--blur', !!S.handleBlur);
@@ -1747,7 +1804,7 @@ function applyTagBlur(){
   const tag=document.querySelector('.tag'); if(!tag) return;
   tag.classList.add('tag--clickable');
   tag.title='Clique pour flouter ton pseudo Discord (éviter les ajouts)';
-  tag.addEventListener('click',()=>{ S.handleBlur=!S.handleBlur; applyTagBlur(); persist(); toast(S.handleBlur?'Pseudo Discord flouté 🔒':'Pseudo Discord visible'); });
+  tag.addEventListener('click',()=>{ S.handleBlur=!S.handleBlur; applyTagBlur(); persist(); toast(S.handleBlur?'Pseudo Discord flouté 🔒':'Pseudo Discord visible'); if(document.body.classList.contains('color-open')) renderColorPanel(); });
 })();
 /* Pseudo Matefindr : popup rename + (Boost) retrait du style doré */
 (function(){
@@ -2879,10 +2936,17 @@ const GRAD_SWAP_SVG='<svg class="gv-swap-ico" viewBox="0 0 24 24" fill="currentC
    chaque poignée ouvre le picker natif. + dégradés 1 clic + reset Discord. */
 function renderColorPanel(){
   const p=$('colorPanel');
-  const isBoost=!document.body.classList.contains('not-boost');
   const ncVal=nameSwatchColor();
+  const connOn=!!(S.connUniformColor && /^#[0-9a-f]{6}$/i.test(S.connUniformColor));
+  const connCol=connUniformSwatchColor();
   p.innerHTML=`
     <button class="cp-close" id="cpClose" aria-label="Fermer">✕</button>
+    <div class="cp-title">Pseudo Discord (@tag)</div>
+    <div class="cp-toggle-row">
+      <button type="button" class="sh-contour-tgl${!S.handleBlur?' on':''}" id="cpTagVisible" title="Afficher ou masquer ton @username sur la carte"><span>Afficher le @username</span><span class="sw"></span></button>
+    </div>
+    <p class="cp-hint">Désactivé = pseudo flouté (évite les ajouts Discord non désirés).</p>
+    <div class="cp-div"></div>
     <div class="cp-title">Couleur de la carte</div>
     <div class="cp-grad-wrap">
       <div class="grad-vert" id="gradVert" style="background:linear-gradient(180deg,${S.c1},${S.c2})">
@@ -2898,14 +2962,26 @@ function renderColorPanel(){
     <div class="cp-sub">Dégradés en 1 clic</div>
     <div class="cp-swatches">${SWATCH_PAIRS.map(pr=>`<button data-c1="${pr[0]}" data-c2="${pr[1]}" title="${pr[0]} → ${pr[1]}" style="background:linear-gradient(180deg,${pr[0]},${pr[1]})"></button>`).join('')}</div>
     <button class="cp-reset" id="colReset">↺ Couleur par défaut</button>
-    ${isBoost ? `
     <div class="cp-div"></div>
     <div class="cp-title">Couleur du pseudo</div>
     <div class="uname-color" style="margin-top:2px">
       <button type="button" class="uname-color-swatch" id="cpNameColor" style="background:${ncVal}" data-hex="${ncVal}"></button>
       <span class="uname-color-lbl">${esc(S.username||'Pseudo')}</span>
       <button type="button" class="uname-color-def" id="cpNameDef">Défaut</button>
-    </div>` : ''}`;
+    </div>
+    <div class="cp-sub">Couleurs rapides</div>
+    <div class="cp-swatches cp-name-swatches">${NAME_COLORS.map(c=>`<button type="button" data-nc="${c}" class="${(S.nameColor||'').toLowerCase()===c.toLowerCase()?'on':''}" title="${c}" style="background:${c}"></button>`).join('')}</div>
+    <div class="cp-div"></div>
+    <div class="cp-title">Connexions</div>
+    <div class="cp-toggle-row">
+      <button type="button" class="sh-contour-tgl${connOn?' on':''}" id="cpConnUniformTgl" title="Même couleur pour toutes les icônes"><span>Couleur uniforme</span><span class="sw"></span></button>
+    </div>
+    <div class="uname-color" id="cpConnColorRow" style="margin-top:10px"${connOn?'':' hidden'}>
+      <button type="button" class="uname-color-swatch" id="cpConnColor" style="background:${connCol}" data-hex="${connCol}"></button>
+      <span class="uname-color-lbl">Icônes</span>
+      <button type="button" class="uname-color-def" id="cpConnColorDef">Marques</button>
+    </div>
+    <p class="cp-hint">Une seule teinte pour tous les réseaux (les favicons URL perso restent inchangés).</p>`;
   const sync=()=>{ const g=p.querySelector('#gradVert'); if(g) g.style.background='linear-gradient(180deg,'+S.c1+','+S.c2+')';
     const t=p.querySelector('#colP'); if(t){ t.style.background=S.c1; t.dataset.hex=S.c1; }
     const b=p.querySelector('#colS'); if(b){ b.style.background=S.c2; b.dataset.hex=S.c2; } };
@@ -2914,10 +2990,50 @@ function renderColorPanel(){
   p.querySelector('#colSwap').addEventListener('click',()=>{ applyColors(S.c2,S.c1); sync(); });
   p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); sync(); }));
   p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#242429','#242429'); sync(); toast('Couleur par défaut appliquée'); });
+  p.querySelector('#cpTagVisible').addEventListener('click',()=>{
+    const btn=p.querySelector('#cpTagVisible');
+    const show=!btn.classList.contains('on');
+    btn.classList.toggle('on',show);
+    S.handleBlur=!show;
+    applyTagBlur(); persist();
+    toast(S.handleBlur?'Pseudo Discord flouté 🔒':'Pseudo Discord visible');
+  });
   const cpNC=p.querySelector('#cpNameColor');
-  if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>applyNameColorVal(hex));
+  if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>{ applyNameColorVal(hex); DarkColorPicker.setSwatchBg(cpNC,hex); p.querySelectorAll('[data-nc]').forEach(b=>b.classList.toggle('on',b.dataset.nc.toLowerCase()===hex.toLowerCase())); });
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(cpNC,'#FFFFFF'); toast('Pseudo remis en blanc'); });
+  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(cpNC,'#FFFFFF'); p.querySelectorAll('[data-nc]').forEach(b=>b.classList.toggle('on',b.dataset.nc==='#FFFFFF')); toast('Pseudo remis en blanc'); });
+  p.querySelectorAll('[data-nc]').forEach(b=>b.addEventListener('click',()=>{
+    applyNameColorVal(b.dataset.nc);
+    DarkColorPicker.setSwatchBg(cpNC,b.dataset.nc);
+    p.querySelectorAll('[data-nc]').forEach(x=>x.classList.toggle('on',x===b));
+    toast('Couleur du pseudo appliquée');
+  }));
+  const cpConnTgl=p.querySelector('#cpConnUniformTgl');
+  const cpConnRow=p.querySelector('#cpConnColorRow');
+  const cpConnSw=p.querySelector('#cpConnColor');
+  if(cpConnTgl) cpConnTgl.addEventListener('click',()=>{
+    const enabling=!cpConnTgl.classList.contains('on');
+    cpConnTgl.classList.toggle('on',enabling);
+    if(enabling){
+      if(!S.connUniformColor) S.connUniformColor='#ffffff';
+      cpConnRow.hidden=false;
+      DarkColorPicker.setSwatchBg(cpConnSw,S.connUniformColor);
+    } else {
+      S.connUniformColor=null;
+      cpConnRow.hidden=true;
+    }
+    renderConnections(); persist();
+    toast(enabling?'Couleur uniforme activée':'Couleurs marque restaurées');
+  });
+  if(cpConnSw) DarkColorPicker.bindSwatch(cpConnSw,()=>connUniformSwatchColor(),hex=>{ applyConnUniformColor(hex); DarkColorPicker.setSwatchBg(cpConnSw,hex); });
+  const cpConnDef=p.querySelector('#cpConnColorDef');
+  if(cpConnDef) cpConnDef.addEventListener('click',()=>{
+    S.connUniformColor=null;
+    cpConnTgl.classList.remove('on');
+    cpConnRow.hidden=true;
+    renderConnections(); persist();
+    toast('Couleurs marque restaurées');
+  });
   p.querySelector('#cpClose').addEventListener('click',closeColorPanel);
 }
 function openColorPanel(){ closeOrbStylePanel(); renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
@@ -3248,7 +3364,7 @@ function renderConnections(){
     b.draggable=true;
     b.dataset.connId=id;
     b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''} · glisser pour réordonner`;
-    b.innerHTML=MC().connIconHtml(app,22,entry)+CONN_DEL;
+    b.innerHTML=MC().connIconHtml(app,22,entry,S.connUniformColor)+CONN_DEL;
     b.addEventListener('dragstart',e=>{
       if(e.target.closest('.conn-del')){ e.preventDefault(); return; }
       _connDragId=id;
@@ -3542,7 +3658,7 @@ let _persistT=null;
 // sur la carte change (pseudo, bio, avatar, bannière, couleurs, bulles, GIFs, photos,
 // connexions...), jamais sur un simple rechargement de page (applyPreset() au boot
 // déclenche aussi persist() sans qu'aucun champ n'ait changé).
-const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','orbGlow','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','connUniformColor','orbs','orbColors','orbGlow','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
 function visualFingerprint(){ try{ return JSON.stringify(VISUAL_KEYS.map(k=>S[k])); }catch(_){ return ''; } }
 let _lastVisualFingerprint=null; // posé juste après l'hydratation initiale (cf. boot plus bas)
 function writeState(){
@@ -3562,6 +3678,7 @@ function writeState(){
   else if(S.bannerRemoved){ st.user.bannerUrl=null; st.user.bannerCustom=true; st.user.bannerPos=null; } // bannière supprimée volontairement → Discord ne doit pas la réimporter
   st.user.profileColor=S.c1; st.user.profileColor2=S.c2;
   st.user.nameColor=(S.nameColor&&/^#[0-9a-f]{6}$/i.test(S.nameColor))?S.nameColor:null; // couleur du pseudo (null = blanc)
+  st.user.connUniformColor=(S.connUniformColor&&/^#[0-9a-f]{6}$/i.test(S.connUniformColor))?S.connUniformColor:null;
   if(S.bg.type==='preset'){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=false; st.user.boostBgPos=null; }
   else if(S.bg.type==='custom' && /^https?:/.test(S.bg.value||'')){ st.user.boostBg=S.bg.value; st.user.boostBgVideo=!!S.bg.video; st.user.boostBgPos=(!S.bg.video&&typeof S.bg.posX==='number')?{posX:S.bg.posX,posY:S.bg.posY,scale:S.bg.scale}:null; } // URL Storage uniquement (jamais un blob:)
   // Capture les positions live du mode en cours d'édition dans posByMode.
@@ -3674,6 +3791,7 @@ function buildDbProfile(st){
     avatarUrl:u.avatarUrl||null, avatarPos:u.avatarPos||null, bannerUrl:u.bannerUrl||null, bannerPos:u.bannerPos||null, decorationUrl:u.decorationUrl||null,
     profileColor:u.profileColor||'#393a41', profileColor2:u.profileColor2||'#393a41',
     nameColor:u.nameColor||null,
+    connUniformColor:(u.connUniformColor&&/^#[0-9a-f]{6}$/i.test(u.connUniformColor))?u.connUniformColor:null,
     accentColor:u.accentColor||null, profileVoice:u.profileVoice||null,
     // IDs serveurs Discord → serveurs en commun calculés chez les autres.
     guildIds:(Array.isArray(u.guilds)?u.guilds.map(g=>String(g.id)):[]),
@@ -3823,6 +3941,8 @@ async function edEnsureLocalProfile(){
       if(d.profileColor) su.profileColor=d.profileColor;
       if(d.profileColor2) su.profileColor2=d.profileColor2;
       if(d.nameColor) su.nameColor=d.nameColor;
+      if(d.connUniformColor && /^#[0-9a-f]{6}$/i.test(d.connUniformColor)) su.connUniformColor=d.connUniformColor;
+      else if(d.connUniformColor===null) su.connUniformColor=null;
       if(typeof d.showBoostName==='boolean') su.boostShowName=d.showBoostName;
       if(typeof d.boost==='boolean') su.boost=d.boost;
       if(d.boostPlan) su.boostPlan=d.boostPlan;
@@ -3909,8 +4029,9 @@ function renderEditorCardMeta(){
     name:u.displayName||'Moi', tag:u.discordTag||'moi',
     isMe:true, titlesData:TQ.getTitlesData(u),
   };
-  titleBox.innerHTML=TQ.cardTitleSlotHtml(prof, esc);
+  titleBox.innerHTML=TQ.editorTitleSlotHtml(prof, esc);
 }
+window.renderEditorCardMeta=renderEditorCardMeta;
 async function refreshDiscordFromOAuth(btn){
   const u=connReadUser();
   if(!u.discordId){ toast('Connecte-toi avec Discord d\'abord'); return; }
@@ -3998,6 +4119,7 @@ function hydrateFromSite(){
     syncCardGradient();
   }
   S.nameColor=(u.nameColor&&/^#[0-9a-f]{6}$/i.test(u.nameColor))?u.nameColor:null; applyUsernameBoostStyle();
+  S.connUniformColor=(u.connUniformColor&&/^#[0-9a-f]{6}$/i.test(u.connUniformColor))?u.connUniformColor:null;
   if(u.boostBg){ if(/^https?:/.test(u.boostBg)) applyBg({type:'custom',value:u.boostBg,video:!!u.boostBgVideo,posX:u.boostBgPos?u.boostBgPos.posX:undefined,posY:u.boostBgPos?u.boostBgPos.posY:undefined,scale:u.boostBgPos?u.boostBgPos.scale:undefined}); else applyBg({type:'preset',value:u.boostBg}); }
   if(Array.isArray(p.userOrbs)&&p.userOrbs.length){
     S.orbs=p.userOrbs.map(o=>{
@@ -4105,7 +4227,7 @@ let PRESETS=loadPresets();
 // Capture les champs de profil personnalisables (positions live figées via posByMode).
 function snapshotProfile(){
   if(typeof snapshotCanvasMode==='function') snapshotCanvasMode(S.canvasMode);
-  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','orbs','orbColors','orbGlow','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
+  const keys=['username','bio','avatar','banner','voice','music','bg','c1','c2','nameColor','connUniformColor','orbs','orbColors','orbGlow','gifs','gifContour','photos','photoContour','connections','handleBlur','boostShowName','nameCustom','avatarCustom','addBubblePos'];
   const o={}; keys.forEach(k=>{ o[k]=S[k]; }); return JSON.parse(JSON.stringify(o));
 }
 // Snapshot vierge : personnalisation (bio, couleurs, bulles, GIFs…) remise à zéro,
@@ -4113,7 +4235,7 @@ function snapshotProfile(){
 // l'inscription) plutôt qu'un placeholder générique.
 async function blankPresetSnapshot(){
   const base={ username:'Matefindr_user', bio:'', avatar:null, banner:null, voice:null, music:null,
-    bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null,
+    bg:{type:'preset', value:'default'}, c1:'#242429', c2:'#242429', nameColor:null, connUniformColor:null,
     orbs:[], orbColors:{music:null,game:null,film:null}, orbGlow:{music:true,game:true,film:true}, gifs:[], gifContour:true, photos:[], photoContour:true, connections:{}, handleBlur:false, boostShowName:true,
     nameCustom:false, avatarCustom:false, addBubblePos:null };
   try{
@@ -4185,6 +4307,7 @@ function applyPreset(snap){
     S.voice=c.voice||null; S.music=c.music||null;
     S.c1=c.c1||S.c1; S.c2=c.c2||S.c2;
     S.nameColor=(c.nameColor&&/^#[0-9a-f]{6}$/i.test(c.nameColor))?c.nameColor:null;
+    S.connUniformColor=(c.connUniformColor&&/^#[0-9a-f]{6}$/i.test(c.connUniformColor))?c.connUniformColor:null;
     S.orbs=Array.isArray(c.orbs)?c.orbs:[];
     S.orbColors={music:null,game:null,film:null};
     if(c.orbColors&&typeof c.orbColors==='object'){ ['music','game','film'].forEach(k=>{ if(c.orbColors[k]&&/^#[0-9a-f]{6}$/i.test(c.orbColors[k])) S.orbColors[k]=c.orbColors[k]; }); }
