@@ -73,7 +73,12 @@
     const psetSlots = $('linkPsetSlots');
     if (!pop || !inp) return;
 
-    const sanit = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40); };
+    const sanit = function (s) {
+      let raw = String(s || '').trim();
+      const fromUrl = raw.match(/matefindr\.com\/([a-z0-9_-]+)/i);
+      if (fromUrl) raw = fromUrl[1];
+      return raw.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+    };
     const isReserved = function (s) { return reservedSlugs().includes(String(s || '').toLowerCase()); };
     let fullHref = '';
     let slugChangedAt = '';
@@ -131,7 +136,13 @@
       fullHref = 'https://matefindr.com/' + slug;
       if (share) share.hidden = false;
       const lf = $('linkFull');
-      if (lf) { lf.href = fullHref; lf.textContent = fullHref; lf.hidden = false; }
+      if (lf) {
+        lf.href = fullHref;
+        lf.textContent = 'matefindr.com/' + slug;
+        lf.hidden = false;
+      }
+      const lab = $('linkEditLabel');
+      if (lab) lab.textContent = 'Modifier l’adresse';
     }
 
     function linkStatusForSlug(slug) {
@@ -152,7 +163,7 @@
       const prev = currentSlug();
       const dirty = slug !== prev;
       if (slugInputLocked) {
-        editSaveBtn.textContent = 'Modifier';
+        editSaveBtn.textContent = 'Enregistrer';
         editSaveBtn.disabled = true;
         return;
       }
@@ -167,8 +178,9 @@
           return;
         }
       }
-      editSaveBtn.textContent = dirty ? 'Sauvegarder' : 'Modifier';
-      editSaveBtn.disabled = !dirty;
+      if (!prev) editSaveBtn.textContent = dirty ? 'Créer mon lien' : 'Créer mon lien';
+      else editSaveBtn.textContent = dirty ? 'Enregistrer' : 'Enregistrer';
+      editSaveBtn.disabled = !dirty || slug.length < 2;
       if (status && status.className.indexOf('err') === -1 && !slugInputLocked) {
         status.textContent = '';
         status.className = 'link-status';
@@ -185,21 +197,30 @@
 
     function openPop() {
       const cur = currentSlug();
-      inp.value = cur;
+      // Ne préremplit PAS avec le pseudo Discord / displayName : uniquement le slug déjà choisi.
+      inp.value = cur || '';
       inp.readOnly = false;
       slugInputLocked = false;
       $('linkInputRow')?.classList.remove('is-locked');
       if (status) { status.textContent = ''; status.className = 'link-status'; }
+      const lab = $('linkEditLabel');
+      if (lab) lab.textContent = cur ? 'Modifier l’adresse' : 'Adresse personnalisée';
       if (cur) showLink(cur);
-      else if (share) share.hidden = true;
+      else {
+        if (share) share.hidden = true;
+        if (lab) lab.textContent = 'Choisis ton adresse';
+      }
       renderLinkPresets();
       refreshDirty();
       showPop('linkPop', 'linkBackdrop', opts.beforeOpen);
       loadSlugMeta().then(function () {
+        const latest = currentSlug();
+        if (latest && inp.value !== latest && !inp.value) inp.value = latest;
+        if (latest) showLink(latest);
         applySlugLockUi();
         refreshDirty();
       });
-      setTimeout(function () { if (!inp.readOnly) inp.focus(); }, 60);
+      setTimeout(function () { if (!inp.readOnly && !cur) inp.focus(); }, 60);
     }
 
     function closePop() { hidePop('linkPop', 'linkBackdrop'); }

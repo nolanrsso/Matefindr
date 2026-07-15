@@ -772,29 +772,67 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-add-foot .btn-add{padding:10px 18px;border-radius:11px;border:none;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:13px;font-weight:800;cursor:pointer;margin-left:auto}
 .conn-add-foot .btn-add:hover{background:rgba(255,255,255,.18)}
 /* ===== Modale "Ton lien de partage" ===== */
-.top-btn--link{color:#fff}
-.top-btn--link:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.22)}
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
-.link-sub{color:var(--dim);font-size:12.5px;line-height:1.5;margin:0 0 12px}
+
+/* Mon lien — bas-droite, même verre que .pset-panel */
+.link-panel{position:fixed;right:22px;bottom:26px;z-index:38}
+body.not-boost .link-panel{bottom:92px}
+.link-panel-btn{
+  display:inline-flex;align-items:center;gap:9px;padding:11px 16px 11px 14px;border-radius:16px;
+  border:1px solid var(--stroke-2);cursor:pointer;font:inherit;font-weight:800;font-size:13.5px;color:#fff;
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));
+  backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+  box-shadow:0 12px 34px rgba(0,0,0,.45);transition:transform .13s ease,border-color .14s ease,background .14s ease
+}
+.link-panel-btn svg{width:18px;height:18px;flex:0 0 auto;opacity:.92}
+.link-panel-btn:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.85);background:linear-gradient(180deg, rgba(40,28,78,.92), rgba(24,14,52,.92))}
+.link-panel-btn:active{transform:translateY(0) scale(.98)}
+@media(max-width:600px){
+  .link-panel{right:10px;bottom:18px}
+  body.not-boost .link-panel{bottom:18px}
+  .link-panel-btn{padding:0;width:46px;height:46px;justify-content:center;border-radius:14px}
+  .link-panel-btn span{display:none}
+  .link-panel-btn svg{width:20px;height:20px}
+}
+
+.link-pop .conn-pop-head{margin-bottom:4px}
+.link-sub{color:var(--dim);font-size:12.5px;line-height:1.5;margin:0 0 16px}
+.link-share{
+  display:flex;flex-direction:column;gap:12px;margin:0 0 16px;padding:14px 14px 12px;border-radius:14px;
+  background:rgba(59,209,124,.10);border:1px solid rgba(59,209,124,.32)
+}
+.link-share[hidden]{display:none}
+.link-share-main{min-width:0}
+.link-share-label{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(140,229,176,.75);margin-bottom:5px}
+.link-full{
+  display:block;color:#8CE5B0;font-weight:800;font-size:15px;text-decoration:none;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.01em
+}
+.link-full:hover{text-decoration:underline}
+.link-share-actions{display:flex;gap:8px}
+.link-share-actions .btn{flex:1;justify-content:center}
+
+.link-edit-block{
+  margin:0 0 4px;padding:14px;border-radius:14px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)
+}
+.link-edit-label{font-size:12px;font-weight:800;color:#fff;margin:0 0 4px}
+.link-edit-hint{font-size:11.5px;color:var(--dim);line-height:1.45;margin:0 0 10px}
 .link-input-row{display:flex;align-items:stretch;border-radius:11px;overflow:hidden;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05)}
 .link-input-row[hidden]{display:none}
 .link-input-row.is-locked{opacity:.72;border-color:rgba(255,255,255,.12)}
 .link-input-row.is-locked input{color:var(--dim);cursor:not-allowed}
 .link-input-row:focus-within{border-color:rgba(145,70,255,.6);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
-.link-prefix{display:flex;align-items:center;padding:0 4px 0 12px;color:var(--dim);font-size:13.5px;white-space:nowrap;background:rgba(255,255,255,.04)}
+.link-prefix{display:flex;align-items:center;padding:0 4px 0 12px;color:var(--dim);font-size:12.5px;white-space:nowrap;background:rgba(255,255,255,.04);user-select:none}
 .link-input-row input{flex:1;min-width:0;padding:11px 12px 11px 2px;border:none!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;color:#fff;font:inherit}
 .link-status{min-height:18px;font-size:12.5px;font-weight:700;margin:9px 2px 0}
 .link-status.ok{color:#3BD17C}
 .link-status.err{color:#FF6B8A}
 .link-status.dim{color:var(--dim);font-weight:600}
-.link-share{display:flex;gap:9px;align-items:center;margin-top:12px;padding:10px 12px;border-radius:11px;background:rgba(59,209,124,.10);border:1px solid rgba(59,209,124,.35)}
-.link-share[hidden]{display:none}
-.link-full{flex:1;min-width:0;color:#8CE5B0;font-weight:700;font-size:13px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.link-full:hover{text-decoration:underline}
-.link-pset{margin-top:12px;margin-bottom:22px}
+.link-pset{margin:0 0 14px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)}
 .link-pset[hidden]{display:none}
 .link-pset-label{font-size:11.5px;font-weight:700;color:var(--dim);margin-bottom:10px}
-.link-pset-slots{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.link-pset-slots{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:0}
 .link-pset-slot{position:relative;width:32px;height:32px;border-radius:9px;cursor:pointer;display:grid;place-items:center;
   border:2px solid var(--stroke-2);color:#fff;overflow:visible;transition:transform .15s ease,border-color .15s ease}
 .link-pset-slot:hover{transform:translateY(-1px);border-color:rgba(179,128,255,.9)}
@@ -1307,7 +1345,6 @@ html.perf-lite *{
 <header class="topbar">
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
   <span class="crumb">/ éditeur de profil</span>
-  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
   <div class="topbar-actions">
   <button type="button" class="top-btn top-btn--quests" id="btnQuests" title="Quêtes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8c1.1 0 2 .9 2 2v11.5c0 .8-.6 1.5-1.4 1.5H7.4C6.6 18 6 17.3 6 16.5V5c0-1.1.9-2 2-2z"/><path d="M9 3v2.5c0 .8.7 1.5 1.5 1.5h3c.8 0 1.5-.7 1.5-1.5V3"/><path d="M8.5 9h7M8.5 12h5.5M8.5 15h4"/><path d="M16.5 4.5 19 7l-5.5 5.5-2-.5-.5-2L16.5 4.5z"/></svg><span>Quêtes</span></button>
   <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
@@ -1412,6 +1449,14 @@ html.perf-lite *{
     <div class="pset-head">Presets <span class="pset-boost">Boost</span></div>
     <div class="pset-slots" id="psetSlots"></div>
   </div>
+</aside>
+
+<!-- Mon lien — bas-droite, même verre que les presets -->
+<aside class="link-panel" id="linkPanel" aria-label="Mon lien de profil">
+  <button type="button" class="link-panel-btn" id="btnShareLink" title="Ton lien de profil partageable">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg>
+    <span>Mon lien</span>
+  </button>
 </aside>
 
 <button class="boost-fab" id="btnBoostUpsell" title="Passer à Matefindr Boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg><span>Passez à Matefindr Boost</span></button>
@@ -1538,22 +1583,38 @@ html.perf-lite *{
 
 <!-- Modales compte (avant les scripts pour que l'init JS les trouve) -->
 <div class="conn-pop-backdrop" id="linkBackdrop" hidden></div>
-<div class="conn-pop" id="linkPop" hidden>
+<div class="conn-pop link-pop" id="linkPop" hidden>
   <button type="button" class="cp-close" id="linkClose" aria-label="Fermer">✕</button>
-  <div class="conn-pop-head"><b>Ton lien de partage</b></div>
-  <p class="link-sub">Choisis ton lien perso. Les gens tombent direct sur ton profil et peuvent te <b>liker</b> — ils créent un compte au passage.</p>
+  <div class="conn-pop-head"><b>Mon lien</b></div>
+  <p class="link-sub">Partage ton profil : les gens atterrissent dessus et peuvent te <b>liker</b>.</p>
+
+  <div class="link-share" id="linkShare" hidden>
+    <div class="link-share-main">
+      <span class="link-share-label">Lien actif</span>
+      <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
+    </div>
+    <div class="link-share-actions">
+      <button type="button" class="btn" id="linkCopy">Copier</button>
+      <button type="button" class="btn primary" id="linkOpen">Ouvrir</button>
+    </div>
+  </div>
+
   <div class="link-pset" id="linkPsetRow" hidden>
-    <div class="link-pset-label">Preset affiché par ce lien</div>
+    <div class="link-pset-label">Preset affiché sur ce lien</div>
     <div class="link-pset-slots" id="linkPsetSlots"></div>
   </div>
-  <div class="link-input-row" id="linkInputRow"><span class="link-prefix">matefindr.com/</span><input id="linkSlug" maxlength="40" placeholder="ton-pseudo" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-  <div class="link-status" id="linkStatus"></div>
-  <div class="link-share" id="linkShare" hidden>
-    <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
-    <button type="button" class="btn" id="linkCopy">Copier le lien</button>
-    <button type="button" class="btn primary" id="linkOpen">Ouvrir le lien</button>
+
+  <div class="link-edit-block">
+    <div class="link-edit-label" id="linkEditLabel">Adresse personnalisée</div>
+    <p class="link-edit-hint">Tape seulement le nom — pas besoin de coller toute l’URL.</p>
+    <div class="link-input-row" id="linkInputRow">
+      <span class="link-prefix">matefindr.com/</span>
+      <input id="linkSlug" maxlength="40" placeholder="choisis-ton-nom" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="link-status" id="linkStatus"></div>
   </div>
-  <div class="conn-pop-actions"><button type="button" class="btn primary" id="linkEditSave" disabled>Modifier</button></div>
+
+  <div class="conn-pop-actions"><button type="button" class="btn primary" id="linkEditSave" disabled>Enregistrer</button></div>
 </div>
 <div class="conn-pop-backdrop" id="settingsBackdrop" hidden></div>
 <div class="conn-pop settings-pop" id="settingsPop" hidden>

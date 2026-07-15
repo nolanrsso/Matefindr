@@ -789,22 +789,38 @@
 
 <!-- Modales compte (lien perso + paramètres) -->
 <div class="conn-pop-backdrop" id="linkBackdrop" hidden></div>
-<div class="conn-pop" id="linkPop" hidden>
+<div class="conn-pop link-pop" id="linkPop" hidden>
   <button type="button" class="cp-close" id="linkClose" aria-label="Fermer">✕</button>
-  <div class="conn-pop-head"><b>Ton lien de partage</b></div>
-  <p class="link-sub">Choisis ton lien perso. Les gens tombent direct sur ton profil et peuvent te <b>liker</b> — ils créent un compte au passage.</p>
+  <div class="conn-pop-head"><b>Mon lien</b></div>
+  <p class="link-sub">Partage ton profil : les gens atterrissent dessus et peuvent te <b>liker</b>.</p>
+
+  <div class="link-share" id="linkShare" hidden>
+    <div class="link-share-main">
+      <span class="link-share-label">Lien actif</span>
+      <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
+    </div>
+    <div class="link-share-actions">
+      <button type="button" class="btn" id="linkCopy">Copier</button>
+      <button type="button" class="btn primary" id="linkOpen">Ouvrir</button>
+    </div>
+  </div>
+
   <div class="link-pset" id="linkPsetRow" hidden>
-    <div class="link-pset-label">Preset affiché par ce lien</div>
+    <div class="link-pset-label">Preset affiché sur ce lien</div>
     <div class="link-pset-slots" id="linkPsetSlots"></div>
   </div>
-  <div class="link-input-row" id="linkInputRow"><span class="link-prefix">matefindr.com/</span><input id="linkSlug" maxlength="40" placeholder="ton-pseudo" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-  <div class="link-status" id="linkStatus"></div>
-  <div class="link-share" id="linkShare" hidden>
-    <a class="link-full" id="linkFull" href="#" target="_blank" rel="noopener" hidden></a>
-    <button type="button" class="btn" id="linkCopy">Copier le lien</button>
-    <button type="button" class="btn primary" id="linkOpen">Ouvrir le lien</button>
+
+  <div class="link-edit-block">
+    <div class="link-edit-label" id="linkEditLabel">Adresse personnalisée</div>
+    <p class="link-edit-hint">Tape seulement le nom — pas besoin de coller toute l’URL.</p>
+    <div class="link-input-row" id="linkInputRow">
+      <span class="link-prefix">matefindr.com/</span>
+      <input id="linkSlug" maxlength="40" placeholder="choisis-ton-nom" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="link-status" id="linkStatus"></div>
   </div>
-  <div class="conn-pop-actions"><button type="button" class="btn primary" id="linkEditSave" disabled>Modifier</button></div>
+
+  <div class="conn-pop-actions"><button type="button" class="btn primary" id="linkEditSave" disabled>Enregistrer</button></div>
 </div>
 <div class="conn-pop-backdrop" id="settingsBackdrop" hidden></div>
 <div class="conn-pop settings-pop" id="settingsPop" hidden>
