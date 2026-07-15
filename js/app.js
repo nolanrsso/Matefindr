@@ -127,12 +127,11 @@
       if (name !== 'swipe')   {
         stopSwipeMusic();
         if (typeof orbSimStop === 'function') orbSimStop();
-        // swipeGifsBg ET swipePhotosBg sont ajoutés en enfants directs de <body>
-        // (pas dans #screen-swipe) -> pas cachés par le changement d'écran, il
-        // faut les retirer explicitement en quittant le swipe, sinon ils restent
-        // visibles par-dessus le menu (landing) au retour.
-        const _gb = document.getElementById('swipeGifsBg'); if (_gb) _gb.remove();
-        const _pb = document.getElementById('swipePhotosBg'); if (_pb) _pb.remove();
+        // #swipeStickersBg (GIFs + photos perso) est ajouté en enfant direct de <body>
+        // (pas dans #screen-swipe) -> pas caché par le changement d'écran, il
+        // faut le retirer explicitement en quittant le swipe, sinon il reste
+        // visible par-dessus le menu (landing) au retour.
+        const _sb = document.getElementById('swipeStickersBg'); if (_sb) _sb.remove();
         _previewMode = false; _previewProfile = null; document.body.removeAttribute('data-preview'); // sort du mode aperçu
       }
     }
@@ -1631,10 +1630,33 @@
     }
     _bindAudioUnlock();
 
-    /* GIFs en couche d'arrière-plan (body > .swipe-gifs-bg, z:1) :
+    /* GIFs + photos perso en couche d'arrière-plan (body > #swipeStickersBg, z:1) :
        - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
+       - un seul calque partagé (triage par item.z) pour que "premier plan/arrière-plan"
+         défini dans l'éditeur fonctionne entre GIFs et photos, pas seulement au sein d'un type
        - positions calculées en pixels viewport à partir des % de la carte
        - se mettent à jour à chaque resize */
+    function ensureSwipeStickersLayer() {
+      let layer = document.getElementById('swipeStickersBg');
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.id = 'swipeStickersBg';
+        layer.className = 'swipe-gifs-bg';
+        document.body.appendChild(layer);
+      }
+      return layer;
+    }
+    function reorderSwipeStickersLayer() {
+      const layer = document.getElementById('swipeStickersBg');
+      if (!layer) return;
+      const kids = Array.from(layer.children);
+      kids.sort((a, b) => (parseFloat(a.dataset.z) || 0) - (parseFloat(b.dataset.z) || 0));
+      kids.forEach(k => layer.appendChild(k));
+    }
+    function swipeStickerZ(item, kind, idx) {
+      if (typeof item.z === 'number') return item.z;
+      return kind === 'gif' ? (-1000 + idx) : (1000 + idx);
+    }
     function applySwipeStickerImg(img, m, baseWpx) {
       if (!img || !m) return;
       const inner = img.parentElement;
@@ -1722,31 +1744,30 @@
     }
     let _swipeGifsResize = null;
     function renderSwipeGifs(p){
-      // Nettoie l'ancien layer s'il existe
-      const old = document.getElementById('swipeGifsBg');
-      if (old) old.remove();
       if (_swipeGifsResize) {
         window.removeEventListener('resize', _swipeGifsResize);
         _swipeGifsResize = null;
       }
       // GIFs : les miens (state.user) OU ceux du profil affiché (cross-user, depuis p.gifs)
+      const old = document.getElementById('swipeStickersBg');
+      if (old) old.querySelectorAll('.swipe-gif[data-kind="gif"]').forEach(n => n.remove());
       const isMe = p && p.isMe;
       const gifs = isMe ? ((state.user && state.user.gifs) || []) : ((p && p.gifs) || []);
-      if (!gifs.length) return;
+      if (!gifs.length) { reorderSwipeStickersLayer(); return; }
       const contourOn = isMe ? ((state.user && state.user.gifContour) !== false) : (p && p.gifContour !== false);
       const wrap = document.getElementById('swipeWrap');
       if (!wrap) return;
-      const layer = document.createElement('div');
-      layer.id = 'swipeGifsBg';
-      layer.className = 'swipe-gifs-bg' + (contourOn ? '' : ' no-contour');
-      const items = gifs.map(g => {
+      const layer = ensureSwipeStickersLayer();
+      const items = gifs.map((g, i) => {
         const el = document.createElement('div');
-        el.className = 'swipe-gif';
+        el.className = 'swipe-gif' + (contourOn ? '' : ' no-contour');
+        el.dataset.kind = 'gif';
+        el.dataset.z = String(swipeStickerZ(g, 'gif', i));
         el.innerHTML = `<div class="swipe-gif-inner"><img src="${g.full || g.preview}" alt=""></div>`;
         layer.appendChild(el);
         return { el, g };
       });
-      document.body.appendChild(layer);
+      reorderSwipeStickersLayer();
       // Position d'un GIF selon l'orientation courante (portrait/paysage/bureau).
       function gifPos(g){
         const mode = activeLayoutMode();
@@ -1781,34 +1802,34 @@
       _swipeGifsResize = () => reposition();
       window.addEventListener('resize', _swipeGifsResize);
     }
-    /* Photos perso (Boost) : même mécanique que les GIFs ci-dessus (couche fixe,
-       positions en % de la carte, translate(-50%,-50%)), mais un layer séparé pour
-       ne pas interférer avec renderSwipeGifs() (chacun vide/reconstruit le sien). */
+    /* Photos perso (Boost) : même mécanique que les GIFs ci-dessus, dans le même
+       calque partagé #swipeStickersBg (cf. renderSwipeGifs) pour que le tri par
+       calque défini dans l'éditeur soit respecté entre GIFs et photos. */
     let _swipePhotosResize = null;
     function renderSwipePhotos(p){
-      const old = document.getElementById('swipePhotosBg');
-      if (old) old.remove();
       if (_swipePhotosResize) {
         window.removeEventListener('resize', _swipePhotosResize);
         _swipePhotosResize = null;
       }
+      const old = document.getElementById('swipeStickersBg');
+      if (old) old.querySelectorAll('.swipe-gif[data-kind="photo"]').forEach(n => n.remove());
       const isMe = p && p.isMe;
       const photos = isMe ? ((state.user && state.user.photos) || []) : ((p && p.photos) || []);
-      if (!photos.length) return;
+      if (!photos.length) { reorderSwipeStickersLayer(); return; }
       const contourOn = isMe ? ((state.user && state.user.photoContour) !== false) : (p && p.photoContour !== false);
       const wrap = document.getElementById('swipeWrap');
       if (!wrap) return;
-      const layer = document.createElement('div');
-      layer.id = 'swipePhotosBg';
-      layer.className = 'swipe-gifs-bg' + (contourOn ? '' : ' no-contour');
-      const items = photos.map(ph => {
+      const layer = ensureSwipeStickersLayer();
+      const items = photos.map((ph, i) => {
         const el = document.createElement('div');
-        el.className = 'swipe-gif';
+        el.className = 'swipe-gif' + (contourOn ? '' : ' no-contour');
+        el.dataset.kind = 'photo';
+        el.dataset.z = String(swipeStickerZ(ph, 'photo', i));
         el.innerHTML = `<div class="swipe-gif-inner"><img src="${ph.url}" alt=""></div>`;
         layer.appendChild(el);
         return { el, g: ph };
       });
-      document.body.appendChild(layer);
+      reorderSwipeStickersLayer();
       function photoPos(g){
         const mode = activeLayoutMode();
         const m = (mode === 'portrait'  && g.portrait)  ? g.portrait
@@ -5336,7 +5357,7 @@
             state.user.gifs.push({ preview:r.preview, full:r.full, x:-30, y:50, w:34, rot:0 });
             save();
             // Re-render dans l'aperçu pour montrer le GIF placé à gauche
-            const o2 = document.getElementById('swipeGifsBg'); if (o2) o2.remove();
+            const o2 = document.getElementById('swipeStickersBg'); if (o2) o2.remove();
             document.getElementById('gifInput').value = '';
             sugg.innerHTML=''; sugg.classList.remove('open');
             renderGifStage();

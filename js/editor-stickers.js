@@ -457,17 +457,59 @@
     return null;
   }
 
+  /** Calques partagés entre photos et GIFs : chaque item a un item.z global (indépendant du tableau qui le contient). */
+  function allStickerItems() {
+    return [].concat(api.S.photos || [], api.S.gifs || []);
+  }
+
+  function ensureZOrder() {
+    const all = allStickerItems();
+    let maxZ = 0;
+    all.forEach(it => { if (typeof it.z === 'number' && it.z > maxZ) maxZ = it.z; });
+    const missingGifs = (api.S.gifs || []).filter(it => typeof it.z !== 'number');
+    const missingPhotos = (api.S.photos || []).filter(it => typeof it.z !== 'number');
+    let z = maxZ;
+    missingGifs.forEach(it => { it.z = ++z; });
+    missingPhotos.forEach(it => { it.z = ++z; });
+  }
+
+  function nextZOrder() {
+    ensureZOrder();
+    let maxZ = 0;
+    allStickerItems().forEach(it => { if (it.z > maxZ) maxZ = it.z; });
+    return maxZ + 1;
+  }
+
+  function renumberZOrder(items) {
+    items.forEach((it, i) => { it.z = i + 1; });
+  }
+
   function moveLayer(kind, idx, action) {
     const arr = getArray(kind);
     if (idx < 0 || idx >= arr.length) return;
     const item = arr[idx];
-    arr.splice(idx, 1);
-    if (action === 'front') arr.push(item);
-    else if (action === 'back') arr.unshift(item);
-    else if (action === 'forward') arr.splice(Math.min(idx + 1, arr.length), 0, item);
-    else if (action === 'backward') arr.splice(Math.max(idx - 1, 0), 0, item);
-    if (kind === 'photo') api.renderPhotos();
-    else api.renderGifs();
+    ensureZOrder();
+    const ordered = allStickerItems().sort((a, b) => (a.z || 0) - (b.z || 0));
+    const pos = ordered.indexOf(item);
+    if (pos === -1) return;
+    if (action === 'front' && pos < ordered.length - 1) {
+      ordered.splice(pos, 1);
+      ordered.push(item);
+    } else if (action === 'back' && pos > 0) {
+      ordered.splice(pos, 1);
+      ordered.unshift(item);
+    } else if (action === 'forward' && pos < ordered.length - 1) {
+      const tmp = ordered[pos + 1];
+      ordered[pos + 1] = item;
+      ordered[pos] = tmp;
+    } else if (action === 'backward' && pos > 0) {
+      const tmp = ordered[pos - 1];
+      ordered[pos - 1] = item;
+      ordered[pos] = tmp;
+    }
+    renumberZOrder(ordered);
+    api.renderPhotos();
+    api.renderGifs();
     api.persist();
   }
 
@@ -520,6 +562,7 @@
     dup.y = spawn.y;
     dup.w = spawn.w || dup.w || W_DEFAULT;
     normalizeItem(dup);
+    dup.z = nextZOrder();
     arr.push(dup);
     pushToFront(arr, dup);
     if (clip.kind === 'photo') { api.renderPhotos(); api.updatePhotoCount(); }
@@ -542,6 +585,7 @@
     dup.x = (t.item.x || 50) + off.dx;
     dup.y = (t.item.y || 50) + off.dy;
     normalizeItem(dup);
+    dup.z = nextZOrder();
     arr.push(dup);
     pushToFront(arr, dup);
     if (t.kind === 'photo') { api.renderPhotos(); api.updatePhotoCount(); }
@@ -821,7 +865,8 @@
     el.className = 'sticker';
     el.dataset.stickerKind = kind;
     el.dataset.stickerIdx = String(idx);
-    el.style.zIndex = String(idx + 1);
+    ensureZOrder();
+    el.style.zIndex = String(item.z || (idx + 1));
 
     el.innerHTML =
       '<div class="sticker-inner"><img src="' + item.url + '" alt="" draggable="false"></div>' +
@@ -896,7 +941,7 @@
       if (!drag) return;
       drag = null;
       el.classList.remove('dragging');
-      el.style.zIndex = String(idx + 1);
+      el.style.zIndex = String(item.z || (idx + 1));
       api.hideGuide();
       try { el.releasePointerCapture(e.pointerId); } catch (_) {}
       if (kind === 'photo') api._lastPhotoPlace = { x: item.x, y: item.y, w: item.w };
@@ -1107,6 +1152,7 @@
     if (item.cropL) o.cropL = item.cropL;
     if (item.scaleX != null && item.scaleX !== 1) o.scaleX = item.scaleX;
     if (item.scaleY != null && item.scaleY !== 1) o.scaleY = item.scaleY;
+    if (typeof item.z === 'number') o.z = item.z;
     return o;
   }
 
@@ -1118,6 +1164,7 @@
     if (raw.cropL != null) item.cropL = raw.cropL;
     if (raw.scaleX != null) item.scaleX = raw.scaleX;
     if (raw.scaleY != null) item.scaleY = raw.scaleY;
+    if (typeof raw.z === 'number') item.z = raw.z;
     normalizeItem(item);
   }
 

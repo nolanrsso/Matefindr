@@ -301,7 +301,10 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 }
 
 /* ===================== GIFS (stickers sur la carte, comme le site) ===================== */
-.sticker-layer{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
+/* z-index volontairement absent (auto) : les deux calques (GIFs + photos) ne doivent PAS
+   créer leur propre contexte d'empilement, sinon "premier plan/arrière-plan" ne pourrait
+   jamais faire passer un GIF devant une photo (ou l'inverse) — voir item.z sur .sticker. */
+.sticker-layer{position:absolute;inset:0;pointer-events:none;overflow:visible}
 .sticker{position:absolute;transform-origin:center center;pointer-events:none;touch-action:none;cursor:grab;box-sizing:border-box}
 .sticker-inner{pointer-events:auto;cursor:grab}
 .sticker.dragging,.sticker.dragging .sticker-inner{cursor:grabbing}
@@ -884,7 +887,6 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
    même sans bordure visible. */
 #photoLayer.no-contour .sticker-inner,
 #stickerLayer.no-contour .sticker-inner{border:none;box-shadow:none}
-#photoLayer{z-index:2}
 
 /* Menu contextuel stickers (GIFs + photos) */
 .ed-ctx{position:fixed;z-index:320;min-width:210px;padding:6px;border-radius:12px;

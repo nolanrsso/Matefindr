@@ -3191,7 +3191,7 @@
   /* Contour désactivable sur les PHOTOS perso (pas les GIFs) — cf. renderSwipePhotos.
      Retire aussi l'ombre portée : sans ça le rectangle d'ombre trahit encore "une
      image collée" même sans bordure visible. */
-  .swipe-gifs-bg.no-contour .swipe-gif{border:none;box-shadow:none}
+  .swipe-gifs-bg.no-contour .swipe-gif,.swipe-gifs-bg .swipe-gif.no-contour{border:none;box-shadow:none}
 
   /* ===== GIF edit overlay (preview carte plein écran, comme l'éditeur de bulles) ===== */
   .gef{position:fixed;inset:0;z-index:332;display:none;align-items:center;justify-content:center}
