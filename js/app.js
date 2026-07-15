@@ -2485,7 +2485,7 @@
         el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
       }
     }
-    /* Hint centre bulle : note (musique) / clic (jeu+clip). Cycle CSS 7s sync entre toutes les bulles. */
+    /* Hint centre bulle : note (musique) / clic (jeu+clip). Cycle CSS 9s (2s on / 7s off). */
     const ORB_HINT_SRC = {
       music: 'assets/orb-hint-music.png',
       clip: 'assets/orb-hint-click.png',
