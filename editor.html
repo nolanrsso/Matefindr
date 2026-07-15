@@ -302,8 +302,9 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 
 /* ===================== GIFS (stickers sur la carte, comme le site) ===================== */
 .sticker-layer{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
-.sticker{position:absolute;transform-origin:center center;pointer-events:auto;touch-action:none;cursor:grab}
-.sticker.dragging{cursor:grabbing}
+.sticker{position:absolute;transform-origin:center center;pointer-events:none;touch-action:none;cursor:grab;box-sizing:border-box}
+.sticker-inner{pointer-events:auto;cursor:grab}
+.sticker.dragging,.sticker.dragging .sticker-inner{cursor:grabbing}
 .sticker-inner{width:100%;position:relative;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.55);line-height:0;transform-origin:center center;box-sizing:border-box}
 .sticker-inner img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;object-fit:cover;object-position:center center;box-sizing:border-box}
 /* Poignées (retirer/pivoter/redimensionner) — position mises à jour en JS sur .sticker-inner */

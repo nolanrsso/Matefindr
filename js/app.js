@@ -1635,11 +1635,12 @@
        - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
        - positions calculées en pixels viewport à partir des % de la carte
        - se mettent à jour à chaque resize */
-    function applySwipeStickerImg(img, m) {
+    function applySwipeStickerImg(img, m, baseWpx) {
       if (!img || !m) return;
       const inner = img.parentElement;
       const wrap = inner && inner.parentElement;
       if (!inner || !wrap) return;
+      const PX_MIN = 50;
 
       inner.style.transform = '';
       inner.style.clipPath = '';
@@ -1647,7 +1648,6 @@
       inner.style.position = 'relative';
       inner.style.marginLeft = '';
       inner.style.marginTop = '';
-      wrap.style.height = '';
       img.style.margin = '0';
       img.style.maxWidth = 'none';
       img.style.display = 'block';
@@ -1658,24 +1658,22 @@
       const cb = m.cropB || 0;
       const sx = m.scaleX || 1;
       const sy = m.scaleY || 1;
-      const hasCrop = cl || cr || ct || cb;
-      const hasStretch = sx !== 1 || sy !== 1;
 
-      const bw = Math.max(1, wrap.getBoundingClientRect().width);
+      const bw = Math.max(PX_MIN, baseWpx || wrap.getBoundingClientRect().width || PX_MIN);
       let aspect = 1;
       if (img.naturalWidth > 0) aspect = img.naturalHeight / img.naturalWidth;
       else if (img.offsetWidth > 0 && img.offsetHeight > 0) aspect = img.offsetHeight / img.offsetWidth;
-      const bh = bw * aspect;
+      const bh = Math.max(PX_MIN, bw * aspect);
       const coreW = bw * (1 - cl / 100 - cr / 100);
       const coreH = bh * (1 - ct / 100 - cb / 100);
-      const visW = Math.max(4, coreW * sx);
-      const visH = Math.max(4, coreH * sy);
+      const visW = Math.max(PX_MIN, coreW * sx);
+      const visH = Math.max(PX_MIN, coreH * sy);
 
-      inner.style.width = visW + 'px';
-      inner.style.height = visH + 'px';
-      inner.style.marginLeft = hasCrop ? (bw * cl / 100) + 'px' : '0';
-      inner.style.marginTop = hasCrop ? (bh * ct / 100) + 'px' : '0';
-      wrap.style.height = (hasCrop ? (bh * ct / 100) : 0) + visH + 'px';
+      wrap.style.width = visW + 'px';
+      wrap.style.height = visH + 'px';
+
+      inner.style.width = '100%';
+      inner.style.height = '100%';
 
       img.style.position = 'absolute';
       img.style.top = '0';
@@ -1688,7 +1686,7 @@
       img.style.transformOrigin = '';
       img.style.objectPosition = '50% 50%';
 
-      if (hasCrop) {
+      if (cl || cr || ct || cb) {
         const spanX = Math.max(1, 100 - cl - cr);
         const spanY = Math.max(1, 100 - ct - cb);
         const px = cl + spanX / 2;
@@ -1697,7 +1695,7 @@
         img.style.objectPosition = px + '% ' + py + '%';
         img.style.transformOrigin = px + '% ' + py + '%';
         img.style.transform = 'scale(' + (100 / spanX) + ', ' + (100 / spanY) + ')';
-      } else if (hasStretch) {
+      } else if (sx !== 1 || sy !== 1) {
         img.style.objectFit = 'fill';
       } else {
         img.style.objectFit = 'cover';
@@ -1761,10 +1759,9 @@
           const cy = wr.top  + (p.y / 100) * wr.height;
           el.style.left = cx + 'px';
           el.style.top  = cy + 'px';
-          el.style.width = wpx + 'px';
           el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
           const img = el.querySelector('img');
-          if (img) applySwipeStickerImg(img, p);
+          if (img) applySwipeStickerImg(img, p, wpx);
         });
       }
       reposition();
@@ -1823,10 +1820,9 @@
           const cy = wr.top  + (p2.y / 100) * wr.height;
           el.style.left = cx + 'px';
           el.style.top  = cy + 'px';
-          el.style.width = wpx + 'px';
           el.style.transform = `translate(-50%,-50%) rotate(${p2.rot}deg)`;
           const img = el.querySelector('img');
-          if (img) applySwipeStickerImg(img, p2);
+          if (img) applySwipeStickerImg(img, p2, wpx);
         });
       }
       reposition();
