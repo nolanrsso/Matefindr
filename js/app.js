@@ -2491,7 +2491,7 @@
       }
     }
     /* Hint centre bulle : note (musique) / clic (jeu+clip).
-       1s fade-in → opacité max → 1s fade-out → 7s caché (cycle 9s). */
+       Dès l'affichage d'un profil : 1s fade-in → 1s fade-out → 7s off (cycle 9s). */
     const ORB_HINT_SRC = {
       music: 'assets/orb-hint-music.png',
       clip: 'assets/orb-hint-click.png',
@@ -2506,35 +2506,55 @@
       _orbHintPhaseTimers = [];
     }
     function orbHintNodes(){
-      return document.querySelectorAll('.orb-click-hint');
-    }
-    function setOrbHintsOpacity(op, withFade){
-      orbHintNodes().forEach(h => {
-        h.style.visibility = op > 0.01 ? 'visible' : 'hidden';
-        h.style.transition = withFade ? ('opacity ' + ORB_HINT_FADE_MS + 'ms linear') : 'none';
-        h.style.opacity = String(op);
-      });
+      return document.querySelectorAll('#swipeOrbit .orb-click-hint');
     }
     function runOrbHintPulse(){
       clearOrbHintPhaseTimers();
-      // Start at 0, then fade in to max over 1s
-      setOrbHintsOpacity(0, false);
-      // force reflow so the transition from 0 → max actually runs
-      orbHintNodes().forEach(h => { void h.offsetWidth; });
-      setOrbHintsOpacity(ORB_HINT_MAX_OP, true);
-      // At 1s (max reached): start fading out over 1s
+      const nodes = orbHintNodes();
+      if (!nodes.length) return;
+      // Reset sans transition
+      nodes.forEach(h => {
+        h.style.transition = 'none';
+        h.style.opacity = '0';
+        h.style.visibility = 'visible';
+        void h.offsetWidth;
+      });
+      // Fade-in 1s
+      nodes.forEach(h => {
+        h.style.transition = 'opacity ' + ORB_HINT_FADE_MS + 'ms linear';
+        h.style.opacity = String(ORB_HINT_MAX_OP);
+      });
+      // À 1s (opacité max) : fade-out 1s — visibility reste visible pendant la transition
       _orbHintPhaseTimers.push(setTimeout(() => {
-        setOrbHintsOpacity(0, true);
+        orbHintNodes().forEach(h => {
+          h.style.visibility = 'visible';
+          h.style.transition = 'opacity ' + ORB_HINT_FADE_MS + 'ms linear';
+          h.style.opacity = '0';
+        });
       }, ORB_HINT_FADE_MS));
-      // After fade-out: keep fully hidden
+      // Après fade-out : caché totalement
       _orbHintPhaseTimers.push(setTimeout(() => {
-        setOrbHintsOpacity(0, false);
+        orbHintNodes().forEach(h => {
+          h.style.transition = 'none';
+          h.style.opacity = '0';
+          h.style.visibility = 'hidden';
+        });
       }, ORB_HINT_FADE_MS * 2));
     }
-    function ensureOrbHintCycle(){
-      if (_orbHintCycleTimer) return;
-      runOrbHintPulse();
-      _orbHintCycleTimer = setInterval(runOrbHintPulse, ORB_HINT_PERIOD_MS);
+    /** Relance le cycle dès qu'un profil (ses bulles) est affiché. */
+    function restartOrbHintCycle(){
+      clearOrbHintPhaseTimers();
+      if (_orbHintCycleTimer) {
+        clearInterval(_orbHintCycleTimer);
+        _orbHintCycleTimer = null;
+      }
+      // Laisser le DOM peindre les hints avant de lancer le fade
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          runOrbHintPulse();
+          _orbHintCycleTimer = setInterval(runOrbHintPulse, ORB_HINT_PERIOD_MS);
+        });
+      });
     }
     function appendOrbClickHint(btn, kind){
       if (!btn || btn.querySelector('.orb-click-hint')) return;
@@ -2545,7 +2565,6 @@
       hint.setAttribute('aria-hidden', 'true');
       hint.innerHTML = '<img class="orb-click-hint__ico" src="' + src + '" alt="" draggable="false">';
       btn.appendChild(hint);
-      ensureOrbHintCycle();
     }
 
     function renderOrbs(p){
@@ -2718,6 +2737,8 @@
       // Initial paint
       _orbSim.items.forEach(it => { it.el.style.transform = `translate(${it.x - it.r}px, ${it.y - it.r}px)`; });
       orbSimStart();
+      // Hints : fade dès l'affichage de CE profil (pas un cycle global déjà lancé)
+      restartOrbHintCycle();
     }
     // Recompute anchors on viewport resize from each orb's stored relative position
     // (rx, ry) — keeps bubbles locked to the same spot relative to the card.
