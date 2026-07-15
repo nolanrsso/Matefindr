@@ -108,14 +108,18 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .topbar .logo{height:46px;width:auto;display:block;filter:drop-shadow(0 4px 18px rgba(255,31,158,.55))}
 .topbar .crumb{color:var(--dim);font-size:13px;font-weight:600}
 .topbar .note{color:var(--dim);font-size:11.5px;border:1px dashed var(--stroke-2);border-radius:999px;padding:5px 12px}
-/* Boutons topbar : Aperçu (gauche) / Paramètres (droite) */
-.top-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:60px;padding:0 16px;border-radius:16px;border:1px solid var(--stroke-2);cursor:pointer;
-  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));backdrop-filter:blur(18px) saturate(150%);
-  color:#fff;font-family:inherit;font-weight:700;font-size:13px;transition:transform .12s ease,filter .16s ease,border-color .14s ease}
-.top-btn:hover{transform:translateY(-1px);filter:brightness(1.1);border-color:rgba(255,255,255,.28)}
+.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:6px}
+/* Boutons topbar — même taille que « Mon profil » (42px) dans le menu swipe */
+.top-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:42px;height:42px;min-height:42px;padding:0 14px;border-radius:12px;border:1px solid var(--stroke-2);cursor:pointer;
+  background:rgba(255,255,255,.05);color:#fff;font-family:inherit;font-weight:700;font-size:13px;
+  transition:background .18s ease,border-color .18s ease,transform .12s ease;box-sizing:border-box;flex:0 0 auto}
+.top-btn:hover{background:rgba(0,0,0,.14);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
 .top-btn:active{transform:translateY(0) scale(.97)}
-.top-btn svg{width:17px;height:17px}
-@media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{min-height:52px;padding:0 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}}
+.top-btn svg{width:18px;height:18px}
+.top-btn--link{position:fixed;right:22px;bottom:26px;z-index:41;width:auto;padding:0 14px}
+body.not-boost .top-btn--link{bottom:calc(26px + 58px)}
+.topbar-actions .top-btn--settings{width:auto;padding:0 14px}
+@media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{width:42px;height:42px;min-height:42px;padding:0;font-size:0;gap:0}.top-btn--link{padding:0;width:42px}.top-btn svg{width:18px;height:18px}}
 
 /* Sélecteur d'orientation (Bureau / Portrait / Paysage) — bloc normal centré
    juste au-dessus de la carte (dans .card-zone, PAS dans .card-frame : les
@@ -546,9 +550,9 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 .eye-dot--card:hover{transform:translateX(-50%) scale(1.12)}
 /* séparateurs + boutons Retour (gauche) / Aperçu (droite), symétriques autour des 5 outils */
 .tool-sep{width:1px;height:34px;background:var(--stroke-2);margin:0 2px;align-self:center}
-.tool--preview,.tool--back{width:auto;display:flex;align-items:center;gap:7px;padding:0 15px;min-height:60px;height:60px}
+.tool--preview,.tool--back{width:auto;display:flex;align-items:center;gap:7px;padding:0 14px;min-height:42px;height:42px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);box-sizing:border-box}
 .tool--preview{color:#fff}
-.tool--preview:hover{background:rgba(145,70,255,.18);color:#fff}
+.tool--preview:hover{background:rgba(0,0,0,.14);border-color:rgba(255,255,255,.22);color:#fff}
 .tool--gif{font-weight:800;letter-spacing:.02em}
 .tool-word{font-weight:700;font-size:14px;line-height:1}
 .tool--gif .tool-word{font-size:15px}
@@ -571,26 +575,27 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
   /* width:auto explicite : sans ça, .tool{width:44px} ci-dessus (même spécificité,
      déclaré après) écrase leur largeur auto et comprime/superpose leur libellé
      ("Retour"/"Aperçu") au lieu de le laisser respirer. */
-  .tool--preview,.tool--back{width:auto;height:52px;min-height:52px;padding:0 10px;gap:5px;flex:0 0 auto}
+  .tool--preview,.tool--back{width:auto;height:42px;min-height:42px;padding:0 10px;gap:5px;flex:0 0 auto}
   .tool-word{font-size:12px}
   .tool-sep{margin:0 1px;flex:0 0 auto}
 }
 
-/* Volume musique — bouton glass + barre blanche au survol (haut-gauche) */
-.mf-vol{position:fixed;top:70px;left:14px;z-index:39;display:flex;align-items:center;gap:0}
-.mf-vol-btn{width:45px;height:45px;border-radius:15px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
-.mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(0,0,0,.14);border-color:rgba(255,255,255,.22)}
+/* Volume musique — bas-gauche (même Y que le menu swipe, X inchangé) */
+.mf-vol{--mf-vol-btn-size:53px;--mf-vol-bar:78px;position:fixed;bottom:calc(18px + (60px - var(--mf-vol-btn-size)) / 2);left:14px;z-index:39;display:flex;align-items:center;gap:0;border:1px solid transparent;border-radius:18px;box-sizing:border-box;transition:background .18s ease,border-color .18s ease,padding .22s ease}
+.mf-vol:hover,.mf-vol.mf-vol--open{background:rgba(255,255,255,.05);border-color:var(--stroke-2);padding-right:6px}
+.mf-vol-btn{width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:18px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
+.mf-vol:hover .mf-vol-btn,.mf-vol.mf-vol--open .mf-vol-btn{background:transparent;border-color:transparent}
 .mf-vol-btn svg{width:26px;height:26px;display:block}
 .mf-vol-slash{display:none}
 .mf-vol.muted .mf-vol-wave{display:none}
 .mf-vol.muted .mf-vol-slash{display:block}
 .mf-vol.muted .mf-vol-btn{color:rgba(255,126,182,.92)}
-.mf-vol-track{width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;transition:width .22s ease,opacity .18s ease,margin-left .22s ease}
-.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:92px;opacity:1;margin-left:8px}
-.mf-vol-range{-webkit-appearance:none;appearance:none;width:92px;height:6px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
+.mf-vol-track{width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;transition:width .22s ease,opacity .18s ease,margin-left .22s ease;display:flex;align-items:center}
+.mf-vol:hover .mf-vol-track,.mf-vol.mf-vol--open .mf-vol-track{width:var(--mf-vol-bar);opacity:1;margin-left:6px}
+.mf-vol-range{-webkit-appearance:none;appearance:none;width:var(--mf-vol-bar);height:6px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
 .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
 .mf-vol-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol-btn{width:39px;height:39px;border-radius:13px}.mf-vol-btn svg{width:22px;height:22px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:72px}.mf-vol-range{width:72px}}
+@media(max-width:600px){.mf-vol{--mf-vol-btn-size:46px;--mf-vol-bar:61px;left:10px;bottom:calc(10px + (52px - var(--mf-vol-btn-size)) / 2);border-radius:16px}.mf-vol-btn{border-radius:15px}.mf-vol-btn svg{width:22px;height:22px}}
 
 /* Presets de profil (Boost) — bas-gauche */
 .pset-panel{position:fixed;left:22px;bottom:26px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
@@ -646,16 +651,16 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 
 /* Connexions (réseaux sociaux) */
 .connections{display:flex;flex-wrap:wrap;gap:9px;align-items:flex-start;align-content:flex-start}
-.conn{position:relative;width:40px;height:40px;border-radius:11px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:grab;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease,opacity .14s ease;padding:0;touch-action:none;flex:0 0 40px}
+.conn{position:relative;width:32px;height:32px;border-radius:9px;border:1.5px solid rgba(255,255,255,.12);background:rgba(0,0,0,.28);cursor:grab;display:grid;place-items:center;transition:transform .14s ease,border-color .14s ease,opacity .14s ease;padding:0;touch-action:none;flex:0 0 32px}
 .conn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.3)}
 .conn:active{cursor:grabbing}
 .conn.dragging{opacity:.45;transform:scale(.94)}
 .conn.drag-over{border-color:rgba(145,70,255,.75);box-shadow:0 0 0 2px rgba(145,70,255,.28)}
-.conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
+.conn img,.conn .conn-ico-svg{width:18px;height:18px;object-fit:contain;opacity:1}
 .conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
-.conn .conn-ico-svg svg{width:20px;height:20px}
+.conn .conn-ico-svg svg{width:16px;height:16px}
 .conn-add-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease;flex:0 0 auto;width:max-content;max-width:100%;order:-1}
-.conn-add-btn--icon{width:40px;height:40px;padding:0;flex:0 0 40px;border-radius:11px}
+.conn-add-btn--icon{width:32px;height:32px;padding:0;flex:0 0 32px;border-radius:9px}
 .conn-add-btn--icon svg{width:18px;height:18px}
 .conn-add-btn:hover{border-color:rgba(145,70,255,.55);background:rgba(145,70,255,.12)}
 .conn-add-btn svg{width:15px;height:15px;opacity:.85}
@@ -764,7 +769,7 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn-add-foot .btn-add:hover{background:rgba(255,255,255,.18)}
 /* ===== Modale "Ton lien de partage" ===== */
 .top-btn--link{color:#fff}
-.top-btn--link:hover{background:rgba(255,255,255,.10);color:#fff;border-color:rgba(255,255,255,.22)}
+.top-btn--link:hover{background:rgba(0,0,0,.14);color:#fff;border-color:rgba(255,255,255,.22)}
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
 .link-sub{color:var(--dim);font-size:12.5px;line-height:1.5;margin:0 0 12px}
 .link-input-row{display:flex;align-items:stretch;border-radius:11px;overflow:hidden;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05)}
@@ -1245,12 +1250,13 @@ html.perf-lite *{
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
   <span class="crumb">/ éditeur de profil</span>
   <div class="topbar-actions">
-  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
-  <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
+  <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte" aria-label="Paramètres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
   </div>
 </header>
 
-<!-- Volume musique — haut-gauche (style bouton glass + barre au survol) -->
+<button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
+
+<!-- Volume musique — bas-gauche (même Y que swipe, X inchangé) -->
 <div class="mf-vol" id="mfVol" aria-label="Volume de la musique">
   <button class="mf-vol-btn" type="button" aria-label="Couper / rétablir le son">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

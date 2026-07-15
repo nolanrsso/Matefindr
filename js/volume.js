@@ -46,6 +46,21 @@
     const range = root.querySelector('.mf-vol-range');
     if (!range) return { refresh: function () {} };
     let preMute = null;
+    const open = function () { root.classList.add('mf-vol--open'); };
+    const close = function () {
+      root.classList.remove('mf-vol--open');
+      if (document.activeElement === range || document.activeElement === btn) {
+        try { document.activeElement.blur(); } catch (_) {}
+      }
+    };
+    root.addEventListener('mouseenter', open);
+    root.addEventListener('mouseleave', close);
+    range.addEventListener('blur', function () {
+      if (!root.matches(':hover')) close();
+    });
+    btn.addEventListener('blur', function () {
+      if (!root.matches(':hover') && document.activeElement !== range) close();
+    });
     const apply = function (v, persist) {
       v = setVol(v, persist);
       paintRange(range, v);

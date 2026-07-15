@@ -1053,10 +1053,12 @@
       let dragging = false, pending = 0;
       function maxLeft(){ return Math.max(1, root.clientWidth - handle.offsetWidth); }
       function updateStarsFromHandle(){
-        const handleRight = handle.getBoundingClientRect().right;
+        const handleRect = handle.getBoundingClientRect();
+        const handleCenter = handleRect.left + handleRect.width / 2;
         stars.forEach(s => {
-          const starLeft = s.getBoundingClientRect().left;
-          s.classList.toggle('active', handleRight > starLeft + 2);
+          const starRect = s.getBoundingClientRect();
+          const starCenter = starRect.left + starRect.width / 2;
+          s.classList.toggle('active', handleCenter >= starCenter);
         });
       }
       function applyFromClientX(clientX){
