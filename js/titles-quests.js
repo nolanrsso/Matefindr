@@ -341,6 +341,86 @@
     return getMission(td.equipped) || null;
   }
 
+  const TITLE_TYPO_POOL = [
+    { family: '"Inter", system-ui, sans-serif', weight: 800, spacing: '.10em', transform: 'uppercase' },
+    { family: '"Space Grotesk", sans-serif', weight: 700, spacing: '.11em', transform: 'uppercase' },
+    { family: '"Clash Display", sans-serif', weight: 800, spacing: '.13em', transform: 'uppercase' },
+    { family: '"Cinzel Decorative", serif', weight: 700, spacing: '.15em', transform: 'uppercase' },
+    { family: '"Unbounded", sans-serif', weight: 800, spacing: '.09em', transform: 'uppercase' },
+    { family: '"Bebas Neue", sans-serif', weight: 400, spacing: '.07em', transform: 'uppercase' },
+    { family: '"Orbitron", sans-serif', weight: 900, spacing: '.11em', transform: 'uppercase' },
+    { family: '"Playfair Display SC", serif', weight: 700, spacing: '.18em', transform: 'uppercase' },
+  ];
+
+  function titleTypoMeta(m) {
+    if (!m) return TITLE_TYPO_POOL[3];
+    if (m.noTranslate) {
+      return { family: '"Space Grotesk", sans-serif', weight: 700, spacing: '.05em', transform: 'none' };
+    }
+    const h = String(m.id || m.title || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const base = TITLE_TYPO_POOL[h % TITLE_TYPO_POOL.length];
+    const rBoost = Math.max(0, (m.rarity || 1) - 1) * 0.011;
+    const spacing = (parseFloat(base.spacing) + rBoost).toFixed(3) + 'em';
+    const weight = (m.rarity || 1) >= 12 ? 900 : base.weight;
+    return { family: base.family, weight, spacing, transform: base.transform };
+  }
+
+  function titleTypoCss(m) {
+    const t = titleTypoMeta(m);
+    return `--title-font:${t.family};--title-weight:${t.weight};--title-spacing:${t.spacing};--title-transform:${t.transform}`;
+  }
+
+  function nextUncollectedMissionId(sm, td) {
+    for (const th of MILESTONES) {
+      const id = missionId(sm.id, th);
+      if (!td.collected.includes(id)) return id;
+    }
+    let th = 2500;
+    while (td.collected.includes(missionId(sm.id, th))) th += 500;
+    return missionId(sm.id, th);
+  }
+
+  /** Titres verrouillés visibles dans la modale : prochain palier par piste + quêtes en attente. */
+  function computeSoonTitleIds(stats, td) {
+    td = td || getTitlesData();
+    const soon = new Set();
+    (td.pending || []).forEach(id => soon.add(id));
+
+    QUEST_TRACKS.forEach(track => {
+      const m = nextMissionForTrack(track, stats);
+      if (!m || td.collected.includes(m.id)) return;
+      const p = missionProgress(m, stats);
+      if (p.current > 0 || p.pct >= 18 || td.pending.includes(m.id) || p.complete) soon.add(m.id);
+    });
+
+    if (!td.collected.includes(VOTES_UNLOCK.id)) {
+      const p = missionProgress({ id: VOTES_UNLOCK.id, stat: VOTES_UNLOCK.stat, threshold: VOTES_UNLOCK.threshold }, stats);
+      if (p.current > 0 || p.complete) soon.add(VOTES_UNLOCK.id);
+    }
+
+    STAT_MISSIONS.forEach(sm => {
+      const id = nextUncollectedMissionId(sm, td);
+      if (td.collected.includes(id)) return;
+      const m = getMission(id);
+      if (!m) return;
+      const p = missionProgress(m, stats);
+      if (p.current > 0 || p.pct >= 18 || td.pending.includes(id)) soon.add(id);
+    });
+
+    if ((stats.ratingVotes || 0) > 0 && (stats.ratingVotes || 0) < 10 && !td.collected.includes('rt_subhuman')) {
+      soon.add('rt_subhuman');
+    }
+
+    if ((stats.ratingVotes || 0) >= 10) {
+      RATING_TITLES.forEach(r => {
+        if (td.collected.includes(r.id)) return;
+        if (stats.rating >= r.min - 0.35 && stats.rating < r.max + 0.15) soon.add(r.id);
+      });
+    }
+
+    return soon;
+  }
+
   function titleBadgeInnerHtml(title, rarity, escH) {
     const shine = (rarity >= 8) ? '<span class="card-profile-title-shine" aria-hidden="true"></span>' : '';
     return `<span class="card-profile-title-glow" aria-hidden="true"></span><span class="card-profile-title-aura" aria-hidden="true"></span>${shine}<span class="card-profile-title-text">${escH(title)}</span>`;
@@ -353,11 +433,12 @@
     const color = td.color || '#C7A5FF';
     const rarity = meta.rarity || 3;
     const inner = titleBadgeInnerHtml(meta.title, rarity, escH);
+    const typo = titleTypoCss(meta);
     if (opts.asSpan) {
-      return `<span class="card-profile-title" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}">${inner}</span>`;
+      return `<span class="card-profile-title" data-rarity="${rarity}" data-title-id="${escH(meta.id)}" style="--title-color:${escH(color)};${typo}" title="${escH(meta.title)}">${inner}</span>`;
     }
     const cls = opts.clickable ? 'card-profile-title card-profile-title--clickable' : 'card-profile-title';
-    return `<button type="button" class="${cls}" data-rarity="${rarity}" style="--title-color:${escH(color)}" title="${escH(meta.title)}"${opts.clickable ? '' : ' tabindex="-1"'}>${inner}</button>`;
+    return `<button type="button" class="${cls}" data-rarity="${rarity}" data-title-id="${escH(meta.id)}" style="--title-color:${escH(color)};${typo}" title="${escH(meta.title)}"${opts.clickable ? '' : ' tabindex="-1"'}>${inner}</button>`;
   }
 
   function cardTitleHtml(p, escFn) {
@@ -366,8 +447,7 @@
     return cardTitleBadgeHtml(td, escH, { clickable: !!p.isMe });
   }
 
-  /** Zone sous le @tag, au-dessus du séparateur — clic ouvre le sélecteur de titres (aperçu perso). */
-  /** Zone sous le @tag — éditeur : cadre modifiable + badge identique à l'aperçu swipe. */
+  /** Éditeur : cadre modifiable + badge identique à l'aperçu swipe. */
   function editorTitleSlotHtml(p, escFn) {
     const escH = escFn || esc;
     const td = titlesDataForCard(p);
@@ -629,27 +709,42 @@
     });
   }
 
+  function renderTitlePickRow(meta, td, soonIds) {
+    const owned = td.collected.includes(meta.id);
+    const soon = !owned && soonIds.has(meta.id);
+    const pending = td.pending.includes(meta.id);
+    const badge = pending ? '<span class="tq-soon tq-soon--ready">Quête prête</span>' : (soon ? '<span class="tq-soon">Bientôt</span>' : '');
+    const typo = titleTypoCss(meta);
+    return `<button type="button" class="tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}" ${owned ? '' : 'disabled'}>
+        <span class="tq-title-glow" aria-hidden="true"></span>
+        <span class="tq-title-aura" aria-hidden="true"></span>
+        <span class="tq-title-label">${esc(meta.title)}</span>
+        ${badge}
+      </button>`;
+  }
+
   function renderTitlesModal(body, stats) {
+    refreshPending(stats);
     const td = getTitlesData();
-    const eligible = computeEligible(stats);
-    const byRarity = MISSIONS.slice().sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
+    const soonIds = computeSoonTitleIds(stats, td);
+    const ownedList = MISSIONS.filter(m => td.collected.includes(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
+    const soonList = MISSIONS.filter(m => !td.collected.includes(m.id) && soonIds.has(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
     let html = `<div class="tq-titles-toolbar">
       <label>Couleur du titre
         <input type="color" id="tqTitleColor" value="${esc(td.color || '#C7A5FF')}">
       </label>
     </div><div class="tq-scroll tq-titles-list">`;
-    byRarity.forEach(m => {
-      const meta = getMission(m.id) || m;
-      const owned = td.collected.includes(m.id);
-      const soon = !owned && eligible.includes(m.id);
-      const locked = !owned && !soon;
-      html += `<button type="button" class="tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${locked ? ' locked' : ''}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" style="--title-color:${esc(td.color || '#C7A5FF')}" ${owned ? '' : 'disabled'}>
-        <span class="tq-title-glow" aria-hidden="true"></span>
-        <span class="tq-title-aura" aria-hidden="true"></span>
-        <span class="tq-title-label">${esc(meta.title)}</span>
-        ${soon ? '<span class="tq-soon">Bientôt</span>' : ''}
-      </button>`;
-    });
+    if (ownedList.length) {
+      html += '<div class="tq-section-label">Mes titres</div>';
+      ownedList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
+    }
+    if (soonList.length) {
+      html += '<div class="tq-section-label">Bientôt débloqués</div>';
+      soonList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
+    }
+    if (!ownedList.length && !soonList.length) {
+      html += '<p class="tq-titles-empty">Aucun titre pour l’instant — complète des quêtes pour en débloquer.</p>';
+    }
     html += '</div>';
     body.innerHTML = html;
     body.querySelector('#tqTitleColor')?.addEventListener('input', e => {
