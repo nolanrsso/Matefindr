@@ -2148,13 +2148,17 @@
       const guildIconHtml = (g) => g.iconUrl
         ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
         : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
-      const guildsHtml = commonGuilds.length > 0 ? `
-        <div class="card-guilds card-guilds--head" title="${commonGuilds.length} serveur${commonGuilds.length > 1 ? 's' : ''} Discord en commun">
+      const nGuild = commonGuilds.length;
+      const guildLabel = nGuild === 1
+        ? `<b>1</b> serveur commun`
+        : `<b>${nGuild}</b> serveurs communs`;
+      const guildsHtml = nGuild > 0 ? `
+        <div class="card-guilds card-guilds--head" title="${nGuild} serveur${nGuild > 1 ? 's' : ''} Discord en commun">
+          <span class="cg-label">${guildLabel}</span>
           <div class="cg-icons">
             ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
-            ${commonGuilds.length > 5 ? `<span class="cg-more">+${commonGuilds.length - 5}</span>` : ''}
+            ${nGuild > 5 ? `<span class="cg-more">+${nGuild - 5}</span>` : ''}
           </div>
-          <span class="cg-label"><b>${commonGuilds.length}</b> en commun</span>
         </div>
       ` : '';
       const viewsHtml = (p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : '';

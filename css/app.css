@@ -1880,34 +1880,40 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
-  /* Discord servers in common — à droite du titre (sous le badge âge) */
+  /* Discord servers in common — texte au-dessus, logos en dessous.
+     Position absolute à droite : n'augmente PAS la hauteur de la ligne
+     (le hr / bio restent exactement où ils étaient). */
   .swipe-card .card-title-guilds-row{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    margin-top:6px;min-height:0;width:100%;
+    display:block;position:relative;margin-top:6px;min-height:0;width:100%;
   }
-  .swipe-card .card-title-guilds-row .card-title-slot{flex:1 1 auto;min-width:0}
-  .swipe-card .card-title-guilds-row .card-title-slot--empty{flex:1 1 auto;min-width:0;display:block}
+  .swipe-card .card-title-guilds-row .card-title-slot{
+    display:block;max-width:calc(100% - 118px);min-width:0;
+  }
+  .swipe-card .card-title-guilds-row .card-title-slot--empty{display:block;min-height:0;max-width:0;overflow:hidden}
   .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
   .swipe-card .card-guilds--head{
-    margin-top:0;flex:0 0 auto;flex-direction:column;align-items:flex-end;gap:4px;
-    padding:5px 8px;border-radius:10px;max-width:min(48%,180px);
+    position:absolute;right:0;top:50%;transform:translateY(-50%);
+    margin:0;flex-direction:column;align-items:flex-end;gap:3px;
+    padding:4px 7px;border-radius:10px;max-width:112px;
     background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.10);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
     box-shadow:0 4px 14px rgba(0,0,0,.3);
-    pointer-events:none;
+    pointer-events:none;z-index:2;
   }
+  .swipe-card .card-guilds--head .cg-label{
+    font-size:10px;color:#b9bbbe;line-height:1.15;white-space:nowrap;order:0;
+  }
+  .swipe-card .card-guilds--head .cg-label b{color:#fff;font-weight:700}
   .swipe-card .card-guilds--head .cg-icons{
-    display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:0;max-width:100%;
+    display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:0;max-width:100%;order:1;
   }
   .swipe-card .card-guilds--head .cg-icon{
-    width:22px;height:22px;margin-left:-6px;border-width:1.5px;
+    width:18px;height:18px;margin-left:-5px;border-width:1.5px;
   }
   .swipe-card .card-guilds--head .cg-icon:first-child{margin-left:0}
   .swipe-card .card-guilds--head .cg-more{
-    margin-left:-6px;min-width:22px;height:22px;padding:0 5px;border-radius:11px;font-size:9px;
+    margin-left:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;font-size:8px;
   }
-  .swipe-card .card-guilds--head .cg-label{font-size:10.5px;color:#b9bbbe;line-height:1;white-space:nowrap}
-  .swipe-card .card-guilds--head .cg-label b{color:#fff;font-weight:700}
   .swipe-card .cg-icons{display:flex;align-items:center}
   .swipe-card .cg-icon{
     width:26px;height:26px;border-radius:50%;
@@ -2064,10 +2070,11 @@
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}
-    .swipe-card .card-guilds--head{padding:4px 6px;gap:3px;max-width:min(46%,150px)}
-    .swipe-card .card-guilds--head .cg-icon{width:18px;height:18px}
-    .swipe-card .card-guilds--head .cg-more{min-width:18px;height:18px;font-size:8px}
-    .swipe-card .card-guilds--head .cg-label{font-size:9.5px}
+    .swipe-card .card-guilds--head{padding:3px 5px;gap:2px;max-width:98px}
+    .swipe-card .card-guilds--head .cg-label{font-size:9px}
+    .swipe-card .card-guilds--head .cg-icon{width:16px;height:16px}
+    .swipe-card .card-guilds--head .cg-more{min-width:16px;height:16px;font-size:7px}
+    .swipe-card .card-title-guilds-row .card-title-slot{max-width:calc(100% - 102px)}
     .swipe-card .card-guilds{gap:8px}
     .swipe-card .cg-icon,
     .swipe-card .cg-more{width:22px;height:22px;font-size:10px}
