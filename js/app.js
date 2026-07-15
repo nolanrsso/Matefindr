@@ -2462,24 +2462,19 @@
         el.style.setProperty('--orb-hc', hexToRgbaOrb(hex, .45));
       }
     }
-    /* Hint souris clignotante sur bulles musique / jeu-avec-clip (1× par session jusqu'au 1er clic). */
-    function shouldShowOrbClickHint(kind){
-      try { return sessionStorage.getItem('mf_orb_hint_' + kind) !== '1'; } catch (_) { return true; }
-    }
-    function markOrbClickHintSeen(kind){
-      try { sessionStorage.setItem('mf_orb_hint_' + kind, '1'); } catch (_) {}
-      document.querySelectorAll('.orb-click-hint--' + kind).forEach(n => n.remove());
-    }
+    /* Hint centre bulle : note (musique) / clic (jeu+clip). Cycle CSS 7s sync entre toutes les bulles. */
+    const ORB_HINT_SRC = {
+      music: 'assets/orb-hint-music.png',
+      clip: 'assets/orb-hint-click.png',
+    };
     function appendOrbClickHint(btn, kind){
       if (!btn || btn.querySelector('.orb-click-hint')) return;
+      const src = ORB_HINT_SRC[kind];
+      if (!src) return;
       const hint = document.createElement('span');
       hint.className = 'orb-click-hint orb-click-hint--' + kind;
       hint.setAttribute('aria-hidden', 'true');
-      hint.title = kind === 'music' ? 'Clique pour écouter' : 'Clique pour voir le clip';
-      hint.innerHTML =
-        '<svg class="orb-click-hint__cursor" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
-          '<path d="M5.5 3.2 18.8 11a1.1 1.1 0 0 1-.15 2L12.2 15l-2.7 5.6a1.1 1.1 0 0 1-2-.05L5.5 3.2Z"/>' +
-        '</svg><span class="orb-click-hint__ring"></span>';
+      hint.innerHTML = '<img class="orb-click-hint__ico" src="' + src + '" alt="" draggable="false">';
       btn.appendChild(hint);
     }
 
@@ -2562,7 +2557,6 @@
       }
       function pickPos(orbR, idx){ return relToPx(orbRel.get(list[idx]), orbR); }
 
-      let musicHintPlaced = false;
       list.forEach((o, i) => {
         const locked = unlockedSet ? !unlockedSet.has(i) : false;
         // Pas de highlight "en commun" (halo doré) sur un lien perso : comparer les
@@ -2595,14 +2589,10 @@
           rk.innerHTML = `<span class="orb-rank-ball${iconUrl ? ' orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}">${iconHtml}</span>`;
           btn.appendChild(rk);
         }
-        // Hint souris : 1re bulle musique (écouter) + chaque bulle jeu avec clip
+        // Hint centre : toutes les bulles musique + chaque jeu avec clip (cycle sync CSS)
         if (!locked) {
-          if (o.kind === 'music' && !musicHintPlaced && shouldShowOrbClickHint('music')) {
-            appendOrbClickHint(btn, 'music');
-            musicHintPlaced = true;
-          } else if (o.kind === 'game' && o.clipUrl && shouldShowOrbClickHint('clip')) {
-            appendOrbClickHint(btn, 'clip');
-          }
+          if (o.kind === 'music') appendOrbClickHint(btn, 'music');
+          else if (o.kind === 'game' && o.clipUrl) appendOrbClickHint(btn, 'clip');
         }
         // (Le "+" pour ajouter rank/clip n'apparaît PLUS sur la carte de swipe —
         // il reste accessible uniquement via l'overlay d'édition des bulles.
@@ -2611,8 +2601,6 @@
           ev.stopPropagation();
           if (locked) { showLockPopup(ownCount); return; }
           if (o.kind === 'music') {
-            markOrbClickHintSeen('music');
-            btn.querySelectorAll('.orb-click-hint').forEach(n => n.remove());
             for (let r = 0; r < 3; r++) {
               const ripple = document.createElement('span');
               ripple.className = 'orb-sound-ripple';
@@ -2620,9 +2608,6 @@
               btn.appendChild(ripple);
               setTimeout(() => ripple.remove(), 1500);
             }
-          } else if (o.kind === 'game' && o.clipUrl) {
-            markOrbClickHintSeen('clip');
-            btn.querySelectorAll('.orb-click-hint').forEach(n => n.remove());
           }
           playOrb(o, btn);
         });

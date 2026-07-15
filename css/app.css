@@ -1374,42 +1374,26 @@
   .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:clamp(28px,3vw,44px);height:clamp(28px,3vw,44px)}
   .orbit .orb-label,.orbit.orbit--dynamic .orb-label{font-size:clamp(9.5px,1vw,11px)}
 
-  /* Hint « clique ici » — souris qui clignote / tape sur la bulle (musique ou clip jeu) */
+  /* Hint bulle : icône centre (note / clic) — 2s visible toutes les 7s, sync sur toutes les bulles */
   .orb-click-hint{
-    position:absolute;right:-6px;bottom:-4px;width:34px;height:34px;
-    display:grid;place-items:center;pointer-events:none;z-index:8;
-    filter:drop-shadow(0 2px 6px rgba(0,0,0,.55));
-    animation:orbHintBlink 1.35s ease-in-out infinite;
+    position:absolute;inset:0;display:grid;place-items:center;
+    pointer-events:none;z-index:8;color:#fff;
+    opacity:0;animation:orbHintPulse 7s ease-in-out infinite;
   }
-  .orb-click-hint__cursor{
-    width:26px;height:26px;display:block;
-    animation:orbHintClick 1.35s ease-in-out infinite;
-    transform-origin:20% 10%;
+  .swipe-stage .orbit .orb .orb-click-hint__ico,
+  .orbit .orb .orb-click-hint__ico{
+    width:42%;height:42%;max-width:44px;max-height:44px;min-width:22px;min-height:22px;
+    display:block;object-fit:contain;pointer-events:none;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.55));
   }
-  .orb-click-hint__ring{
-    position:absolute;left:42%;top:58%;width:10px;height:10px;border-radius:50%;
-    border:2px solid rgba(255,255,255,.85);transform:translate(-50%,-50%) scale(.4);
-    opacity:0;animation:orbHintRing 1.35s ease-out infinite;
-  }
-  .orb-click-hint--clip .orb-click-hint__cursor{color:#fff}
-  .orb-click-hint--music .orb-click-hint__cursor{color:#fff}
-  @keyframes orbHintBlink{
-    0%,100%{opacity:1}
-    45%,55%{opacity:.28}
-  }
-  @keyframes orbHintClick{
-    0%,55%,100%{transform:translate(0,0) rotate(-12deg) scale(1)}
-    62%{transform:translate(1px,3px) rotate(-12deg) scale(.88)}
-    72%{transform:translate(0,0) rotate(-12deg) scale(1)}
-  }
-  @keyframes orbHintRing{
-    0%,58%{opacity:0;transform:translate(-50%,-50%) scale(.35)}
-    62%{opacity:.95;transform:translate(-50%,-50%) scale(.55)}
-    100%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}
+  @keyframes orbHintPulse{
+    /* 2s / 7s ≈ 28.57% visible à faible opacite */
+    0%,2%{opacity:0}
+    6%,28%{opacity:.38}
+    32%,100%{opacity:0}
   }
   @media (prefers-reduced-motion:reduce){
-    .orb-click-hint,.orb-click-hint__cursor,.orb-click-hint__ring{animation:none}
-    .orb-click-hint{opacity:.85}
+    .orb-click-hint{animation:none;opacity:.28}
   }
 
   /* Sound-wave ripple when clicking a music orb */
