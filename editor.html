@@ -968,34 +968,6 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .orbstyle-sw:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
 .orbstyle-sw:focus-visible{outline:2px solid rgba(145,70,255,.75);outline-offset:2px}
 
-/* Sélecteur de couleur sombre (remplace le picker natif blanc) */
-.dk-pick{position:fixed;z-index:120;width:248px;padding:14px;border-radius:16px;
-  background:linear-gradient(180deg,rgba(28,22,58,.98),rgba(13,11,24,.99));
-  border:1px solid var(--stroke-2);box-shadow:0 24px 70px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.04) inset;
-  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;user-select:none}
-.dk-pick[hidden]{display:none!important}
-.dk-pick-sv{position:relative;height:148px;border-radius:12px;cursor:crosshair;overflow:hidden;margin-bottom:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08) inset}
-.dk-pick-sv::before,.dk-pick-sv::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit}
-.dk-pick-sv::before{background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
-.dk-pick-sv::after{background:linear-gradient(180deg,rgba(0,0,0,0),#000)}
-.dk-pick-cursor{position:absolute;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;
-  box-shadow:0 0 0 1px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);pointer-events:none}
-.dk-pick-hue{position:relative;height:14px;border-radius:999px;margin-bottom:12px;cursor:pointer;
-  background:linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
-  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
-.dk-pick-hue-thumb{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;
-  background:#fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.45)}
-.dk-pick-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.dk-pick-preview{width:38px;height:38px;border-radius:11px;flex:0 0 auto;border:2px solid rgba(255,255,255,.22);
-  box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.35) inset}
-.dk-pick-hex{flex:1;min-width:0;padding:9px 11px;border-radius:10px;border:1.5px solid var(--stroke-2);
-  background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;outline:none}
-.dk-pick-hex:focus{border-color:rgba(145,70,255,.65);box-shadow:0 0 0 3px rgba(145,70,255,.18)}
-.dk-pick-presets{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
-.dk-pick-presets button{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);
-  cursor:pointer;padding:0;transition:transform .12s ease,border-color .12s ease}
-.dk-pick-presets button:hover{transform:scale(1.08);border-color:rgba(255,255,255,.45)}
 .orbstyle-lbl{flex:1;font-size:13px;font-weight:700;color:#fff}
 
 .search-row{display:flex;gap:8px;margin-bottom:10px}
@@ -1273,6 +1245,7 @@ html.perf-lite *{
 }
 .ed-title-edit-btn:hover{background:rgba(145,70,255,.62);transform:scale(1.04);box-shadow:0 0 0 1px rgba(194,130,255,.75),0 3px 12px rgba(145,70,255,.38)}
 </style>
+<link rel="stylesheet" href="css/dark-color-picker.css">
 <link rel="stylesheet" href="css/titles-quests.css">
 </head>
 <body class="editor-page">
@@ -1464,15 +1437,6 @@ html.perf-lite *{
 <!-- Panneau couleur de la carte : glisse la carte à droite et s'ouvre sur sa gauche -->
 <div class="color-panel" id="colorPanel"></div>
 <div class="color-panel" id="orbColorPanel"></div>
-<div class="dk-pick" id="darkColorPicker" hidden aria-hidden="true">
-  <div class="dk-pick-sv" id="dkPickSv"><div class="dk-pick-cursor" id="dkPickCursor"></div></div>
-  <div class="dk-pick-hue" id="dkPickHue"><div class="dk-pick-hue-thumb" id="dkPickHueThumb"></div></div>
-  <div class="dk-pick-row">
-    <div class="dk-pick-preview" id="dkPickPreview"></div>
-    <input class="dk-pick-hex" id="dkPickHex" type="text" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Code hexadécimal">
-  </div>
-  <div class="dk-pick-presets" id="dkPickPresets"></div>
-</div>
 <div class="mf-modal-backdrop" id="sheetBackdrop" hidden></div>
 <div class="sheet" id="sheet"></div>
 
@@ -1556,6 +1520,7 @@ html.perf-lite *{
 
 <script src="js/core.js"></script>
 <script src="js/discord-presence.js"></script>
+<script src="js/dark-color-picker.js"></script>
 <script src="js/titles-quests.js"></script>
 <script src="js/account-modals.js"></script>
 <script src="js/volume.js"></script>
@@ -1577,99 +1542,6 @@ async function klipySearchGifs(q, page){
   return { gifs, hasNext:!!box.has_next };
 }
 function hexToRgba(hex,a){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return null;const r=parseInt(m[1].substr(0,2),16),g=parseInt(m[1].substr(2,2),16),b=parseInt(m[1].substr(4,2),16);return `rgba(${r},${g},${b},${a})`;}
-function normHex6(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');return m?'#'+m[1].toUpperCase():null;}
-function hexToRgbObj(hex){const h=normHex6(hex);if(!h)return null;return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};}
-function rgbToHex(r,g,b){const c=n=>Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,'0');return '#'+c(r)+c(g)+c(b);}
-function rgbToHsv(r,g,b){
-  r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;
-  let h=0; const s=max===0?0:d/max, v=max;
-  if(d){ if(max===r) h=((g-b)/d+(g<b?6:0))*60; else if(max===g) h=((b-r)/d+2)*60; else h=((r-g)/d+4)*60; }
-  return{h,s:s*100,v:v*100};
-}
-function hsvToRgb(h,s,v){
-  s/=100;v/=100;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let rp=0,gp=0,bp=0;
-  if(h<60){rp=c;gp=x}else if(h<120){rp=x;gp=c}else if(h<180){gp=c;bp=x}else if(h<240){gp=x;bp=c}else if(h<300){rp=x;bp=c}else{rp=c;bp=x}
-  return{r:Math.round((rp+m)*255),g:Math.round((gp+m)*255),b:Math.round((bp+m)*255)};
-}
-const DARK_PICK_PRESETS=['#1ED760','#8DCBFF','#C7A5FF','#9146FF','#FF4FA0','#FFD83D','#FFFFFF','#242429'];
-const DarkColorPicker=(function(){
-  let root,sv,hue,cursor,hueThumb,preview,hexIn,presetsEl,anchor=null,onChange=null,h=280,s=70,v=80,drag=null;
-  function ensure(){
-    if(root) return;
-    root=$('darkColorPicker'); sv=$('dkPickSv'); hue=$('dkPickHue'); cursor=$('dkPickCursor');
-    hueThumb=$('dkPickHueThumb'); preview=$('dkPickPreview'); hexIn=$('dkPickHex'); presetsEl=$('dkPickPresets');
-    presetsEl.innerHTML=DARK_PICK_PRESETS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
-    presetsEl.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>setFromHex(btn.dataset.c,true)));
-    hexIn.addEventListener('change',()=>{ const nx=normHex6(hexIn.value); if(nx) setFromHex(nx,true); else hexIn.value=currentHex(); });
-    hexIn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); hexIn.blur(); } });
-    sv.addEventListener('pointerdown',e=>startDrag('sv',e));
-    hue.addEventListener('pointerdown',e=>startDrag('hue',e));
-    window.addEventListener('pointermove',onMove);
-    window.addEventListener('pointerup',endDrag);
-    window.addEventListener('pointercancel',endDrag);
-    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&root&&!root.hidden) close(); });
-    document.addEventListener('pointerdown',e=>{
-      if(root.hidden||!anchor) return;
-      if(root.contains(e.target)||anchor.contains(e.target)) return;
-      close();
-    },true);
-  }
-  function currentHex(){ const rgb=hsvToRgb(h,s,v); return rgbToHex(rgb.r,rgb.g,rgb.b).toUpperCase(); }
-  function paint(emit){
-    sv.style.background='hsl('+h+',100%,50%)';
-    cursor.style.left=s+'%'; cursor.style.top=(100-v)+'%';
-    hueThumb.style.left=(h/360*100)+'%';
-    const hex=currentHex();
-    preview.style.background=hex; hexIn.value=hex;
-    if(emit!==false&&onChange) onChange(hex);
-    if(anchor) anchor.style.background=hex;
-  }
-  function setFromHex(hex,emit){
-    const rgb=hexToRgbObj(hex); if(!rgb) return;
-    const hsv=rgbToHsv(rgb.r,rgb.g,rgb.b); h=hsv.h; s=hsv.s; v=hsv.v; paint(emit);
-  }
-  function position(){
-    if(!anchor||!root) return;
-    const r=anchor.getBoundingClientRect(), pw=root.offsetWidth||248, ph=root.offsetHeight||320;
-    let left=r.right+10; if(left+pw>window.innerWidth-10) left=Math.max(10,r.left-pw-10);
-    let top=r.top; if(top+ph>window.innerHeight-10) top=Math.max(10,window.innerHeight-ph-10);
-    root.style.left=left+'px'; root.style.top=top+'px';
-  }
-  function startDrag(kind,e){
-    e.preventDefault(); drag=kind;
-    try{(kind==='sv'?sv:hue).setPointerCapture(e.pointerId);}catch(_){}
-    applyPoint(kind,e); root.setAttribute('aria-hidden','false');
-  }
-  function applyPoint(kind,e){
-    const box=(kind==='sv'?sv:hue).getBoundingClientRect();
-    if(kind==='sv'){
-      s=Math.max(0,Math.min(100,(e.clientX-box.left)/box.width*100));
-      v=Math.max(0,Math.min(100,(1-(e.clientY-box.top)/box.height)*100));
-    }else h=Math.max(0,Math.min(360,(e.clientX-box.left)/box.width*360));
-    paint();
-  }
-  function onMove(e){ if(!drag) return; applyPoint(drag,e); }
-  function endDrag(e){ if(!drag) return; drag=null; try{sv.releasePointerCapture(e.pointerId);hue.releasePointerCapture(e.pointerId);}catch(_){} }
-  function open(anchorEl,hex,cb){
-    ensure(); anchor=anchorEl; onChange=cb||null;
-    setFromHex(normHex6(hex)||'#9146FF',false);
-    root.hidden=false; root.setAttribute('aria-hidden','false');
-    requestAnimationFrame(position);
-  }
-  function close(){ if(!root) return; root.hidden=true; root.setAttribute('aria-hidden','true'); anchor=null; onChange=null; drag=null; }
-  function bindSwatch(el,get,set){
-    if(!el||el.disabled) return;
-    el.addEventListener('click',e=>{
-      if(el.disabled) return;
-      e.stopPropagation();
-      const start=normHex6(typeof get==='function'?get():el.dataset.hex)||'#9146FF';
-      if(el.style) el.style.background=start;
-      open(el,start,hex=>{ if(typeof set==='function') set(hex); });
-    });
-  }
-  function setSwatchBg(el,hex){ if(!el) return; const c=normHex6(hex)||'#9146FF'; el.style.background=c; el.dataset.hex=c; }
-  return {open,close,bindSwatch,setSwatchBg};
-})();
 // Bannière fixe en haut : posée quand un admin a désactivé ce profil (admin.html).
 // Le compte reste utilisable ICI (pour corriger le contenu signalé) mais swipe/messagerie
 // sont bloqués côté site (cf. js/app.js) tant que non réactivé.

@@ -1,0 +1,47 @@
+/* Sélecteur de couleur sombre Matefindr (remplace le picker natif blanc) */
+.dk-pick{
+  position:fixed;z-index:310;width:248px;padding:14px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(28,22,58,.98),rgba(13,11,24,.99));
+  border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 70px rgba(0,0,0,.72),0 0 0 1px rgba(255,255,255,.04) inset;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);touch-action:none;user-select:none;
+}
+.dk-pick[hidden]{display:none!important}
+.dk-pick-sv{position:relative;height:148px;border-radius:12px;cursor:crosshair;overflow:hidden;margin-bottom:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08) inset}
+.dk-pick-sv::before,.dk-pick-sv::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+.dk-pick-sv::before{background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
+.dk-pick-sv::after{background:linear-gradient(180deg,rgba(0,0,0,0),#000)}
+.dk-pick-cursor{position:absolute;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.35);transform:translate(-50%,-50%);pointer-events:none}
+.dk-pick-hue{position:relative;height:14px;border-radius:999px;margin-bottom:12px;cursor:pointer;
+  background:linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+.dk-pick-hue-thumb{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;
+  background:#fff;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+.dk-pick-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dk-pick-drop{
+  flex:0 0 auto;width:38px;height:38px;padding:0;border-radius:11px;border:1.5px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:#fff;cursor:pointer;display:grid;place-items:center;
+  transition:background .14s ease,border-color .14s ease,transform .12s ease;
+}
+.dk-pick-drop:hover{background:rgba(145,70,255,.22);border-color:rgba(145,70,255,.45);transform:scale(1.04)}
+.dk-pick-drop:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.dk-pick-drop svg{width:18px;height:18px;display:block}
+.dk-pick-preview{width:38px;height:38px;border-radius:11px;flex:0 0 auto;border:2px solid rgba(255,255,255,.22);
+  box-shadow:0 4px 14px rgba(0,0,0,.4),0 0 0 1px rgba(0,0,0,.35) inset}
+.dk-pick-hex{flex:1;min-width:0;padding:9px 11px;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;outline:none}
+.dk-pick-hex:focus{border-color:rgba(145,70,255,.65);box-shadow:0 0 0 3px rgba(145,70,255,.18)}
+.dk-pick-presets{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.dk-pick-presets button{width:100%;aspect-ratio:1;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);
+  cursor:pointer;padding:0;transition:transform .12s ease,border-color .12s ease}
+.dk-pick-presets button:hover{transform:scale(1.08);border-color:rgba(255,255,255,.45)}
+
+/* Swatch déclencheur (titres, compte, éditeur…) */
+.mf-color-swatch{
+  flex:0 0 auto;width:34px;height:34px;padding:0;border-radius:10px;border:2px solid rgba(255,255,255,.22);
+  cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.25) inset;
+  transition:transform .12s ease,border-color .14s ease;
+}
+.mf-color-swatch:hover{transform:scale(1.05);border-color:rgba(145,70,255,.55)}
+.mf-color-swatch:focus-visible{outline:2px solid rgba(145,70,255,.75);outline-offset:2px}

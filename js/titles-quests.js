@@ -933,11 +933,13 @@
       if (m.id === BETA_TESTER_ID) return false;
       return titleCoinPrice(m) != null;
     }).sort((a, b) => (titleCoinPrice(a) || 0) - (titleCoinPrice(b) || 0));
+    const titleColor = td.color || '#C7A5FF';
     let html = `<div class="tq-titles-toolbar">
       <div class="tq-coins" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
-      <label>Couleur du titre
-        <input type="color" id="tqTitleColor" value="${esc(td.color || '#C7A5FF')}">
-      </label>
+      <div class="tq-title-color-row">
+        <span class="tq-title-color-lbl">Teinte</span>
+        <button type="button" class="mf-color-swatch" id="tqTitleColorSw" aria-label="Teinte du titre" data-hex="${esc(titleColor)}" style="background:${esc(titleColor)}"></button>
+      </div>
     </div><div class="tq-scroll tq-titles-list">`;
     if (ownedList.length) {
       html += '<div class="tq-section-label">Mes titres</div>';
@@ -952,10 +954,14 @@
     }
     html += '</div>';
     body.innerHTML = html;
-    body.querySelector('#tqTitleColor')?.addEventListener('input', e => {
-      saveTitlesData({ color: e.target.value });
-      if (td.equipped) renderTitlesModal(body, stats);
-    });
+    const colorSw = body.querySelector('#tqTitleColorSw');
+    if (colorSw && global.DarkColorPicker) {
+      global.DarkColorPicker.setSwatchBg(colorSw, titleColor);
+      global.DarkColorPicker.bindSwatch(colorSw, () => getTitlesData().color || '#C7A5FF', hex => {
+        saveTitlesData({ color: hex });
+        body.querySelectorAll('.tq-title-pick').forEach(btn => btn.style.setProperty('--title-color', hex));
+      });
+    }
     body.querySelectorAll('.tq-title-pick.owned').forEach(btn => {
       btn.addEventListener('click', () => {
         saveTitlesData({ equipped: btn.getAttribute('data-id') });
@@ -1013,6 +1019,7 @@
   }
 
   function closeModal(kind) {
+    if (global.DarkColorPicker) global.DarkColorPicker.close();
     $(kind + 'Backdrop')?.setAttribute('hidden', '');
     const pop = $(kind + 'Pop');
     if (pop) { pop.setAttribute('hidden', ''); delete pop.dataset.open; }

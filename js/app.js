@@ -4587,6 +4587,7 @@
       const cur = (document.documentElement.lang || 'fr').toUpperCase();
       document.querySelectorAll('#accLangs button').forEach(b => b.classList.toggle('active', b.dataset.val === cur));
       refreshAccountPreview();
+      if (typeof MFUpgradeColorInputs === 'function') MFUpgradeColorInputs(card);
       // Reset dirty-state snapshot after fresh render
       if (typeof window.__resetSaveSnapshot === 'function') window.__resetSaveSnapshot();
     }

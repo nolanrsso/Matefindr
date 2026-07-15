@@ -369,7 +369,8 @@
 .tq-coins b{font-family:"Clash Display",sans-serif;font-size:15px;color:#fff}
 .tq-coins span:last-child{color:var(--dim);font-weight:600;font-size:11px}
 .tq-coins-ico{font-size:14px;line-height:1}
-.tq-titles-toolbar input[type=color]{width:36px;height:28px;padding:0;border:none;background:transparent;cursor:pointer}
+.tq-title-color-row{display:inline-flex;align-items:center;gap:8px}
+.tq-title-color-lbl{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .tq-titles-list{display:flex;flex-direction:column;gap:6px}
 .tq-section-label{
   font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
