@@ -91,6 +91,23 @@
   };
 
   const BETA_TESTER_ID = 'beta_tester';
+  const OWNER_DISCORD_TAG = 'alonemaxing';
+  const OWNER_TITLE_ID = 'owner';
+  const MATEFINDR_OWNER_TITLE_ID = 'matefindr_owner';
+  const EXCLUSIVE_TITLE_IDS = [BETA_TESTER_ID, OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID];
+
+  function isOwnerDiscordTag(user) {
+    const u = user || readSite().user || {};
+    const tag = String(u.discordTag || u.tag || '').replace(/^@+/, '').replace(/#0$/, '').toLowerCase();
+    return tag === OWNER_DISCORD_TAG.toLowerCase();
+  }
+
+  function grantOwnerTitles(td) {
+    [OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID].forEach(id => {
+      if (!td.collected.includes(id)) td.collected.push(id);
+    });
+    return td;
+  }
 
   function $(id) { return document.getElementById(id); }
   function readSite() { try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch (_) { return {}; } }
@@ -106,7 +123,9 @@
     const td = u.titlesData && typeof u.titlesData === 'object' ? u.titlesData : defaultTitlesData();
     if (!Array.isArray(td.collected)) td.collected = [];
     if (!Array.isArray(td.pending)) td.pending = [];
-    return normalizeTitlesData(td);
+    const normalized = normalizeTitlesData(td);
+    if (isOwnerDiscordTag(u)) grantOwnerTitles(normalized);
+    return normalized;
   }
 
   function normalizeTitlesData(td) {
@@ -121,12 +140,14 @@
   function titlesDataForCard(p) {
     const raw = p.titlesData || (p.isMe ? getTitlesData(p) : null);
     if (!raw) return normalizeTitlesData(defaultTitlesData());
-    return normalizeTitlesData({
+    const result = normalizeTitlesData({
       collected: Array.isArray(raw.collected) ? [...raw.collected] : [],
       pending: Array.isArray(raw.pending) ? [...raw.pending] : [],
       equipped: raw.equipped,
       color: raw.color,
     });
+    if (isOwnerDiscordTag(p)) grantOwnerTitles(result);
+    return result;
   }
 
   function saveTitlesData(patch) {
@@ -152,6 +173,28 @@
       rarity: 4,
       desc: 'Titre exclusif pour les testeurs de la beta Matefindr.',
       stat: 'beta',
+    });
+    list.push({
+      id: OWNER_TITLE_ID,
+      group: 'profil',
+      label: 'Owner',
+      title: 'Owner',
+      rarity: 14,
+      noTranslate: true,
+      exclusive: true,
+      desc: 'Titre réservé au propriétaire de Matefindr.',
+      stat: 'staff',
+    });
+    list.push({
+      id: MATEFINDR_OWNER_TITLE_ID,
+      group: 'profil',
+      label: 'Matefindr Owner',
+      title: 'Matefindr Owner',
+      rarity: 14,
+      noTranslate: true,
+      exclusive: true,
+      desc: 'Titre fondateur Matefindr.',
+      stat: 'staff',
     });
     list.push({
       id: VOTES_UNLOCK.id,
@@ -434,7 +477,7 @@
   }
 
   function titleCoinPrice(m) {
-    if (!m || isRatingTitle(m) || m.id === BETA_TESTER_ID) return null;
+    if (!m || isRatingTitle(m) || EXCLUSIVE_TITLE_IDS.includes(m.id) || m.exclusive) return null;
     return TITLE_PRICE_BY_RARITY[m.rarity] || 250;
   }
 
@@ -931,6 +974,7 @@
       if (td.collected.includes(m.id)) return false;
       if (isRatingTitle(m)) return false;
       if (m.id === BETA_TESTER_ID) return false;
+      if (EXCLUSIVE_TITLE_IDS.includes(m.id) || m.exclusive) return false;
       return titleCoinPrice(m) != null;
     }).sort((a, b) => (titleCoinPrice(a) || 0) - (titleCoinPrice(b) || 0));
     const titleColor = td.color || '#C7A5FF';
@@ -1053,7 +1097,8 @@
     const u = readSite().user || {};
     const prev = u.titlesData;
     const td = getTitlesData(u);
-    if (!prev?.collected?.includes(BETA_TESTER_ID) || !prev?.equipped) {
+    const ownerGranted = isOwnerDiscordTag(u) && [OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID].some(id => !prev?.collected?.includes(id));
+    if (!prev?.collected?.includes(BETA_TESTER_ID) || !prev?.equipped || ownerGranted) {
       saveTitlesData({ collected: td.collected, equipped: td.equipped, pending: td.pending || [] });
     }
     (async () => {
