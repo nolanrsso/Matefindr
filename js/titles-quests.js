@@ -35,7 +35,7 @@
       titles: ['Premier Regard', 'Vitrine Émergente', 'Spotlight Discret', 'Radar Social', 'Pôle d\'Attention', 'Constellation Vue', 'Horizon Matefindr', 'Phare Nocturne', 'Éclipse de Vues', 'Légende du Feed', 'Mythique du Scroll', 'Oracle des Vues', 'Monument Visible'],
     },
     {
-      id: 'matches', group: 'profil', label: 'Matchs', stat: 'matches',
+      id: 'matches', group: 'interaction', label: 'Matchs', stat: 'matches',
       titles: ['Étincelle Mutuelle', 'Double Connexion', 'Alchimie Douce', 'Symbiose Swipe', 'Destins Croisés', 'Réseau d\'Or', 'Cercle Fidèle', 'Galaxie Match', 'Architecte du Lien', 'Maestro du Match', 'Dynastie Swipe', 'Empire des Matchs', 'Apothéose Match'],
     },
     {
@@ -50,6 +50,20 @@
       id: 'conversations', group: 'interaction', label: 'Nouvelles conversations', stat: 'newChats',
       titles: ['Premier Mot', 'Brise-Glace', 'Fil Tissé', 'Echo Social', 'Dialogue Vivant', 'Carrefour Chat', 'Mosaic Paroles', 'Pont Humain', 'Symphonie DM', 'Archiviste du Chat', 'Horizon Parlé', 'Citadelle DM', 'Transcendance Chat'],
     },
+    {
+      id: 'likes_received', group: 'profil', label: 'Likes reçus sur votre profil', stat: 'likesReceived',
+      titles: ['Premier Cœur', 'Magnétisme Doux', 'Pôle d\'Attraction', 'Aura Like', 'Star du Swipe', 'Comète Rose', 'Légende Likée', 'Icône du Feed', 'Mythique du Like', 'Diva du Match', 'Empire Cœur', 'Titans Reçus', 'Apothéose Like'],
+    },
+  ];
+
+  /* 6 pistes affichées dans la modale Quêtes (bouton quêtes) — pas sur le bloc Discord. */
+  const QUEST_TRACKS = [
+    { group: 'interaction', statId: 'matches', stat: 'matches', label: 'Matchs' },
+    { group: 'interaction', statId: 'votes', stat: 'votesGiven', label: 'Votes sur les autres profils' },
+    { group: 'interaction', statId: 'conversations', stat: 'newChats', label: 'Conversations avec de nouvelles personnes' },
+    { group: 'profil', isRating: true, label: 'Beauté' },
+    { group: 'profil', statId: 'views', stat: 'views', label: 'Visionnage' },
+    { group: 'profil', statId: 'likes_received', stat: 'likesReceived', label: 'Likes sur votre profil' },
   ];
 
   const VOTES_UNLOCK = {
@@ -321,68 +335,6 @@
     online: 'En ligne', idle: 'Inactif', dnd: 'Ne pas déranger', offline: 'Hors ligne', invisible: 'Hors ligne',
   };
 
-  const CARD_QUEST_DEFS = [
-    { group: 'interaction', label: 'Matchs', prefix: 'matches' },
-    { group: 'interaction', label: 'Votes sur les autres profils', prefix: 'votes' },
-    { group: 'interaction', label: 'Conversations avec de nouvelles personnes', prefix: 'conversations' },
-    { group: 'profil', label: 'Beauté', prefix: 'rt_', isRating: true },
-    { group: 'profil', label: 'Visionnage', prefix: 'views' },
-    { group: 'profil', label: 'Likes sur votre profil', prefix: null, statKey: 'likesReceived' },
-  ];
-
-  function questRowValue(td, def, stats) {
-    if (def.statKey) {
-      const n = stats?.[def.statKey] || 0;
-      if (n > 0) return `${n} like${n > 1 ? 's' : ''}`;
-      return '—';
-    }
-    const meta = bestTitleForQuest(td, def);
-    return meta ? meta.title : '—';
-  }
-
-  function bestTitleForQuest(td, def) {
-    if (!def.prefix) return null;
-    const collected = td?.collected || [];
-    if (def.isRating) {
-      const hit = collected.filter(id => String(id).startsWith('rt_')).pop();
-      return hit ? getMission(hit) : null;
-    }
-    let best = null;
-    let bestTh = -1;
-    collected.forEach(id => {
-      if (!String(id).startsWith(def.prefix + '_') && id !== def.prefix) return;
-      const m = getMission(id);
-      if (!m) return;
-      const th = m.threshold || 0;
-      if (th >= bestTh) { bestTh = th; best = m; }
-    });
-    return best;
-  }
-
-  function cardQuestStripHtml(p, escFn) {
-    const escH = escFn || esc;
-    const td = p.titlesData || (p.isMe ? getTitlesData(p) : null);
-    if (!td) return '';
-    const stats = p.questStats || (p.isMe ? (readSite().user?.questStats || null) : null);
-    const groups = [
-      { id: 'interaction', title: 'Interaction' },
-      { id: 'profil', title: 'Profil' },
-    ];
-    let html = '<div class="discord-floor-quests">';
-    groups.forEach(g => {
-      const items = CARD_QUEST_DEFS.filter(d => d.group === g.id);
-      if (!items.length) return;
-      html += `<div class="discord-floor-quest-group"><span class="discord-floor-quest-head">${escH(g.title)}</span><ul class="discord-floor-quest-list">`;
-      items.forEach(def => {
-        const lbl = questRowValue(td, def, stats);
-        html += `<li><span class="discord-floor-quest-lbl">${escH(def.label)}</span><span class="discord-floor-quest-val">${escH(lbl)}</span></li>`;
-      });
-      html += '</ul></div>';
-    });
-    html += '</div>';
-    return html;
-  }
-
   function discordFloorAvatar(p) {
     return p.discordAvatarUrl || p.avatarUrl || '';
   }
@@ -508,7 +460,6 @@
 
     const sub = discordStatusLine(live, showStatus, helpers.fmtRelative);
     const dotCls = discordDotClass(live);
-    const questsHtml = cardQuestStripHtml(p, escH);
 
     return `<div class="discord-floor discord-floor--head" aria-label="Discord">
       <div class="discord-floor-head">
@@ -521,7 +472,6 @@
           ${sub ? `<span class="discord-floor-sub">${escH(sub)}</span>` : ''}
         </div>
       </div>
-      ${questsHtml}
     </div>`;
   }
 
@@ -549,45 +499,50 @@
       avatarUrl: u.avatarUrl,
       discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl,
       initial: (u.displayName || 'T').charAt(0),
-      titlesData: getTitlesData(u),
-      isMe: true,
     };
     return discordFloorHtml(p, helpers);
   }
 
-  function missionsForDisplay(stats) {
-    const ids = new Set(MISSIONS.map(m => m.id));
-    STAT_MISSIONS.forEach(sm => {
-      const cur = stats[sm.stat] || 0;
-      let th = 2500;
-      while (th <= Math.max(cur, 2500) + 500) {
-        ids.add(missionId(sm.id, th));
-        th += 500;
+  function nextMissionForTrack(track, stats) {
+    if (track.isRating) {
+      if ((stats.ratingVotes || 0) < 10) {
+        return getMission('rt_subhuman') || MISSIONS.find(m => m.id === 'rt_subhuman');
       }
-    });
-    return [...ids].map(getMission).filter(Boolean);
+      const bracket = RATING_TITLES.find(r => stats.rating >= r.min && stats.rating < r.max);
+      return getMission((bracket || RATING_TITLES[RATING_TITLES.length - 1]).id);
+    }
+    const cur = stats[track.stat] || 0;
+    let targetTh = MILESTONES.find(th => cur < th);
+    if (!targetTh) {
+      let th = 2500;
+      while (cur >= th) th += 500;
+      targetTh = th;
+    }
+    return getMission(missionId(track.statId, targetTh));
   }
 
   function renderQuestsModal(body, stats) {
     refreshPending(stats);
     const td = getTitlesData();
     const groups = [
-      { id: 'profil', label: 'Profil' },
       { id: 'interaction', label: 'Interaction' },
+      { id: 'profil', label: 'Profil' },
     ];
     let html = '<div class="tq-scroll">';
     groups.forEach(g => {
       html += `<h3 class="tq-group-title">${esc(g.label)}</h3>`;
-      missionsForDisplay(stats).filter(m => m.group === g.id).forEach(m => {
+      QUEST_TRACKS.filter(t => t.group === g.id).forEach(track => {
+        const m = nextMissionForTrack(track, stats);
+        if (!m) return;
         const p = missionProgress(m, stats);
         const done = td.collected.includes(m.id);
         const ready = td.pending.includes(m.id);
         html += `<div class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
           <div class="tq-mission-head">
-            <span class="tq-mission-title">${esc(m.title)}</span>
+            <span class="tq-mission-title">${esc(track.label)}</span>
             <span class="tq-mission-rarity" data-r="${m.rarity || 1}">★${m.rarity || 1}</span>
           </div>
-          <p class="tq-mission-desc">${esc(m.desc || m.label)}</p>
+          <p class="tq-mission-desc">Prochain titre : <b>${esc(m.title)}</b></p>
           <div class="tq-bar"><span style="width:${p.pct.toFixed(1)}%"></span></div>
           <div class="tq-mission-foot">
             <span>${m.stat === 'rating' ? (p.locked ? `${Math.floor(p.current)}/10 votants` : p.current.toFixed(1) + '/5') : `${Math.floor(p.current)} / ${p.target}`}</span>
@@ -741,8 +696,6 @@
       avatarUrl: u.avatarUrl,
       discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl,
       initial: (u.displayName || 'T').charAt(0),
-      titlesData: getTitlesData(u),
-      isMe: true,
     };
     box.innerHTML = discordFloorHtml(p, {
       fmtRelative: global.__mfFmtRelativeFr,
@@ -760,7 +713,6 @@
     refreshPending,
     collectMission,
     cardTitleHtml,
-    cardQuestStripHtml,
     discordFloorHtml,
     discordCardHeadHtml,
     discordCardActivityHtml,

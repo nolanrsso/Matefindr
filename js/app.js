@@ -1975,9 +1975,9 @@
       const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
       const TQ = window.MatefindrTitlesQuests;
       const discHelpers = { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr };
-      const discordHeadHtml = TQ ? TQ.discordCardHeadHtml(p, discHelpers) : '';
-      const discordActHtml = TQ ? TQ.discordCardActivityHtml(p, discHelpers) : '';
-      const hasDiscordFloor = !!(discordHeadHtml || discordActHtml);
+      const discordFloorHtml = TQ ? TQ.discordFloorHtml(p, discHelpers) : '';
+      const titleHtml = TQ ? TQ.cardTitleHtml(p, escapeHtmlMini) : '';
+      const hasDiscordFloor = !!discordFloorHtml;
       let connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
       if (hasDiscordFloor) connKeys = connKeys.filter(k => k !== 'discord');
       const connDensity = connKeys.length >= 9 ? ' card-connections--dense' : connKeys.length >= 6 ? ' card-connections--many' : '';
@@ -2062,7 +2062,7 @@
               <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
             <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel && !hasDiscordFloor ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
-            ${discordHeadHtml}
+            ${titleHtml}
           </div>
           <hr class="div"/>
           ${p.profileVoice ? `
@@ -2080,7 +2080,7 @@
           ` : (hasDiscordFloor ? '' : cardPresenceHtml(p))}
           ${bioHtml}
           ${joinedHtml}
-          ${discordActHtml}
+          ${discordFloorHtml}
           ${connectionsBlock}
           ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
