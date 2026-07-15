@@ -15,6 +15,25 @@
     const KEY = 'matefindr_state';
     let state = { user:null, profile:null };
     try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
+    /* Recadrage avatar : certaines sauvegardes ont scale=100 (valeur du slider %) au lieu
+       d'un multiplicateur ~1–3 → transform:scale(100) déborde visuellement de l'avatar. */
+    function normalizeAvatarPos(ap){
+      if (!ap || typeof ap !== 'object') return null;
+      let posX = Number(ap.posX), posY = Number(ap.posY), scale = Number(ap.scale);
+      if (!Number.isFinite(posX)) posX = 50;
+      if (!Number.isFinite(posY)) posY = 50;
+      if (!Number.isFinite(scale)) scale = 1;
+      if (scale > 10) scale = scale / 100;
+      scale = Math.min(4, Math.max(0.5, scale));
+      return { posX: Math.min(100, Math.max(0, posX)), posY: Math.min(100, Math.max(0, posY)), scale };
+    }
+    if (state.user && state.user.avatarPos) {
+      const fixed = normalizeAvatarPos(state.user.avatarPos);
+      if (JSON.stringify(fixed) !== JSON.stringify(state.user.avatarPos)) {
+        state.user.avatarPos = fixed;
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(_){}
+      } else state.user.avatarPos = fixed;
+    }
     /* Garde multi-onglets : si l'éditeur (dans un AUTRE onglet) vient de sauvegarder
        pendant que cet onglet affiche l'aperçu de SON profil, l'évènement 'storage'
        (déclenché uniquement par les écritures d'un AUTRE onglet, jamais les siennes)
@@ -93,7 +112,18 @@
       // force=true : (ré)entrer sur le swipe court-circuite le cache 30s de fetchOtherProfiles
       // -- sinon un profil réactivé (ou désactivé) par un admin entre-temps pouvait rester
       // invisible/visible à tort jusqu'à 30s de plus après être revenu sur cet écran.
-      if (name === 'swipe')   { deckIdx = 0; ensureDeck(true); refreshMyStatusUI(); refreshSwipeTools(); }
+      if (name === 'swipe') {
+        // Deck normal : nettoyer un état « lien perso » résiduel (sinon like/dislike masqués
+        // et commitSwipe bloqué tant que _sharedProfile ou data-shared traîne en session).
+        if (!_previewMode) {
+          const slug = (typeof getSharedSlug === 'function') ? getSharedSlug() : null;
+          if (!slug) {
+            _sharedProfile = null;
+            document.body.removeAttribute('data-shared');
+          }
+        }
+        deckIdx = 0; ensureDeck(true); refreshMyStatusUI(); refreshSwipeTools();
+      }
       if (name !== 'swipe')   {
         stopSwipeMusic();
         if (typeof orbSimStop === 'function') orbSimStop();
@@ -134,10 +164,10 @@
         // Respecte le recadrage choisi dans l'éditeur (posX/posY/scale) — sans ça la
         // pastille "Mon profil" montrait toujours le cover par défaut de l'image brute,
         // qui ne correspond pas forcément au recadrage voulu par l'utilisateur.
-        const ap = (u.avatarPos && typeof u.avatarPos === 'object') ? u.avatarPos : null;
-        const posX = (ap && typeof ap.posX === 'number') ? ap.posX : 50;
-        const posY = (ap && typeof ap.posY === 'number') ? ap.posY : 50;
-        const scale = (ap && typeof ap.scale === 'number') ? ap.scale : 1;
+        const ap = normalizeAvatarPos(u.avatarPos);
+        const posX = ap ? ap.posX : 50;
+        const posY = ap ? ap.posY : 50;
+        const scale = ap ? ap.scale : 1;
         avi.innerHTML = `<img src="${u.avatarUrl}" alt="${escapeHtmlMini(u.displayName || '')}" style="width:100%;height:100%;object-fit:cover;object-position:${posX}% ${posY}%;transform-origin:${posX}% ${posY}%;transform:scale(${scale})">`;
         avi.style.background = 'none';
       } else {
@@ -417,6 +447,7 @@
             const pa = JSON.parse(raw);
             if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
             _sharedProfile = null;
+            document.body.removeAttribute('data-shared');
             try { history.replaceState(null, '', '/'); } catch(_){}
           }
         } catch(_){}
@@ -838,7 +869,7 @@
         c1:'#393a41', c2:'#393a41',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
-        avatarPos: u.avatarPos || null,
+        avatarPos: normalizeAvatarPos(u.avatarPos),
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
         // Couleur Discord par défaut (#393a41) tant que l'utilisateur n'a pas choisi la sienne.
@@ -1387,6 +1418,7 @@
     function ensureDeckSync(){
       refreshMyGuildsIfNeeded();
       const wrap = document.getElementById('swipeWrap');
+      if (!wrap) return;
       wrap.innerHTML = '';
       // Lien de partage : on montre UNIQUEMENT ce profil (carte + like/dislike, pas de deck).
       // Jamais en mode aperçu (les deux s'excluent) : sinon la carte partagée peut
@@ -1841,9 +1873,9 @@
       // transform-origin DOIT matcher object-position (voir editor.html/setCroppedMedia) :
       // sinon scale() zoome autour du centre de la boîte au lieu du point de pan choisi
       // dans le recadrage, et l'image atterrit ailleurs que prévisualisé dès que scale≠1.
-      const ap = (p.avatarPos && typeof p.avatarPos === 'object') ? p.avatarPos : null;
+      const ap = normalizeAvatarPos(p.avatarPos);
       const apStyle = ap
-        ? `${(typeof ap.posX === 'number' && typeof ap.posY === 'number') ? `object-position:${ap.posX}% ${ap.posY}%;transform-origin:${ap.posX}% ${ap.posY}%;` : ''}${(typeof ap.scale === 'number' && ap.scale !== 1) ? `transform:scale(${ap.scale});` : ''}`
+        ? `object-position:${ap.posX}% ${ap.posY}%;transform-origin:${ap.posX}% ${ap.posY}%;${ap.scale !== 1 ? `transform:scale(${ap.scale});` : ''}`
         : '';
       const aviInner = p.avatarUrl
         ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;${apStyle}" alt="${p.name}">`

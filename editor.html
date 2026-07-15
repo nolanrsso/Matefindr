@@ -1828,9 +1828,17 @@ function cropPaint(){
    fond transparent. On neutralise le fond du slot dès qu'une image est posée : #1c1d22
    pour l'avatar (même anneau que la vraie carte, .swipe-card .avatar-wrap), transparent
    pour la bannière (laisse voir le dégradé de LA CARTE elle-même, comme sur le vrai site). */
+function clampMediaPos(data){
+  if(!data||typeof data!=='object')return data;
+  let s=Number(data.scale);if(!Number.isFinite(s))s=1;if(s>10)s/=100;s=Math.max(0.5,Math.min(4,s));
+  let x=Number(data.posX);if(!Number.isFinite(x))x=50;
+  let y=Number(data.posY);if(!Number.isFinite(y))y=50;
+  return Object.assign({},data,{scale:s,posX:Math.max(0,Math.min(100,x)),posY:Math.max(0,Math.min(100,y))});
+}
 function setCroppedMedia(slot,data,ph){
   slot.innerHTML='';
   if(!data){slot.innerHTML=ph;slot.style.background='';return;}
+  data=clampMediaPos(data);
   const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';
   // transform-origin DOIT matcher object-position : object-fit:cover positionne déjà le
   // contenu (posX/posY), donc si scale() zoome autour du centre de la BOÎTE (par défaut)
@@ -3947,7 +3955,7 @@ function hydrateFromSite(){
   S.handleBlur=!!u.handleBlur; S.boostShowName=(u.boostShowName!==false);
   applyTagBlur(); applyUsernameBoostStyle();
   if(typeof p.bio==='string' && p.bio.trim()){ S.bio=p.bio.trim(); $('bioSlot').textContent=S.bio; }
-  if(u.avatarUrl){ const ap=u.avatarPos||{}; S.avatar={url:u.avatarUrl,posX:(typeof ap.posX==='number'?ap.posX:50),posY:(typeof ap.posY==='number'?ap.posY:50),scale:(typeof ap.scale==='number'?ap.scale:1)}; S.avatarCustom=!!u.avatarCustom; setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+(u.displayName||'T').charAt(0).toUpperCase()+'</div>'); }
+  if(u.avatarUrl){ S.avatar=clampMediaPos({url:u.avatarUrl,posX:50,posY:50,scale:1,...((u.avatarPos&&typeof u.avatarPos==='object')?u.avatarPos:{})}); S.avatarCustom=!!u.avatarCustom; setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+(u.displayName||'T').charAt(0).toUpperCase()+'</div>'); }
   // Décoration d'avatar + point de statut Discord → la carte éditeur colle au vrai profil.
   _decorationUrl = u.decorationUrl || null;
   applyAvatarDeco();
@@ -4330,7 +4338,8 @@ $('btnBack').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); toast('�
 /* Logo Matefindr → retour à l'accueil (en sauvegardant). */
 $('logoHome').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); location.href='/'; }));
 /* Aperçu (collé aux 5 outils) : sauvegarde puis ouvre l'aperçu du profil. */
-$('btnPreview').addEventListener('click',()=>leaveEditor(()=>{ saveNow(); try{sessionStorage.setItem('mf_from_editor','1');}catch(_){}; location.href='/#preview'; }));
+/* Aperçu : pas de gate Boost (lecture seule, on veut voir la carte telle quelle). */
+$('btnPreview').addEventListener('click',()=>{ saveNow(); try{sessionStorage.setItem('mf_from_editor','1');}catch(_){}; location.href='/#preview'; });
 /* Paramètres (haut-droite) : modale centrée style connexions. */
 function openSettingsSheet(){
   activeTool=null;
