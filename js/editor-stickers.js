@@ -160,24 +160,50 @@
     return d < 0 ? d + 360 : d;
   }
 
-  /** Curseur resize le plus proche pour un axe de drag (angle écran, 0° = horizontal). */
-  function resizeCursorForAxis(deg) {
-    const mod = normDeg(deg) % 180;
-    if (mod <= 22.5 || mod >= 157.5) return 'ew-resize';
-    if (mod >= 67.5 && mod < 112.5) return 'ns-resize';
-    if (mod >= 22.5 && mod < 67.5) return 'nesw-resize';
-    return 'nwse-resize';
+  /** Angle du bord en coords écran (0° = horizontal, sens horaire CSS). */
+  function edgeScreenAngle(h, rot) {
+    if (h === 'n' || h === 's') return normDeg(rot);
+    if (h === 'e' || h === 'w') return normDeg(rot + 90);
+    return null;
   }
 
-  const XH_DRAG_AXIS = { n: 90, s: 90, e: 0, w: 0, se: 45, sw: 135, ne: -45, nw: -135 };
+  /** Angle de drag d'un coin (parallèle à la diagonale). */
+  const CORNER_DRAG_DEG = { nw: -135, ne: -45, se: 45, sw: 135 };
+
+  /** Choisit ew/ns/nesw/nwse le plus proche d'un angle cible (° écran, 0 = →). */
+  function resizeCursorForAngle(targetDeg) {
+    const t = normDeg(targetDeg);
+    const opts = [
+      { c: 'ew-resize', a: 0 },
+      { c: 'ns-resize', a: 90 },
+      { c: 'nesw-resize', a: 45 },
+      { c: 'nwse-resize', a: 135 },
+    ];
+    let best = opts[0].c;
+    let bestD = Infinity;
+    opts.forEach(o => {
+      let d = Math.abs(t - o.a);
+      if (d > 180) d = 360 - d;
+      d = Math.min(d, Math.abs(t - o.a - 180), Math.abs(t - o.a + 180));
+      if (d < bestD) { bestD = d; best = o.c; }
+    });
+    return best;
+  }
+
+  /** Curseur perpendiculaire au bord (n/s/e/w) ou le long de la diagonale (coins). */
+  function cursorForResizeHandle(h, rot) {
+    const edge = edgeScreenAngle(h, rot);
+    if (edge != null) return resizeCursorForAngle(edge + 90);
+    const drag = CORNER_DRAG_DEG[h];
+    if (drag != null) return resizeCursorForAngle(rot + drag);
+    return 'default';
+  }
 
   function syncXformCursors(el, rot) {
     const xform = el && el.querySelector('.ed-xform');
     if (!xform) return;
     xform.querySelectorAll('.ed-xh').forEach(handle => {
-      const off = XH_DRAG_AXIS[handle.dataset.h];
-      if (off == null) return;
-      handle.style.cursor = resizeCursorForAxis(rot + off);
+      handle.style.cursor = cursorForResizeHandle(handle.dataset.h, rot);
     });
   }
 
@@ -213,7 +239,7 @@
     placeHandle(el.querySelector('.sk-size'), il + iw - r, it + ih - r);
     const item = getItem(el);
     const size = el.querySelector('.sk-size');
-    if (size && item) size.style.cursor = resizeCursorForAxis((item.rot || 0) + 45);
+    if (size && item) size.style.cursor = cursorForResizeHandle('se', item.rot || 0);
   }
 
   function cropObjectPos(cl, cr, ct, cb) {
