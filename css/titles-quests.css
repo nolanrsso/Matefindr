@@ -88,31 +88,25 @@
   display:inline-flex;align-items:center;
 }
 .swipe-card .card-title-slot--clickable:hover .card-profile-title,
-.editor-page .card .card-title-slot--clickable:hover .card-profile-title{filter:brightness(1.12) saturate(1.08)}
+.editor-page .card .card-title-slot--clickable:hover .card-profile-title{filter:none}
 .swipe-card .card-title-slot .card-profile-title,
 .editor-page .card .card-title-slot .card-profile-title{margin:0;pointer-events:none}
 
 .swipe-card .card-profile-title,
-.editor-page .card .card-profile-title,
-#edProfileTitle .card-profile-title{
+.editor-page .card .card-profile-title{
   --title-glow:var(--title-color,#C7A5FF);
-  position:relative;display:inline-flex;align-items:center;justify-content:center;
-  margin:4px 0 3px;padding:6px 18px 7px;
-  border:none;border-radius:999px;cursor:default;font:inherit;
+  position:relative;display:inline-flex;align-items:center;justify-content:flex-start;
+  margin:2px 0 0;padding:0;border:none;border-radius:0;cursor:default;font:inherit;
   max-width:100%;overflow:visible;isolation:isolate;
-  background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(0,0,0,.18));
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.14),
-    0 0 0 1px rgba(255,255,255,.07),
-    0 4px 18px rgba(0,0,0,.28);
+  background:none;box-shadow:none;
 }
 .swipe-card .card-profile-title--clickable{cursor:pointer}
 .swipe-card .card-profile-title--clickable:hover,
-.editor-page .card .card-profile-title--clickable:hover{filter:brightness(1.1)}
+.editor-page .card .card-profile-title--clickable:hover{filter:brightness(1.08)}
+.swipe-card .card-title-slot--clickable:hover .card-profile-title-text{filter:brightness(1.1) saturate(1.06)}
 
 .swipe-card .card-profile-title-text,
-.editor-page .card .card-profile-title-text,
-#edProfileTitle .card-profile-title-text{
+.editor-page .card .card-profile-title-text{
   position:relative;z-index:3;display:block;
   font-family:var(--title-font,"Cinzel Decorative","Clash Display",serif);
   font-weight:var(--title-weight,700);font-size:11px;line-height:1.15;
@@ -131,31 +125,19 @@
 }
 
 .swipe-card .card-profile-title-glow,
-.editor-page .card .card-profile-title-glow,
-#edProfileTitle .card-profile-title-glow{
-  position:absolute;inset:-10px -18px;border-radius:999px;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse 88% 120% at 50% 50%,color-mix(in srgb,var(--title-glow) 72%,transparent) 0%,transparent 72%);
-  opacity:.55;filter:blur(10px);
+.editor-page .card .card-profile-title-glow{
+  position:absolute;inset:-6px -10px;border-radius:8px;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 90% 140% at 50% 50%,color-mix(in srgb,var(--title-glow) 65%,transparent) 0%,transparent 74%);
+  opacity:.5;filter:blur(8px);
 }
 .swipe-card .card-profile-title-aura,
-.editor-page .card .card-profile-title-aura,
-#edProfileTitle .card-profile-title-aura{
-  position:absolute;inset:-6px -12px;border-radius:999px;z-index:1;pointer-events:none;
-  background:radial-gradient(ellipse at center,var(--title-glow,#C7A5FF) 0%,transparent 70%);
-  opacity:.28;filter:blur(8px);
+.editor-page .card .card-profile-title-aura{
+  position:absolute;inset:-3px -6px;border-radius:6px;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse at center,var(--title-glow,#C7A5FF) 0%,transparent 72%);
+  opacity:.22;filter:blur(6px);
 }
 .swipe-card .card-profile-title-shine,
-.editor-page .card .card-profile-title-shine,
-#edProfileTitle .card-profile-title-shine{
-  position:absolute;inset:0;border-radius:inherit;z-index:2;pointer-events:none;overflow:hidden;
-}
-.swipe-card .card-profile-title-shine::after,
-.editor-page .card .card-profile-title-shine::after,
-#edProfileTitle .card-profile-title-shine::after{
-  content:"";position:absolute;top:-40%;bottom:-40%;left:0;width:38%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62),transparent);
-  animation:mf-title-shimmer 3.4s ease-in-out infinite;
-}
+.editor-page .card .card-profile-title-shine{display:none}
 
 /* Intensité glow ↔ rareté */
 .swipe-card .card-profile-title[data-rarity="1"] .card-profile-title-glow,

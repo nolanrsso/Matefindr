@@ -374,14 +374,16 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 /* position:absolute + inset (au lieu de position:relative + padding-top) : la carte
    a maintenant une hauteur FIXE (cf. .card ci-dessus) → le corps défile en interne
    (overflow-y:auto) au lieu de pousser la carte à grandir, comme la vraie carte. */
-.body{position:absolute;inset:216px 0 0 0;overflow-y:auto;padding:0 18px 18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
+.body{position:absolute;inset:216px 0 0 0;overflow-y:auto;padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
+/* Bloc pseudo + @tag + titre — même regroupement que .swipe-card .body > div (buildCard). */
+.card-meta-head{display:flex;flex-direction:column;gap:0;align-items:flex-start;margin:0;padding:0}
 .username{
   margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.05;
   display:inline-flex;align-items:center;gap:8px;align-self:flex-start;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4);
 }
 .username input{font:inherit;color:#fff;background:rgba(0,0,0,.25);border:1.5px solid rgba(255,255,255,.6);border-radius:10px;padding:2px 10px;outline:none;max-width:240px}
-.editor-page .card .body > .tag{margin-bottom:-4px}
-.tag{color:rgba(255,255,255,.7);font-size:13px;margin-top:-8px}
+.card-meta-head .tag{color:#b9bbbe;font-size:13px;margin-top:-6px;margin-bottom:0;line-height:1.25}
+.tag{color:#b9bbbe;font-size:13px;margin-top:-6px}
 .tag--clickable{cursor:pointer;border-radius:7px;transition:background .15s ease,filter .2s ease;padding:1px 4px;margin-left:-4px;display:inline-block}
 .tag--clickable:hover{background:rgba(255,255,255,.08)}
 .tag.tag--blur{filter:blur(5px);user-select:none}
@@ -456,7 +458,7 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 .uname-color-lbl{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--dim)}
 .uname-color-def{padding:8px 13px;border-radius:10px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:12px;cursor:pointer;transition:.15s}
 .uname-color-def:hover{background:rgba(255,255,255,.1)}
-.divider{height:1px;background:rgba(255,255,255,.12);margin:2px 0}
+.divider{height:1px;background:rgba(255,255,255,.08);margin:4px 0 2px}
 .bio{position:relative;padding:11px 13px;border-radius:13px;cursor:pointer;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13.5px;line-height:1.5;min-height:44px;white-space:pre-wrap}
 .bio textarea{width:100%;min-height:74px;resize:vertical;font:inherit;color:#fff;background:transparent;border:none;outline:none}
 .label-mini{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.65);text-transform:uppercase;margin-bottom:-6px}
@@ -1248,8 +1250,8 @@ html.perf-lite *{
 }
 
 /* ---- Titre profil (éditeur) : texte brut + petit bouton edit ---- */
-#edProfileTitle{margin:-10px 0 -8px;padding:0;min-height:0;line-height:1;display:block}
-.ed-title-inline{display:inline-flex;align-items:center;gap:5px;max-width:100%}
+#edProfileTitle{margin:2px 0 0;padding:0;min-height:0;line-height:1;display:block}
+.ed-title-inline{display:inline-flex;align-items:center;gap:6px;max-width:100%}
 .ed-title-text{
   font-family:var(--title-font,"Cinzel Decorative",serif);
   font-weight:var(--title-weight,700);
@@ -1262,12 +1264,14 @@ html.perf-lite *{
   -webkit-text-fill-color:currentColor;filter:none;
 }
 .ed-title-edit-btn{
-  flex:0 0 auto;width:20px;height:20px;padding:0;border:none;border-radius:6px;
-  background:rgba(255,255,255,.08);color:rgba(255,255,255,.55);
-  font-size:10px;font-weight:900;line-height:1;cursor:pointer;
-  display:grid;place-items:center;transition:background .14s ease,color .14s ease;
+  flex:0 0 auto;width:22px;height:22px;padding:0;border:none;border-radius:7px;
+  background:rgba(145,70,255,.42);color:#fff;
+  font-size:11px;font-weight:900;line-height:1;cursor:pointer;
+  display:grid;place-items:center;
+  box-shadow:0 0 0 1px rgba(145,70,255,.55),0 2px 8px rgba(145,70,255,.28);
+  transition:background .14s ease,transform .14s ease,box-shadow .14s ease;
 }
-.ed-title-edit-btn:hover{background:rgba(145,70,255,.22);color:#fff}
+.ed-title-edit-btn:hover{background:rgba(145,70,255,.62);transform:scale(1.04);box-shadow:0 0 0 1px rgba(194,130,255,.75),0 3px 12px rgba(145,70,255,.38)}
 </style>
 <link rel="stylesheet" href="css/titles-quests.css">
 </head>
@@ -1337,9 +1341,11 @@ html.perf-lite *{
       <span class="card-views" id="edCardViews" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b></b></span>
       <span class="card-reactions" id="edCardReactions" hidden></span>
       <div class="body">
-        <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
-        <div class="tag">@matefindr · en ligne sur Matefindr</div>
-        <div id="edProfileTitle"></div>
+        <div class="card-meta-head">
+          <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
+          <div class="tag">@matefindr · en ligne sur Matefindr</div>
+          <div id="edProfileTitle"></div>
+        </div>
         <div class="divider"></div>
         <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
         <div class="label-mini">Vocal du profil</div>
