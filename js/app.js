@@ -948,6 +948,7 @@
         orbs,
         orbColors: (p.orbColors && typeof p.orbColors === 'object') ? p.orbColors : null,
         orbGlow: (p.orbGlow && typeof p.orbGlow === 'object') ? p.orbGlow : null,
+        orbContour: (p.orbContour && typeof p.orbContour === 'object') ? p.orbContour : null,
         // Champs posés par admin.html -- jamais modifiés depuis ce site, mais buildUserProfile()
         // remplace TOUTE la colonne data à chaque sync : sans ce passthrough, se reconnecter
         // effacerait silencieusement le message du staff / le flag disabled / le compteur.
@@ -2454,7 +2455,7 @@
     function orbDisplayContourOff(o, p){
       if (o.contour === false) return true;
       if (o.contour === true) return false;
-      return false;
+      return !!(p.orbContour && p.orbContour[o.kind] === false);
     }
     function applyOrbCustomColor(el, hex, glowOff, contourOff){
       if (!el) return;
@@ -5070,6 +5071,7 @@
         orbs: f.orbs || p.orbs || [],
         orbColors: f.orbColors || p.orbColors || null,
         orbGlow: f.orbGlow || p.orbGlow || null,
+        orbContour: f.orbContour || p.orbContour || null,
         gifs: f.gifs || [],
         gifContour: f.gifContour !== false,
         photos: f.photos || [],

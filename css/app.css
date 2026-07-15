@@ -1264,7 +1264,7 @@
       0 0 62px 16px var(--orb-hc,rgba(47,123,216,.55)),
       0 14px 30px rgba(0,0,0,.55);
   }
-  /* Contour désactivé : retire bordure + anneau (plus de liseré sombre résiduel) */
+  /* Contour désactivé : retire bordure + anneau net (glow diffus seulement, pas de liseré) */
   .swipe-stage .orbit .orb.orb--no-contour{border:none!important}
   .swipe-stage .orbit .orb.orb--no-contour.orb--no-glow[data-kind="music"],
   .swipe-stage .orbit .orb.orb--no-contour.orb--no-glow[data-kind="game"],
@@ -1272,13 +1272,13 @@
     box-shadow:0 14px 30px rgba(0,0,0,.55)!important;
   }
   .swipe-stage .orbit .orb.orb--no-contour:not(.orb--no-glow)[data-kind="music"]{
-    box-shadow:0 0 22px 4px var(--orb-gc,rgba(30,215,96,.80)),0 0 60px 14px var(--orb-hc,rgba(29,185,84,.45)),0 14px 30px rgba(0,0,0,.55)!important;
+    box-shadow:0 0 40px 14px var(--orb-gc,rgba(30,215,96,.45)),0 0 70px 20px var(--orb-hc,rgba(29,185,84,.28)),0 14px 30px rgba(0,0,0,.55)!important;
   }
   .swipe-stage .orbit .orb.orb--no-contour:not(.orb--no-glow)[data-kind="game"]{
-    box-shadow:0 0 24px 5px var(--orb-gc,rgba(141,203,255,.85)),0 0 62px 16px var(--orb-hc,rgba(47,123,216,.55)),0 14px 30px rgba(0,0,0,.55)!important;
+    box-shadow:0 0 40px 14px var(--orb-gc,rgba(141,203,255,.45)),0 0 70px 20px var(--orb-hc,rgba(47,123,216,.28)),0 14px 30px rgba(0,0,0,.55)!important;
   }
   .swipe-stage .orbit .orb.orb--no-contour:not(.orb--no-glow)[data-kind="film"]{
-    box-shadow:0 0 24px 5px var(--orb-gc,rgba(199,165,255,.85)),0 0 62px 16px var(--orb-hc,rgba(139,92,246,.55)),0 14px 30px rgba(0,0,0,.5)!important;
+    box-shadow:0 0 40px 14px var(--orb-gc,rgba(199,165,255,.45)),0 0 70px 20px var(--orb-hc,rgba(139,92,246,.28)),0 14px 30px rgba(0,0,0,.5)!important;
   }
   .swipe-stage .orbit .orb[data-kind="voice"].playing{animation:voicePulse 1s ease-in-out infinite}
   @keyframes voicePulse{
@@ -1412,9 +1412,20 @@
   .orbit .orb-wrap--music .orb.playing{
     animation:musicGlow 1.4s ease-in-out infinite;
   }
+  .orbit .orb-wrap--music .orb.playing.orb--no-contour{
+    animation:musicGlowNoContour 1.4s ease-in-out infinite;
+  }
+  .orbit .orb-wrap--music .orb.playing.orb--no-contour.orb--no-glow{
+    animation:none;
+    box-shadow:0 14px 30px rgba(0,0,0,.55)!important;
+  }
   @keyframes musicGlow{
     0%,100%{ box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 -10px 22px rgba(0,0,0,.28), 0 0 0 2px rgba(29,185,84,.45), 0 0 22px 4px rgba(29,185,84,.65), 0 0 60px 14px rgba(29,185,84,.42), 0 14px 30px rgba(0,0,0,.45) }
     50%    { box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 -10px 22px rgba(0,0,0,.28), 0 0 0 5px rgba(29,185,84,.30), 0 0 38px 12px rgba(29,185,84,.85), 0 0 90px 24px rgba(29,185,84,.55), 0 14px 30px rgba(0,0,0,.45) }
+  }
+  @keyframes musicGlowNoContour{
+    0%,100%{ box-shadow:inset 0 0 0 1px rgba(255,255,255,.18), inset 0 -10px 22px rgba(0,0,0,.28), 0 0 36px 14px rgba(29,185,84,.4), 0 0 70px 22px rgba(29,185,84,.25), 0 14px 30px rgba(0,0,0,.45) }
+    50%    { box-shadow:inset 0 0 0 1px rgba(255,255,255,.18), inset 0 -10px 22px rgba(0,0,0,.28), 0 0 48px 18px rgba(29,185,84,.55), 0 0 90px 28px rgba(29,185,84,.35), 0 14px 30px rgba(0,0,0,.45) }
   }
   /* Orb label — floats below each bubble */
   .orb-label{
