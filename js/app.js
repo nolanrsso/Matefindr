@@ -825,6 +825,16 @@
     // Gain global appliqué à la musique (entrée + previews) — baisse le son partout (trop fort sinon)
     const ENTRY_MUSIC_GAIN = (window.MatefindrVolume && window.MatefindrVolume.GAIN) || 0.275;
     const DEFAULT_MUSIC_VOL = 0.5; // 50% par défaut
+    function mediaEffectiveVol(){
+      const MV = window.MatefindrVolume;
+      const raw = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
+      return MV ? MV.effective(raw) : raw * ENTRY_MUSIC_GAIN;
+    }
+    function refreshProfileVoiceVol(){
+      document.querySelectorAll('.card-voice').forEach(w => {
+        if (w._voiceAudio) try { w._voiceAudio.volume = mediaEffectiveVol(); } catch(_){}
+      });
+    }
 
     function buildMinimalProfile(){
       const u = state.user || {};
@@ -1753,6 +1763,8 @@
       const time = widget.querySelector('.card-voice-time');
       const audio = new Audio(src);
       audio.preload = 'metadata';
+      audio.volume = mediaEffectiveVol();
+      widget._voiceAudio = audio;
       const fmt = t => { const s = Math.floor(t || 0); return '0:' + (s < 10 ? '0' + s : s); };
       audio.addEventListener('loadedmetadata', () => { time.textContent = fmt(audio.duration); });
       audio.addEventListener('play',  () => widget.setAttribute('data-playing','true'));
@@ -2827,8 +2839,7 @@
     let _swipeMusicPausedForOrb = false;
     // Volume cible d'une bulle de musique = même réglage que la musique d'entrée.
     function orbMusicTarget(){
-      const v = (state.user && typeof state.user.musicVolume === 'number') ? state.user.musicVolume : DEFAULT_MUSIC_VOL;
-      return v * ENTRY_MUSIC_GAIN;
+      return mediaEffectiveVol();
     }
     // Quand une bulle de musique démarre : on met en pause la musique d'entrée (pas de superposition).
     function pauseProfileMusicForOrb(){
@@ -5656,6 +5667,7 @@
         const eff = MV.effective(v);
         if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
         if (_spotifyAudio) _spotifyAudio.volume = eff;
+        refreshProfileVoiceVol();
         if (typeof window.__mfVolRefresh === 'function') window.__mfVolRefresh();
         save();
       });
@@ -5680,6 +5692,7 @@
           state.user.musicVolume = v;
           if (_swipeMusicAudio) _swipeMusicAudio.volume = eff;
           if (typeof _spotifyAudio !== 'undefined' && _spotifyAudio) _spotifyAudio.volume = eff;
+          refreshProfileVoiceVol();
           const sl = document.getElementById('musicVolume');
           if (sl) {
             sl.value = Math.round(v * 100);
@@ -5690,6 +5703,7 @@
         onSave() { if (typeof save === 'function') save(); }
       });
       window.__mfVolRefresh = () => widget.refresh();
+      window.addEventListener('mf:volume', () => refreshProfileVoiceVol());
     })();
 
     // Discord resync button — fetches latest Discord profile and merges into state.user
@@ -5719,6 +5733,7 @@
         timer.textContent = '';
         if (has) {
           audioEl.src = u.profileVoice;
+          try { audioEl.volume = mediaEffectiveVol(); } catch(_){}
           preview.hidden = false;
           fab.hidden = false;
           lbl.textContent = 'Ré-enregistrer le vocal';
@@ -5780,6 +5795,7 @@
       });
       // Custom player controls
       playBtn.addEventListener('click', () => {
+        try { audioEl.volume = mediaEffectiveVol(); } catch(_){}
         if (audioEl.paused) audioEl.play().catch(()=>{});
         else audioEl.pause();
       });
@@ -5795,6 +5811,9 @@
       audioEl.addEventListener('loadedmetadata', () => {
         const dur = isFinite(audioEl.duration) ? audioEl.duration : 5;
         timeLbl.textContent = fmtTime(dur);
+      });
+      window.addEventListener('mf:volume', () => {
+        try { audioEl.volume = mediaEffectiveVol(); } catch(_){}
       });
     })();
 

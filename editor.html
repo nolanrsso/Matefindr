@@ -1838,7 +1838,7 @@ $('recPlay').addEventListener('click',()=>{
   const setUI=setPlayUI;
   if(rec.audio&&!rec.audio.paused){rec.audio.pause();setUI(false);return;}
   if(rec.audio&&rec.audio._u===rec.url&&!rec.audio.ended){rec.audio.play().then(()=>setUI(true)).catch(()=>{});return;}
-  rec.audio=new Audio(rec.url);rec.audio._u=rec.url;
+  rec.audio=new Audio(rec.url);rec.audio._u=rec.url;rec.audio.volume=editorEffectiveVol();
   rec.audio.addEventListener('timeupdate',()=>{const d=(rec.audio.duration&&isFinite(rec.audio.duration))?rec.audio.duration:(rec.dur||1);$('recBar').style.width=Math.min(100,(rec.audio.currentTime/d)*100)+'%';});
   rec.audio.addEventListener('ended',()=>{setUI(false);$('recBar').style.width='0%';});
   rec.audio.play().then(()=>setUI(true)).catch(()=>{setUI(false);toast('Lecture impossible');});
@@ -2895,6 +2895,16 @@ function renderColorPanel(){
 }
 function openColorPanel(){ closeOrbStylePanel(); renderColorPanel(); document.body.classList.add('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.add('active'); }
 function closeColorPanel(){ DarkColorPicker.close(); document.body.classList.remove('color-open'); const btn=document.querySelector('.tool[data-tool="color"]'); if(btn) btn.classList.remove('active'); }
+document.addEventListener('pointerdown',e=>{
+  if(!document.body.classList.contains('color-open')) return;
+  const panel=$('colorPanel');
+  const btn=document.querySelector('.tool[data-tool="color"]');
+  const picker=document.getElementById('darkColorPicker');
+  if(panel&&panel.contains(e.target)) return;
+  if(btn&&btn.contains(e.target)) return;
+  if(picker&&!picker.hidden&&picker.contains(e.target)) return;
+  closeColorPanel();
+},true);
 
 /* Panneau "Style de la bulle" : une bulle ou toutes les bulles placées. */
 function renderOrbStylePanel(){
@@ -3147,7 +3157,7 @@ function editorEffectiveVol(){
 }
 function applyEditorAudioVol(){
   const eff=editorEffectiveVol();
-  [_previewAudio,chipAudio,nowAudio,voiceAudio].forEach(a=>{ if(a){ try{a.volume=eff;}catch(_){} } });
+  [_previewAudio,chipAudio,nowAudio,voiceAudio,rec.audio].forEach(a=>{ if(a){ try{a.volume=eff;}catch(_){} } });
 }
 // Coupe les previews de musique d'AMBIANCE (musique d'entrée) — quand une bulle son démarre.
 function stopAmbiencePreview(){ if(nowAudio){nowAudio.pause();nowAudio=null;} if(chipAudio){chipAudio.pause();chipAudio=null;} }
