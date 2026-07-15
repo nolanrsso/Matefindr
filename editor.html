@@ -109,15 +109,26 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .topbar .logo{height:46px;width:auto;display:block;filter:drop-shadow(0 4px 18px rgba(255,31,158,.55))}
 .topbar .crumb{color:var(--dim);font-size:13px;font-weight:600}
 .topbar .note{color:var(--dim);font-size:11.5px;border:1px dashed var(--stroke-2);border-radius:999px;padding:5px 12px}
-/* Boutons topbar : Aperçu (gauche) / Paramètres (droite) */
-.top-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:60px;padding:0 16px;border-radius:16px;border:1px solid var(--stroke-2);cursor:pointer;
-  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));backdrop-filter:blur(18px) saturate(150%);
-  color:#fff;font-family:inherit;font-weight:700;font-size:13px;transition:transform .12s ease,filter .16s ease,border-color .14s ease}
-.top-btn:hover{transform:translateY(-1px);filter:brightness(1.1);border-color:rgba(255,255,255,.28)}
-.top-btn:active{transform:translateY(0) scale(.97)}
-.top-btn svg{width:17px;height:17px}
-.top-btn--quests svg{width:23px;height:23px}
-@media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{min-height:52px;padding:0 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}.top-btn--quests svg{width:27px;height:27px}}
+/* Boutons topbar (Quêtes / Paramètres) — même verre + hover violet que Mon lien */
+.top-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 14px 8px 12px;border-radius:14px;border:1px solid var(--stroke-2);cursor:pointer;
+  background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));
+  backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+  box-shadow:0 10px 28px rgba(0,0,0,.35);
+  color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;
+  transition:background .14s ease,border-color .14s ease,transform .12s ease,box-shadow .14s ease}
+.top-btn:hover{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.55);box-shadow:0 10px 28px rgba(145,70,255,.22)}
+.top-btn:active{transform:scale(.97)}
+.top-btn svg{width:18px;height:18px;flex:0 0 auto;opacity:.92}
+.top-btn--quests svg{width:20px;height:20px}
+.top-btn--quests{margin-left:4px}
+@media(max-width:560px){
+  .topbar .crumb,.topbar .note{display:none}
+  .top-btn{min-height:46px;width:46px;padding:0;font-size:0;gap:0;border-radius:14px}
+  .top-btn span{display:none}
+  .top-btn svg{width:20px;height:20px}
+  .top-btn--quests svg{width:22px;height:22px}
+  .top-btn:hover{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.55)}
+}
 
 /* Sélecteur d'orientation (Bureau / Portrait / Paysage) — bloc normal centré
    juste au-dessus de la carte (dans .card-zone, PAS dans .card-frame : les
@@ -785,11 +796,12 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 }
 .link-panel-btn{
   display:inline-flex;align-items:center;gap:9px;padding:8px 12px 8px 10px;margin:0;
-  border:none;border-radius:12px;cursor:pointer;font:inherit;font-weight:800;font-size:13.5px;color:#fff;
-  background:transparent;transition:background .14s ease,transform .12s ease
+  border:1px solid transparent;border-radius:12px;cursor:pointer;font:inherit;font-weight:800;font-size:13.5px;color:#fff;
+  background:transparent;
+  transition:background .14s ease,border-color .14s ease,transform .12s ease,box-shadow .14s ease
 }
 .link-panel-btn svg{width:18px;height:18px;flex:0 0 auto;opacity:.92}
-.link-panel-btn:hover{background:rgba(145,70,255,.18)}
+.link-panel-btn:hover{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.55);box-shadow:0 8px 22px rgba(145,70,255,.18)}
 .link-panel-btn:active{transform:scale(.97)}
 @media(max-width:600px){
   .link-panel{right:10px;bottom:18px;padding:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -801,7 +813,7 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
   }
   .link-panel-btn span{display:none}
   .link-panel-btn svg{width:20px;height:20px}
-  .link-panel-btn:hover{background:rgba(145,70,255,.22)}
+  .link-panel-btn:hover{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.55);box-shadow:0 10px 28px rgba(145,70,255,.22)}
 }
 
 .link-pop .conn-pop-head{margin-bottom:4px}
@@ -1354,8 +1366,8 @@ html.perf-lite *{
 <header class="topbar">
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
   <span class="crumb">/ éditeur de profil</span>
-  <div class="topbar-actions">
   <button type="button" class="top-btn top-btn--quests" id="btnQuests" title="Quêtes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8c1.1 0 2 .9 2 2v11.5c0 .8-.6 1.5-1.4 1.5H7.4C6.6 18 6 17.3 6 16.5V5c0-1.1.9-2 2-2z"/><path d="M9 3v2.5c0 .8.7 1.5 1.5 1.5h3c.8 0 1.5-.7 1.5-1.5V3"/><path d="M8.5 9h7M8.5 12h5.5M8.5 15h4"/><path d="M16.5 4.5 19 7l-5.5 5.5-2-.5-.5-2L16.5 4.5z"/></svg><span>Quêtes</span></button>
+  <div class="topbar-actions">
   <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
   </div>
 </header>
