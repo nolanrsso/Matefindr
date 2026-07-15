@@ -578,19 +578,19 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 
 /* Volume musique — bouton glass + barre blanche au survol (haut-gauche) */
 .mf-vol{position:fixed;top:70px;left:14px;z-index:39;display:flex;align-items:center;gap:0}
-.mf-vol-btn{width:60px;height:60px;border-radius:20px;border:1px solid rgba(255,255,255,.24);background:rgba(10,8,24,.58);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .15s ease;box-shadow:0 4px 18px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.12)}
-.mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(10,8,24,.68)}
-.mf-vol-btn svg{width:22px;height:22px;display:block}
+.mf-vol-btn{width:45px;height:45px;border-radius:15px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
+.mf-vol:hover .mf-vol-btn,.mf-vol:focus-within .mf-vol-btn{background:rgba(0,0,0,.14);border-color:rgba(255,255,255,.22)}
+.mf-vol-btn svg{width:26px;height:26px;display:block}
 .mf-vol-slash{display:none}
 .mf-vol.muted .mf-vol-wave{display:none}
 .mf-vol.muted .mf-vol-slash{display:block}
 .mf-vol.muted .mf-vol-btn{color:rgba(255,126,182,.92)}
 .mf-vol-track{width:0;opacity:0;overflow:hidden;margin-left:0;flex:0 0 auto;transition:width .22s ease,opacity .18s ease,margin-left .22s ease}
-.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:80px;opacity:1;margin-left:10px}
-.mf-vol-range{-webkit-appearance:none;appearance:none;width:80px;height:5px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
-.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-.mf-vol-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol-btn{width:52px;height:52px;border-radius:18px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:60px}.mf-vol-range{width:60px}}
+.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:92px;opacity:1;margin-left:8px}
+.mf-vol-range{-webkit-appearance:none;appearance:none;width:92px;height:6px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
+.mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+.mf-vol-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
+@media(max-width:600px){.mf-vol{top:58px;left:10px}.mf-vol-btn{width:39px;height:39px;border-radius:13px}.mf-vol-btn svg{width:22px;height:22px}.mf-vol:hover .mf-vol-track,.mf-vol:focus-within .mf-vol-track{width:72px}.mf-vol-range{width:72px}}
 
 /* Presets de profil (Boost) — bas-gauche */
 .pset-panel{position:fixed;left:22px;bottom:26px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
@@ -654,7 +654,9 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
 .conn .conn-ico-svg{display:grid;place-items:center;color:#fff;opacity:.92}
 .conn .conn-ico-svg svg{width:20px;height:20px}
-.conn-add-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease;flex:0 0 auto;width:max-content;max-width:100%;order:-1}
+.conn-add-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 13px;border-radius:11px;border:1.5px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.04);color:#fff;font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:.14s ease;flex:0 0 auto;width:max-content;max-width:100%;order:-1}
+.conn-add-btn--icon{width:40px;height:40px;padding:0;flex:0 0 40px;border-radius:11px}
+.conn-add-btn--icon svg{width:18px;height:18px}
 .conn-add-btn:hover{border-color:rgba(145,70,255,.55);background:rgba(145,70,255,.12)}
 .conn-add-btn svg{width:15px;height:15px;opacity:.85}
 .conn .conn-del{position:absolute;right:-5px;top:-5px;width:17px;height:17px;border-radius:50%;background:#FF4FA0;border:2px solid var(--card);display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 6px rgba(255,79,160,.5)}
@@ -3211,13 +3213,19 @@ function reorderConnections(fromId,toId){
 function renderConnections(){
   const box=$('connections'); if(!box||!MC()) return;
   box.innerHTML='';
+  MC().connEnsureOrder(S.connections);
+  const connIds=MC().connOrderedIds(S.connections);
   const add=document.createElement('button');
-  add.type='button'; add.className='conn-add-btn';
-  add.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter connexion';
+  add.type='button';
+  add.className='conn-add-btn'+(connIds.length?' conn-add-btn--icon':'');
+  add.title='Ajouter connexion';
+  add.setAttribute('aria-label','Ajouter connexion');
+  add.innerHTML=connIds.length
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter connexion';
   add.addEventListener('click',openConnPick);
   box.appendChild(add);
-  MC().connEnsureOrder(S.connections);
-  MC().connOrderedIds(S.connections).forEach(id=>{
+  connIds.forEach(id=>{
     const app=MC().connApp(id); if(!app) return;
     const entry=MC().connGet(S.connections,id);
     const b=document.createElement('button'); b.type='button'; b.className='conn set';
