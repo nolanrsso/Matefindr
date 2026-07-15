@@ -3019,8 +3019,9 @@
         document.addEventListener('touchend', onUp);
       }
       const wrap = document.getElementById('swipeWrap');
-      const actions = wrap.parentElement.querySelector('.swipe-actions');
+      const actions = document.getElementById('screen-swipe')?.querySelector('.swipe-actions');
       function setDir(dir){
+        if (!actions) return;
         actions.classList.toggle('dir-right', dir === 'right');
         actions.classList.toggle('dir-left',  dir === 'left');
       }
@@ -3033,8 +3034,8 @@
         // Aperçu / lien perso : on déplace librement la carte, sans stamps LIKE/NOPE
         // ni boutons de swipe (le lien perso n'a plus qu'un cœur, pas de dislike).
         if (_previewMode || _sharedProfile) return;
-        like.style.opacity = Math.max(0, Math.min(1, dx / 120));
-        nope.style.opacity = Math.max(0, Math.min(1, -dx / 120));
+        if (like) like.style.opacity = Math.max(0, Math.min(1, dx / 120));
+        if (nope) nope.style.opacity = Math.max(0, Math.min(1, -dx / 120));
         if (dx > 40) setDir('right');
         else if (dx < -40) setDir('left');
         else setDir(null);
@@ -3053,7 +3054,9 @@
           // Retour au centre avec un léger ressort.
           card.style.transition = 'transform .55s cubic-bezier(.34,1.4,.5,1)';
           card.style.transform = '';
-          like.style.opacity = 0; nope.style.opacity = 0; setDir(null);
+          if (like) like.style.opacity = 0;
+          if (nope) nope.style.opacity = 0;
+          setDir(null);
         }
       }
       card.addEventListener('mousedown', onDown);
@@ -6605,7 +6608,11 @@
     document.getElementById('orbPreviewBtn')?.addEventListener('click', openOrbEditOverlay);
     document.getElementById('accountChip')?.addEventListener('click', (e) => {
       e.preventDefault();
-      // Clic sur « mon compte » → ouvre directement l'éditeur de profil.
+      if (typeof finishShared === 'function' && (_sharedProfile || document.body.getAttribute('data-shared') === 'true')) {
+        try { sessionStorage.setItem('mf_open_editor', '1'); } catch(_){}
+        finishShared();
+        return;
+      }
       location.href = 'editor.html';
     });
 
@@ -6759,6 +6766,19 @@
       } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
       if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
       if (prof.disabled === true) { try { history.replaceState(null,'','/'); } catch(_){} showAccountDisabledMessage(); return; }
+      // Propriétaire connecté sur son propre lien perso → hub normal (swipe + éditeur),
+      // pas le mode visiteur (like/dislike masqués, une seule carte figée).
+      try {
+        const { data: { session } } = await window.__supa.auth.getSession();
+        if (session && prof.uid === session.user.id) {
+          _sharedProfile = null;
+          document.body.removeAttribute('data-shared');
+          try { history.replaceState(null, '', '/'); } catch(_){}
+          revealApp();
+          if (typeof enterFullApp === 'function') enterFullApp();
+          return;
+        }
+      } catch(_){}
       prof._showViews = true;
       _sharedProfile = prof;
       document.body.setAttribute('data-shared', 'true'); // masque like/dislike/swipe/FABs, montre cœur + commentaires
@@ -6791,6 +6811,9 @@
     function finishShared(){
       _sharedProfile = null;
       document.body.removeAttribute('data-shared');
+      let openEditor = false;
+      try { openEditor = sessionStorage.getItem('mf_open_editor') === '1'; sessionStorage.removeItem('mf_open_editor'); } catch(_){}
+      if (openEditor) { location.href = 'editor.html'; return; }
       try { history.replaceState(null,'','/'); } catch(_){}
       if (typeof enterFullApp === 'function') enterFullApp();
     }

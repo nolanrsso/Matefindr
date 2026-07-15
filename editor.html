@@ -3280,6 +3280,7 @@ function renderConnections(){
   });
   if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
 }
+function openConnPick(){
   const grid=$('connPickGrid'); if(!grid||!MC()) return;
   grid.innerHTML='';
   MC().CONN_APPS.forEach(app=>{
@@ -3766,6 +3767,94 @@ async function refreshDisabledStatus(){
   }catch(e){ console.warn('[editor] refresh disabled status', e); }
 }
 refreshDisabledStatus();
+async function edWaitSession(sb, tries){
+  tries=tries||10;
+  for(let i=0;i<tries;i++){
+    try{
+      const { data:{ session } }=await sb.auth.getSession();
+      if(session) return session;
+    }catch(_){}
+    await new Promise(r=>setTimeout(r,120));
+  }
+  return null;
+}
+async function edEnsureLocalProfile(){
+  const st=readSite(); const u=st.user||{}, p=st.profile||{};
+  const sb=edSupa(); if(!sb) return false;
+  try{
+    const session=await edWaitSession(sb);
+    if(!session){
+      if(!u.displayName && !u.avatarUrl && !(p&&p.bio)) toast('Connecte-toi sur matefindr.com puis reviens ici');
+      return false;
+    }
+    const hasLocal=!!(u.displayName||u.avatarUrl||(p&&p.bio));
+    const { data:row }=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+    const d=(row&&row.data&&typeof row.data==='object')?row.data:null;
+    const dn=(d&&d.name)||row?.display_name||null;
+    if(!dn && !row?.avatar_url) return hasLocal;
+    if(hasLocal && dn && u.displayName===dn) return true;
+    st.user=st.user||{}; st.profile=st.profile||{};
+    const su=st.user, pr=st.profile;
+    su.uid=session.user.id;
+    if(row?.discord_id) su.discordId=row.discord_id;
+    if(dn) su.displayName=dn;
+    if(d&&d.tag) su.discordTag=d.tag;
+    else if(row?.discord_tag) su.discordTag=row.discord_tag;
+    if(d){
+      pr.age=d.age||null; pr.gender=d.gender||''; pr.country=d.country||''; pr.countryFlag=d.countryFlag||'';
+      pr.looking=d.looking||'game';
+      pr.bio=(d.bio&&d.bio.indexOf('Complète ta bio')===-1)?d.bio:'';
+      pr.connections=(d.connections&&typeof d.connections==='object')?d.connections:{};
+      pr.userOrbs=Array.isArray(d.orbs)?d.orbs:[];
+      if(d.avatarUrl){ su.avatarUrl=d.avatarUrl; su.avatarPos=d.avatarPos||null; if(!/cdn\.discordapp\.com/i.test(d.avatarUrl)) su.avatarCustom=true; }
+      if(d.bannerUrl){ su.bannerUrl=d.bannerUrl; su.bannerPos=d.bannerPos||null; if(!/cdn\.discordapp\.com/i.test(d.bannerUrl)) su.bannerCustom=true; }
+      if(d.decorationUrl) su.decorationUrl=d.decorationUrl;
+      if(d.profileColor) su.profileColor=d.profileColor;
+      if(d.profileColor2) su.profileColor2=d.profileColor2;
+      if(d.nameColor) su.nameColor=d.nameColor;
+      if(typeof d.showBoostName==='boolean') su.boostShowName=d.showBoostName;
+      if(typeof d.boost==='boolean') su.boost=d.boost;
+      if(d.boostPlan) su.boostPlan=d.boostPlan;
+      if(Array.isArray(d.gifs)) su.gifs=d.gifs;
+      if(typeof d.gifContour==='boolean') su.gifContour=d.gifContour;
+      if(Array.isArray(d.photos)) su.photos=d.photos;
+      if(typeof d.photoContour==='boolean') su.photoContour=d.photoContour;
+      if(d.bg) su.boostBg=d.bg;
+      if(d.bgPos) su.boostBgPos=d.bgPos;
+      if(typeof d.handleBlur==='boolean') su.handleBlur=d.handleBlur;
+      if(d.profileVoice) su.profileVoice=d.profileVoice;
+      if(d.titlesData) su.titlesData=d.titlesData;
+      if(d.discordLive) su.discordLive=d.discordLive;
+    }
+    if(!su.avatarUrl && row?.avatar_url) su.avatarUrl=row.avatar_url;
+    if(!su.bannerUrl && row?.banner_url) su.bannerUrl=row.banner_url;
+    try{ localStorage.setItem(STATE_KEY,JSON.stringify(st)); }catch(_){}
+    hydrateFromSite();
+    return true;
+  }catch(e){ console.warn('[editor] cloud profile hydrate', e); return false; }
+}
+function isGenericPresetSnap(snap){
+  if(!snap) return true;
+  if(snap.username && snap.username!=='Matefindr_user') return false;
+  if(snap.nameCustom || snap.avatarCustom) return false;
+  if(snap.bio && String(snap.bio).trim()) return false;
+  if(Array.isArray(snap.orbs)&&snap.orbs.length) return false;
+  if(Array.isArray(snap.gifs)&&snap.gifs.length) return false;
+  if(Array.isArray(snap.photos)&&snap.photos.length) return false;
+  return true;
+}
+function syncActivePresetFromSite(){
+  const st=readSite(); const dn=st.user&&st.user.displayName;
+  if(!dn || dn==='Matefindr_user') return;
+  hydrateFromSite();
+  const idx=(_activePresetIdx===null||_activePresetIdx>=PRESETS.length)?0:_activePresetIdx;
+  _activePresetIdx=idx; saveActivePresetIdx();
+  const snap=PRESETS[idx];
+  if(!isGenericPresetSnap(snap) && snap.username===dn) return;
+  if(PRESETS.length===0) PRESETS.push(snapshotProfile());
+  else PRESETS[idx]=snapshotProfile();
+  savePresetsLS();
+}
 /* Message du staff (admin.html) : bannière fermable, empilée sous celle de désactivation
    si les deux sont présentes. Reste fermée jusqu'à un nouveau message (ts différent). */
 function showStaffBanner(msg){
@@ -3937,14 +4026,10 @@ function hydrateFromSite(){
 document.body.classList.add('not-boost'); // par défaut non-Boost (hydrate corrige si Boost)
 applyColor(S.c1);
 drawIdleWave();
-hydrateFromSite();
 applyCanvasMode(); // pose data-canvas + état actif du sélecteur (défaut : bureau)
-syncCanvasModeToRealDevice(); // corrige immédiatement si on ouvre l'éditeur sur un vrai téléphone étroit
-renderOrbs(); // affiche au moins la bulle "+" même sans bulle existante
-if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes); // position finale une fois le profil chargé
+syncCanvasModeToRealDevice();
 let _canvasSyncResize=null;
 window.addEventListener('resize',()=>{ clearTimeout(_canvasSyncResize); _canvasSyncResize=setTimeout(syncCanvasModeToRealDevice,150); });
-// Désélectionne le sticker (GIF/photo) sélectionné dès qu'on clique ailleurs sur la page.
 document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile')) deselectAllStickers(); });
 
 /* ===== Volume musique : câblage du widget ===== */
@@ -4011,22 +4096,21 @@ async function blankPresetSnapshot(){
 function loadActivePresetIdx(){ try{ const v=localStorage.getItem(ACTIVE_PSET_KEY); const n=v===null?NaN:parseInt(v,10); return Number.isInteger(n)&&n>=0?n:null; }catch(_){ return null; } }
 function saveActivePresetIdx(){ try{ if(_activePresetIdx===null) localStorage.removeItem(ACTIVE_PSET_KEY); else localStorage.setItem(ACTIVE_PSET_KEY,String(_activePresetIdx)); }catch(_){} }
 let _activePresetIdx=loadActivePresetIdx();
-// 1er chargement (migration) : aucun preset encore enregistré → le profil actuel devient "Preset 1".
-if(PRESETS.length===0){ PRESETS.push(snapshotProfile()); savePresetsLS(); _activePresetIdx=0; saveActivePresetIdx(); }
-else {
+async function edBootProfile(){
+  hydrateFromSite();
+  await edEnsureLocalProfile();
+  syncActivePresetFromSite();
   if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length){ _activePresetIdx=0; saveActivePresetIdx(); }
-  // Recharge le preset actif par-dessus ce que hydrateFromSite() a lu dans
-  // matefindr_state : ce fichier est aussi touché par index.html (aperçu,
-  // resync Discord auto...) et peut avoir dérivé du contenu du preset actif
-  // entretemps. Sans ce recalage, revenir de l'aperçu pouvait faire
-  // apparaître (et donc sauvegarder par-dessus) un autre preset que celui
-  // vraiment actif.
-  applyPreset(PRESETS[_activePresetIdx]);
+  if(PRESETS.length===0){
+    PRESETS.push(snapshotProfile()); savePresetsLS(); _activePresetIdx=0; saveActivePresetIdx();
+  } else {
+    applyPreset(PRESETS[_activePresetIdx]);
+  }
+  renderOrbs();
+  if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes);
+  _lastVisualFingerprint=visualFingerprint();
 }
-// Ligne de base pour lastEditedAt : posée APRÈS toute l'hydratation/normalisation du
-// boot (qui peut elle-même déclencher persist() sans aucune vraie modif) -- seules les
-// modifs faites APRÈS ce point (donc par l'utilisateur) bougeront lastEditedAt.
-_lastVisualFingerprint=visualFingerprint();
+edBootProfile();
 /* Garde multi-onglets : si un AUTRE onglet (ex: cet éditeur laissé ouvert ailleurs)
    modifie les presets ou le preset actif pendant que celui-ci est ouvert, ce tab-ci
    travaillerait sur des données périmées puis écraserait la modif la plus récente
