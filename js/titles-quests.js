@@ -67,8 +67,27 @@
   ];
 
   const VOTES_UNLOCK = {
-    id: 'votes_received', group: 'profil', label: 'Votes reçus sur ton profil', stat: 'votesReceived', threshold: 10,
+    id: 'votes_received', group: 'profil', label: 'Votes reçus sur ton profil', stat: 'votesReceived', threshold: 5,
     title: 'Voix du Public', rarity: 2,
+  };
+
+  const RATING_MIN_VOTERS = 5;
+
+  /** Pièces gagnées à chaque palier terminé (niveau 1 = 36, niveau 2 = 62, …). */
+  const QUEST_COIN_REWARD = [
+    36, 62, 98, 146, 212, 286, 372, 470, 580, 702, 836, 982, 1140, 1310, 1492, 1686, 1892, 2110, 2340, 2582,
+    2836, 3102, 3380, 3670, 3972, 4286, 4612, 4950, 5300, 5662, 6036, 6422, 6820, 7230, 7652, 8086, 8532, 8990,
+    9460, 9942, 10436, 10942, 11460, 11990, 12532, 13086, 13652, 14230, 14820, 15422, 16036, 16662, 17300, 17950,
+    18612, 19286, 19972, 20670, 21380, 22102, 22836, 23582, 24340, 25110, 25892, 26686, 27492, 28310, 29140, 29982,
+    30836, 31702, 32580, 33470, 34372, 35286, 36212, 37150, 38100, 39062, 40036, 41022, 42020, 43030, 44052, 45086,
+    46132, 47190, 48260, 49342, 50436, 51542, 52660, 53790, 54932, 56086, 57252, 58430, 59620, 60822, 62036, 63262,
+    64500, 65750, 67012, 68286, 69572, 70870, 72180, 73502, 74836, 76182, 77540, 78910, 80292, 81686, 83092, 84510,
+    85940, 87382, 88836, 90302, 91780, 93270, 94772, 96286, 97812, 99350, 100900, 102462,
+  ];
+
+  const TITLE_PRICE_BY_RARITY = {
+    2: 150, 3: 280, 4: 450, 5: 680, 6: 950, 7: 1300, 8: 1750, 9: 2400,
+    10: 3200, 11: 4200, 12: 5500, 13: 7200, 14: 10000,
   };
 
   const BETA_TESTER_ID = 'beta_tester';
@@ -142,7 +161,7 @@
       threshold: VOTES_UNLOCK.threshold,
       title: VOTES_UNLOCK.title,
       rarity: VOTES_UNLOCK.rarity,
-      desc: 'Reçois 10 votes sur ton profil pour débloquer les titres de note.',
+      desc: 'Reçois 5 votes sur ton profil pour débloquer les titres de note.',
     });
     STAT_MISSIONS.forEach(m => {
       MILESTONES.forEach((th, i) => {
@@ -170,7 +189,7 @@
         title: r.label.charAt(0).toUpperCase() + r.label.slice(1),
         rarity: r.rarity,
         noTranslate: true,
-        desc: `Note moyenne entre ${r.min} et ${r.max} (min. 10 votants).`,
+        desc: `Note moyenne entre ${r.min} et ${r.max} (min. ${RATING_MIN_VOTERS} votants).`,
       });
     });
     return list;
@@ -250,11 +269,11 @@
   function missionProgress(m, stats) {
     if (m.id === VOTES_UNLOCK.id || m.stat === 'votesReceived') {
       const cur = stats.votesReceived || 0;
-      const tgt = m.threshold || 10;
+      const tgt = m.threshold || RATING_MIN_VOTERS;
       return { current: cur, target: tgt, pct: Math.min(100, tgt ? (cur / tgt) * 100 : 0), complete: cur >= tgt, locked: false };
     }
     if (m.stat === 'rating') {
-      if ((stats.ratingVotes || 0) < 10) return { current: stats.ratingVotes || 0, target: 10, pct: Math.min(100, ((stats.ratingVotes || 0) / 10) * 100), locked: true };
+      if ((stats.ratingVotes || 0) < RATING_MIN_VOTERS) return { current: stats.ratingVotes || 0, target: RATING_MIN_VOTERS, pct: Math.min(100, ((stats.ratingVotes || 0) / RATING_MIN_VOTERS) * 100), locked: true };
       const ok = stats.rating >= (m.ratingMin || 0) && stats.rating < (m.ratingMax || 99);
       return { current: stats.rating, target: m.ratingMax, pct: ok ? 100 : Math.min(99, (stats.rating / 5) * 100), locked: false, complete: ok };
     }
@@ -280,7 +299,7 @@
     });
 
     const ratingIds = RATING_TITLES.map(r => r.id);
-    if ((stats.ratingVotes || 0) >= 10) {
+    if ((stats.ratingVotes || 0) >= RATING_MIN_VOTERS) {
       RATING_TITLES.forEach(r => {
         if (stats.rating >= r.min && stats.rating < r.max) eligible.push(r.id);
       });
@@ -297,11 +316,78 @@
     return uniq;
   }
 
-  function refreshPending(stats) {
-    const td = getTitlesData();
+  function missionCoinLevel(m) {
+    if (!m || isRatingTitle(m) || m.stat === 'beta') return -1;
+    if (m.id === VOTES_UNLOCK.id) return 0;
+    const match = String(m.id).match(/^(\w+)_(\d+)$/);
+    if (!match) return -1;
+    const th = parseInt(match[2], 10);
+    const idx = MILESTONES.indexOf(th);
+    if (idx >= 0) return idx;
+    if (th >= 2500) return MILESTONES.length + Math.floor((th - 2500) / 500);
+    return -1;
+  }
+
+  function questCoinReward(levelIndex) {
+    if (levelIndex < 0) return 0;
+    return QUEST_COIN_REWARD[Math.min(levelIndex, QUEST_COIN_REWARD.length - 1)];
+  }
+
+  function getQuestCoinClaims() {
+    const u = readSite().user || {};
+    return Array.isArray(u.questCoinClaims) ? u.questCoinClaims : [];
+  }
+
+  function saveQuestCoinClaims(list) {
+    const s = readSite();
+    s.user = s.user || {};
+    s.user.questCoinClaims = list;
+    writeSite(s);
+    if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
+  }
+
+  function processQuestCoinRewards(stats) {
     const eligible = computeEligible(stats);
-    const pending = eligible.filter(id => !td.collected.includes(id));
-    if (pending.length !== td.pending.length || pending.some((x, i) => x !== td.pending[i])) {
+    const claims = getQuestCoinClaims();
+    let coins = getCoins();
+    let gained = 0;
+    let lastReward = 0;
+    eligible.forEach(id => {
+      if (claims.includes(id)) return;
+      const m = getMission(id);
+      const lvl = missionCoinLevel(m);
+      if (lvl < 0) return;
+      const reward = questCoinReward(lvl);
+      coins += reward;
+      gained += reward;
+      lastReward = reward;
+      claims.push(id);
+    });
+    if (gained > 0) {
+      saveQuestCoinClaims(claims);
+      setCoins(coins);
+      tqToast(gained === lastReward ? `+${gained} pièces — palier terminé !` : `+${gained} pièces — paliers terminés !`);
+    }
+    return gained;
+  }
+
+  function refreshPending(stats) {
+    processQuestCoinRewards(stats);
+    const eligible = computeEligible(stats);
+    const td = getTitlesData();
+    // Titres de note : débloqués automatiquement (non achetables).
+    const ratingAuto = eligible.filter(id => isRatingTitle(getMission(id)));
+    if (ratingAuto.length) {
+      const collected = td.collected.slice();
+      let changed = false;
+      ratingAuto.forEach(id => {
+        if (!collected.includes(id)) { collected.push(id); bumpGlobalStat(id); changed = true; }
+      });
+      if (changed) saveTitlesData({ collected });
+    }
+    const td2 = getTitlesData();
+    const pending = eligible.filter(id => !td2.collected.includes(id) && !isRatingTitle(getMission(id)));
+    if (pending.length !== td2.pending.length || pending.some((x, i) => x !== td2.pending[i])) {
       saveTitlesData({ pending });
     }
     return pending;
@@ -349,13 +435,12 @@
 
   function titleCoinPrice(m) {
     if (!m || isRatingTitle(m) || m.id === BETA_TESTER_ID) return null;
-    const table = { 2: 150, 3: 200, 4: 275, 5: 350, 6: 450, 7: 550, 8: 675, 9: 800, 10: 950, 11: 1100, 12: 1300, 13: 1500, 14: 1750 };
-    return table[m.rarity] || 250;
+    return TITLE_PRICE_BY_RARITY[m.rarity] || 250;
   }
 
   function getCoins() {
     const u = readSite().user || {};
-    return typeof u.coins === 'number' ? u.coins : 1000;
+    return typeof u.coins === 'number' ? u.coins : 0;
   }
 
   function setCoins(n) {
@@ -462,11 +547,11 @@
       if (p.current > 0 || p.pct >= 18 || td.pending.includes(id)) soon.add(id);
     });
 
-    if ((stats.ratingVotes || 0) > 0 && (stats.ratingVotes || 0) < 10 && !td.collected.includes('rt_subhuman')) {
+    if ((stats.ratingVotes || 0) > 0 && (stats.ratingVotes || 0) < RATING_MIN_VOTERS && !td.collected.includes('rt_subhuman')) {
       soon.add('rt_subhuman');
     }
 
-    if ((stats.ratingVotes || 0) >= 10) {
+    if ((stats.ratingVotes || 0) >= RATING_MIN_VOTERS) {
       RATING_TITLES.forEach(r => {
         if (td.collected.includes(r.id)) return;
         if (stats.rating >= r.min - 0.35 && stats.rating < r.max + 0.15) soon.add(r.id);
@@ -708,7 +793,7 @@
 
   function nextMissionForTrack(track, stats) {
     if (track.isRating) {
-      if ((stats.ratingVotes || 0) < 10) {
+      if ((stats.ratingVotes || 0) < RATING_MIN_VOTERS) {
         return getMission('rt_subhuman') || MISSIONS.find(m => m.id === 'rt_subhuman');
       }
       const bracket = RATING_TITLES.find(r => stats.rating >= r.min && stats.rating < r.max);
@@ -735,20 +820,49 @@
     groups.forEach(g => {
       html += `<h3 class="tq-group-title">${esc(g.label)}</h3>`;
       QUEST_TRACKS.filter(t => t.group === g.id).forEach(track => {
+        if (track.isRating) {
+          const m = nextMissionForTrack(track, stats);
+          const p = m ? missionProgress(m, stats) : null;
+          const done = m && td.collected.includes(m.id);
+          const ready = m && td.pending.includes(m.id);
+          const tiersHtml = RATING_TITLES.map(r => {
+            const rm = getMission(r.id);
+            const owned = td.collected.includes(r.id);
+            const active = (stats.ratingVotes || 0) >= RATING_MIN_VOTERS && stats.rating >= r.min && stats.rating < r.max;
+            return `<li class="tq-rating-tier${owned ? ' owned' : ''}${active ? ' active' : ''}"><span>${esc(titleDisplay(rm || { title: r.label, noTranslate: true }))}</span><span class="tq-rating-range">${r.min} – ${r.max}</span></li>`;
+          }).join('');
+          html += `<div class="tq-mission tq-mission--rating${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}">
+            <div class="tq-mission-head">
+              <span class="tq-mission-title">${esc(track.label)}</span>
+              <span class="tq-mission-rarity" data-r="14">★ note</span>
+            </div>
+            <p class="tq-mission-desc">Titres exclusifs selon ta note — <b>pas de pièces</b>, débloqués automatiquement après ${RATING_MIN_VOTERS} votes sur ton profil.</p>
+            ${p ? `<div class="tq-bar"><span style="width:${p.pct.toFixed(1)}%"></span></div>
+            <div class="tq-mission-foot">
+              <span>${p.locked ? `${Math.floor(p.current)}/${RATING_MIN_VOTERS} votants` : `Note ${p.current.toFixed(1)}/5 · ${esc(titleDisplay(m))}`}</span>
+              ${done ? '<span class="tq-done-lbl">Débloqué</span>' : (p.locked ? '' : '<span class="tq-auto-lbl">Auto</span>')}
+            </div>` : ''}
+            <button type="button" class="tq-rating-details-toggle" aria-expanded="false">Voir les titres selon ta note</button>
+            <ul class="tq-rating-tiers" hidden>${tiersHtml}</ul>
+          </div>`;
+          return;
+        }
         const m = nextMissionForTrack(track, stats);
         if (!m) return;
         const p = missionProgress(m, stats);
         const done = td.collected.includes(m.id);
         const ready = td.pending.includes(m.id);
+        const coinLvl = missionCoinLevel(m);
+        const coinReward = coinLvl >= 0 ? questCoinReward(coinLvl) : 0;
         html += `<div class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
           <div class="tq-mission-head">
             <span class="tq-mission-title">${esc(track.label)}</span>
             <span class="tq-mission-rarity" data-r="${m.rarity || 1}">★${m.rarity || 1}</span>
           </div>
-          <p class="tq-mission-desc">Prochain titre : <b>${esc(m.title)}</b></p>
+          <p class="tq-mission-desc">Prochain titre : <b>${esc(m.title)}</b>${coinReward ? ` · <span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}</p>
           <div class="tq-bar"><span style="width:${p.pct.toFixed(1)}%"></span></div>
           <div class="tq-mission-foot">
-            <span>${m.stat === 'rating' ? (p.locked ? `${Math.floor(p.current)}/10 votants` : p.current.toFixed(1) + '/5') : `${Math.floor(p.current)} / ${p.target}`}</span>
+            <span>${`${Math.floor(p.current)} / ${p.target}`}</span>
             ${ready ? `<button type="button" class="tq-collect" data-collect="${esc(m.id)}">Récolter</button>` : (done ? '<span class="tq-done-lbl">Obtenu</span>' : '')}
           </div>
         </div>`;
@@ -756,6 +870,15 @@
     });
     html += '</div>';
     body.innerHTML = html;
+    body.querySelectorAll('.tq-rating-details-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const list = btn.nextElementSibling;
+        const open = list.hasAttribute('hidden');
+        list.toggleAttribute('hidden', !open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? 'Masquer les titres' : 'Voir les titres selon ta note';
+      });
+    });
     body.querySelectorAll('[data-collect]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (collectMission(btn.getAttribute('data-collect'))) {
@@ -763,6 +886,17 @@
         }
       });
     });
+  }
+
+  function renderShopTitleRow(meta, td) {
+    const price = titleCoinPrice(meta);
+    if (price == null) return '';
+    const typo = titleTypoCss(meta);
+    const canBuy = getCoins() >= price;
+    return `<div class="tq-shop-row" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}">
+      <span class="tq-title-label">${esc(titleDisplay(meta))}</span>
+      <button type="button" class="tq-buy-btn"${canBuy ? '' : ' disabled'} data-buy="${esc(meta.id)}" data-price="${price}">Acheter · ${price.toLocaleString('fr-FR')} 🪙</button>
+    </div>`;
   }
 
   function renderTitlePickRow(meta, td, soonIds, opts) {
@@ -793,14 +927,12 @@
     const coins = getCoins();
     const soonIds = computeSoonTitleIds(stats, td);
     const ownedList = MISSIONS.filter(m => td.collected.includes(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
-    const soonList = MISSIONS.filter(m => !td.collected.includes(m.id) && soonIds.has(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
     const shopList = MISSIONS.filter(m => {
       if (td.collected.includes(m.id)) return false;
       if (isRatingTitle(m)) return false;
       if (m.id === BETA_TESTER_ID) return false;
-      if (soonIds.has(m.id)) return false;
       return titleCoinPrice(m) != null;
-    }).sort((a, b) => (a.rarity || 0) - (b.rarity || 0));
+    }).sort((a, b) => (titleCoinPrice(a) || 0) - (titleCoinPrice(b) || 0));
     let html = `<div class="tq-titles-toolbar">
       <div class="tq-coins" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
       <label>Couleur du titre
@@ -811,16 +943,12 @@
       html += '<div class="tq-section-label">Mes titres</div>';
       ownedList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
     }
-    if (soonList.length) {
-      html += '<div class="tq-section-label">Bientôt débloqués</div>';
-      soonList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
-    }
     if (shopList.length) {
-      html += '<div class="tq-section-label">Boutique</div>';
-      shopList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds, { shop: true }); });
+      html += '<div class="tq-section-label">Acheter</div>';
+      shopList.forEach(m => { html += renderShopTitleRow(getMission(m.id) || m, td); });
     }
-    if (!ownedList.length && !soonList.length && !shopList.length) {
-      html += '<p class="tq-titles-empty">Aucun titre pour l’instant — complète des quêtes pour en débloquer.</p>';
+    if (!ownedList.length && !shopList.length) {
+      html += '<p class="tq-titles-empty">Aucun titre pour l’instant — complète des quêtes pour gagner des pièces.</p>';
     }
     html += '</div>';
     body.innerHTML = html;
@@ -838,9 +966,10 @@
         btn.title = `${st.count} joueurs · ${st.pct}%`;
       });
     });
-    body.querySelectorAll('.tq-title-pick.shop').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
+    body.querySelectorAll('.tq-buy-btn[data-buy]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-buy');
         const price = parseInt(btn.getAttribute('data-price'), 10);
         if (!id || !price) return;
         if (getCoins() < price) {
@@ -920,6 +1049,13 @@
     if (!prev?.collected?.includes(BETA_TESTER_ID) || !prev?.equipped) {
       saveTitlesData({ collected: td.collected, equipped: td.equipped, pending: td.pending || [] });
     }
+    (async () => {
+      try {
+        const stats = await fetchStats({ supa: global.__supa, uid: u.uid, ratingRec: opts.getRatingRec?.() });
+        syncStatsLocal(stats);
+        refreshPending(stats);
+      } catch (_) {}
+    })();
   }
 
   async function openQuests(o) {
@@ -971,6 +1107,8 @@
     saveTitlesData,
     fetchStats,
     syncStatsLocal,
+    processQuestCoinRewards,
+    questCoinReward,
     refreshPending,
     collectMission,
     cardTitleHtml,

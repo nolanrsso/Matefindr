@@ -116,7 +116,8 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .top-btn:hover{transform:translateY(-1px);filter:brightness(1.1);border-color:rgba(255,255,255,.28)}
 .top-btn:active{transform:translateY(0) scale(.97)}
 .top-btn svg{width:17px;height:17px}
-@media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{min-height:52px;padding:0 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}}
+.top-btn--quests svg{width:23px;height:23px}
+@media(max-width:560px){.topbar .crumb,.topbar .note{display:none}.top-btn{min-height:52px;padding:0 12px;font-size:0;gap:0}.top-btn svg{width:20px;height:20px}.top-btn--quests svg{width:27px;height:27px}}
 
 /* Sélecteur d'orientation (Bureau / Portrait / Paysage) — bloc normal centré
    juste au-dessus de la carte (dans .card-zone, PAS dans .card-frame : les
@@ -889,6 +890,9 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .cats button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px;border-radius:11px;border:1.5px solid var(--stroke);background:rgba(255,255,255,.03);color:var(--dim);font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;transition:.14s ease}
 .cats button:hover{color:#fff}
 .cats button.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
+.cats button.cat-soon{opacity:.72;cursor:not-allowed;flex-direction:column;gap:2px;padding:7px 6px;line-height:1.15}
+.cats button.cat-soon small{font-size:9px;font-weight:700;letter-spacing:.04em;color:#FFD15C;text-transform:uppercase}
+.cats button.cat-soon:hover{color:var(--dim)}
 
 /* Aperçu des bulles actives dans l'en-tête du sheet Mes bulles */
 .sh-head-tools{display:flex;align-items:center;gap:8px;margin-left:auto;margin-right:8px;min-width:0;flex:1 1 auto;justify-content:flex-end}
@@ -2012,7 +2016,7 @@ document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener
 // Sélecteur d'orientation → bascule le mode d'édition (Bureau / Portrait / Paysage).
 document.querySelectorAll('.canvas-mode-btn').forEach(btn=>{btn.addEventListener('click',()=>setCanvasMode(btn.dataset.mode));});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');const sb=$('sheetBackdrop');if(sb)sb.hidden=true;document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
-function openBubblesSheet(){if(typeof closeColorPanel==='function')closeColorPanel();if(typeof closeOrbStylePanel==='function')closeOrbStylePanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');const sb=$('sheetBackdrop');if(sb)sb.hidden=false;$('sheet').classList.add('open');}
+function openBubblesSheet(){if(isOrbKindSoon(orbKind))orbKind='music';if(typeof closeColorPanel==='function')closeColorPanel();if(typeof closeOrbStylePanel==='function')closeOrbStylePanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');const sb=$('sheetBackdrop');if(sb)sb.hidden=false;$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='',rightExtra='')=>`<h3><span class="sh-title">${t}${badge}</span>${rightExtra}<button class="close" data-close>✕</button></h3>`;
 $('sheet').addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeSheet();});
 $('sheetBackdrop')?.addEventListener('click',closeSheet);
@@ -2025,6 +2029,9 @@ const ORB_ICON={
   film:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M17 7h5M2 17h5M17 17h5"/></svg>',
 };
 const ORBCAP_FREE=4, ORBCAP_BOOST=16;
+const ORB_KIND_SOON={game:1,film:1};
+function isOrbKindSoon(k){return!!ORB_KIND_SOON[k];}
+function showOrbKindSoonToast(){toast('Bientôt redisponible');}
 function orbMax(){ return document.body.classList.contains('not-boost')?ORBCAP_FREE:ORBCAP_BOOST; }
 let orbKind='music';
 function updateOrbCount(){
@@ -2231,21 +2238,24 @@ function renderBubblesSheet(sh){
   sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,headTools)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
-      <button data-k="game" class="${orbKind==='game'?'active':''}">Jeu</button>
-      <button data-k="film" class="${orbKind==='film'?'active':''}">Série·Film</button>
+      <button data-k="game" class="cat-soon${orbKind==='game'?' active':''}" type="button" aria-disabled="true"><span>Jeu</span><small>Bientôt redisponible</small></button>
+      <button data-k="film" class="cat-soon${orbKind==='film'?' active':''}" type="button" aria-disabled="true"><span>Série·Film</span><small>Bientôt redisponible</small></button>
     </div>
-    <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"></div>
-    <div class="sugg-list" id="orbSugg"></div>`;
+    <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"${isOrbKindSoon(orbKind)?' disabled':''}></div>
+    <div class="sugg-list" id="orbSugg">${isOrbKindSoon(orbKind)?'<div class="hint">Bientôt redisponible — les bulles jeu et série·film reviennent très bientôt.</div>':''}</div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   refreshOrbHeaderPreview(sh);
-  sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];refreshOrbHeaderPreview(sh);input.focus();runOrbSearch(input.value.trim());}));
+  sh.querySelectorAll('#orbCats button').forEach(b=>b.addEventListener('click',()=>{
+    if(isOrbKindSoon(b.dataset.k)){showOrbKindSoonToast();if(orbKind!=='music'){orbKind='music';sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x.dataset.k==='music'));input.placeholder=ph.music;input.disabled=false;runOrbSearch(input.value.trim());}return;}
+    orbKind=b.dataset.k;sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x===b));input.placeholder=ph[orbKind];input.disabled=false;refreshOrbHeaderPreview(sh);input.focus();runOrbSearch(input.value.trim());
+  }));
   const allStyleBtn=sh.querySelector('#orbStyleAllBtn');
   if(allStyleBtn) allStyleBtn.addEventListener('click',e=>{e.stopPropagation();openOrbStyleAllPanel();});
   let deb=null;
   input.addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();deb=setTimeout(()=>runOrbSearch(q),orbKind==='music'?320:80);});
   // jeu/film : montrer la liste curatée tout de suite
-  setTimeout(()=>{input.focus();if(orbKind!=='music')runOrbSearch('');},250);
+  setTimeout(()=>{input.focus();if(orbKind==='music')runOrbSearch('');else if(isOrbKindSoon(orbKind)){orbKind='music';sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x.dataset.k==='music'));input.placeholder=ph.music;input.disabled=false;}},250);
 }
 function renderOrbSugg(sugg,results,kind){
   sugg.innerHTML='';
@@ -2257,6 +2267,7 @@ function renderOrbSugg(sugg,results,kind){
   });
 }
 async function ensureCoverThenAdd(r,kind){
+  if(isOrbKindSoon(kind)){showOrbKindSoonToast();return;}
   let cover=r.cover;
   if(!cover&&(kind==='game'||kind==='film')){toast('Recherche de l\'image…');cover=await fetchSuggCover(kind,r.orb.title);}
   if(!cover){toast('Pas d\'image trouvée — choisis un autre titre');return;}
@@ -2276,6 +2287,7 @@ let _orbReqId=0;
 async function runOrbSearch(q){
   const reqId=++_orbReqId;
   const sugg=document.getElementById('orbSugg');if(!sugg)return;
+  if(isOrbKindSoon(orbKind)){sugg.innerHTML='<div class="hint">Bientôt redisponible — les bulles jeu et série·film reviennent très bientôt.</div>';return;}
   if(orbKind==='music'){
     if(q.length<2){sugg.innerHTML='';return;}
     sugg.innerHTML='<div class="hint">Recherche…</div>';
@@ -2293,6 +2305,7 @@ async function runOrbSearch(q){
   hydrateCovers(sugg,results,orbKind,reqId);
 }
 function addOrb(o){
+  if(isOrbKindSoon(o.kind)){showOrbKindSoonToast();return;}
   if(S.orbs.length>=orbMax()){toast('Limite : '+orbMax()+' bulles'+(document.body.classList.contains('not-boost')?' (16 avec Boost)':''));return;}
   if(S.orbs.some(x=>x.kind===o.kind&&x.title===o.title)){toast('Déjà ajoutée');return;}
   S.orbs.push(o); renderOrbs();
@@ -3777,7 +3790,8 @@ function buildDbProfile(st){
     staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
     discordLive:u.discordLive||null,
     titlesData:u.titlesData||null,
-    coins:typeof u.coins==='number'?u.coins:1000,
+    coins:typeof u.coins==='number'?u.coins:0,
+    questCoinClaims:Array.isArray(u.questCoinClaims)?u.questCoinClaims:[],
     slugChangedAt:u.slugChangedAt||null,
   };
 }
@@ -3923,6 +3937,7 @@ async function edEnsureLocalProfile(){
       if(d.profileVoice) su.profileVoice=d.profileVoice;
       if(d.titlesData) su.titlesData=d.titlesData;
       if(typeof d.coins==='number') su.coins=d.coins;
+      if(Array.isArray(d.questCoinClaims)) su.questCoinClaims=d.questCoinClaims;
       if(d.discordLive) su.discordLive=d.discordLive;
     }
     if(!su.avatarUrl && row?.avatar_url) su.avatarUrl=row.avatar_url;

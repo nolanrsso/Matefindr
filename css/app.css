@@ -845,6 +845,7 @@
   body[data-auth="in"] .nav-ico{display:inline-flex}
   .nav-ico:hover{background:rgba(0,0,0,.14);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
   .nav-ico svg{width:18px;height:18px;display:block}
+  .nav-ico--quests svg{width:24px;height:24px}
   #navShareLink{color:#fff}
   .msg-chat-sub--hidden{color:var(--ink-dim);font-style:italic}
 
@@ -3666,7 +3667,12 @@
     cursor:pointer;transition:.15s ease;font-family:inherit;
   }
   .acc-orb-cat.active{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
+  .acc-orb-cat.cat-soon{opacity:.72;cursor:not-allowed;flex-direction:column;gap:1px;line-height:1.15}
+  .acc-orb-cat.cat-soon small{font-size:9px;font-weight:700;color:#FFD15C;letter-spacing:.04em;text-transform:uppercase}
   .acc-orb-cat:hover:not(.active){background:rgba(255,255,255,.08);color:#fff}
+  .oeo-cats button.oeo-cat--soon{opacity:.72;cursor:not-allowed;flex-direction:column;gap:1px;line-height:1.15}
+  .oeo-cats button.oeo-cat--soon small{font-size:9px;font-weight:700;color:#FFD15C;letter-spacing:.04em;text-transform:uppercase}
+  .oeo-cats button.oeo-cat--soon:hover{background:rgba(255,255,255,.04);color:var(--dim)}
   .acc-orb-form{display:flex;gap:8px;margin-bottom:16px}
   .acc-orb-input-wrap{flex:1;position:relative}
   .acc-orb-input-wrap .acc-input{width:100%;margin:0;box-sizing:border-box}

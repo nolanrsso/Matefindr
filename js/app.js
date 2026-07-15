@@ -1328,6 +1328,28 @@
       };
     }
 
+    /* Agrégat des notes profil pour le tri découverte (cache léger par fetch). */
+    const RATING_MIN_VOTERS_DISCOVER = 5;
+    async function fetchProfileRatingMap(uids) {
+      if (!window.__supa || !uids || !uids.length) return {};
+      try {
+        const { data } = await window.__supa.from('profile_reactions').select('profile_id, rating').in('profile_id', uids.slice(0, 200));
+        const acc = {};
+        (data || []).forEach(row => {
+          const id = row.profile_id;
+          const v = Number(row.rating);
+          if (!acc[id]) acc[id] = { sum: 0, count: 0 };
+          if (!Number.isNaN(v)) { acc[id].sum += v; acc[id].count += 1; }
+        });
+        const out = {};
+        Object.keys(acc).forEach(id => {
+          const { sum, count } = acc[id];
+          out[id] = { avg: count ? sum / count : 0, count };
+        });
+        return out;
+      } catch (_) { return {}; }
+    }
+
     /* SELECT tous les autres profils (cache 30s pour ne pas spam). */
     let _profilesInFlight = null;
     async function fetchOtherProfiles(force){
@@ -1344,11 +1366,27 @@
           const result = await Promise.race([q, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]);
           const { data, error } = result;
           if (error) { console.warn('[Matefindr] fetch profiles failed', error.message || error); return _remoteProfiles; }
-          // Tri temporaire (règle appliquée une fois, pas figée) : plus un profil a de
-          // photos+GIFs, plus tôt il apparaît. .sort() est stable → l'ordre updated_at
-          // DESC de la requête sert de départage naturel à nombre de médias égal.
+          // Tri découverte : note moyenne (avec aléatoire) + médias.
+          const uids = (data || []).map(r => r.id).filter(Boolean);
+          const ratingMap = await fetchProfileRatingMap(uids);
           const mediaCount = (p) => (Array.isArray(p.photos) ? p.photos.length : 0) + (Array.isArray(p.gifs) ? p.gifs.length : 0);
-          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).filter(p => p.disabled !== true).sort((a, b) => mediaCount(b) - mediaCount(a));
+          const DISCOVER_RANDOM = 18;
+          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).filter(p => p.disabled !== true)
+            .map(p => {
+              const r = ratingMap[p.uid] || { avg: 0, count: 0 };
+              const voteFactor = r.count >= RATING_MIN_VOTERS_DISCOVER ? 1 : (r.count / RATING_MIN_VOTERS_DISCOVER);
+              const ratingScore = r.avg * voteFactor * 22;
+              const mediaScore = mediaCount(p) * 1.2;
+              const jitter = Math.random() * DISCOVER_RANDOM;
+              return { p, score: ratingScore + mediaScore + jitter };
+            })
+            .sort((a, b) => b.score - a.score)
+            .map(x => {
+              const r = ratingMap[x.p.uid] || { avg: 0, count: 0 };
+              x.p.profileRating = r.avg;
+              x.p.profileRatingVotes = r.count;
+              return x.p;
+            });
           _remoteFetchedAt = Date.now();
           return _remoteProfiles;
         } catch (e) { console.warn('[Matefindr] fetch profiles error', e); return _remoteProfiles; }
@@ -3763,6 +3801,10 @@
     }
 
     // ---------- Orb manager ----------
+    const ORB_KIND_SOON = new Set(['game', 'film', 'anime']);
+    function isOrbKindSoon(kind) { return ORB_KIND_SOON.has(kind); }
+    function showOrbKindSoonToast() { showToast('🕐', 'Bientôt redisponible', 'Les bulles jeu et série·film reviennent très bientôt.'); }
+
     let selectedOrbKind = 'music';
     const orbPlaceholders = {
       music:'Recherche un son Spotify…',
@@ -3834,6 +3876,7 @@
 
     document.querySelectorAll('.acc-orb-cat').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (isOrbKindSoon(btn.dataset.kind)) { showOrbKindSoonToast(); return; }
         document.querySelectorAll('.acc-orb-cat').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedOrbKind = btn.dataset.kind;
@@ -3857,6 +3900,7 @@
       state.profile.userOrbs = state.profile.userOrbs || [];
       if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
       const orb = orbOverride || _pendingSpotifyOrb || {kind: selectedOrbKind, title: val};
+      if (isOrbKindSoon(orb.kind)) { showOrbKindSoonToast(); return; }
       // Empêche les doublons (même kind + même titre normalisé)
       const normTitle = (orb.title || '').toLowerCase().trim();
       const dup = (state.profile.userOrbs || []).some(o => o.kind === orb.kind && (o.title || '').toLowerCase().trim() === normTitle);
@@ -4362,6 +4406,7 @@
        Items pending cover are dimmed and labelled "...". A click on an item
        ensures a cover is fetched before adding — no cover = no bulle. */
     async function ensureCoverThenAdd(r, kind){
+      if (isOrbKindSoon(kind)) { showOrbKindSoonToast(); return; }
       let cover = r.cover;
       if (!cover && (kind === 'game' || kind === 'film' || kind === 'anime')) {
         cover = await fetchSuggCover(kind, r.orb.title);
@@ -4426,6 +4471,8 @@
       const reqId = ++_suggReqId;
       const sugg = document.getElementById('spotifySugg');
       const kind = selectedOrbKind;
+
+      if (isOrbKindSoon(kind)) { closeSugg(); return; }
 
       if (kind === 'music') {
         if (val.length < 2) { closeSugg(); return; }
@@ -6610,11 +6657,13 @@
       let oeoKind = 'music';
       document.querySelectorAll('#oeoCats button').forEach(b => {
         b.addEventListener('click', () => {
+          if (isOrbKindSoon(b.dataset.kind)) { showOrbKindSoonToast(); return; }
           document.querySelectorAll('#oeoCats button').forEach(x => x.classList.remove('active'));
           b.classList.add('active');
           oeoKind = b.dataset.kind;
           const ph = { music:'Recherche un son Spotify…', game:'ex: Valorant, Minecraft…', film:'ex: One Piece, Inception…' };
           document.getElementById('oeoSearch').placeholder = ph[oeoKind] || 'Tape ici…';
+          document.getElementById('oeoSearch').disabled = false;
           runOeoSearch(document.getElementById('oeoSearch').value);
         });
       });
@@ -6624,6 +6673,10 @@
         clearTimeout(_oeoDebounce);
         _oeoDebounce = setTimeout(async () => {
           const sugg = document.getElementById('oeoSugg');
+          if (isOrbKindSoon(oeoKind)) {
+            sugg.innerHTML = '<div style="color:#FFD15C;font-size:12.5px;padding:8px;line-height:1.45">Bientôt redisponible — les bulles jeu et série·film reviennent très bientôt.</div>';
+            return;
+          }
           sugg.innerHTML = '<div style="color:#72767d;font-size:12.5px;padding:8px">Chargement…</div>';
           let results = [];
           if (oeoKind === 'music') {
@@ -6663,6 +6716,7 @@
               `<div class="sp-info"><div class="sp-title">${escapeHtmlMini(r.name)}</div>` +
               `<div class="sp-artist">${escapeHtmlMini(r.sub || '')}</div></div>`;
             item.addEventListener('click', async () => {
+              if (isOrbKindSoon(oeoKind) || isOrbKindSoon(r.orb.kind)) { showOrbKindSoonToast(); return; }
               // Make sure we have a cover before adding
               if (!r.cover && oeoKind !== 'music') {
                 r.cover = await fetchSuggCover(oeoKind, r.orb.title);
