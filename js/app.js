@@ -1635,6 +1635,25 @@
        - en arrière des bulles (.orbit z:5) et de la carte (main z:6)
        - positions calculées en pixels viewport à partir des % de la carte
        - se mettent à jour à chaque resize */
+    function applySwipeStickerImg(img, m) {
+      if (!img || !m) return;
+      const sx = m.scaleX || 1;
+      const sy = m.scaleY || 1;
+      img.style.objectFit = 'cover';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.display = 'block';
+      if (m.posX != null && m.posY != null) {
+        img.style.objectPosition = m.posX + '% ' + m.posY + '%';
+        img.style.transformOrigin = m.posX + '% ' + m.posY + '%';
+        const sc = m.scale || 1;
+        img.style.transform = 'scale(' + (sc * sx) + ', ' + (sc * sy) + ')';
+      } else {
+        img.style.objectPosition = '50% 50%';
+        img.style.transformOrigin = '50% 50%';
+        img.style.transform = (sx === 1 && sy === 1) ? '' : ('scale(' + sx + ', ' + sy + ')');
+      }
+    }
     let _swipeGifsResize = null;
     function renderSwipeGifs(p){
       // Nettoie l'ancien layer s'il existe
@@ -1673,6 +1692,8 @@
           y: (typeof m.y === 'number') ? m.y : 30,
           w: (typeof m.w === 'number') ? m.w : 32,
           rot: m.rot || 0,
+          posX: m.posX, posY: m.posY, scale: m.scale,
+          scaleX: m.scaleX, scaleY: m.scaleY,
         };
       }
       function reposition(){
@@ -1682,14 +1703,12 @@
           const wpx = (p.w / 100) * wr.width;
           const cx = wr.left + (p.x / 100) * wr.width;
           const cy = wr.top  + (p.y / 100) * wr.height;
-          // Centrage par transform (comme l'éditeur, translate(-50%,-50%)) — PAS par
-          // wpx/2 sur le top : la hauteur réelle du GIF dépend de son ratio image
-          // (souvent non carré), donc un offset basé sur la largeur décale l'image
-          // verticalement d'autant que (largeur - hauteur)/2.
           el.style.left = cx + 'px';
           el.style.top  = cy + 'px';
           el.style.width = wpx + 'px';
           el.style.transform = `translate(-50%,-50%) rotate(${p.rot}deg)`;
+          const img = el.querySelector('img');
+          if (img) applySwipeStickerImg(img, p);
         });
       }
       reposition();
@@ -1734,6 +1753,8 @@
           y: (typeof m.y === 'number') ? m.y : 30,
           w: (typeof m.w === 'number') ? m.w : 32,
           rot: m.rot || 0,
+          posX: m.posX, posY: m.posY, scale: m.scale,
+          scaleX: m.scaleX, scaleY: m.scaleY,
         };
       }
       function reposition(){
@@ -1747,6 +1768,8 @@
           el.style.top  = cy + 'px';
           el.style.width = wpx + 'px';
           el.style.transform = `translate(-50%,-50%) rotate(${p2.rot}deg)`;
+          const img = el.querySelector('img');
+          if (img) applySwipeStickerImg(img, p2);
         });
       }
       reposition();

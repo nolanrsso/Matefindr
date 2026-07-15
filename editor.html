@@ -886,6 +886,36 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
    même sans bordure visible. */
 #photoLayer.no-contour .sticker-inner,
 #stickerLayer.no-contour .sticker-inner{border:none;box-shadow:none}
+#photoLayer{z-index:2}
+.sticker-inner img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+
+/* Menu contextuel stickers (GIFs + photos) */
+.ed-ctx{position:fixed;z-index:320;min-width:210px;padding:6px;border-radius:12px;
+  background:linear-gradient(180deg,rgba(32,32,36,.98),rgba(22,22,26,.99));
+  border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 50px rgba(0,0,0,.65);
+  display:flex;flex-direction:column;gap:2px}
+.ed-ctx[hidden]{display:none!important}
+.ed-ctx button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:8px 10px;border:none;border-radius:8px;
+  background:transparent;color:#fff;font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
+.ed-ctx button:hover{background:rgba(145,70,255,.22)}
+.ed-ctx kbd{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.04em}
+.ed-ctx-sep{height:1px;margin:3px 6px;background:rgba(255,255,255,.1)}
+.ed-ctx-sub{position:relative}
+.ed-ctx-sub-btn{width:100%}
+.ed-ctx-arr{color:var(--dim);font-size:14px}
+.ed-ctx-sub-menu{position:absolute;left:100%;top:0;margin-left:4px;min-width:210px;padding:6px;border-radius:12px;
+  background:linear-gradient(180deg,rgba(32,32,36,.98),rgba(22,22,26,.99));border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 18px 50px rgba(0,0,0,.65);display:none;flex-direction:column;gap:2px}
+.ed-ctx-sub:hover .ed-ctx-sub-menu{display:flex}
+.ed-stretch-pop{position:fixed;z-index:321;width:200px;padding:12px;border-radius:12px;
+  background:linear-gradient(180deg,rgba(32,32,36,.98),rgba(22,22,26,.99));border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 18px 50px rgba(0,0,0,.65);color:#fff;font-size:12px}
+.ed-stretch-pop label{display:flex;align-items:center;gap:8px;margin:8px 0}
+.ed-stretch-pop input{flex:1}
+.ed-stretch-ok{margin-top:6px;width:100%;padding:7px;border-radius:8px;border:none;background:#9146FF;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.ed-marquee{position:fixed;z-index:25;border:1.5px dashed rgba(145,70,255,.85);background:rgba(145,70,255,.12);pointer-events:none;border-radius:4px}
+.ed-marquee[hidden]{display:none!important}
+.sticker.selected .sticker-inner{outline:2px dashed rgba(145,70,255,.75);outline-offset:3px}
 
 /* catégories de bulles (onglets, comme le site) */
 .cats{display:flex;gap:8px;margin-bottom:10px}
@@ -1257,10 +1287,10 @@ html.perf-lite *{
 
 <header class="topbar">
   <img src="assets/logo.svg" alt="Matefindr" class="logo" id="logoHome" title="Retour à l'accueil" style="cursor:pointer">
+  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
   <span class="crumb">/ éditeur de profil</span>
   <div class="topbar-actions">
   <button type="button" class="top-btn top-btn--quests" id="btnQuests" title="Quêtes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8c1.1 0 2 .9 2 2v11.5c0 .8-.6 1.5-1.4 1.5H7.4C6.6 18 6 17.3 6 16.5V5c0-1.1.9-2 2-2z"/><path d="M9 3v2.5c0 .8.7 1.5 1.5 1.5h3c.8 0 1.5-.7 1.5-1.5V3"/><path d="M8.5 9h7M8.5 12h5.5M8.5 15h4"/><path d="M16.5 4.5 19 7l-5.5 5.5-2-.5-.5-2L16.5 4.5z"/></svg><span>Quêtes</span></button>
-  <button type="button" class="top-btn top-btn--link" id="btnShareLink" title="Créer ton lien de profil partageable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg><span>Mon lien</span></button>
   <button type="button" class="top-btn top-btn--settings" id="btnSettings" title="Paramètres du compte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg><span>Paramètres</span></button>
   </div>
 </header>
@@ -1521,6 +1551,7 @@ html.perf-lite *{
 <script src="js/core.js"></script>
 <script src="js/discord-presence.js"></script>
 <script src="js/dark-color-picker.js"></script>
+<script src="js/editor-stickers.js"></script>
 <script src="js/titles-quests.js"></script>
 <script src="js/account-modals.js"></script>
 <script src="js/volume.js"></script>
@@ -2509,19 +2540,16 @@ function renderGifsSheet(sh){
 let _lastGifPlace=null;
 function addGif(url){
   if(S.gifs.length>=GIF_MAX){toast('Limite : '+GIF_MAX+' GIFs');return;}
-  const last=S.gifs[S.gifs.length-1];
-  // Spawn EXACTEMENT là où l'utilisateur a posé le dernier GIF (sinon : à gauche de la carte par défaut)
-  const base=_lastGifPlace||(last?{x:last.x,y:last.y,w:last.w}:{x:-18,y:58,w:30});
-  // Décalage UNIQUEMENT vertical → garde le même X (reste visible à gauche, ne dérive pas derrière la carte)
+  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-18,y:58,w:48};
   const dy=S.gifs.length?6:0;
-  const g={url,x:base.x,y:base.y+dy,w:base.w,rot:0};
+  const g={url,x:spawn.x,y:spawn.y+dy,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.gifs.push(g);
   _lastGifPlace={x:g.x,y:g.y,w:g.w};
   renderGifs();
   updateGifCount();
   toast('GIF ajouté');
 }
-function renderGifs(){const layer=$('stickerLayer');layer.innerHTML='';layer.classList.toggle('no-contour',S.gifContour===false);S.gifs.forEach((g,i)=>layer.appendChild(makeSticker(g,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
+function renderGifs(){const layer=$('stickerLayer');layer.innerHTML='';layer.classList.toggle('no-contour',S.gifContour===false);S.gifs.forEach((g,i)=>layer.appendChild(window.__EditorStickers?__EditorStickers.makeEl(g,i,layer,'gif'):makeSticker(g,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
 
 /* ===== Modes d'orientation (Paysage / Portrait) =====
    Chaque bulle/GIF garde une position PAR MODE (posByMode). En basculant, on
@@ -2583,34 +2611,9 @@ function syncCanvasModeToRealDevice(){
    selectSticker() au pointerdown du sticker, désélection globale au clic ailleurs
    (voir écouteur document tout en bas du fichier) ou en cliquant sa vignette dans
    le panneau Photos (voir renderPhotosSheet). */
-function deselectAllStickers(){ document.querySelectorAll('.sticker.selected').forEach(x=>x.classList.remove('selected')); }
-function selectSticker(el){ if(!el||el.classList.contains('selected'))return; deselectAllStickers(); el.classList.add('selected'); }
-function makeSticker(g,idx,layer){
-  if(typeof g.x!=='number')g.x=50; if(typeof g.y!=='number')g.y=28; if(typeof g.w!=='number')g.w=34; if(typeof g.rot!=='number')g.rot=0;
-  const el=document.createElement('div'); el.className='sticker';
-  const apply=()=>{el.style.left=g.x+'%';el.style.top=g.y+'%';el.style.width=g.w+'%';el.style.transform=`translate(-50%,-50%) rotate(${g.rot}deg)`;};
-  apply();
-  el.innerHTML=`<div class="sticker-inner"><img src="${g.url}" alt="" draggable="false"></div>
-    <button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    <div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
-    <div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>`;
-  const center=()=>{const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
-  el.querySelector('.sk-del').addEventListener('pointerdown',e=>e.stopPropagation());
-  el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.gifs.splice(idx,1);renderGifs();toast('GIF retiré');updateGifCount();});
-  // déplacer
-  let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();selectSticker(el);try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('gif');});
-  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();g.x=(cx-lr.left)/lr.width*100;g.y=(cy-lr.top)/lr.height*100;apply();});
-  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastGifPlace={x:g.x,y:g.y,w:g.w};persist();};
-  el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
-  // taille
-  const rz=el.querySelector('.sk-size');
-  rz.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{rz.setPointerCapture(e.pointerId);}catch(_){}const c=center();const d0=Math.max(8,Math.hypot(e.clientX-c.x,e.clientY-c.y));const w0=g.w;const mv=ev=>{g.w=clamp(w0*(Math.hypot(ev.clientX-c.x,ev.clientY-c.y)/d0),12,75);apply();};const up=ev=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up);try{rz.releasePointerCapture(ev.pointerId);}catch(_){}_lastGifPlace={x:g.x,y:g.y,w:g.w};persist();};rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);});
-  // rotation
-  const ro=el.querySelector('.sk-rot');
-  ro.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{ro.setPointerCapture(e.pointerId);}catch(_){}const c=center();const a0=Math.atan2(e.clientY-c.y,e.clientX-c.x)*180/Math.PI;const r0=g.rot;const mv=ev=>{const a=Math.atan2(ev.clientY-c.y,ev.clientX-c.x)*180/Math.PI;g.rot=Math.round(r0+(a-a0));apply();};const up=ev=>{ro.removeEventListener('pointermove',mv);ro.removeEventListener('pointerup',up);try{ro.releasePointerCapture(ev.pointerId);}catch(_){}persist();};ro.addEventListener('pointermove',mv);ro.addEventListener('pointerup',up);});
-  return el;
-}
+function deselectAllStickers(){ if(window.__EditorStickers) __EditorStickers.deselectAll(); else document.querySelectorAll('.sticker.selected').forEach(x=>x.classList.remove('selected')); }
+function selectSticker(el){ if(window.__EditorStickers){ __EditorStickers.deselectAll(); __EditorStickers.selectEl(el,false); } else if(!el||el.classList.contains('selected'))return; deselectAllStickers(); el.classList.add('selected'); }
+function makeSticker(g,idx,layer){ return window.__EditorStickers?__EditorStickers.makeEl(g,idx,layer,'gif'):null; }
 
 /* ===== 2bis. PHOTOS = photos perso (Boost), mêmes mécaniques que les GIFs (sticker
    déplaçable/redimensionnable/rotatif) mais importées depuis l'appareil, pas cherchées
@@ -2638,7 +2641,7 @@ function renderPhotosSheet(sh){
   // Cliquer une vignette affiche ses poignées (déplacer/pivoter/redimensionner) sur la carte.
   sh.querySelectorAll('.photo-tile').forEach(t=>t.addEventListener('click',()=>{
     const i=+t.dataset.i;
-    const el=document.querySelector(`#photoLayer .sticker[data-photo-idx="${i}"]`);
+    const el=document.querySelector(`#photoLayer .sticker[data-sticker-idx="${i}"]`);
     if(el) selectSticker(el);
   }));
   const upBtn=sh.querySelector('[data-photo-upload]');
@@ -2656,10 +2659,9 @@ function renderPhotosSheet(sh){
 let _lastPhotoPlace=null;
 function addPhotoFile(f){
   if(f.size>PHOTO_MAX_BYTES){ toast('⚠️ '+f.name+' trop lourde — 5 Mo max'); return; }
-  const last=S.photos[S.photos.length-1];
-  const base=_lastPhotoPlace||(last?{x:last.x,y:last.y,w:last.w}:{x:-18,y:58,w:30});
+  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-18,y:58,w:48};
   const dy=S.photos.length?6:0;
-  const p={url:URL.createObjectURL(f),x:base.x,y:base.y+dy,w:base.w,rot:0};
+  const p={url:URL.createObjectURL(f),x:spawn.x,y:spawn.y+dy,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.photos.push(p);
   _lastPhotoPlace={x:p.x,y:p.y,w:p.w};
   renderPhotos(); updatePhotoCount();
@@ -2680,30 +2682,8 @@ $('filePhoto').addEventListener('change',e=>{
   toAdd.forEach(addPhotoFile);
   if($('sheet').classList.contains('open') && activeTool==='photos') renderPhotosSheet($('sheet'));
 });
-function renderPhotos(){const layer=$('photoLayer');layer.innerHTML='';layer.classList.toggle('no-contour',S.photoContour===false);S.photos.forEach((p,i)=>layer.appendChild(makePhotoSticker(p,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
-function makePhotoSticker(p,idx,layer){
-  if(typeof p.x!=='number')p.x=50; if(typeof p.y!=='number')p.y=28; if(typeof p.w!=='number')p.w=34; if(typeof p.rot!=='number')p.rot=0;
-  const el=document.createElement('div'); el.className='sticker'; el.dataset.photoIdx=idx;
-  const apply=()=>{el.style.left=p.x+'%';el.style.top=p.y+'%';el.style.width=p.w+'%';el.style.transform=`translate(-50%,-50%) rotate(${p.rot}deg)`;};
-  apply();
-  el.innerHTML=`<div class="sticker-inner"><img src="${p.url}" alt="" draggable="false"></div>
-    <button class="sk-handle sk-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    <div class="sk-handle sk-rot" title="Rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
-    <div class="sk-handle sk-size" title="Taille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H3v-6M21 9V3h-6M3 21 10 14M21 3l-7 7"/></svg></div>`;
-  const center=()=>{const r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
-  el.querySelector('.sk-del').addEventListener('pointerdown',e=>e.stopPropagation());
-  el.querySelector('.sk-del').addEventListener('click',e=>{e.stopPropagation();S.photos.splice(idx,1);renderPhotos();toast('Photo retirée');updatePhotoCount();});
-  let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.sk-handle'))return;if(e.button)return;e.preventDefault();selectSticker(el);try{el.setPointerCapture(e.pointerId);}catch(_){}const er=el.getBoundingClientRect();drag={mx:e.clientX,my:e.clientY,sx0:er.left+er.width/2,sy0:er.top+er.height/2};el.classList.add('dragging');el.style.zIndex='10';showGuide('photo');});
-  el.addEventListener('pointermove',e=>{if(!drag)return;const half=el.getBoundingClientRect().height/2;const bnd=stageBounds(Math.max(16,half));const cx=clamp(drag.sx0+(e.clientX-drag.mx),bnd.minX,bnd.maxX);const cy=clamp(drag.sy0+(e.clientY-drag.my),bnd.minY,bnd.maxY);const lr=layer.getBoundingClientRect();p.x=(cx-lr.left)/lr.width*100;p.y=(cy-lr.top)/lr.height*100;apply();});
-  const endDrag=e=>{if(!drag)return;drag=null;el.classList.remove('dragging');el.style.zIndex='';hideGuide();try{el.releasePointerCapture(e.pointerId);}catch(_){}_lastPhotoPlace={x:p.x,y:p.y,w:p.w};persist();};
-  el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
-  const rz=el.querySelector('.sk-size');
-  rz.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{rz.setPointerCapture(e.pointerId);}catch(_){}const c=center();const d0=Math.max(8,Math.hypot(e.clientX-c.x,e.clientY-c.y));const w0=p.w;const mv=ev=>{p.w=clamp(w0*(Math.hypot(ev.clientX-c.x,ev.clientY-c.y)/d0),12,75);apply();};const up=ev=>{rz.removeEventListener('pointermove',mv);rz.removeEventListener('pointerup',up);try{rz.releasePointerCapture(ev.pointerId);}catch(_){}_lastPhotoPlace={x:p.x,y:p.y,w:p.w};persist();};rz.addEventListener('pointermove',mv);rz.addEventListener('pointerup',up);});
-  const ro=el.querySelector('.sk-rot');
-  ro.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{ro.setPointerCapture(e.pointerId);}catch(_){}const c=center();const a0=Math.atan2(e.clientY-c.y,e.clientX-c.x)*180/Math.PI;const r0=p.rot;const mv=ev=>{const a=Math.atan2(ev.clientY-c.y,ev.clientX-c.x)*180/Math.PI;p.rot=Math.round(r0+(a-a0));apply();};const up=ev=>{ro.removeEventListener('pointermove',mv);ro.removeEventListener('pointerup',up);try{ro.releasePointerCapture(ev.pointerId);}catch(_){}persist();};ro.addEventListener('pointermove',mv);ro.addEventListener('pointerup',up);});
-  return el;
-}
+function renderPhotos(){const layer=$('photoLayer');layer.innerHTML='';layer.classList.toggle('no-contour',S.photoContour===false);S.photos.forEach((p,i)=>layer.appendChild(window.__EditorStickers?__EditorStickers.makeEl(p,i,layer,'photo'):makePhotoSticker(p,i,layer)));if(typeof updateEyeVisibility==='function')updateEyeVisibility();if(typeof persist==='function')persist();}
+function makePhotoSticker(p,idx,layer){ return window.__EditorStickers?__EditorStickers.makeEl(p,idx,layer,'photo'):null; }
 
 /* ===== 3. FOND ===== */
 const BG_PRESETS=[{id:'default',nm:'Défaut'},{id:'stars',nm:'Nuit étoilée'},{id:'pink',nm:'Rose'}];
@@ -3578,17 +3558,17 @@ function writeState(){
   st.user.gifs=S.gifs.map(g=>{
     const pm=g.posByMode||{};
     const d=pm.desktop||{x:g.x,y:g.y,w:g.w,rot:g.rot};
-    const out={preview:g.url,full:g.url,x:d.x,y:d.y,w:d.w,rot:d.rot};
-    if(pm.portrait)  out.portrait ={x:pm.portrait.x, y:pm.portrait.y, w:pm.portrait.w, rot:pm.portrait.rot};
-    if(pm.landscape) out.landscape={x:pm.landscape.x,y:pm.landscape.y,w:pm.landscape.w,rot:pm.landscape.rot};
+    const out=Object.assign({preview:g.url,full:g.url,x:d.x,y:d.y,w:d.w,rot:d.rot},window.__EditorStickers?__EditorStickers.stickerFields(g):{});
+    if(pm.portrait)  out.portrait =Object.assign({x:pm.portrait.x, y:pm.portrait.y, w:pm.portrait.w, rot:pm.portrait.rot},window.__EditorStickers?__EditorStickers.stickerFields(pm.portrait):{});
+    if(pm.landscape) out.landscape=Object.assign({x:pm.landscape.x,y:pm.landscape.y,w:pm.landscape.w,rot:pm.landscape.rot},window.__EditorStickers?__EditorStickers.stickerFields(pm.landscape):{});
     return out;
   });
   st.user.photos=S.photos.map(p=>{
     const pm=p.posByMode||{};
     const d=pm.desktop||{x:p.x,y:p.y,w:p.w,rot:p.rot};
-    const out={url:p.url,x:d.x,y:d.y,w:d.w,rot:d.rot};
-    if(pm.portrait)  out.portrait ={x:pm.portrait.x, y:pm.portrait.y, w:pm.portrait.w, rot:pm.portrait.rot};
-    if(pm.landscape) out.landscape={x:pm.landscape.x,y:pm.landscape.y,w:pm.landscape.w,rot:pm.landscape.rot};
+    const out=Object.assign({url:p.url,x:d.x,y:d.y,w:d.w,rot:d.rot},window.__EditorStickers?__EditorStickers.stickerFields(p):{});
+    if(pm.portrait)  out.portrait =Object.assign({x:pm.portrait.x, y:pm.portrait.y, w:pm.portrait.w, rot:pm.portrait.rot},window.__EditorStickers?__EditorStickers.stickerFields(pm.portrait):{});
+    if(pm.landscape) out.landscape=Object.assign({x:pm.landscape.x,y:pm.landscape.y,w:pm.landscape.w,rot:pm.landscape.rot},window.__EditorStickers?__EditorStickers.stickerFields(pm.landscape):{});
     return out;
   });
   st.user.photoContour=(S.photoContour!==false);
@@ -4026,7 +4006,8 @@ function hydrateFromSite(){
   S.gifContour=(u.gifContour!==false);
   if(Array.isArray(u.gifs)&&u.gifs.length){
     S.gifs=u.gifs.slice(0,GIF_MAX).map(g=>{
-      const gif={url:g.full||g.preview,x:typeof g.x==='number'?g.x:50,y:typeof g.y==='number'?g.y:28,w:g.w||34,rot:g.rot||0};
+      const gif={url:g.full||g.preview,x:typeof g.x==='number'?g.x:50,y:typeof g.y==='number'?g.y:28,w:g.w||48,rot:g.rot||0,scaleX:1,scaleY:1};
+      if(window.__EditorStickers) __EditorStickers.hydrateFields(gif,g);
       const pm={desktop:{x:gif.x,y:gif.y,w:gif.w,rot:gif.rot}};
       if(g.portrait) pm.portrait={x:g.portrait.x,y:g.portrait.y,w:g.portrait.w,rot:g.portrait.rot};
       if(g.landscape) pm.landscape={x:g.landscape.x,y:g.landscape.y,w:g.landscape.w,rot:g.landscape.rot};
@@ -4039,7 +4020,8 @@ function hydrateFromSite(){
   S.photoContour=(u.photoContour!==false);
   if(Array.isArray(u.photos)&&u.photos.length){
     S.photos=u.photos.slice(0,PHOTO_MAX).map(ph=>{
-      const photo={url:ph.url,x:typeof ph.x==='number'?ph.x:50,y:typeof ph.y==='number'?ph.y:28,w:ph.w||34,rot:ph.rot||0};
+      const photo={url:ph.url,x:typeof ph.x==='number'?ph.x:50,y:typeof ph.y==='number'?ph.y:28,w:ph.w||48,rot:ph.rot||0,scaleX:1,scaleY:1};
+      if(window.__EditorStickers) __EditorStickers.hydrateFields(photo,ph);
       const pm={desktop:{x:photo.x,y:photo.y,w:photo.w,rot:photo.rot}};
       if(ph.portrait) pm.portrait={x:ph.portrait.x,y:ph.portrait.y,w:ph.portrait.w,rot:ph.portrait.rot};
       if(ph.landscape) pm.landscape={x:ph.landscape.x,y:ph.landscape.y,w:ph.landscape.w,rot:ph.landscape.rot};
@@ -4061,7 +4043,20 @@ applyCanvasMode(); // pose data-canvas + état actif du sélecteur (défaut : bu
 syncCanvasModeToRealDevice();
 let _canvasSyncResize=null;
 window.addEventListener('resize',()=>{ clearTimeout(_canvasSyncResize); _canvasSyncResize=setTimeout(syncCanvasModeToRealDevice,150); });
-document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile')) deselectAllStickers(); });
+document.addEventListener('pointerdown',e=>{ if(!e.target.closest('.sticker,.photo-tile,.ed-ctx,.ed-stretch-pop') && !e.shiftKey) deselectAllStickers(); });
+
+if(window.__EditorStickers){
+  const _stickerLast={gif:null,photo:null};
+  __EditorStickers.install({
+    S, clamp, stageBounds, showGuide, hideGuide, persist, toast, openCrop, openBoostGate,
+    renderGifs, renderPhotos, updateGifCount, updatePhotoCount, addPhotoFile,
+    GIF_MAX, PHOTO_MAX,
+    get _lastGifPlace(){ return _stickerLast.gif; },
+    set _lastGifPlace(v){ _stickerLast.gif=v; _lastGifPlace=v; },
+    get _lastPhotoPlace(){ return _stickerLast.photo; },
+    set _lastPhotoPlace(v){ _stickerLast.photo=v; _lastPhotoPlace=v; },
+  });
+}
 
 /* ===== Volume musique : câblage du widget ===== */
 (function initEdVol(){
