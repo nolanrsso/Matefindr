@@ -4,6 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Matefindr — Éditeur de profil</title>
+<!-- Anti-flash : cache le skeleton Matefindr_user jusqu'à edBootProfile. -->
+<script>
+(function(){
+  try{
+    document.documentElement.classList.add('mf-boot-hidden');
+    setTimeout(function(){ document.documentElement.classList.remove('mf-boot-hidden'); }, 6000);
+  }catch(e){}
+})();
+</script>
+<style>html{background:#0D0B1E}html.mf-boot-hidden body{visibility:hidden}</style>
 <!-- Perf : mode allégé auto pour machines faibles. Exécuté AVANT tout rendu. -->
 <script>
 (function(){
@@ -4655,7 +4665,10 @@ async function edBootProfile(){
   if(typeof resetUndoBaseline==='function') resetUndoBaseline();
   if(typeof markStorageSynced==='function') markStorageSynced();
 }
-edBootProfile();
+function edRevealEditor(){
+  try{ document.documentElement.classList.remove('mf-boot-hidden'); }catch(_){}
+}
+edBootProfile().then(edRevealEditor, edRevealEditor);
 /* Sync multi-onglets : un autre onglet éditeur a modifié le profil → on recharge
    l'état local SANS réécrire (sinon ping-pong de saves entre onglets). */
 let _lastTabSyncToast=0;

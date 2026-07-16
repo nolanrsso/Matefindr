@@ -8573,6 +8573,10 @@
       if (willBeOverridden) document.body.setAttribute('data-screen', state.profile ? 'landing' : 'onboarding');
       else setScreen(state.profile ? 'landing' : 'onboarding');
       backfillCovers();
+    } else if (!getSharedSlug()) {
+      // Visiteur déconnecté sur / : révéler tout de suite (body était caché au boot).
+      // Lien perso (/<slug>) : handleSharedLink révèle après résolution.
+      revealApp();
     }
     if (typeof refreshLandingCta === 'function') refreshLandingCta();
 

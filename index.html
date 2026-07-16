@@ -41,17 +41,21 @@
     // js/app.js pour bloquer l'accès au RESTE de l'app (menu, autres profils…) tant que le
     // code n'a pas été saisi -- même si le visiteur se connecte via Discord depuis ce lien.
     window.__mfIsSlugPath = isSlug;
-    var isReturnHash = location.hash === '#preview' || location.hash === '#account';
-    if (isSlug || isReturnHash) {
-      document.documentElement.classList.add('mf-boot-hidden');
-      // Filet de sécurité : si rien ne révèle la page (erreur JS, session lente...),
-      // on ne laisse jamais le site invisible plus de quelques secondes.
-      setTimeout(function(){ document.documentElement.classList.remove('mf-boot-hidden'); }, 6000);
-    }
+    // Toujours cacher le body au boot : sinon le HTML par défaut (landing + data-auth=out)
+    // flashe ~0.3s au refresh / avant que setAuth+setScreen appliquent le vrai état.
+    document.documentElement.classList.add('mf-boot-hidden');
+    // Filet de sécurité : si rien ne révèle la page (erreur JS, session lente...),
+    // on ne laisse jamais le site invisible plus de quelques secondes.
+    setTimeout(function(){ document.documentElement.classList.remove('mf-boot-hidden'); }, 6000);
   }catch(e){}
 })();
 </script>
-<style>html.mf-boot-hidden body{visibility:hidden}</style>
+<style>
+  html{background:#0D0B1E}
+  html.mf-boot-hidden body{visibility:hidden}
+  /* Le gate mot de passe est posé avant app.js : il doit rester visible pendant le boot. */
+  html.mf-boot-hidden #gate{visibility:visible}
+</style>
 <!-- Police du wordmark logo (comme le design) -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
