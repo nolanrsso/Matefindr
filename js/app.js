@@ -8206,61 +8206,173 @@
       const AM = window.MFAccountModals;
       if (!AM) return;
 
-      function fmtDate(iso){ try{ return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}); }catch(_){ return '—'; } }
-
       function renderIndexSettings(body){
         const st = AM.readSite();
         const u = Object.assign({}, st.user || {}, state.user || {});
+        const p = Object.assign({}, st.profile || {}, state.profile || {});
         const MV = window.MatefindrVolume;
         const volPct = Math.round((MV ? MV.getVol() : 0.5) * 100);
         const lang = (typeof window.__mfCurrentLang === 'function') ? window.__mfCurrentLang() : 'FR';
         // Mot de confirmation attendu pour la suppression — dépend de la langue courante
         // (SUPPRIMER en FR, DELETE en EN), pas figé en dur.
         const DELETE_WORD = lang === 'EN' ? 'DELETE' : 'SUPPRIMER';
-        let bill;
-        if (u.boost) {
-          const lifetime = u.boostPlan === 'lifetime';
-          const promo = u.boostPromo;
-          bill = `<b>Matefindr Boost</b> ${promo ? '· <span style="color:#5ee6a0">offert (code)</span>' : ''}<br>`
-            + `<small>${lifetime ? 'Accès à vie — aucun prélèvement' : ('Mensuel · prochain paiement ' + (u.boostNextPayment ? fmtDate(u.boostNextPayment) : '—'))}</small>`;
-        } else {
-          bill = `<b data-i18n="set_free">Gratuit</b><br><small data-i18n="set_free_sub">Aucun abonnement actif</small>`;
-        }
+
+        const displayName = u.displayName || u.email || 'Matefindr user';
+        const tagLine = u.discordTag ? '@' + u.discordTag : (u.email || '—');
+        const avatarInner = u.avatarUrl
+          ? `<img src="${u.avatarUrl}" alt="">`
+          : escapeHtmlMini((displayName || 'M').charAt(0).toUpperCase());
+        // Le champ genre a deux vocabulaires historiques (onboarding: il/elle/autre/hidden ;
+        // legacy: male/female/nonbinary/other) — on normalise juste pour savoir quel bouton
+        // surligner, la valeur écrite reste toujours le vocabulaire onboarding.
+        const normGender = (g) => ({ male:'il', female:'elle', nonbinary:'autre', other:'autre' }[g] || g || '');
+        const curGender = normGender(p.gender);
+        const GENDERS = [
+          { v:'il', label:'Il / Lui' },
+          { v:'elle', label:'Elle' },
+          { v:'autre', label:'Autre' },
+          { v:'hidden', label:'Ne pas dire' },
+        ];
+        const notifT = (state.user && state.user.notifTypes) || {};
+
         body.innerHTML = `
-          <div class="set-sheet">
-            <div class="ss-group">
-              <div class="ss-lbl" data-i18n="acc_lang">Langue</div>
-              <div class="ss-lang" id="ssLang">
-                <button type="button" data-code="FR" class="${lang==='FR'?'on':''}" data-i18n="set_lang_fr">🇫🇷 Français</button>
-                <button type="button" data-code="EN" class="${lang==='EN'?'on':''}" data-i18n="set_lang_en">🇬🇧 English</button>
-              </div>
-            </div>
-            <div class="ss-group">
-              <div class="ss-lbl"><span data-i18n="set_volume">Volume de la musique</span> <span id="ssVolVal">${volPct}%</span></div>
-              <input type="range" id="ssVol" min="0" max="100" value="${volPct}">
-            </div>
-            <div class="ss-group">
-              <div class="ss-lbl" data-i18n="set_billing">Abonnement &amp; facturation</div>
-              <div class="ss-bill">${bill}</div>
-              ${u.boost ? '' : '<button type="button" class="btn primary" id="ssBoost" style="width:100%;margin-top:9px" data-i18n="set_upgrade">Passer à Matefindr Boost</button>'}
-            </div>
-            <div class="ss-group">
-              <div class="ss-lbl" data-i18n="set_legal">Légal</div>
-              <a class="ss-legal-link" href="rules.html" target="_blank" rel="noopener" data-i18n="set_terms_link">📋 Conditions d'utilisation</a>
-            </div>
-            <div class="ss-group ss-danger">
-              <div class="ss-lbl" data-i18n="set_danger">Zone dangereuse</div>
-              <button type="button" class="btn" id="ssLogout" data-i18n="logout">Se déconnecter</button>
-              <button type="button" class="btn ghost-danger" id="ssDelete" data-i18n="set_delete">Supprimer mon compte</button>
-              <div class="ss-delete-confirm" id="ssDeleteConfirm" hidden>
-                <p data-i18n="set_delete_warn">Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
-                <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="${DELETE_WORD}" />
-                <div class="ss-delete-actions">
-                  <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled data-i18n="set_delete_confirm_btn">Supprimer définitivement</button>
-                  <button type="button" class="btn" id="ssDeleteCancelBtn" data-i18n="set_cancel">Annuler</button>
+          <div class="set-layout">
+            <nav class="set-nav">
+              <button type="button" class="on" data-sec="compte"><span class="ico">👤</span>Compte</button>
+              <button type="button" data-sec="notifs"><span class="ico">🔔</span>Notifications</button>
+              <button type="button" data-sec="abo"><span class="ico">💎</span>Abonnement</button>
+              <button type="button" data-sec="legal"><span class="ico">📋</span>Confidentialité &amp; légal</button>
+              <button type="button" data-sec="prefs"><span class="ico">⚙️</span>Préférences</button>
+              <button type="button" data-sec="danger"><span class="ico">⚠️</span>Zone dangereuse</button>
+            </nav>
+            <div class="set-content">
+
+              <section class="set-panel" data-sec="compte">
+                <h2>Compte</h2>
+                <p class="set-panel-sub">Tes informations personnelles — affichées sur le badge en haut de ta carte.</p>
+                <div class="set-identity">
+                  <div class="si-avatar">${avatarInner}</div>
+                  <div class="si-txt">
+                    <div class="si-name">${escapeHtmlMini(displayName)}</div>
+                    <div class="si-tag">${escapeHtmlMini(tagLine)}</div>
+                  </div>
                 </div>
-                <div class="ss-delete-status" id="ssDeleteStatus"></div>
-              </div>
+                <a href="editor.html" class="acc-btn acc-btn--ghost" style="display:inline-flex;margin-bottom:18px">✎ Modifier l'apparence (bulles, photos, couleurs…)</a>
+                <div class="set-card">
+                  <h3>Âge, genre &amp; pays</h3>
+                  <p class="set-card-hint">Modifiables à tout moment.</p>
+                  <div class="acc-grid2">
+                    <div class="acc-field">
+                      <label for="ssAge">Âge</label>
+                      <input class="acc-input" type="number" id="ssAge" min="18" max="99" inputmode="numeric" value="${p.age || ''}" placeholder="18+">
+                    </div>
+                    <div class="acc-field">
+                      <label for="ssCountryTrigger">Pays</label>
+                      <div class="ctry-picker" id="ssCountryPicker" data-open="false">
+                        <button type="button" class="ctry-trigger" id="ssCountryTrigger"><span class="ctry-name ctry-placeholder">Choisis ton pays…</span></button>
+                        <div class="ctry-panel">
+                          <input type="text" class="ctry-search" id="ssCountrySearch" placeholder="Rechercher un pays…" autocomplete="off">
+                          <div class="ctry-list" id="ssCountryList"></div>
+                        </div>
+                      </div>
+                      <select class="acc-select" id="ssCountry" style="display:none"></select>
+                    </div>
+                  </div>
+                  <div class="acc-field" style="margin-top:14px">
+                    <label>Genre</label>
+                    <div class="set-seg" id="ssGender">
+                      ${GENDERS.map(g => `<button type="button" data-val="${g.v}" class="${curGender===g.v?'on':''}">${g.label}</button>`).join('')}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="set-panel" data-sec="notifs" hidden>
+                <h2>Notifications Discord</h2>
+                <p class="set-panel-sub">Reçois un message privé sur Discord (via un webhook perso) à chaque like, match ou message.</p>
+                <div class="set-card">
+                  <h3>Webhook Discord</h3>
+                  <p class="set-card-hint">Crée un webhook depuis les paramètres d'un salon Discord (Intégrations → Webhooks → Nouveau webhook), puis colle son URL ici.</p>
+                  <div class="acc-field">
+                    <label for="accDiscordWebhook">URL du webhook</label>
+                    <input class="acc-input" type="url" id="accDiscordWebhook" placeholder="https://discord.com/api/webhooks/…" value="${escapeHtmlMini(u.discordWebhook || '')}">
+                  </div>
+                  <div class="set-toggle-row">
+                    <div><div class="str-label">❤️ Likes</div><div class="str-sub">Quelqu'un like ton profil</div></div>
+                    <label class="toggle"><input type="checkbox" id="notifLike" ${notifT.like ? 'checked' : ''}><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                  </div>
+                  <div class="set-toggle-row">
+                    <div><div class="str-label">💞 Matchs</div><div class="str-sub">Un like réciproque</div></div>
+                    <label class="toggle"><input type="checkbox" id="notifMatch" ${notifT.match ? 'checked' : ''}><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                  </div>
+                  <div class="set-toggle-row">
+                    <div><div class="str-label">💬 Messages</div><div class="str-sub">Nouveau message reçu</div></div>
+                    <label class="toggle"><input type="checkbox" id="notifMessage" ${notifT.message ? 'checked' : ''}><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                  </div>
+                  <button type="button" class="acc-btn acc-btn--ghost" id="notifTestBtn" style="width:100%;margin-top:14px">Envoyer une notif de test</button>
+                  <div id="notifTestStatus" style="margin-top:8px;font-size:12.5px;color:var(--ink-dim);min-height:16px"></div>
+                </div>
+              </section>
+
+              <section class="set-panel" data-sec="abo" hidden>
+                <h2>Abonnement &amp; facturation</h2>
+                <p class="set-panel-sub">Gère ton abonnement Matefindr Boost — formule, échéance et résiliation.</p>
+                <div class="set-card"><div class="acc-billing" id="accBilling"></div></div>
+              </section>
+
+              <section class="set-panel" data-sec="legal" hidden>
+                <h2>Confidentialité &amp; légal</h2>
+                <p class="set-panel-sub">Tes droits sur tes données, et les règles du site.</p>
+                <div class="set-legal-warn">⚠️ <span><b>Les Conditions d'utilisation sont un brouillon</b> — rédigées pour encadrer l'usage du site, pas encore relues par un juriste. On te préviendra ici en cas de changement important.</span></div>
+                <div class="set-card">
+                  <h3>Documents</h3>
+                  <a class="acc-btn acc-btn--ghost" href="rules.html" target="_blank" rel="noopener" style="width:100%;justify-content:center" data-i18n="set_terms_link">📋 Conditions d'utilisation</a>
+                </div>
+                <div class="set-card">
+                  <h3>Tes données</h3>
+                  <p class="set-card-hint">Droit d'accès : exporte une copie complète de ton profil. Droit à l'effacement : supprime ton compte depuis la Zone dangereuse.</p>
+                  <button type="button" class="acc-btn acc-btn--ghost" id="ssExportData" style="width:100%">⬇️ Exporter mes données (JSON)</button>
+                </div>
+                <div class="set-card">
+                  <h3>Nous contacter</h3>
+                  <p class="set-card-hint">Une question sur tes données ou ces règles ? Écris-nous sur Discord.</p>
+                  <a class="acc-btn acc-btn--ghost" href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" style="width:100%;justify-content:center">Rejoindre le Discord</a>
+                </div>
+              </section>
+
+              <section class="set-panel" data-sec="prefs" hidden>
+                <h2>Préférences</h2>
+                <p class="set-panel-sub">Langue et réglages audio.</p>
+                <div class="set-card">
+                  <h3 data-i18n="acc_lang">Langue</h3>
+                  <div class="ss-lang" id="ssLang">
+                    <button type="button" data-code="FR" class="${lang==='FR'?'on':''}" data-i18n="set_lang_fr">🇫🇷 Français</button>
+                    <button type="button" data-code="EN" class="${lang==='EN'?'on':''}" data-i18n="set_lang_en">🇬🇧 English</button>
+                  </div>
+                </div>
+                <div class="set-card">
+                  <h3><span data-i18n="set_volume">Volume de la musique</span> <span id="ssVolVal" style="color:#C9B6FF">${volPct}%</span></h3>
+                  <input type="range" id="ssVol" min="0" max="100" value="${volPct}" style="width:100%;accent-color:#9146FF">
+                </div>
+              </section>
+
+              <section class="set-panel" data-sec="danger" hidden>
+                <h2 data-i18n="set_danger">Zone dangereuse</h2>
+                <div class="set-card ss-danger">
+                  <button type="button" class="btn" id="ssLogout" data-i18n="logout">Se déconnecter</button>
+                  <button type="button" class="btn ghost-danger" id="ssDelete" data-i18n="set_delete">Supprimer mon compte</button>
+                  <div class="ss-delete-confirm" id="ssDeleteConfirm" hidden>
+                    <p data-i18n="set_delete_warn">Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
+                    <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="${DELETE_WORD}" />
+                    <div class="ss-delete-actions">
+                      <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled data-i18n="set_delete_confirm_btn">Supprimer définitivement</button>
+                      <button type="button" class="btn" id="ssDeleteCancelBtn" data-i18n="set_cancel">Annuler</button>
+                    </div>
+                    <div class="ss-delete-status" id="ssDeleteStatus"></div>
+                  </div>
+                </div>
+              </section>
+
             </div>
           </div>`;
         // Les data-i18n ci-dessus viennent d'être insérés dans le DOM -- applyLang() ne
@@ -8268,6 +8380,130 @@
         // on le rejoue explicitement sur le document pour les traduire immédiatement
         // si l'utilisateur avait déjà choisi l'anglais.
         if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(lang, { persist:false });
+
+        // ----- Navigation entre sections -----
+        const navBtns = body.querySelectorAll('.set-nav button[data-sec]');
+        const panels = body.querySelectorAll('.set-panel[data-sec]');
+        function showSec(sec){
+          navBtns.forEach(b => b.classList.toggle('on', b.dataset.sec === sec));
+          panels.forEach(pnl => { pnl.hidden = (pnl.dataset.sec !== sec); });
+        }
+        navBtns.forEach(b => b.addEventListener('click', () => showSec(b.dataset.sec)));
+
+        // ----- Compte : âge / genre / pays -----
+        const ageEl = body.querySelector('#ssAge');
+        ageEl.addEventListener('change', () => {
+          const v = parseInt(ageEl.value, 10);
+          if (!(v >= 18 && v <= 99)) {
+            ageEl.value = p.age || '';
+            if (typeof showToast === 'function') showToast('⚠️', 'Âge invalide', '18 ans minimum, 99 ans maximum');
+            return;
+          }
+          state.profile = state.profile || {};
+          state.profile.age = v;
+          save();
+          if (typeof showToast === 'function') showToast('✓', 'Âge mis à jour', v + ' ans');
+        });
+        const genderWrap = body.querySelector('#ssGender');
+        genderWrap.addEventListener('click', (e) => {
+          const b = e.target.closest('button[data-val]'); if (!b) return;
+          genderWrap.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+          state.profile = state.profile || {};
+          state.profile.gender = b.dataset.val;
+          save();
+          if (typeof showToast === 'function') showToast('✓', 'Genre mis à jour', '');
+        });
+        (function initSettingsCountryPicker(){
+          const picker  = body.querySelector('#ssCountryPicker');
+          const trigger = body.querySelector('#ssCountryTrigger');
+          const search  = body.querySelector('#ssCountrySearch');
+          const list    = body.querySelector('#ssCountryList');
+          const select  = body.querySelector('#ssCountry');
+          const source  = document.getElementById('onbCountry');
+          if (!picker || !trigger || !search || !list || !select || !source) return;
+          select.innerHTML = source.innerHTML;
+          const countries = [...select.querySelectorAll('option')]
+            .filter(o => o.value)
+            .map(o => ({ code: o.value, name: o.textContent.replace(/^\s*\S+\s*/, '').trim() }));
+          const flagUrl = c => c === 'OTHER' ? '' : `https://flagcdn.com/${c.toLowerCase()}.svg`;
+          function renderList(filter){
+            const q = (filter || '').toLowerCase().trim();
+            const matches = countries.filter(c => !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
+            list.innerHTML = matches.length
+              ? matches.map(c => `<div class="ctry-item" data-code="${c.code}"><span style="display:inline-flex;width:26px;height:18px;justify-content:center;align-items:center;flex:0 0 auto">${c.code === 'OTHER' ? '🏳️' : `<img src="${flagUrl(c.code)}" alt="${c.code}" loading="lazy">`}</span><span>${c.name}</span></div>`).join('')
+              : `<div class="ctry-empty">Aucun pays</div>`;
+          }
+          function setTriggerLabel(code, name){
+            if (!code) { trigger.innerHTML = '<span class="ctry-name ctry-placeholder">Choisis ton pays…</span>'; return; }
+            const flag = code === 'OTHER' ? '<span style="font-size:18px">🏳️</span>' : `<img class="ctry-flag" src="${flagUrl(code)}" alt="${code}">`;
+            trigger.innerHTML = `${flag}<span class="ctry-name">${name}</span>`;
+          }
+          function open(){ picker.setAttribute('data-open', 'true'); renderList(''); search.value=''; setTimeout(() => search.focus(), 0); }
+          function close(){ picker.setAttribute('data-open', 'false'); }
+          function pick(code){
+            const c = countries.find(x => x.code === code); if (!c) return;
+            select.value = code;
+            setTriggerLabel(code, c.name);
+            close();
+            state.profile = state.profile || {};
+            state.profile.country = code;
+            state.profile.countryFlag = (select.selectedOptions[0] && select.selectedOptions[0].getAttribute('data-flag')) || '';
+            save();
+            if (typeof showToast === 'function') showToast('✓', 'Pays mis à jour', c.name);
+          }
+          trigger.addEventListener('click', e => { e.stopPropagation(); picker.getAttribute('data-open') === 'true' ? close() : open(); });
+          search.addEventListener('input', e => renderList(e.target.value));
+          list.addEventListener('click', e => { const it = e.target.closest('.ctry-item'); if (it) pick(it.dataset.code); });
+          document.addEventListener('click', e => { if (!picker.contains(e.target)) close(); });
+          if (p.country) { select.value = p.country; const c = countries.find(x => x.code === p.country); if (c) setTriggerLabel(c.code, c.name); }
+        })();
+
+        // ----- Notifications Discord (webhook perso) -----
+        const whEl = body.querySelector('#accDiscordWebhook');
+        const notifTg = { like: body.querySelector('#notifLike'), match: body.querySelector('#notifMatch'), message: body.querySelector('#notifMessage') };
+        let _notifSyncT = null;
+        function scheduleNotifSync(){ clearTimeout(_notifSyncT); _notifSyncT = setTimeout(() => { if (typeof syncNotifPrefsToSupabase === 'function') syncNotifPrefsToSupabase(); }, 600); }
+        whEl.addEventListener('input', () => {
+          state.user = state.user || {};
+          state.user.discordWebhook = whEl.value.trim();
+          save();
+          scheduleNotifSync();
+        });
+        Object.entries(notifTg).forEach(([k, el]) => {
+          el.addEventListener('change', () => {
+            state.user = state.user || {};
+            state.user.notifTypes = Object.assign({}, state.user.notifTypes || {}, { [k]: el.checked });
+            save();
+            scheduleNotifSync();
+          });
+        });
+        body.querySelector('#notifTestBtn').addEventListener('click', async () => {
+          const testStatus = body.querySelector('#notifTestStatus');
+          testStatus.textContent = 'Envoi…';
+          testStatus.style.color = 'var(--ink-dim)';
+          const me = state.user || {};
+          const fakeMe = { name: me.displayName || 'Toi', initial: (me.displayName || 'T').charAt(0).toUpperCase(), avatarUrl: me.avatarUrl, c1:'#9146FF', c2:'#FF7EB6' };
+          const ok = (typeof sendDiscordNotif === 'function') ? await sendDiscordNotif('test', fakeMe) : false;
+          testStatus.textContent = ok ? '✅ Envoyé ! Vérifie ton serveur Discord.' : '❌ Échec — URL invalide ?';
+          testStatus.style.color = ok ? '#3BD17C' : '#FF4FA0';
+          setTimeout(() => { testStatus.textContent = ''; }, 5000);
+        });
+
+        // ----- Abonnement & facturation (réutilise la logique existante, ex-écran compte) -----
+        if (typeof refreshBillingUI === 'function') refreshBillingUI();
+
+        // ----- Confidentialité & légal : export de données -----
+        body.querySelector('#ssExportData').addEventListener('click', () => {
+          const payload = { exportedAt: new Date().toISOString(), profile: state.profile || null, account: state.user || null };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'matefindr-mes-donnees.json';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+        });
+
+        // ----- Préférences : langue + volume -----
         body.querySelector('#ssLang').addEventListener('click', (e) => {
           const b = e.target.closest('button[data-code]'); if (!b) return;
           if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(b.dataset.code);
@@ -8284,7 +8520,8 @@
           if (typeof window.__mfVolRefresh === 'function') window.__mfVolRefresh();
           save();
         });
-        body.querySelector('#ssBoost')?.addEventListener('click', () => { location.href = 'checkout.html?plan=monthly'; });
+
+        // ----- Zone dangereuse (déconnexion + suppression réelle, logique inchangée) -----
         body.querySelector('#ssLogout')?.addEventListener('click', async (e) => {
           const btn = e.currentTarget;
           try { btn.disabled = true; btn.textContent = 'Déconnexion…'; } catch (_) {}
@@ -8364,6 +8601,53 @@
         buttons: ['navSettings'],
         render: renderIndexSettings
       });
+
+      /* ===== Paramètres = vraie page (matefindr.com/settings) =====
+         Le popup lui-même reste géré par AM (showPop/hidePop sur #settingsPop) --
+         on se contente d'accrocher l'URL par-dessus : un MutationObserver sur
+         l'attribut "hidden" du pop couvre TOUS les chemins de fermeture (croix,
+         backdrop, Échap, déconnexion, suppression de compte) sans avoir à patcher
+         chacun individuellement. */
+      (function initSettingsRouting(){
+        const pop = document.getElementById('settingsPop');
+        if (!pop) return;
+        let pushedByUs = false;
+        document.getElementById('navSettings')?.addEventListener('click', () => {
+          if (location.pathname !== '/settings') {
+            try { history.pushState({ mfSettings: true }, '', '/settings'); pushedByUs = true; } catch(_){}
+          }
+        });
+        const mo = new MutationObserver(() => {
+          if (pop.hidden && location.pathname === '/settings') {
+            if (pushedByUs) { pushedByUs = false; try { history.back(); } catch(_){} }
+            else { try { history.replaceState(null, '', '/'); } catch(_){} }
+          }
+        });
+        mo.observe(pop, { attributes: true, attributeFilter: ['hidden'] });
+        window.addEventListener('popstate', () => {
+          if (location.pathname !== '/settings' && !pop.hidden) {
+            pushedByUs = false;
+            AM.closeSettingsPop();
+          } else if (location.pathname === '/settings' && pop.hidden && document.body.getAttribute('data-auth') === 'in') {
+            if (typeof window.__mfOpenSettings === 'function') window.__mfOpenSettings();
+          }
+        });
+        // Lien direct matefindr.com/settings : ouvre la page dès que la session est connue.
+        if (location.pathname === '/settings') {
+          let tries = 0;
+          const iv = setInterval(() => {
+            tries++;
+            const authState = document.body.getAttribute('data-auth');
+            if (authState === 'in') {
+              clearInterval(iv);
+              if (typeof window.__mfOpenSettings === 'function') window.__mfOpenSettings();
+            } else if (tries > 100) {
+              clearInterval(iv);
+              try { history.replaceState(null, '', '/'); } catch(_){}
+            }
+          }, 100);
+        }
+      })();
 
       if (window.MatefindrTitlesQuests) {
         window.MatefindrTitlesQuests.init({
