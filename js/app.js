@@ -558,6 +558,15 @@
             }
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
         }
+        // Compte Discord → statut Discord auto (non retirable). Migre aussi les anciens comptes.
+        try {
+          const MC = window.MatefindrConnections;
+          if (MC && state.user && state.user.discordId) {
+            if (!state.profile) state.profile = {};
+            if (!state.profile.connections || typeof state.profile.connections !== 'object') state.profile.connections = {};
+            MC.ensureDiscordConnection(state.user, state.profile.connections);
+          }
+        } catch(_){}
         save(); setAuth(true);
         if (window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
         // Sync quêtes (note / votes) dès la connexion — init() a souvent tourné avant l'auth.
@@ -804,8 +813,14 @@
         looking: 'chill',
         pseudo: draft.pseudo || '', bio: draft.bio || '',
         color1: draft.color1, color2: draft.color2,
-        avatar: draft.avatar || null
+        avatar: draft.avatar || null,
+        connections: {},
       };
+      // Compte Discord → statut Discord auto (non retirable, prefs affichage modifiables).
+      try {
+        const MC = window.MatefindrConnections;
+        if (MC && state.user) MC.ensureDiscordConnection(state.user, state.profile.connections);
+      } catch(_){}
       save();
       // Reflète les choix de perso dans le compte si les champs existent
       try {
@@ -1209,7 +1224,19 @@
         photos: Array.isArray(u.photos) ? u.photos : [],
         bg: u.boostBg || null,
         bgPos: u.boostBgPos || null,
-        connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
+        connections: (function(){
+          const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
+          try {
+            const MC = window.MatefindrConnections;
+            if (MC && u.discordId) {
+              if (!state.profile) state.profile = {};
+              if (!state.profile.connections || typeof state.profile.connections !== 'object') state.profile.connections = conns;
+              MC.ensureDiscordConnection(u, state.profile.connections);
+              return state.profile.connections;
+            }
+          } catch(_){}
+          return conns;
+        })(),
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         discordLive: u.discordLive || null,
         isMe: true,
@@ -1301,7 +1328,21 @@
         bg: u.boostBg || null,
         bgPos: u.boostBgPos || null,
         swipeMusic: u.swipeMusic || null,
-        connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
+        connections: (function(){
+          const conns = (p.connections && typeof p.connections === 'object') ? p.connections : {};
+          try {
+            const MC = window.MatefindrConnections;
+            if (MC && u.discordId) {
+              if (!state.profile) state.profile = {};
+              if (!state.profile.connections || typeof state.profile.connections !== 'object') {
+                state.profile.connections = conns;
+              }
+              MC.ensureDiscordConnection(u, state.profile.connections);
+              return state.profile.connections;
+            }
+          } catch(_){}
+          return conns;
+        })(),
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         coins: typeof u.coins === 'number' ? u.coins : 0,
         questCoinClaims: Array.isArray(u.questCoinClaims) ? u.questCoinClaims : [],

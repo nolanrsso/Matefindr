@@ -152,10 +152,56 @@
   }
 
   function connRemove(connObj, id){
-    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return;
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return false;
+    // Discord = statut lié au compte OAuth : non retirable (seulement prefs affichage).
+    if(id === 'discord') return false;
     delete connObj[id];
     if(Array.isArray(connObj[CONN_META_ORDER]))
       connObj[CONN_META_ORDER] = connObj[CONN_META_ORDER].filter(x => x !== id);
+    return true;
+  }
+
+  /** Compte créé / lié via Discord → connexion Discord obligatoire. */
+  function connDiscordLocked(user){
+    return !!(user && user.discordId);
+  }
+
+  /**
+   * Garantit la présence de connections.discord pour un compte Discord.
+   * Préserve showActivity / showStatus / showLabel si déjà définis.
+   * @returns {boolean} true si ajout ou identité mise à jour
+   */
+  function ensureDiscordConnection(user, connObj){
+    if(!user || !user.discordId || !connObj || typeof connObj !== 'object') return false;
+    const id = String(user.discordId);
+    const tag = String(user.discordTag || '').replace(/^@+/, '').replace(/#0$/, '');
+    const cur = connNormalize(connObj.discord);
+    if(cur){
+      let dirty = false;
+      const next = {
+        v: id,
+        mode: cur.mode === 'text' ? 'text' : 'link',
+        showActivity: cur.showActivity !== false,
+        showStatus: cur.showStatus !== false,
+        showLabel: cur.showLabel !== false,
+        label: tag || cur.label || '',
+      };
+      if(String(cur.v) !== id) dirty = true;
+      if((cur.label || '') !== (next.label || '')) dirty = true;
+      if(cur.showActivity === undefined || cur.showStatus === undefined || cur.showLabel === undefined) dirty = true;
+      connObj.discord = next;
+      return dirty;
+    }
+    connObj.discord = {
+      v: id,
+      mode: 'link',
+      label: tag,
+      showLabel: true,
+      showActivity: true,
+      showStatus: true,
+    };
+    connEnsureOrder(connObj);
+    return true;
   }
 
   function cleanHandle(v){
@@ -272,6 +318,8 @@
     connSetOrder,
     connEnsureOrder,
     connRemove,
+    connDiscordLocked,
+    ensureDiscordConnection,
     buildConnUrl,
     connProfileLabel,
     connCardHtml,

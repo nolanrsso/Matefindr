@@ -3410,6 +3410,15 @@ function connReadUser(){
   try{ const st=readSite(); return st.user||{}; }catch(_){ return {}; }
 }
 
+/** Compte Discord → ajoute le statut Discord s'il manque (non retirable). */
+function ensureEditorDiscordConn(){
+  if(!MC()) return false;
+  const u=connReadUser();
+  if(!u.discordId) return false;
+  if(!S.connections || typeof S.connections!=='object') S.connections={};
+  return !!MC().ensureDiscordConnection(u, S.connections);
+}
+
 let _connDragId=null, _connDragDidMove=false;
 
 function reorderConnections(fromId,toId){
@@ -3426,6 +3435,7 @@ function reorderConnections(fromId,toId){
 
 function renderConnections(){
   const box=$('connections'); if(!box||!MC()) return;
+  if(ensureEditorDiscordConn()) persist();
   box.innerHTML='';
   MC().connEnsureOrder(S.connections);
   const connIds=MC().connOrderedIds(S.connections);
@@ -3442,11 +3452,12 @@ function renderConnections(){
   connIds.forEach(id=>{
     const app=MC().connApp(id); if(!app) return;
     const entry=MC().connGet(S.connections,id);
-    const b=document.createElement('button'); b.type='button'; b.className='conn set';
+    const locked=id==='discord' && MC().connDiscordLocked(connReadUser());
+    const b=document.createElement('button'); b.type='button'; b.className='conn set'+(locked?' conn--locked':'');
     b.draggable=true;
     b.dataset.connId=id;
-    b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''} · glisser pour réordonner`;
-    b.innerHTML=MC().connIconHtml(app,22,entry,S.connUniformColor)+CONN_DEL;
+    b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''} · glisser pour réordonner${locked?' · lié au compte':''}`;
+    b.innerHTML=MC().connIconHtml(app,22,entry,S.connUniformColor)+(locked?'':CONN_DEL);
     b.addEventListener('dragstart',e=>{
       if(e.target.closest('.conn-del')){ e.preventDefault(); return; }
       _connDragId=id;
@@ -3479,7 +3490,11 @@ function renderConnections(){
     });
     b.addEventListener('click',e=>{
       if(_connDragDidMove){ e.preventDefault(); e.stopPropagation(); return; }
-      if(e.target.closest('.conn-del')){ e.stopPropagation(); MC().connRemove(S.connections,id); renderConnections(); persist(); toast('Connexion retirée'); return; }
+      if(e.target.closest('.conn-del')){
+        e.stopPropagation();
+        if(id==='discord' && MC().connDiscordLocked(connReadUser())){ toast('Le statut Discord est lié à ton compte'); return; }
+        MC().connRemove(S.connections,id); renderConnections(); persist(); toast('Connexion retirée'); return;
+      }
       openConnAdd(app);
     });
     box.appendChild(b);
@@ -3488,21 +3503,29 @@ function renderConnections(){
 }
 function openConnPick(){
   const grid=$('connPickGrid'); if(!grid||!MC()) return;
+  if(ensureEditorDiscordConn()) persist();
   grid.innerHTML='';
   MC().CONN_APPS.forEach(app=>{
     const taken=MC().connIsSet(S.connections,app.id);
+    const locked=app.id==='discord' && MC().connDiscordLocked(connReadUser());
     const b=document.createElement('button');
     b.type='button';
     b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'')+(taken?' conn-pick-tile--done':'');
-    b.disabled=taken && app.id!=='custom';
-    b.title=taken?`${app.name} — déjà ajouté`:app.name;
+    // Discord lié au compte : toujours « pris », on ouvre le panneau de prefs au clic
+    b.disabled=taken && app.id!=='custom' && !locked;
+    b.title=locked?'Discord — lié au compte (modifier l\'affichage)'
+      :(taken?`${app.name} — déjà ajouté`:app.name);
     const doneBadge=taken?'<span class="conn-pick-done">Validé</span>':'';
     if(app.wide){
       const entry=app.id==='custom'?MC().connGet(S.connections,'custom'):null;
       b.innerHTML=doneBadge+MC().connIconHtml(app,24,entry)+`<span>${esc(app.name)}</span>`;
     }
     else b.innerHTML=doneBadge+MC().connIconHtml(app,26);
-    b.addEventListener('click',()=>{ if(b.disabled) return; closeConnPick(); openConnAdd(app); });
+    b.addEventListener('click',()=>{
+      if(b.disabled) return;
+      closeConnPick();
+      openConnAdd(app);
+    });
     grid.appendChild(b);
   });
   $('connModalBackdrop').hidden=false;
@@ -3513,14 +3536,20 @@ function closeConnPick(){ $('connModalBackdrop').hidden=true; $('connPickSheet')
 function syncConnAddUi(){
   const app=_connApp; if(!app) return;
   const isDiscord=app.special==='discord';
+  const locked=isDiscord && MC().connDiscordLocked(connReadUser());
   $('connAddDiscordPanel').hidden=!isDiscord;
   $('connAddLinkPanel').hidden=!!isDiscord;
   $('connAddTitle').textContent=(MC().connIsSet(S.connections,app.id)?'Modifier':'Ajouter')+' le réseau '+app.name;
-  $('connAddRemove').hidden=!MC().connIsSet(S.connections,app.id);
+  // Discord lié au compte : pas de bouton Retirer
+  $('connAddRemove').hidden=locked || !MC().connIsSet(S.connections,app.id);
+  const submit=$('connAddSubmit');
+  if(submit) submit.textContent=MC().connIsSet(S.connections,app.id)?'Enregistrer':'Ajouter';
   if(isDiscord){
     const u=connReadUser();
     $('connDiscordName').textContent=u.displayName||u.discordTag||'Discord';
-    $('connDiscordSub').textContent=u.discordId?('@'+(u.discordTag||'compte Discord')):'Connecte-toi avec Discord pour lier ton profil';
+    $('connDiscordSub').textContent=u.discordId
+      ? ('@'+(u.discordTag||'compte Discord')+(locked?' · lié à ton compte Matefindr':''))
+      : 'Connecte-toi avec Discord pour lier ton profil';
     const cur=MC().connGet(S.connections,'discord');
     $('connDiscordActivity').checked=cur?cur.showActivity!==false:true;
     $('connDiscordStatus').checked=cur?cur.showStatus!==false:true;
@@ -3596,6 +3625,9 @@ $('connModalBackdrop').addEventListener('click',closeConnAll);
 $('connAddSubmit').addEventListener('click',saveConnAdd);
 $('connAddRemove').addEventListener('click',()=>{
   if(!_connApp) return;
+  if(_connApp.id==='discord' && MC() && MC().connDiscordLocked(connReadUser())){
+    toast('Le statut Discord est lié à ton compte'); return;
+  }
   MC().connRemove(S.connections,_connApp.id); renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
 });
 $('connAddInput').addEventListener('input',()=>{ if(_connApp&&_connApp.id==='custom') updateCustomConnIconPreview(); });
@@ -4464,7 +4496,9 @@ function hydrateFromSite(){
     renderPhotos();
   }
   if(u.profileVoice){ S.voice={url:u.profileVoice,dur:5}; renderVoice(); }
-  if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); if(typeof renderConnections==='function') renderConnections(); }
+  if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); }
+  ensureEditorDiscordConn();
+  if(typeof renderConnections==='function') renderConnections();
   if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
   ensureAllEditBadges();
 }
