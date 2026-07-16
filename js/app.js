@@ -1284,6 +1284,7 @@
       if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(floor);
       if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(floor);
       if (typeof TQ.hydrateDiscordActivityCovers === 'function') TQ.hydrateDiscordActivityCovers(floor);
+      lockMediaNativeDrag(floor);
     }
     function rerenderVisibleDiscordFloor(){
       try {
@@ -2515,11 +2516,12 @@
         el.className = 'swipe-gif' + (contourOn ? '' : ' no-contour');
         el.dataset.kind = 'gif';
         el.dataset.z = String(swipeStickerZ(g, 'gif', i));
-        el.innerHTML = `<div class="swipe-gif-inner"><img src="${g.full || g.preview}" alt=""></div>`;
+        el.innerHTML = `<div class="swipe-gif-inner"><img src="${g.full || g.preview}" alt="" draggable="false"></div>`;
         layer.appendChild(el);
         return { el, g };
       });
       reorderSwipeStickersLayer();
+      lockMediaNativeDrag(layer);
       // Position d'un GIF selon l'orientation courante (portrait/paysage/bureau).
       function layoutOne(el, g) {
         const wr = wrap.getBoundingClientRect();
@@ -2569,11 +2571,12 @@
         el.className = 'swipe-gif' + (contourOn ? '' : ' no-contour');
         el.dataset.kind = 'photo';
         el.dataset.z = String(swipeStickerZ(ph, 'photo', i));
-        el.innerHTML = `<div class="swipe-gif-inner"><img src="${ph.url}" alt=""></div>`;
+        el.innerHTML = `<div class="swipe-gif-inner"><img src="${ph.url}" alt="" draggable="false"></div>`;
         layer.appendChild(el);
         return { el, g: ph };
       });
       reorderSwipeStickersLayer();
+      lockMediaNativeDrag(layer);
       function layoutOne(el, g) {
         const wr = wrap.getBoundingClientRect();
         const p2 = swipeStickerPos(g);
@@ -3001,6 +3004,7 @@
       // En mode APERÇU on peut aussi traîner la carte : attachDrag détecte le
       // preview et la fait rebondir au centre au relâchement (aucun swipe).
       if (isTop) attachDrag(c);
+      lockMediaNativeDrag(c);
       // Voice-memo player on the card (if any)
       bindCardVoice(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
@@ -4124,17 +4128,31 @@
       }
     }
     function attachDrag(card){
-      let sx=0, sy=0, dx=0, dy=0, dragging=false;
+      let sx=0, sy=0, dx=0, dy=0, dragging=false, moved=false, suppressClick=false;
       const like = card.querySelector('.badge-stamp.like');
       const nope = card.querySelector('.badge-stamp.nope');
+      // Jamais de drag natif navigateur (ghost image) sur la carte
+      card.addEventListener('dragstart', (e) => { e.preventDefault(); });
+      card.addEventListener('click', (e) => {
+        if (!suppressClick) return;
+        suppressClick = false;
+        const a = e.target && e.target.closest && e.target.closest('a');
+        if (a) { e.preventDefault(); e.stopPropagation(); }
+      }, true);
       function onDown(e){
-        // Don't start a drag if user is clicking an interactive element (links, buttons)
         const tgt = e.target;
-        if (tgt && (tgt.closest('a') || tgt.closest('button'))) return;
+        // Boutons / inputs : laisser l'interaction (play vocal, etc.)
+        if (tgt && tgt.closest && tgt.closest('button, input, textarea, select, .card-voice-play')) return;
         dragging = true;
+        moved = false;
+        suppressClick = false;
         const p = e.touches ? e.touches[0] : e;
         sx = p.clientX; sy = p.clientY; dx = 0; dy = 0;
         card.style.transition = 'none';
+        // Bloque le drag d'image navigateur dès le mousedown
+        if (!e.touches && (tgt.tagName === 'IMG' || (tgt.closest && tgt.closest('img')))) {
+          try { e.preventDefault(); } catch(_){}
+        }
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
         document.addEventListener('touchmove', onMove, { passive:false });
@@ -4152,6 +4170,10 @@
         if (e.touches) e.preventDefault();
         const p = e.touches ? e.touches[0] : e;
         dx = p.clientX - sx; dy = p.clientY - sy;
+        if (!moved && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+          moved = true;
+          suppressClick = true;
+        }
         card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
         // Aperçu / lien perso : on déplace librement la carte, sans stamps LIKE/NOPE
         // ni boutons de swipe (le lien perso n'a plus qu'un cœur, pas de dislike).
@@ -4183,6 +4205,18 @@
       }
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });
+    }
+
+    /** Désactive le drag natif de toutes les <img> d'une carte / décor. */
+    function lockMediaNativeDrag(root){
+      if (!root || !root.querySelectorAll) return;
+      root.querySelectorAll('img').forEach(img => {
+        try {
+          img.draggable = false;
+          img.setAttribute('draggable', 'false');
+          img.setAttribute('ondragstart', 'return false');
+        } catch(_){}
+      });
     }
     let _swipeBusy = false;
     function commitSwipe(dir, cardEl){
