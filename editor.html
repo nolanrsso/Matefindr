@@ -2812,7 +2812,10 @@ function makePhotoSticker(p,idx,layer){ return window.__EditorStickers?__EditorS
 
 /* ===== 3. FOND ===== */
 const BG_PRESETS=[{id:'default',nm:'Défaut'},{id:'stars',nm:'Nuit étoilée'},{id:'pink',nm:'Rose'}];
-const BG_MAX_BYTES=5*1024*1024; // 5 Mo max, tous formats confondus
+const BG_MAX_BYTES_FREE=5*1024*1024;   // non-Boost : 5 Mo
+const BG_MAX_BYTES_BOOST=150*1024*1024; // Boost : 150 Mo (vidéos / GIF lourds)
+function bgMaxBytes(){ return document.body.classList.contains('not-boost') ? BG_MAX_BYTES_FREE : BG_MAX_BYTES_BOOST; }
+function bgMaxLabel(){ return document.body.classList.contains('not-boost') ? '5 Mo' : '150 Mo'; }
 // Une image fixe est libre pour tout le monde ; GIF/vidéo restent réservés au Boost.
 function bgIsPremium(){ return !!(S.bg && S.bg.type==='custom' && (S.bg.video || /\.gif(\?|#|$)/i.test(S.bg.value||''))); }
 function renderBgSheet(sh){
@@ -2821,13 +2824,14 @@ function renderBgSheet(sh){
   sh.innerHTML=sheetHeader('Fond personnel')+'<div class="bgp-grid">'+
     BG_PRESETS.map(p=>`<button class="bgp-tile ${S.bg.type==='preset'&&S.bg.value===p.id?'sel':''}" data-bg="${p.id}"><span class="pv pv-${p.id}"></span><span>${p.nm}</span></button>`).join('')+
     `<button class="bgp-tile bgp-up ${S.bg.type==='custom'?'sel':''}" data-bg-upload>＋<span>Importer</span></button></div>
-    <div class="hint">${kindLabel} — affiché derrière ta carte · 5 Mo max · idéal HD (1920×1080)</div>`;
+    <div class="hint">${kindLabel} — affiché derrière ta carte · ${bgMaxLabel()} max · idéal HD (1920×1080)</div>`;
   sh.querySelectorAll('[data-bg]').forEach(b=>b.addEventListener('click',()=>{applyBg({type:'preset',value:b.dataset.bg});sh.querySelectorAll('.bgp-tile').forEach(x=>x.classList.toggle('sel',x===b));}));
   sh.querySelector('[data-bg-upload]').addEventListener('click',()=>{ $('fileBg').setAttribute('accept', isBoost?'image/*,video/*':'image/*'); $('fileBg').click(); });
 }
 $('fileBg').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0]; if(!f){return;}
-  if(f.size>BG_MAX_BYTES){ toast('⚠️ Fichier trop lourd — 5 Mo max'); e.target.value=''; return; }
+  const maxBytes=bgMaxBytes(), maxLbl=bgMaxLabel();
+  if(f.size>maxBytes){ toast('⚠️ Fichier trop lourd — '+maxLbl+' max'); e.target.value=''; return; }
   const isVid=f.type.startsWith('video/');
   const isGif=f.type==='image/gif';
   const isBoost=!document.body.classList.contains('not-boost');
