@@ -26,6 +26,10 @@
   font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   letter-spacing:-.01em;
 }
+.discord-floor-name--blur{
+  filter:blur(5px);user-select:none;-webkit-user-select:none;pointer-events:none;
+  color:rgba(255,255,255,.85);
+}
 /* Ligne compacte unique ; détail des activités au survol */
 .discord-floor-act{
   position:relative;display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;

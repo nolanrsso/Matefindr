@@ -1354,6 +1354,7 @@
     if (!e) return '';
     const showStatus = e.showStatus !== false;
     const showActivity = e.showActivity !== false;
+    const showLabel = e.showLabel !== false;
     if (!showActivity && !showStatus) return '';
 
     const live = p.discordLive;
@@ -1384,6 +1385,8 @@
     }
 
     const dotCls = discordDotClass(live);
+    const nameCls = 'discord-floor-name' + (showLabel ? '' : ' discord-floor-name--blur');
+    const nameText = tag || p.discordTag || p.tag || 'discord';
 
     return `<div class="discord-floor discord-floor--head${primary ? ' discord-floor--has-act' : ''}" aria-label="Discord">
       <div class="discord-floor-head">
@@ -1392,7 +1395,7 @@
           ${showStatus ? `<span class="discord-floor-dot ${dotCls}" aria-hidden="true"></span>` : ''}
         </div>
         <div class="discord-floor-meta">
-          <b class="discord-floor-name">${escH(tag || p.discordTag || p.tag || 'discord')}</b>
+          <b class="${nameCls}"${showLabel ? '' : ' title="Username masqué"'}>${escH(nameText)}</b>
           ${subHtml}
         </div>
       </div>
