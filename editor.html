@@ -176,10 +176,10 @@ body[data-canvas="portrait"] .card .body{position:relative;inset:auto;z-index:5;
    @media max-width:600px .swipe-card ...) — sans ça avatar/texte gardent leur
    taille "bureau" (140px d'avatar etc.) dans une carte 3x plus étroite = ça
    déborde et se chevauche. */
-body[data-canvas="portrait"] .card .banner{height:auto;aspect-ratio:5/2;max-height:none;flex:0 0 auto}
-body[data-canvas="portrait"] .card .avatar{top:calc(40cqi - 47px);left:14px;width:94px;height:94px}
+body[data-canvas="portrait"] .card .banner{height:auto;aspect-ratio:50/17;max-height:none;flex:0 0 auto}
+body[data-canvas="portrait"] .card .avatar{top:calc(34cqi - 47px);left:14px;width:94px;height:94px}
 body[data-canvas="portrait"] .card .avatar .ph{font-size:26px}
-body[data-canvas="portrait"] .card .avatar-deco{top:calc(40cqi - 47px);left:14px;width:94px;height:94px}
+body[data-canvas="portrait"] .card .avatar-deco{top:calc(34cqi - 47px);left:14px;width:94px;height:94px}
 body[data-canvas="portrait"] .card .username{font-size:20px}
 body[data-canvas="portrait"] .card .tag{font-size:11px}
 body[data-canvas="portrait"] .card .bio{font-size:11.5px;padding:8px 10px}
@@ -365,7 +365,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 }
 .banner{
   /* Format Discord 600×240 → ratio 5:2 — même que .swipe-card .banner */
-  position:relative;aspect-ratio:5/2;height:auto;flex:0 0 auto;overflow:visible;cursor:pointer;
+  position:relative;aspect-ratio:50/17;height:auto;flex:0 0 auto;overflow:visible;cursor:pointer;
   border-radius:20px 20px 0 0;
   background:transparent;
 }
@@ -384,7 +384,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .banner-del svg{width:14px;height:14px}
 .avatar{
   /* Même placement que .swipe-card .avatar-wrap : moitié sur bannière 5:2 */
-  position:absolute;left:20px;top:calc(40cqi - 70px);
+  position:absolute;left:20px;top:calc(34cqi - 70px);
   width:140px;height:140px;
   border-radius:0;cursor:pointer;z-index:5;
   overflow:visible;background:transparent;border:none;box-shadow:none;
@@ -404,7 +404,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
 .avatar .ph{width:100%;height:100%;display:grid;place-items:center;font-size:52px;font-weight:800;font-family:"Clash Display",sans-serif;color:#fff;margin:0}
 /* Couche séparée (NON clippée) pour la déco + le statut, alignée sur l'avatar → la déco peut dépasser. */
-.avatar-deco{position:absolute;left:20px;top:calc(40cqi - 70px);width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:5}
+.avatar-deco{position:absolute;left:20px;top:calc(34cqi - 70px);width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:5}
 .avatar-deco .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain}
 .avatar-deco .status-dot{display:none} /* rond de statut retiré */
 /* Body IDENTIQUE à .swipe-card .body : flux sous la bannière + padding-top 86px
@@ -432,7 +432,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
    carte de swipe (index.html), posé par-dessus la bannière/l'avatar (pas dans
    le flux du corps de carte). Copié 1:1 depuis css/app.css (.swipe-card ...). */
 .card-age-badge{
-  position:absolute;top:calc(40cqi + 8px);right:16px;z-index:9;
+  position:absolute;top:calc(34cqi + 8px);right:16px;z-index:9;
   display:flex;align-items:center;gap:8px;
   padding:8px 16px;border-radius:999px;
   background:rgba(0,0,0,.65);
@@ -448,7 +448,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .card-age-badge .cab-gender[data-g="female"],.card-age-badge .cab-gender[data-g="elle"]{background:#FF4FA0;color:#fff;font-weight:900}
 .card-age-badge .cab-gender[data-g="nonbinary"],.card-age-badge .cab-gender[data-g="other"],.card-age-badge .cab-gender[data-g="autre"]{background:rgba(255,255,255,.08);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.30) inset}
 .card-age-badge .cab-gender svg{display:block}
-body[data-canvas="portrait"] .card-age-badge{top:calc(40cqi + 6px);right:12px;padding:5px 11px;gap:6px}
+body[data-canvas="portrait"] .card-age-badge{top:calc(34cqi + 6px);right:12px;padding:5px 11px;gap:6px}
 body[data-canvas="portrait"] .card-age-badge .cab-age{font-size:17px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag{font-size:15px}
 body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14px}
@@ -1305,12 +1305,24 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .crop-frame{position:relative;margin:0 auto;overflow:hidden;cursor:grab;touch-action:none;background:repeating-conic-gradient(#241a40 0% 25%, #160f2c 0% 50%) 0 0/22px 22px;border:2px solid rgba(145,70,255,.6);box-shadow:0 0 0 2000px rgba(8,9,14,.55)}
 .crop-frame:active{cursor:grabbing}
 .crop-frame.circle{width:280px;height:280px;border-radius:50%}
-.crop-frame.banner{width:100%;aspect-ratio:5/2;border-radius:14px}
+.crop-frame.banner{width:85%;max-width:100%;aspect-ratio:50/17;border-radius:14px}
 .crop-frame.bg{width:100%;aspect-ratio:16/9;border-radius:14px}
 .crop-frame img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;will-change:transform}
 .crop-warn{margin-top:12px;padding:9px 12px;border-radius:10px;font-size:12.5px;line-height:1.4;color:#FFD88A;background:rgba(255,184,60,.12);border:1px solid rgba(255,184,60,.35)}
 .zoom-row{display:flex;align-items:center;gap:11px;margin-top:16px}
-.zoom-row input[type=range]{flex:1;accent-color:#9146FF}
+.zoom-row input[type=range]{
+  flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:99px;
+  background:rgba(255,255,255,.14);outline:none;cursor:pointer;
+}
+.zoom-row input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:6px;height:6px;border-radius:50%;background:#9146FF;cursor:pointer;
+  box-shadow:0 0 0 1px rgba(145,70,255,.45);
+}
+.zoom-row input[type=range]::-moz-range-thumb{
+  width:6px;height:6px;border:none;border-radius:50%;background:#9146FF;cursor:pointer;
+  box-shadow:0 0 0 1px rgba(145,70,255,.45);
+}
 .zoom-row span{font-size:16px;color:var(--dim)}
 .rec-zone{display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0}
 #recCanvas{width:100%;height:84px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid var(--stroke)}

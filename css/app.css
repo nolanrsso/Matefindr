@@ -1536,12 +1536,12 @@
   .swipe-card:active{cursor:grabbing}
   .swipe-card .banner{
     /* Format Discord 600×240 → ratio 5:2 */
-    aspect-ratio:5/2;height:auto;max-height:none;background:transparent;
+    aspect-ratio:50/17;height:auto;max-height:none;background:transparent;
     position:relative;flex:0 0 auto;overflow:hidden;
   }
   .swipe-card .avatar-wrap{
-    /* Avatar 140px, moitié sur la bannière 5:2 (40cqi = hauteur bannière) */
-    position:absolute;left:20px;top:calc(40cqi - 70px);width:140px;height:140px;border-radius:50%;
+    /* Avatar 140px, moitié sur la bannière 5:2 (34cqi = hauteur bannière) */
+    position:absolute;left:20px;top:calc(34cqi - 70px);width:140px;height:140px;border-radius:50%;
     padding:8px;background:#1c1d22;display:grid;place-items:center;z-index:5;
     transform:none;
   }
@@ -1563,7 +1563,7 @@
   }
   @keyframes nitroSpin{to{transform:rotate(360deg)}}
   .swipe-card .nitro-badge{
-    position:absolute;left:108px;top:calc(40cqi + 8px);
+    position:absolute;left:108px;top:calc(34cqi + 8px);
     background:linear-gradient(135deg,#FF7EB6,#9146FF);
     color:#fff;font-size:10px;font-weight:800;letter-spacing:.06em;
     padding:3px 7px;border-radius:6px;
@@ -1651,7 +1651,7 @@
 
   /* Age + gender badge — just BELOW the banner 5:2 */
   .card-age-badge{
-    position:absolute;top:calc(40cqi + 8px);right:16px;z-index:6;
+    position:absolute;top:calc(34cqi + 8px);right:16px;z-index:6;
     display:flex;align-items:center;gap:8px;
     padding:8px 16px;border-radius:999px;
     background:rgba(0,0,0,.65);
@@ -2068,14 +2068,14 @@
     #screen-swipe{--swipe-top:62px;--swipe-bottom:94px;padding:var(--swipe-top) 8px var(--swipe-bottom);justify-content:flex-start}
     .swipe-actions{position:fixed;left:0;right:0;bottom:18px;justify-content:center;z-index:23}
     .swipe-card{border-radius:18px}
-    .swipe-card .banner{height:auto;aspect-ratio:5/2;max-height:none}
-    .swipe-card .avatar-wrap{top:calc(40cqi - 47px);left:14px;width:94px;height:94px;padding:5px}
+    .swipe-card .banner{height:auto;aspect-ratio:50/17;max-height:none}
+    .swipe-card .avatar-wrap{top:calc(34cqi - 47px);left:14px;width:94px;height:94px;padding:5px}
     .swipe-card .avatar-wrap .avi{font-size:34px}
     .swipe-card .avi-deco{inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px)}
-    .swipe-card .nitro-badge{left:72px;top:calc(40cqi + 8px);font-size:9px;padding:2px 6px}
+    .swipe-card .nitro-badge{left:72px;top:calc(34cqi + 8px);font-size:9px;padding:2px 6px}
 
     /* Badge âge / genre / drapeau — sous la bannière, à l'échelle */
-    .card-age-badge{top:calc(40cqi + 6px);right:12px;padding:5px 11px;gap:6px}
+    .card-age-badge{top:calc(34cqi + 6px);right:12px;padding:5px 11px;gap:6px}
     .card-age-badge .cab-age{font-size:17px}
     .card-age-badge .cab-flag{font-size:15px}
     .card-age-badge .cab-flag img{width:20px;height:14px}
