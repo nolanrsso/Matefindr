@@ -167,7 +167,8 @@
         if (gen != null && gen !== _pageLoaderGen) return;
         let ready = false;
         try { ready = typeof checkFn === 'function' ? !!checkFn() : true; } catch (_) { ready = true; }
-        if (ready || Date.now() - start > 2800) {
+        // Cap large : le min 1,5s est déjà garanti dans hidePageLoader.
+        if (ready || Date.now() - start > 5000) {
           hidePageLoader(gen);
           return;
         }
@@ -186,7 +187,10 @@
       if (name === 'swipe' && state.user && state.user.disabled) { location.href = 'editor.html'; return; }
       const prev = document.body.getAttribute('data-screen');
       const changing = prev !== name;
-      const loadGen = changing ? showPageLoader() : null;
+      // Premier reveal (boot) : loader même si l'écran HTML est déjà "landing".
+      // Pendant le loader le DOM se charge, mais rien n'est affiché (CSS mf-page-loading).
+      const firstReveal = document.documentElement.classList.contains('mf-boot-hidden');
+      const loadGen = (changing || firstReveal) ? showPageLoader() : null;
 
       document.body.setAttribute('data-screen', name);
       revealApp();
@@ -216,7 +220,7 @@
           });
         }
       } else if (loadGen != null) {
-        // Laisse le nouvel écran peindre, puis retire le loader
+        // Contenu peintes en coulisse ; révélation après le min loader (1,5 s).
         requestAnimationFrame(() => {
           requestAnimationFrame(() => hidePageLoader(loadGen));
         });
@@ -8626,9 +8630,11 @@
       else setScreen(state.profile ? 'landing' : 'onboarding');
       backfillCovers();
     } else if (!getSharedSlug()) {
-      // Visiteur déconnecté sur / : révéler tout de suite (body était caché au boot).
+      // Visiteur déconnecté sur / : loader puis révélation (contenu chargé mais caché).
       // Lien perso (/<slug>) : handleSharedLink révèle après résolution.
+      const gen = showPageLoader();
       revealApp();
+      hidePageLoader(gen);
     }
     if (typeof refreshLandingCta === 'function') refreshLandingCta();
 
