@@ -14,18 +14,18 @@
   }
 
   const RATING_TITLES = [
-    { id: 'rt_subhuman', min: 1, max: 2, label: 'subhuman', rarity: 2 },
+    { id: 'rt_subhuman', min: 1, max: 2, label: 'wip', rarity: 2 },
     { id: 'rt_mid', min: 2, max: 2.5, label: 'mid', rarity: 3 },
-    { id: 'rt_tuff', min: 2.5, max: 3, label: 'tuff', rarity: 4 },
+    { id: 'rt_tuff', min: 2.5, max: 3, label: 'clean', rarity: 4 },
     { id: 'rt_aura', min: 3, max: 3.5, label: 'aura', rarity: 5 },
-    { id: 'rt_aesthetic', min: 3.5, max: 4, label: 'aesthetic', rarity: 6 },
+    { id: 'rt_aesthetic', min: 3.5, max: 4, label: 'main character', rarity: 6 },
     { id: 'rt_peak', min: 4, max: 4.2, label: 'peak', rarity: 7 },
     { id: 'rt_cinema', min: 4.2, max: 4.4, label: 'absolute cinema', rarity: 8 },
-    { id: 'rt_masterpeace', min: 4.4, max: 4.5, label: 'masterpeace', rarity: 9 },
-    { id: 'rt_divine', min: 4.5, max: 4.6, label: 'divine', rarity: 10 },
+    { id: 'rt_masterpeace', min: 4.4, max: 4.5, label: 'masterpiece', rarity: 9 },
+    { id: 'rt_divine', min: 4.5, max: 4.6, label: 'holy aura', rarity: 10 },
     { id: 'rt_goated', min: 4.6, max: 4.7, label: 'goated', rarity: 11 },
     { id: 'rt_beauty', min: 4.7, max: 4.8, label: 'true adam', rarity: 12 },
-    { id: 'rt_perfection', min: 4.8, max: 4.9, label: 'Perfection', rarity: 13 },
+    { id: 'rt_perfection', min: 4.8, max: 4.9, label: 'untouchable', rarity: 13 },
     { id: 'rt_1010', min: 4.9, max: 5.01, label: '10/10', rarity: 14 },
   ];
 
@@ -1226,8 +1226,10 @@
   function missionLevelLabel(m) {
     if (!m) return '';
     if (isRatingTitle(m)) {
-      const idx = RATING_TITLES.findIndex(r => r.id === m.id);
-      return idx >= 0 ? `Lvl ${idx + 1}` : '';
+      const r = RATING_TITLES.find(x => x.id === m.id);
+      if (!r) return '';
+      const hi = r.max > 5 ? 5 : r.max;
+      return `${r.min.toFixed(1)}–${hi.toFixed(1)}`;
     }
     const lvl = missionCoinLevel(m);
     return lvl >= 0 ? `Lvl ${lvl + 1}` : '';
@@ -1254,7 +1256,7 @@
     const rating = Number(stats.rating) || 0;
     const unlocked = (stats.ratingVotes || 0) >= RATING_MIN_VOTERS;
     let rows = '';
-    RATING_TITLES.forEach((r, i) => {
+    RATING_TITLES.forEach((r) => {
       const meta = getMission(r.id);
       const owned = td.collected.includes(r.id);
       const isSoon = soon && soon.id === r.id;
@@ -1262,9 +1264,8 @@
       const typo = titleTypoCss(meta || { id: r.id, title: r.label, rarity: r.rarity, noTranslate: true });
       const cls = `tq-beauty-title-row${owned ? ' is-owned' : ''}${isSoon ? ' is-soon' : ''}${isCurrent ? ' is-current' : ''}`;
       rows += `<div class="${cls}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}">
-        <span class="tq-beauty-title-lvl">Lvl ${i + 1}</span>
+        <span class="tq-beauty-title-lvl">${r.min.toFixed(1)}–${(r.max > 5 ? 5 : r.max).toFixed(1)}</span>
         <span class="tq-beauty-title-name">${esc(titleDisplay(meta) || (r.label.charAt(0).toUpperCase() + r.label.slice(1)))}</span>
-        <span class="tq-beauty-title-range">${r.min.toFixed(1)} – ${(r.max > 5 ? 5 : r.max).toFixed(1)}</span>
         ${owned ? '<span class="tq-done-lbl">Obtenu</span>' : (isSoon ? '<span class="tq-soon">Bientôt</span>' : '')}
       </div>`;
     });
@@ -1450,8 +1451,6 @@
     const soon = !owned && soonIds.has(meta.id);
     const pending = td.pending.includes(meta.id);
     const price = opts.shop ? titleCoinPrice(meta) : null;
-    const holders = titleHoldersCount(meta.id);
-    const holdersHtml = `<span class="tq-title-holders" title="${holders.toLocaleString('fr-FR')} personne${holders > 1 ? 's' : ''}">${holders.toLocaleString('fr-FR')}</span>`;
     let badge = '';
     const lvl = missionLevelLabel(meta);
     if (owned) badge = '';
@@ -1467,7 +1466,6 @@
         <span class="tq-title-aura" aria-hidden="true"></span>
         <span class="tq-title-label">${esc(titleDisplay(meta))}</span>
         ${badge}
-        ${holdersHtml}
       </button>`;
     if (opts.expandable) {
       return `<div class="tq-beauty-top-row">
