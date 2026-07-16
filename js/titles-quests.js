@@ -113,12 +113,20 @@
 
   function grantDiscordienTitle(td, opts) {
     opts = opts || {};
-    if (!td.collected.includes(DISCORDIEN_ID)) td.collected.push(DISCORDIEN_ID);
+    const wasNew = !td.collected.includes(DISCORDIEN_ID);
+    if (wasNew) td.collected.push(DISCORDIEN_ID);
     // Équipe par défaut à la création / si aucun titre choisi (ou encore Beta Tester)
     if (opts.forceEquip || !td.equipped || td.equipped === BETA_TESTER_ID) {
       td.equipped = DISCORDIEN_ID;
     }
+    if (wasNew) bumpGlobalStat(DISCORDIEN_ID);
     return td;
+  }
+
+  function titleHoldersCount(id) {
+    const st = globalTitleStats(id);
+    const owned = (getTitlesData().collected || []).includes(id);
+    return Math.max(typeof st.count === 'number' ? st.count : 0, owned ? 1 : 0);
   }
 
   function trackForMission(m) {
@@ -682,6 +690,7 @@
       color: result.titlesData.color,
     });
     if (result.newBeautyTitles.length) {
+      result.newBeautyTitles.forEach(id => bumpGlobalStat(id));
       tqToast(result.newBeautyTitles.length === 1 ? 'Titre Esthétisme débloqué !' : 'Titres Esthétisme débloqués !');
     }
     if (typeof global.__scheduleCloudSync === 'function'
@@ -1304,22 +1313,32 @@
     const soon = !owned && soonIds.has(meta.id);
     const pending = td.pending.includes(meta.id);
     const price = opts.shop ? titleCoinPrice(meta) : null;
+    const holders = titleHoldersCount(meta.id);
+    const holdersHtml = `<span class="tq-title-holders" title="${holders.toLocaleString('fr-FR')} personne${holders > 1 ? 's' : ''}">${holders.toLocaleString('fr-FR')}</span>`;
     let badge = '';
     const lvl = missionLevelLabel(meta);
-    if (owned) badge = lvl ? `<span class="tq-lvl-badge">${esc(lvl)}</span>` : '';
+    if (owned) badge = '';
     else if (price != null) badge = `<span class="tq-price"><span class="tq-price-ico" aria-hidden="true">🪙</span>${price}</span>`;
     else if (pending) badge = '<span class="tq-soon tq-soon--ready">Quête prête</span>';
-    else if (soon) badge = `<span class="tq-soon">Bientôt</span>${lvl ? `<span class="tq-lvl-badge">${esc(lvl)}</span>` : ''}`;
+    else if (soon) badge = `<span class="tq-soon">Bientôt</span>`;
     else if (lvl) badge = `<span class="tq-lvl-badge">${esc(lvl)}</span>`;
     const typo = titleTypoCss(meta);
-    const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}`;
+    const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}${opts.beautyTop ? ' tq-title-pick--beauty-top' : ''}${opts.beautyChild ? ' tq-title-pick--beauty-child' : ''}`;
     const canBuy = opts.shop && price != null && getCoins() >= price;
-    return `<button type="button" class="${cls}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" data-price="${price || ''}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}" ${owned || canBuy ? '' : 'disabled'}>
+    const pick = `<button type="button" class="${cls}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" data-price="${price || ''}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}" ${owned || canBuy ? '' : 'disabled'}>
         <span class="tq-title-glow" aria-hidden="true"></span>
         <span class="tq-title-aura" aria-hidden="true"></span>
         <span class="tq-title-label">${esc(titleDisplay(meta))}</span>
         ${badge}
+        ${holdersHtml}
       </button>`;
+    if (opts.expandable) {
+      return `<div class="tq-beauty-top-row">
+        <button type="button" class="tq-beauty-expand" data-beauty-expand aria-expanded="false" aria-label="Afficher les niveaux inférieurs" title="Niveaux inférieurs">▾</button>
+        ${pick}
+      </div>`;
+    }
+    return pick;
   }
 
   function renderTitlesModal(body, stats) {
@@ -1327,8 +1346,15 @@
     const td = getTitlesData();
     const coins = getCoins();
     const soonIds = computeSoonTitleIds(stats, td);
-    // Uniquement titres gardés : Esthétisme + exclusifs (pas de titres de missions / boutique)
-    const ownedList = MISSIONS.filter(m => td.collected.includes(m.id) && isKeepableTitleId(m.id))
+    const ratingIds = RATING_TITLES.map(r => r.id);
+    // Esthétisme : du plus haut au plus bas
+    const ownedBeauty = RATING_TITLES
+      .filter(r => td.collected.includes(r.id))
+      .map(r => getMission(r.id))
+      .filter(Boolean)
+      .sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
+    const ownedOther = MISSIONS
+      .filter(m => td.collected.includes(m.id) && isKeepableTitleId(m.id) && !ratingIds.includes(m.id))
       .sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
     const titleColor = td.color || '#C7A5FF';
     let html = `<div class="tq-titles-toolbar">
@@ -1338,13 +1364,25 @@
         <button type="button" class="mf-color-swatch" id="tqTitleColorSw" aria-label="Teinte du titre" data-hex="${esc(titleColor)}" style="background:${esc(titleColor)}"></button>
       </div>
     </div><div class="tq-scroll tq-titles-list">`;
-    if (ownedList.length) {
+    if (ownedBeauty.length || ownedOther.length) {
       html += '<div class="tq-section-label">Mes titres</div>';
-      ownedList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
+      if (ownedBeauty.length) {
+        const top = ownedBeauty[0];
+        const lower = ownedBeauty.slice(1);
+        html += `<div class="tq-beauty-owned">`;
+        html += renderTitlePickRow(top, td, soonIds, { beautyTop: true, expandable: lower.length > 0 });
+        if (lower.length) {
+          html += `<div class="tq-beauty-owned-lower" id="tqBeautyOwnedLower" hidden>`;
+          lower.forEach(m => { html += renderTitlePickRow(m, td, soonIds, { beautyChild: true }); });
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+      ownedOther.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
     }
     html += `<div class="tq-section-label">Boutique</div>
       <p class="tq-titles-empty">L’achat de titres arrive bientôt — garde tes pièces 🪙</p>`;
-    if (!ownedList.length) {
+    if (!ownedBeauty.length && !ownedOther.length) {
       html += '<p class="tq-titles-empty">Aucun titre pour l’instant — progresse en Esthétisme du profil pour en débloquer.</p>';
     }
     html += '</div>';
@@ -1357,14 +1395,26 @@
         body.querySelectorAll('.tq-title-pick').forEach(btn => btn.style.setProperty('--title-color', hex));
       });
     }
+    const lowerBox = body.querySelector('#tqBeautyOwnedLower');
+    const expandBtn = body.querySelector('[data-beauty-expand]');
+    if (expandBtn && lowerBox) {
+      expandBtn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const open = lowerBox.hasAttribute('hidden');
+        if (open) lowerBox.removeAttribute('hidden');
+        else lowerBox.setAttribute('hidden', '');
+        expandBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        expandBtn.classList.toggle('is-open', open);
+        expandBtn.textContent = open ? '▴' : '▾';
+        expandBtn.setAttribute('aria-label', open ? 'Masquer les niveaux inférieurs' : 'Afficher les niveaux inférieurs');
+      });
+    }
     body.querySelectorAll('.tq-title-pick.owned').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', e => {
+        if (e.target.closest('[data-beauty-expand]')) return;
         saveTitlesData({ equipped: btn.getAttribute('data-id') });
         btn.closest('.tq-modal')?.querySelector('.tq-close')?.click();
-      });
-      btn.addEventListener('mouseenter', () => {
-        const st = globalTitleStats(btn.getAttribute('data-id'));
-        btn.title = `${st.count} joueurs · ${st.pct}%`;
       });
     });
   }

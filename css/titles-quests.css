@@ -529,12 +529,31 @@
 .tq-title-pick.soon:not(.owned){border-color:rgba(255,209,92,.45);background:rgba(255,209,92,.06)}
 .tq-title-pick.shop:not(.owned){border-color:rgba(255,209,92,.28);background:rgba(255,255,255,.03)}
 .tq-title-pick.shop:not(:disabled):hover{border-color:rgba(255,209,92,.55);background:rgba(255,209,92,.08)}
-.tq-price{
-  margin-left:auto;position:relative;z-index:1;flex:0 0 auto;
-  display:inline-flex;align-items:center;gap:4px;
-  font-size:11px;font-weight:800;color:#FFD15C;font-family:"Inter",system-ui,sans-serif;
-  letter-spacing:0;text-transform:none;
+.tq-title-label{
+  position:relative;z-index:1;flex:1;min-width:0;
+  font-family:var(--title-font,"Cinzel Decorative",serif);
+  font-weight:var(--title-weight,700);font-size:12px;letter-spacing:var(--title-spacing,.12em);
+  text-transform:var(--title-transform,uppercase);color:var(--title-color,#C7A5FF);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+.tq-title-holders{
+  margin-left:auto;position:relative;z-index:1;flex:0 0 auto;
+  font-size:12px;font-weight:800;color:rgba(255,255,255,.72);
+  font-family:"Inter",system-ui,sans-serif;font-variant-numeric:tabular-nums;
+  letter-spacing:0;text-transform:none;padding-left:8px;
+}
+.tq-beauty-owned{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
+.tq-beauty-top-row{display:flex;align-items:stretch;gap:6px}
+.tq-beauty-top-row .tq-title-pick{flex:1;min-width:0}
+.tq-beauty-expand{
+  flex:0 0 36px;border-radius:12px;border:1px solid rgba(255,126,182,.35);
+  background:rgba(255,126,182,.1);color:#FF7EB6;font-size:16px;font-weight:800;
+  cursor:pointer;line-height:1;padding:0;
+}
+.tq-beauty-expand:hover,.tq-beauty-expand.is-open{background:rgba(255,126,182,.2);border-color:rgba(255,126,182,.55)}
+.tq-beauty-owned-lower{display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:2px solid rgba(255,126,182,.25);margin-left:16px}
+.tq-beauty-owned-lower[hidden]{display:none!important}
+.tq-title-pick--beauty-child{opacity:.92}
 .tq-price-ico{font-size:12px;line-height:1}
 .tq-title-glow{
   position:absolute;inset:-8px -12px;border-radius:inherit;pointer-events:none;z-index:0;
@@ -565,18 +584,7 @@
 .tq-title-pick[data-rarity="12"] .tq-title-aura,
 .tq-title-pick[data-rarity="13"] .tq-title-aura,
 .tq-title-pick[data-rarity="14"] .tq-title-aura{opacity:.75}
-.tq-title-label{
-  position:relative;z-index:1;flex:1;min-width:0;
-  font-family:var(--title-font,"Cinzel Decorative","Clash Display",serif);
-  font-weight:var(--title-weight,700);font-size:12.5px;
-  letter-spacing:var(--title-spacing,.14em);
-  text-transform:var(--title-transform,uppercase);
-  color:var(--title-color,#C7A5FF);
-  text-shadow:
-    0 0 8px color-mix(in srgb,var(--title-color,#C7A5FF) 55%,transparent),
-    0 0 18px color-mix(in srgb,var(--title-color,#C7A5FF) 32%,transparent);
-}
-.tq-soon{font-size:10px;font-weight:800;color:#FFD15C;margin-left:auto;position:relative;z-index:1;font-family:"Inter",system-ui,sans-serif;letter-spacing:.04em;text-transform:none;flex:0 0 auto}
+.tq-soon{font-size:10px;font-weight:800;color:#FFD15C;position:relative;z-index:1;font-family:"Inter",system-ui,sans-serif;letter-spacing:.04em;text-transform:none;flex:0 0 auto}
 .tq-soon--ready{color:#23a559}
 
 /* Éditeur — titre + discord floor preview */
