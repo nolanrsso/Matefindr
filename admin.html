@@ -683,17 +683,20 @@
     for(const a of ACCOUNTS){
       try{
         const uid=a.id;
-        const [{ count:mC },{ count:lC },{ count:lrC },{ count:vC },{ count:vrC }, reactRes]=await Promise.all([
+        const [{ count:mC },{ count:lC },{ count:lrC },{ count:vC },{ count:vrC }, reactRes, msgRes]=await Promise.all([
           sb.from('matches').select('*',{ count:'exact', head:true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
           sb.from('likes').select('*',{ count:'exact', head:true }).eq('liker_id', uid),
           sb.from('likes').select('*',{ count:'exact', head:true }).eq('liked_id', uid),
           sb.from('profile_reactions').select('*',{ count:'exact', head:true }).eq('reactor_id', uid),
           sb.from('profile_reactions').select('*',{ count:'exact', head:true }).eq('profile_id', uid),
           sb.from('profile_reactions').select('rating').eq('profile_id', uid).limit(5000),
+          sb.from('messages').select('match_id').eq('sender_id', uid).limit(5000),
         ]);
         const ratings=[];
         (reactRes.data||[]).forEach(r=>{ const v=parseFloat(r.rating); if(!Number.isNaN(v)) ratings.push(v); });
         const rating=ratings.length? ratings.reduce((s,x)=>s+x,0)/ratings.length : 0;
+        const chatIds=new Set();
+        (msgRes.data||[]).forEach(r=>{ if(r&&r.match_id) chatIds.add(r.match_id); });
         const stats={
           views:(a.prof&&a.prof.views)||0,
           matches:mC||0,
@@ -701,7 +704,7 @@
           likesReceived:lrC||0,
           votesGiven:vC||0,
           votesReceived:vrC||0,
-          newChats:mC||0,
+          newChats:chatIds.size,
           rating,
           ratingVotes:ratings.length,
         };
@@ -712,7 +715,7 @@
           coins:dd.coins,
           questCoinClaims:dd.questCoinClaims,
           titlesData:dd.titlesData,
-        });
+        },{ autoClaimCoins:true });
         const afterBeauty=(result.titlesData.collected||[]).filter(id=>String(id).startsWith('rt_')).length;
         const changed=result.gainedCoins>0
           || result.newBeautyTitles.length>0

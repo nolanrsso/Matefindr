@@ -375,7 +375,38 @@
   padding:4px 9px;border-radius:999px;background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.28);
 }
 .tq-mission--rating{border-color:rgba(255,126,182,.25)}
+.tq-beauty-arrow{
+  display:flex;align-items:baseline;justify-content:center;gap:12px;
+  margin:4px 0 14px;font-variant-numeric:tabular-nums;
+}
+.tq-beauty-from,.tq-beauty-to{
+  font-family:"Clash Display",sans-serif;font-weight:800;font-size:28px;letter-spacing:-.03em;line-height:1;
+}
+.tq-beauty-from{color:#FF7EB6}
+.tq-beauty-to{color:#FFD15C}
+.tq-beauty-chevron{
+  font-size:22px;font-weight:800;color:rgba(255,255,255,.55);transform:translateY(-2px);
+}
+.tq-beauty-unit{
+  align-self:center;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+}
 .tq-rating-details-toggle,.tq-rating-tiers{display:none!important}
+
+/* Notif quête à réclamer */
+.nav-ico--quests,.top-btn--quests{position:relative}
+.tq-quest-badge{
+  position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;
+  border-radius:999px;background:linear-gradient(135deg,#FF4D6D,#FF7EB6);color:#fff;
+  font-size:10px;font-weight:800;line-height:16px;text-align:center;
+  box-shadow:0 0 0 2px rgba(12,10,24,.95),0 4px 10px rgba(255,77,109,.45);
+  pointer-events:none;
+}
+.top-btn--quests .tq-quest-badge{top:-4px;right:-4px}
+.tq-quest-has-claim{animation:tq-quest-pulse 1.8s ease-in-out infinite}
+@keyframes tq-quest-pulse{
+  0%,100%{filter:none}
+  50%{filter:drop-shadow(0 0 6px rgba(255,126,182,.55))}
+}
 @media (max-width:520px){
   .tq-modal--quests{
     width:min(96vw,100%);

@@ -273,26 +273,38 @@
     opts = opts || {};
     const s = readSite();
     const u = s.user || {};
-    let views = typeof opts.views === 'number' ? opts.views : (u.profileViews || s.profile?.views || 0);
-    let matches = 0, likesGiven = 0, likesReceived = 0, votesGiven = 0, votesReceived = 0, newChats = 0;
+    const prev = (u.questStats && typeof u.questStats === 'object') ? u.questStats : {};
+    let views = typeof opts.views === 'number' ? opts.views : (u.profileViews || s.profile?.views || prev.views || 0);
+    let matches = typeof prev.matches === 'number' ? prev.matches : 0;
+    let likesGiven = typeof prev.likesGiven === 'number' ? prev.likesGiven : 0;
+    let likesReceived = typeof prev.likesReceived === 'number' ? prev.likesReceived : 0;
+    let votesGiven = typeof prev.votesGiven === 'number' ? prev.votesGiven : 0;
+    let votesReceived = typeof prev.votesReceived === 'number' ? prev.votesReceived : 0;
+    let newChats = typeof prev.newChats === 'number' ? prev.newChats : 0;
     const sb = opts.supa || global.__supa;
     const uid = opts.uid || u.uid;
     if (sb && uid) {
       try {
-        const [{ count: mC }, { count: lC }, { count: lrC }, { count: vC }, { count: vrC }, viewsRes] = await Promise.all([
+        const [{ count: mC }, { count: lC }, { count: lrC }, { count: vC }, { count: vrC }, viewsRes, msgRes] = await Promise.all([
           sb.from('matches').select('*', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
           sb.from('likes').select('*', { count: 'exact', head: true }).eq('liker_id', uid),
           sb.from('likes').select('*', { count: 'exact', head: true }).eq('liked_id', uid),
           sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('reactor_id', uid),
           sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('profile_id', uid),
           sb.from('profiles').select('views').eq('id', uid).maybeSingle(),
+          // Conversations = matchs où j'ai envoyé au moins 1 message
+          sb.from('messages').select('match_id').eq('sender_id', uid).limit(5000),
         ]);
         matches = mC || 0;
         likesGiven = lC || 0;
         likesReceived = lrC || 0;
         votesGiven = vC || 0;
         votesReceived = vrC || 0;
-        newChats = matches;
+        const chatIds = new Set();
+        (msgRes && msgRes.data ? msgRes.data : []).forEach(row => {
+          if (row && row.match_id) chatIds.add(row.match_id);
+        });
+        newChats = chatIds.size;
         if (typeof opts.views !== 'number' && viewsRes && viewsRes.data && typeof viewsRes.data.views === 'number') {
           views = viewsRes.data.views;
         }
@@ -302,8 +314,8 @@
     if (typeof ratingRec === 'function') {
       try { ratingRec = await ratingRec(); } catch (_) { ratingRec = null; }
     }
-    const rating = avgRating(ratingRec);
-    const ratingVotes = ratingRec?.ratings?.length || 0;
+    const rating = ratingRec ? avgRating(ratingRec) : (typeof prev.rating === 'number' ? prev.rating : 0);
+    const ratingVotes = ratingRec?.ratings?.length || (typeof prev.ratingVotes === 'number' ? prev.ratingVotes : 0);
     return { views, matches, likesGiven, likesReceived, votesGiven, votesReceived, newChats, rating, ratingVotes };
   }
 
@@ -322,13 +334,53 @@
       return { current: cur, target: tgt, pct: Math.min(100, tgt ? (cur / tgt) * 100 : 0), complete: cur >= tgt, locked: false };
     }
     if (m.stat === 'rating') {
-      if ((stats.ratingVotes || 0) < RATING_MIN_VOTERS) return { current: stats.ratingVotes || 0, target: RATING_MIN_VOTERS, pct: Math.min(100, ((stats.ratingVotes || 0) / RATING_MIN_VOTERS) * 100), locked: true };
-      const ok = stats.rating >= (m.ratingMin || 0) && stats.rating < (m.ratingMax || 99);
-      return { current: stats.rating, target: m.ratingMax, pct: ok ? 100 : Math.min(99, (stats.rating / 5) * 100), locked: false, complete: ok };
+      if ((stats.ratingVotes || 0) < RATING_MIN_VOTERS) {
+        const cur = stats.ratingVotes || 0;
+        return { current: cur, target: RATING_MIN_VOTERS, pct: Math.min(100, (cur / RATING_MIN_VOTERS) * 100), locked: true, complete: false };
+      }
+      const rating = Number(stats.rating) || 0;
+      const ok = rating >= (m.ratingMin || 0) && rating < (m.ratingMax || 99);
+      // Barre Esthétisme : 100 % uniquement à 5/5
+      const pct = rating >= 5 ? 100 : Math.min(99.9, Math.max(0, (rating / 5) * 100));
+      return { current: rating, target: 5, pct, locked: false, complete: ok };
     }
     const cur = stats[m.stat] || 0;
     const tgt = m.threshold || 0;
     return { current: cur, target: tgt, pct: Math.min(100, tgt ? (cur / tgt) * 100 : 0), complete: cur >= tgt, locked: false };
+  }
+
+  /** Flèche Esthétisme : note actuelle → prochain palier (ou votants → 5). */
+  function beautyArrow(stats) {
+    const votes = stats.ratingVotes || 0;
+    if (votes < RATING_MIN_VOTERS) {
+      return {
+        locked: true,
+        from: votes,
+        to: RATING_MIN_VOTERS,
+        labelFrom: String(votes),
+        labelTo: String(RATING_MIN_VOTERS),
+        pct: Math.min(100, (votes / RATING_MIN_VOTERS) * 100),
+        unit: 'votants',
+        maxed: false,
+      };
+    }
+    const rating = Number(stats.rating) || 0;
+    let next = 5;
+    for (let i = 0; i < RATING_TITLES.length; i++) {
+      if (rating < RATING_TITLES[i].min) { next = RATING_TITLES[i].min; break; }
+    }
+    if (rating >= (RATING_TITLES[RATING_TITLES.length - 1].min || 5)) next = 5;
+    const maxed = rating >= 5;
+    return {
+      locked: false,
+      from: rating,
+      to: next,
+      labelFrom: rating.toFixed(1),
+      labelTo: Number(next).toFixed(1),
+      pct: maxed ? 100 : Math.min(99.9, Math.max(0, (rating / 5) * 100)),
+      unit: 'note',
+      maxed,
+    };
   }
 
   function listEligibleMissionIds(stats) {
@@ -356,11 +408,14 @@
   }
 
   /**
-   * Applique quêtes → pièces + titres beauté (et pending) à partir des stats réelles.
+   * Applique quêtes → titres beauté + pending (et pièces si autoClaimCoins).
    * Pure : ne lit/écrit pas localStorage. Utilisé client + admin backfill.
+   * Client : autoClaimCoins=false → pièces via bouton « Réclamer ».
    */
-  function applyQuestProgress(stats, snapshot) {
+  function applyQuestProgress(stats, snapshot, opts) {
     snapshot = snapshot || {};
+    opts = opts || {};
+    const autoClaimCoins = !!opts.autoClaimCoins;
     const ratingIds = RATING_TITLES.map(r => r.id);
     const eligible = listEligibleMissionIds(stats || {});
     const srcTd = snapshot.titlesData && typeof snapshot.titlesData === 'object' ? snapshot.titlesData : {};
@@ -387,18 +442,28 @@
     let claims = Array.isArray(snapshot.questCoinClaims) ? snapshot.questCoinClaims.slice() : [];
     let coins = typeof snapshot.coins === 'number' ? snapshot.coins : 0;
     let gainedCoins = 0;
+    const claimable = [];
     eligible.forEach(id => {
-      if (claims.includes(id)) return;
+      if (ratingIds.includes(id)) return;
       const m = getMission(id);
       const lvl = missionCoinLevel(m);
       if (lvl < 0) return;
-      const reward = questCoinReward(lvl);
-      coins += reward;
-      gainedCoins += reward;
-      claims.push(id);
+      if (claims.includes(id)) {
+        // Déjà réclamé (ex. ancien auto-grant) → titre débloqué
+        if (!collected.includes(id)) collected.push(id);
+        return;
+      }
+      claimable.push(id);
+      if (autoClaimCoins) {
+        const reward = questCoinReward(lvl);
+        coins += reward;
+        gainedCoins += reward;
+        claims.push(id);
+        if (!collected.includes(id)) collected.push(id);
+      }
     });
 
-    const pending = eligible.filter(id => !collected.includes(id) && !ratingIds.includes(id));
+    const pending = claimable.filter(id => !collected.includes(id));
     return {
       coins,
       questCoinClaims: claims,
@@ -406,6 +471,7 @@
       gainedCoins,
       newBeautyTitles,
       eligible,
+      claimable,
     };
   }
 
@@ -414,11 +480,13 @@
       coins: getCoins(),
       questCoinClaims: getQuestCoinClaims(),
       titlesData: getTitlesData(),
-    });
+    }, { autoClaimCoins: false });
     const td = getTitlesData();
     const sameCollected = result.titlesData.collected.length === td.collected.length
       && result.titlesData.collected.every((id, i) => id === td.collected[i]);
-    if (!sameCollected || result.titlesData.equipped !== td.equipped) {
+    if (!sameCollected || result.titlesData.equipped !== td.equipped
+      || result.titlesData.pending.length !== (td.pending || []).length
+      || result.titlesData.pending.some((id, i) => id !== td.pending[i])) {
       saveTitlesData({
         collected: result.titlesData.collected,
         equipped: result.titlesData.equipped,
@@ -460,59 +528,104 @@
   }
 
   function processQuestCoinRewards(stats) {
-    const result = applyQuestProgress(stats, {
+    refreshPending(stats);
+    return 0;
+  }
+
+  function listClaimableQuestIds(stats) {
+    const result = applyQuestProgress(stats || {}, {
       coins: getCoins(),
       questCoinClaims: getQuestCoinClaims(),
       titlesData: getTitlesData(),
+    }, { autoClaimCoins: false });
+    return result.claimable || [];
+  }
+
+  function updateQuestButtonBadge(stats) {
+    const ids = ['navQuests', 'btnQuests'];
+    const claimable = listClaimableQuestIds(stats || (readSite().user || {}).questStats || {});
+    const n = claimable.length;
+    ids.forEach(id => {
+      const btn = $(id);
+      if (!btn) return;
+      let badge = btn.querySelector('.tq-quest-badge');
+      if (!n) {
+        if (badge) badge.remove();
+        btn.classList.remove('tq-quest-has-claim');
+        btn.removeAttribute('data-quest-claims');
+        return;
+      }
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'tq-quest-badge';
+        badge.setAttribute('aria-hidden', 'true');
+        btn.appendChild(badge);
+      }
+      badge.textContent = n > 9 ? '9+' : String(n);
+      btn.classList.add('tq-quest-has-claim');
+      btn.setAttribute('data-quest-claims', String(n));
     });
-    if (result.gainedCoins > 0) {
-      saveQuestCoinClaims(result.questCoinClaims);
-      setCoins(result.coins);
-      const last = result.gainedCoins;
-      tqToast(last === result.gainedCoins ? `+${result.gainedCoins} pièces — paliers terminés !` : `+${result.gainedCoins} pièces — paliers terminés !`);
-    }
-    return result.gainedCoins;
   }
 
   function refreshPending(stats) {
-    const beforeCoins = getCoins();
-    const beforeClaims = getQuestCoinClaims().length;
     const beforeBeauty = (getTitlesData().collected || []).filter(id => String(id).startsWith('rt_')).length;
     const result = applyQuestProgress(stats, {
       coins: getCoins(),
       questCoinClaims: getQuestCoinClaims(),
       titlesData: getTitlesData(),
-    });
-    if (result.gainedCoins > 0) {
-      saveQuestCoinClaims(result.questCoinClaims);
-      setCoins(result.coins);
-      tqToast(`+${result.gainedCoins} pièces — paliers terminés !`);
-    }
+    }, { autoClaimCoins: false });
     saveTitlesData({
       collected: result.titlesData.collected,
       pending: result.titlesData.pending,
       equipped: result.titlesData.equipped,
       color: result.titlesData.color,
     });
-    if (result.newBeautyTitles.length && result.gainedCoins === 0) {
+    if (result.newBeautyTitles.length) {
       tqToast(result.newBeautyTitles.length === 1 ? 'Titre Esthétisme débloqué !' : 'Titres Esthétisme débloqués !');
     }
     if (typeof global.__scheduleCloudSync === 'function'
-      && (result.gainedCoins > 0 || result.newBeautyTitles.length || result.questCoinClaims.length !== beforeClaims || getCoins() !== beforeCoins || result.titlesData.collected.filter(id => String(id).startsWith('rt_')).length !== beforeBeauty)) {
+      && (result.newBeautyTitles.length || result.titlesData.collected.filter(id => String(id).startsWith('rt_')).length !== beforeBeauty
+        || (result.claimable || []).length !== (getTitlesData().pending || []).length)) {
       global.__scheduleCloudSync();
     }
+    updateQuestButtonBadge(stats);
     return result.titlesData.pending;
   }
 
   function collectMission(id) {
     const td = getTitlesData();
-    if (!td.pending.includes(id)) return false;
-    td.collected.push(id);
+    if (!td.pending.includes(id) && !td.collected.includes(id)) return false;
+    if (!td.collected.includes(id)) td.collected.push(id);
     td.pending = td.pending.filter(x => x !== id);
     if (!td.equipped) td.equipped = id;
     saveTitlesData({ collected: td.collected, pending: td.pending, equipped: td.equipped });
     bumpGlobalStat(id);
     return true;
+  }
+
+  /** Réclame pièces + titre d'un palier terminé. */
+  function claimQuestReward(id) {
+    const m = getMission(id);
+    if (!m || isRatingTitle(m)) return null;
+    const stats = (readSite().user || {}).questStats || {};
+    const eligible = listEligibleMissionIds(stats);
+    if (!eligible.includes(id)) return null;
+
+    let gained = 0;
+    const claims = getQuestCoinClaims().slice();
+    if (!claims.includes(id)) {
+      const lvl = missionCoinLevel(m);
+      if (lvl >= 0) {
+        gained = questCoinReward(lvl);
+        setCoins(getCoins() + gained);
+        claims.push(id);
+        saveQuestCoinClaims(claims);
+      }
+    }
+    collectMission(id);
+    updateQuestButtonBadge(stats);
+    if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
+    return { id, gained, coins: getCoins() };
   }
 
   function bumpGlobalStat(id) {
@@ -912,9 +1025,18 @@
       return getMission((bracket || RATING_TITLES[RATING_TITLES.length - 1]).id);
     }
     const cur = stats[track.stat] || 0;
-    let targetTh = MILESTONES.find(th => cur < th);
+    const claims = getQuestCoinClaims();
+    const thresholds = milestonesFrom(Math.max(cur + 1, 2000));
+    // 1) Premier palier atteint non réclamé → bouton Réclamer à 100 %
+    for (let i = 0; i < thresholds.length; i++) {
+      const th = thresholds[i];
+      const id = missionId(track.statId, th);
+      if (cur >= th && !claims.includes(id)) return getMission(id);
+    }
+    // 2) Sinon prochain palier en cours
+    let targetTh = thresholds.find(th => cur < th);
     if (!targetTh) {
-      let th = 2500;
+      let th = thresholds[thresholds.length - 1] || 2500;
       while (cur >= th) th += 500;
       targetTh = th;
     }
@@ -924,57 +1046,67 @@
   function renderQuestsModal(body, stats) {
     refreshPending(stats);
     const td = getTitlesData();
+    const claims = getQuestCoinClaims();
     let html = '<div class="tq-scroll tq-quests-list">';
     QUEST_TRACKS.forEach(track => {
       if (track.isRating) {
-        const m = nextMissionForTrack(track, stats);
-        const p = m ? missionProgress(m, stats) : null;
-        const done = m && td.collected.includes(m.id);
-        const ready = m && td.pending.includes(m.id);
-        const noteLbl = p
-          ? (p.locked
-            ? `${Math.floor(p.current)} / ${RATING_MIN_VOTERS} votants`
-            : `Note ${Number(p.current).toFixed(1)} / 5`)
-          : '';
-        html += `<article class="tq-mission tq-mission--hero tq-mission--rating${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}">
+        const arrow = beautyArrow(stats);
+        html += `<article class="tq-mission tq-mission--hero tq-mission--rating${arrow.maxed ? ' tq-mission--done' : ''}">
           <div class="tq-mission-head">
             <span class="tq-mission-title">${esc(track.label)}</span>
-            ${done ? '<span class="tq-done-lbl">Débloqué</span>' : (p && !p.locked ? '<span class="tq-auto-lbl">Auto</span>' : '')}
+            ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : '<span class="tq-auto-lbl">Auto</span>'}
           </div>
-          <p class="tq-mission-desc">Ta note de profil après ${RATING_MIN_VOTERS} votes — progression automatique.</p>
-          ${p ? `<div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${p.pct.toFixed(1)}%"></span></div>
+          <p class="tq-mission-desc">${arrow.locked
+            ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
+            : 'Ta note de profil — la barre atteint 100 % à 5/5.'}</p>
+          <div class="tq-beauty-arrow" aria-label="${esc(arrow.locked ? 'Votants' : 'Note')}">
+            <span class="tq-beauty-from">${esc(arrow.labelFrom)}</span>
+            <span class="tq-beauty-chevron" aria-hidden="true">→</span>
+            <span class="tq-beauty-to">${esc(arrow.labelTo)}</span>
+            ${arrow.locked ? '<span class="tq-beauty-unit">votants</span>' : ''}
+          </div>
+          <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(arrow.pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${arrow.pct.toFixed(1)}%"></span></div>
           <div class="tq-mission-foot">
-            <span class="tq-mission-count">${esc(noteLbl)}</span>
-          </div>` : ''}
+            <span class="tq-mission-count">${arrow.locked
+              ? `${arrow.from} / ${arrow.to} votants`
+              : `Note ${arrow.labelFrom} / 5`}</span>
+          </div>
         </article>`;
         return;
       }
       const m = nextMissionForTrack(track, stats);
       if (!m) return;
       const p = missionProgress(m, stats);
-      const done = td.collected.includes(m.id);
-      const ready = td.pending.includes(m.id);
+      const claimed = claims.includes(m.id);
+      const ready = p.complete && !claimed;
+      const done = claimed && td.collected.includes(m.id);
       const coinLvl = missionCoinLevel(m);
       const coinReward = coinLvl >= 0 ? questCoinReward(coinLvl) : 0;
+      const pct = ready ? 100 : p.pct;
       html += `<article class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
         <div class="tq-mission-head">
           <span class="tq-mission-title">${esc(track.label)}</span>
-          ${coinReward && !done ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
+          ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
         </div>
-        <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${p.pct.toFixed(1)}%"></span></div>
+        <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct.toFixed(1)}%"></span></div>
         <div class="tq-mission-foot">
           <span class="tq-mission-count">${Math.floor(p.current)} / ${p.target}</span>
-          ${ready ? `<button type="button" class="tq-collect" data-collect="${esc(m.id)}">Récolter</button>` : (done ? '<span class="tq-done-lbl">Obtenu</span>' : '')}
+          ${ready
+            ? `<button type="button" class="tq-collect" data-claim="${esc(m.id)}">Réclamer${coinReward ? ` · +${coinReward} 🪙` : ''}</button>`
+            : (claimed ? '<span class="tq-done-lbl">Réclamé</span>' : '')}
         </div>
       </article>`;
     });
     html += '</div>';
     body.innerHTML = html;
-    body.querySelectorAll('[data-collect]').forEach(btn => {
+    body.querySelectorAll('[data-claim]').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (collectMission(btn.getAttribute('data-collect'))) {
-          global.MatefindrTitlesQuests.openQuests({ refresh: true });
-        }
+        const id = btn.getAttribute('data-claim');
+        const res = claimQuestReward(id);
+        if (!res) return;
+        if (res.gained > 0) tqToast(`+${res.gained.toLocaleString('fr-FR')} pièces récupérées !`);
+        else tqToast('Récompense réclamée');
+        global.MatefindrTitlesQuests.openQuests({ refresh: true, stats });
       });
     });
   }
@@ -1234,8 +1366,12 @@
     questCoinReward,
     applyQuestProgress,
     listEligibleMissionIds,
+    listClaimableQuestIds,
     refreshPending,
     collectMission,
+    claimQuestReward,
+    updateQuestButtonBadge,
+    beautyArrow,
     cardTitleHtml,
     cardTitleSlotHtml,
     editorTitleSlotHtml,
