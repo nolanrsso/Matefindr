@@ -106,12 +106,12 @@
 .swipe-card .card-title-slot,
 .editor-page .card .card-title-slot{
   display:flex;align-items:center;flex-wrap:wrap;gap:2px;
-  min-height:14px;margin:2px 0 4px;padding:0;
+  min-height:0;margin:0;padding:0;
 }
 .swipe-card .card-title-slot--clickable,
 .editor-page .card .card-title-slot--clickable:not(.ed-title-frame){
   border:none;background:transparent;cursor:pointer;font:inherit;text-align:left;
-  width:auto;max-width:100%;padding:0;margin:2px 0 4px;
+  width:auto;max-width:100%;padding:0;margin:0;
   display:inline-flex;align-items:center;
 }
 .swipe-card .card-title-slot--clickable:hover .card-profile-title,
