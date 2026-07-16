@@ -95,10 +95,31 @@
   };
 
   const BETA_TESTER_ID = 'beta_tester';
+  const DISCORDIEN_ID = 'discordien';
   const OWNER_DISCORD_TAG = 'alonemaxing';
   const OWNER_TITLE_ID = 'owner';
   const MATEFINDR_OWNER_TITLE_ID = 'matefindr_owner';
-  const EXCLUSIVE_TITLE_IDS = [BETA_TESTER_ID, OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID];
+  const EXCLUSIVE_TITLE_IDS = [BETA_TESTER_ID, DISCORDIEN_ID, OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID];
+
+  function currentUiLang() {
+    try {
+      return String(document.documentElement.lang || 'fr').toLowerCase().slice(0, 2);
+    } catch (_) { return 'fr'; }
+  }
+
+  function discordienLabel() {
+    return currentUiLang() === 'fr' ? 'Discordien' : 'Discordians';
+  }
+
+  function grantDiscordienTitle(td, opts) {
+    opts = opts || {};
+    if (!td.collected.includes(DISCORDIEN_ID)) td.collected.push(DISCORDIEN_ID);
+    // Équipe par défaut à la création / si aucun titre choisi (ou encore Beta Tester)
+    if (opts.forceEquip || !td.equipped || td.equipped === BETA_TESTER_ID) {
+      td.equipped = DISCORDIEN_ID;
+    }
+    return td;
+  }
 
   function trackForMission(m) {
     if (!m) return null;
@@ -122,7 +143,7 @@
 
   function isKeepableTitleId(id) {
     if (!id) return false;
-    if (id === BETA_TESTER_ID || EXCLUSIVE_TITLE_IDS.includes(id)) return true;
+    if (id === BETA_TESTER_ID || id === DISCORDIEN_ID || EXCLUSIVE_TITLE_IDS.includes(id)) return true;
     if (String(id).startsWith('rt_')) return true;
     return false;
   }
@@ -164,7 +185,8 @@
     if (!Array.isArray(td.collected)) td.collected = [];
     if (!Array.isArray(td.pending)) td.pending = [];
     if (!td.collected.includes(BETA_TESTER_ID)) td.collected.push(BETA_TESTER_ID);
-    if (!td.equipped) td.equipped = BETA_TESTER_ID;
+    grantDiscordienTitle(td, { forceEquip: false });
+    if (!td.equipped) td.equipped = DISCORDIEN_ID;
     return td;
   }
 
@@ -204,6 +226,18 @@
       rarity: 4,
       desc: 'Titre exclusif pour les testeurs de la beta Matefindr.',
       stat: 'beta',
+    });
+    list.push({
+      id: DISCORDIEN_ID,
+      group: 'profil',
+      label: 'Discordien',
+      title: 'Discordien',
+      rarity: 5,
+      noTranslate: true,
+      exclusive: true,
+      i18nTitle: true,
+      desc: 'Titre offert à la création de compte via Discord.',
+      stat: 'discord',
     });
     list.push({
       id: OWNER_TITLE_ID,
@@ -488,7 +522,9 @@
     const srcTd = snapshot.titlesData && typeof snapshot.titlesData === 'object' ? snapshot.titlesData : {};
     let collected = Array.isArray(srcTd.collected) ? srcTd.collected.slice() : [];
     if (!collected.includes(BETA_TESTER_ID)) collected.push(BETA_TESTER_ID);
-    let equipped = srcTd.equipped || BETA_TESTER_ID;
+    if (!collected.includes(DISCORDIEN_ID)) collected.push(DISCORDIEN_ID);
+    let equipped = srcTd.equipped || DISCORDIEN_ID;
+    if (!equipped || equipped === BETA_TESTER_ID) equipped = DISCORDIEN_ID;
     const color = srcTd.color || '#C7A5FF';
 
     // Titres missions / boutique retirés : on ne garde que Esthétisme + exclusifs
@@ -712,6 +748,7 @@
 
   function titleDisplay(m) {
     if (!m) return '';
+    if (m.id === DISCORDIEN_ID) return discordienLabel();
     const t = m.title || '';
     if (m.noTranslate) return t.charAt(0).toUpperCase() + t.slice(1);
     return t;
@@ -1406,7 +1443,12 @@
     const prev = u.titlesData;
     const td = getTitlesData(u);
     const ownerGranted = isOwnerDiscordTag(u) && [OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID].some(id => !prev?.collected?.includes(id));
-    if (!prev?.collected?.includes(BETA_TESTER_ID) || !prev?.equipped || ownerGranted) {
+    const needDiscordien = !prev?.collected?.includes(DISCORDIEN_ID)
+      || !prev?.equipped
+      || prev?.equipped === BETA_TESTER_ID
+      || ownerGranted
+      || !prev?.collected?.includes(BETA_TESTER_ID);
+    if (needDiscordien) {
       saveTitlesData({ collected: td.collected, equipped: td.equipped, pending: td.pending || [] });
     }
     (async () => {
@@ -1480,6 +1522,9 @@
   global.MatefindrTitlesQuests = {
     QUEST_SVG,
     MISSIONS,
+    DISCORDIEN_ID,
+    grantDiscordienTitle,
+    discordienLabel,
     getTitlesData,
     saveTitlesData,
     fetchStats,

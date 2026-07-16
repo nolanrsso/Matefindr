@@ -169,6 +169,7 @@
     <label class="chk"><input type="checkbox" id="onlyDisabled" /> Désactivés seulement</label>
     <button class="tbtn" id="migrateBtn" style="display:none">🧹 Migrer images → Storage</button>
     <button class="tbtn" id="questsBackfillBtn" style="display:none" title="Recalcule quêtes, pièces et titres Esthétisme pour tous les profils">🎯 Sync quêtes</button>
+    <button class="tbtn" id="discordienBackfillBtn" style="display:none" title="Donne le titre Discordien / Discordians à tous les comptes">💬 Titre Discordien</button>
     <button class="tbtn" id="clearSeenBtn">✓ Tout marquer comme vu</button>
     <button class="tbtn" id="maintenanceBtn" title="Coupe l'accès au site à tout le monde sauf à alonemaxing">🚧 Mode maintenance</button>
     <button class="tbtn" id="refreshBtn">↻ Actualiser</button>
@@ -368,6 +369,7 @@
     }catch(_){}
     $('migrateBtn').style.display = FULL ? '' : 'none';
     $('questsBackfillBtn').style.display = FULL ? '' : 'none';
+    $('discordienBackfillBtn').style.display = FULL ? '' : 'none';
     renderTable();
   }
 
@@ -742,6 +744,46 @@
     renderTable();
   }
   $('questsBackfillBtn').addEventListener('click', backfillAllQuests);
+
+  /* ---- Donne le titre Discordien / Discordians à TOUS les profils ---- */
+  async function backfillDiscordienTitle(){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const TQ=window.MatefindrTitlesQuests;
+    if(!TQ||typeof TQ.grantDiscordienTitle!=='function'){ toast('titles-quests.js non chargé'); return; }
+    if(!ACCOUNTS.length){ toast('Aucun compte chargé'); return; }
+    const id=TQ.DISCORDIEN_ID||'discordien';
+    if(!confirm('Donner le titre « Discordien / Discordians » à '+ACCOUNTS.length+' profil(s) ?\n→ ajouté à la collection\n→ équipé si aucun titre choisi (ou encore Beta Tester)')) return;
+    const btn=$('discordienBackfillBtn'); btn.disabled=true;
+    let updated=0, equipped=0, fail=0;
+    for(const a of ACCOUNTS){
+      try{
+        const dd=d(a);
+        const src=dd.titlesData&&typeof dd.titlesData==='object'?dd.titlesData:{};
+        const td={
+          collected:Array.isArray(src.collected)?src.collected.slice():[],
+          pending:Array.isArray(src.pending)?src.pending.slice():[],
+          equipped:src.equipped||null,
+          color:src.color||'#C7A5FF',
+        };
+        const beforeHad=td.collected.includes(id);
+        const beforeEq=td.equipped;
+        TQ.grantDiscordienTitle(td,{ forceEquip:false });
+        if(!td.collected.includes('beta_tester')) td.collected.push('beta_tester');
+        const changed=!beforeHad || beforeEq!==td.equipped
+          || JSON.stringify(td.collected)!==JSON.stringify(src.collected||[]);
+        if(!changed) continue;
+        const ok=await patchProfileData(a,{ titlesData:td }, null);
+        if(ok){
+          updated++;
+          if(beforeEq!==td.equipped && td.equipped===id) equipped++;
+        }else fail++;
+      }catch(e){ console.warn('discordien backfill', a.id, e); fail++; }
+    }
+    btn.disabled=false;
+    toast('💬 '+updated+' profil(s) · '+equipped+' équipé(s)'+(fail?(' · ⚠️ '+fail+' échec(s)'):''));
+    renderTable();
+  }
+  $('discordienBackfillBtn').addEventListener('click', backfillDiscordienTitle);
 
   /* ---- Modal : profil complet ---- */
   function openProfile(a){
