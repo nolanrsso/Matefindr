@@ -303,22 +303,44 @@
 .conn-discord-refresh:disabled{opacity:.55;cursor:wait}
 
 /* Quêtes & titres modales */
-.tq-modal{width:min(94vw,480px);max-height:min(86vh,640px);display:flex;flex-direction:column;padding:18px 18px 16px}
-/* Modale Quêtes : format 4/3, plus aérée */
+.tq-modal{width:min(94vw,520px);max-height:min(88vh,720px);display:flex;flex-direction:column;padding:18px 18px 16px}
+/* Modale Quêtes : plus grande */
 .tq-modal--quests{
-  width:min(92vw,560px);
-  aspect-ratio:4 / 3;
-  height:auto;
-  max-height:min(90vh,720px);
-  max-width:min(92vw,calc(min(90vh,720px) * 4 / 3));
-  padding:20px 20px 18px;
+  width:min(96vw,720px);
+  aspect-ratio:auto;
+  height:min(92vh,880px);
+  max-height:min(92vh,880px);
+  max-width:min(96vw,720px);
+  padding:22px 22px 20px;
   border-radius:22px;
   background:linear-gradient(165deg,rgba(32,26,62,.98),rgba(16,12,34,.99));
   border:1px solid rgba(255,255,255,.12);
   box-shadow:0 28px 80px rgba(0,0,0,.65),0 0 0 1px rgba(145,70,255,.12) inset;
 }
 .tq-modal--quests .conn-pick-head{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08)}
-.tq-modal--quests .conn-pick-head h3{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.tq-modal--quests .conn-pick-head h3{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.tq-quests-top{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);
+}
+.tq-coins--quests{font-size:13px}
+.tq-spend-btn{
+  padding:8px 14px;border-radius:999px;border:1px solid rgba(255,209,92,.4);
+  background:rgba(255,209,92,.12);color:#FFD15C;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;
+  white-space:nowrap;
+}
+.tq-spend-btn:hover{background:rgba(255,209,92,.22);border-color:rgba(255,209,92,.6)}
+.tq-event-note{
+  margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.02em;
+  color:#FFD15C;padding:5px 10px;border-radius:999px;display:inline-block;
+  background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.3);
+}
+.tq-mission--event{border-color:rgba(255,209,92,.28)}
+@media (max-width:520px){
+  .tq-bar--lg{height:18px}
+  .tq-mission-title{font-size:14px}
+  .tq-spend-btn{font-size:11.5px;padding:7px 11px}
+}
 .tq-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .tq-scroll{overflow-y:auto;flex:1;min-height:0;padding-right:4px;scrollbar-width:thin}
 .tq-quests-list{display:flex;flex-direction:column;gap:10px;padding:2px 2px 8px}
@@ -454,14 +476,14 @@
 }
 @media (max-width:520px){
   .tq-modal--quests{
-    width:min(96vw,100%);
-    aspect-ratio:auto;
-    height:min(88vh,720px);
-    max-height:88vh;
-    max-width:96vw;
+    width:min(98vw,100%);
+    height:min(94vh,900px);
+    max-height:94vh;
+    max-width:98vw;
   }
   .tq-bar--lg{height:18px}
   .tq-mission-title{font-size:14px}
+  .tq-spend-btn{font-size:11.5px;padding:7px 11px}
 }
 .tq-shop-row{
   display:flex;align-items:center;justify-content:space-between;gap:10px;

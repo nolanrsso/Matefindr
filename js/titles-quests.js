@@ -56,14 +56,18 @@
     },
   ];
 
-  /* Pistes affichées dans la modale Quêtes — Esthétisme en tête. */
+  /* Pistes affichées dans la modale Quêtes. */
   const QUEST_TRACKS = [
     { group: 'profil', isRating: true, label: 'Esthétisme du profil' },
+    {
+      group: 'interaction', statId: 'votes', stat: 'votesGiven',
+      label: 'Noter les autres profils',
+      eventNote: 'Événement · récompense ×2',
+      coinMult: 2,
+    },
+    { group: 'profil', statId: 'views', stat: 'views', label: 'Visionnage de mon profil' },
     { group: 'interaction', statId: 'matches', stat: 'matches', label: 'Matchs' },
-    { group: 'interaction', statId: 'votes', stat: 'votesGiven', label: 'Votes sur les autres profils' },
-    { group: 'interaction', statId: 'conversations', stat: 'newChats', label: 'Conversations avec de nouvelles personnes' },
-    { group: 'profil', statId: 'views', stat: 'views', label: 'Visionnage' },
-    { group: 'profil', statId: 'likes_received', stat: 'likesReceived', label: 'Likes sur votre profil' },
+    { group: 'interaction', statId: 'conversations', stat: 'newChats', label: 'Conversation (par personnes)' },
   ];
 
   const VOTES_UNLOCK = {
@@ -95,6 +99,33 @@
   const OWNER_TITLE_ID = 'owner';
   const MATEFINDR_OWNER_TITLE_ID = 'matefindr_owner';
   const EXCLUSIVE_TITLE_IDS = [BETA_TESTER_ID, OWNER_TITLE_ID, MATEFINDR_OWNER_TITLE_ID];
+
+  function trackForMission(m) {
+    if (!m) return null;
+    if (m.stat === 'rating' || String(m.id || '').startsWith('rt_')) {
+      return QUEST_TRACKS.find(t => t.isRating) || null;
+    }
+    const sid = String(m.id || '').replace(/_\d+$/, '');
+    return QUEST_TRACKS.find(t => t.stat === m.stat || t.statId === sid) || null;
+  }
+
+  function missionCoinMult(m) {
+    const track = trackForMission(m);
+    return (track && track.coinMult) ? track.coinMult : 1;
+  }
+
+  function missionCoinRewardAmount(m) {
+    const lvl = missionCoinLevel(m);
+    if (lvl < 0) return 0;
+    return questCoinReward(lvl) * missionCoinMult(m);
+  }
+
+  function isKeepableTitleId(id) {
+    if (!id) return false;
+    if (id === BETA_TESTER_ID || EXCLUSIVE_TITLE_IDS.includes(id)) return true;
+    if (String(id).startsWith('rt_')) return true;
+    return false;
+  }
 
   function isOwnerDiscordTag(user) {
     const u = user || readSite().user || {};
@@ -460,10 +491,12 @@
     let equipped = srcTd.equipped || BETA_TESTER_ID;
     const color = srcTd.color || '#C7A5FF';
 
+    // Titres missions / boutique retirés : on ne garde que Esthétisme + exclusifs
+    collected = collected.filter(id => isKeepableTitleId(id));
     // Retire les titres de note qui ne matchent plus la note actuelle
     collected = collected.filter(id => !ratingIds.includes(id) || eligible.includes(id));
-    if (equipped && ratingIds.includes(equipped) && !eligible.includes(equipped)) {
-      equipped = collected[0] || BETA_TESTER_ID;
+    if (equipped && !collected.includes(equipped)) {
+      equipped = collected.find(id => ratingIds.includes(id)) || collected[0] || BETA_TESTER_ID;
     }
 
     const newBeautyTitles = [];
@@ -484,22 +517,18 @@
       const m = getMission(id);
       const lvl = missionCoinLevel(m);
       if (lvl < 0) return;
-      if (claims.includes(id)) {
-        // Déjà réclamé (ex. ancien auto-grant) → titre débloqué
-        if (!collected.includes(id)) collected.push(id);
-        return;
-      }
+      if (claims.includes(id)) return;
       claimable.push(id);
       if (autoClaimCoins) {
-        const reward = questCoinReward(lvl);
+        const reward = missionCoinRewardAmount(m);
         coins += reward;
         gainedCoins += reward;
         claims.push(id);
-        if (!collected.includes(id)) collected.push(id);
       }
     });
 
-    const pending = claimable.filter(id => !collected.includes(id));
+    // pending = quêtes pièces à réclamer (plus de titres de missions)
+    const pending = claimable.slice();
     return {
       coins,
       questCoinClaims: claims,
@@ -639,7 +668,7 @@
     return true;
   }
 
-  /** Réclame pièces + titre d'un palier terminé. */
+  /** Réclame les pièces d'un palier terminé (pas de titre de mission). */
   function claimQuestReward(id) {
     const m = getMission(id);
     if (!m || isRatingTitle(m)) return null;
@@ -650,15 +679,14 @@
     let gained = 0;
     const claims = getQuestCoinClaims().slice();
     if (!claims.includes(id)) {
-      const lvl = missionCoinLevel(m);
-      if (lvl >= 0) {
-        gained = questCoinReward(lvl);
-        setCoins(getCoins() + gained);
-        claims.push(id);
-        saveQuestCoinClaims(claims);
-      }
+      gained = missionCoinRewardAmount(m);
+      if (gained > 0) setCoins(getCoins() + gained);
+      claims.push(id);
+      saveQuestCoinClaims(claims);
     }
-    collectMission(id);
+    const td = getTitlesData();
+    td.pending = (td.pending || []).filter(x => x !== id);
+    saveTitlesData({ pending: td.pending, collected: td.collected.filter(isKeepableTitleId), equipped: td.equipped });
     updateQuestButtonBadge(stats);
     if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
     return { id, gained, coins: getCoins() };
@@ -694,8 +722,8 @@
   }
 
   function titleCoinPrice(m) {
-    if (!m || isRatingTitle(m) || EXCLUSIVE_TITLE_IDS.includes(m.id) || m.exclusive) return null;
-    return TITLE_PRICE_BY_RARITY[m.rarity] || 250;
+    // Boutique de titres désactivée pour le moment
+    return null;
   }
 
   function getCoins() {
@@ -722,19 +750,8 @@
   }
 
   function buyTitle(id) {
-    const m = getMission(id);
-    const price = titleCoinPrice(m);
-    if (!m || !price) return false;
-    const td = getTitlesData();
-    if (td.collected.includes(id)) return false;
-    const coins = getCoins();
-    if (coins < price) return false;
-    setCoins(coins - price);
-    const collected = td.collected.slice();
-    collected.push(id);
-    saveTitlesData({ collected });
-    bumpGlobalStat(id);
-    return true;
+    // Boutique désactivée temporairement
+    return false;
   }
 
   function equippedTitleMeta(td) {
@@ -1138,7 +1155,12 @@
     refreshPending(stats);
     const td = getTitlesData();
     const claims = getQuestCoinClaims();
-    let html = '<div class="tq-scroll tq-quests-list">';
+    const coins = getCoins();
+    let html = `<div class="tq-quests-top">
+      <div class="tq-coins tq-coins--quests" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
+      <button type="button" class="tq-spend-btn" data-open-titles>Dépenser · acheter des titres</button>
+    </div>
+    <div class="tq-scroll tq-quests-list">`;
     QUEST_TRACKS.forEach(track => {
       if (track.isRating) {
         const arrow = beautyArrow(stats);
@@ -1177,12 +1199,10 @@
       const p = missionProgress(m, stats);
       const claimed = claims.includes(m.id);
       const ready = p.complete && !claimed;
-      const done = claimed && td.collected.includes(m.id);
-      const coinLvl = missionCoinLevel(m);
-      const coinReward = coinLvl >= 0 ? questCoinReward(coinLvl) : 0;
+      const coinReward = missionCoinRewardAmount(m);
       const pct = ready ? 100 : p.pct;
       const lvlLbl = missionLevelLabel(m);
-      html += `<article class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
+      html += `<article class="tq-mission${ready ? ' tq-mission--ready' : ''}${track.eventNote ? ' tq-mission--event' : ''}" data-id="${esc(m.id)}">
         <div class="tq-mission-head">
           <span class="tq-mission-head-left">
             <span class="tq-mission-title">${esc(track.label)}</span>
@@ -1190,12 +1210,13 @@
           </span>
           ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
         </div>
+        ${track.eventNote ? `<p class="tq-event-note">${esc(track.eventNote)}</p>` : ''}
         <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct.toFixed(1)}%"></span></div>
         <div class="tq-mission-foot">
           <span class="tq-mission-count">${Math.floor(p.current)} / ${p.target}</span>
           ${ready
             ? `<button type="button" class="tq-collect" data-claim="${esc(m.id)}">Réclamer${coinReward ? ` · +${coinReward} 🪙` : ''}</button>`
-            : (claimed ? '<span class="tq-done-lbl">Réclamé</span>' : '')}
+            : ''}
         </div>
       </article>`;
     });
@@ -1222,6 +1243,10 @@
         toggleBtn.classList.toggle('is-open', open);
       });
     }
+    body.querySelector('[data-open-titles]')?.addEventListener('click', () => {
+      closeModal('quests');
+      global.MatefindrTitlesQuests.openTitles({ stats });
+    });
   }
 
   function renderShopTitleRow(meta, td) {
@@ -1265,14 +1290,9 @@
     const td = getTitlesData();
     const coins = getCoins();
     const soonIds = computeSoonTitleIds(stats, td);
-    const ownedList = MISSIONS.filter(m => td.collected.includes(m.id)).sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
-    const shopList = MISSIONS.filter(m => {
-      if (td.collected.includes(m.id)) return false;
-      if (isRatingTitle(m)) return false;
-      if (m.id === BETA_TESTER_ID) return false;
-      if (EXCLUSIVE_TITLE_IDS.includes(m.id) || m.exclusive) return false;
-      return titleCoinPrice(m) != null;
-    }).sort((a, b) => (titleCoinPrice(a) || 0) - (titleCoinPrice(b) || 0));
+    // Uniquement titres gardés : Esthétisme + exclusifs (pas de titres de missions / boutique)
+    const ownedList = MISSIONS.filter(m => td.collected.includes(m.id) && isKeepableTitleId(m.id))
+      .sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
     const titleColor = td.color || '#C7A5FF';
     let html = `<div class="tq-titles-toolbar">
       <div class="tq-coins" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
@@ -1285,12 +1305,10 @@
       html += '<div class="tq-section-label">Mes titres</div>';
       ownedList.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
     }
-    if (shopList.length) {
-      html += '<div class="tq-section-label">Acheter</div>';
-      shopList.forEach(m => { html += renderShopTitleRow(getMission(m.id) || m, td); });
-    }
-    if (!ownedList.length && !shopList.length) {
-      html += '<p class="tq-titles-empty">Aucun titre pour l’instant — complète des quêtes pour gagner des pièces.</p>';
+    html += `<div class="tq-section-label">Boutique</div>
+      <p class="tq-titles-empty">L’achat de titres arrive bientôt — garde tes pièces 🪙</p>`;
+    if (!ownedList.length) {
+      html += '<p class="tq-titles-empty">Aucun titre pour l’instant — progresse en Esthétisme du profil pour en débloquer.</p>';
     }
     html += '</div>';
     body.innerHTML = html;
@@ -1310,22 +1328,6 @@
       btn.addEventListener('mouseenter', () => {
         const st = globalTitleStats(btn.getAttribute('data-id'));
         btn.title = `${st.count} joueurs · ${st.pct}%`;
-      });
-    });
-    body.querySelectorAll('.tq-buy-btn[data-buy]').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const id = btn.getAttribute('data-buy');
-        const price = parseInt(btn.getAttribute('data-price'), 10);
-        if (!id || !price) return;
-        if (getCoins() < price) {
-          tqToast('Pas assez de pièces');
-          return;
-        }
-        if (buyTitle(id)) {
-          tqToast('Titre acheté');
-          renderTitlesModal(body, stats);
-        }
       });
     });
   }
