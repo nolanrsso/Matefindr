@@ -1562,6 +1562,38 @@
     });
   }
 
+  /** Met à jour data-start/data-end des barres (seek Spotify) sans rebuild complet. */
+  function patchDiscordActivityProgressFromLive(live) {
+    const acts = (live && Array.isArray(live.activities)) ? live.activities : [];
+    const withTs = acts.filter(a => a && a.timestamps && a.timestamps.start != null && a.timestamps.end != null);
+    if (!withTs.length) return false;
+    const act = withTs.find(a => a.type === 2) || withTs[0];
+    const start = Number(act.timestamps.start);
+    const end = Number(act.timestamps.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return false;
+    const trackDur = end - start;
+    let patched = false;
+    document.querySelectorAll('.discord-activity-progress[data-start][data-end]').forEach(el => {
+      const oldStart = Number(el.dataset.start);
+      const oldEnd = Number(el.dataset.end);
+      if (!Number.isFinite(oldStart) || !Number.isFinite(oldEnd) || oldEnd <= oldStart) return;
+      // Même piste ≈ même durée (±2,5 s) — un seek ne change que start
+      if (Math.abs((oldEnd - oldStart) - trackDur) > 2500) return;
+      if (el.dataset.start === String(start) && el.dataset.end === String(end)) return;
+      el.dataset.start = String(start);
+      el.dataset.end = String(end);
+      delete el.dataset.ended;
+      const times = el.nextElementSibling;
+      if (times && times.classList.contains('discord-activity-times')) {
+        times.dataset.start = String(start);
+        times.dataset.end = String(end);
+      }
+      patched = true;
+    });
+    if (patched) tickDiscordActivityProgress(document);
+    return patched;
+  }
+
   /** Fait avancer le chrono Spotify localement (1×/s) sans refetch. Bloqué à la fin. */
   function tickDiscordActivityProgress(root) {
     const scope = root && root.querySelectorAll ? root : document;
@@ -2191,6 +2223,7 @@
     updateDiscordPreview,
     bindDiscordActPopovers,
     tickDiscordActivityProgress,
+    patchDiscordActivityProgressFromLive,
     hydrateDiscordActivityCovers,
     discordActivityArt,
     init,

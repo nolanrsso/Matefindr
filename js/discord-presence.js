@@ -36,6 +36,15 @@
       assets.large_image_url = resolveAssetUrl(assets.large_image || rawAssets.large_image, application_id);
     if(!assets.small_image_url && (assets.small_image || rawAssets.small_image))
       assets.small_image_url = resolveAssetUrl(assets.small_image || rawAssets.small_image, application_id);
+    let timestamps = null;
+    if(a.timestamps && (a.timestamps.start != null || a.timestamps.end != null)){
+      const start = a.timestamps.start != null ? Number(a.timestamps.start) : null;
+      const end = a.timestamps.end != null ? Number(a.timestamps.end) : null;
+      timestamps = {
+        start: Number.isFinite(start) ? start : null,
+        end: Number.isFinite(end) ? end : null,
+      };
+    }
     return {
       type: typeof a.type === 'number' ? a.type : 0,
       name: a.name || '',
@@ -43,7 +52,7 @@
       state: a.state || '',
       application_id,
       assets,
-      timestamps: a.timestamps || null,
+      timestamps,
     };
   }
 
@@ -85,6 +94,12 @@
     try{ if(typeof global.__matefindrSave === 'function') global.__matefindrSave(); }catch(_){}
     try{ if(typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync(); }catch(_){}
     try{
+      // Seek Spotify : maj immédiate des barres, puis re-render du bloc Discord
+      if(typeof global.__mfPatchDiscordProgress === 'function') global.__mfPatchDiscordProgress(live);
+      else {
+        const TQ = global.MatefindrTitlesQuests;
+        if(TQ && typeof TQ.patchDiscordActivityProgressFromLive === 'function') TQ.patchDiscordActivityProgressFromLive(live);
+      }
       if(typeof global.__mfRerenderDiscordFloor === 'function') global.__mfRerenderDiscordFloor();
       else if(typeof global.__matefindrRefreshCard === 'function') global.__matefindrRefreshCard();
     }catch(_){}

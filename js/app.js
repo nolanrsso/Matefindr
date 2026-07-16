@@ -511,11 +511,7 @@
                   const loc = state.user.discordLive;
                   const locTs = loc?.updatedAt ? new Date(loc.updatedAt).getTime() : 0;
                   const cloudTs = dRaw.discordLive.updatedAt ? new Date(dRaw.discordLive.updatedAt).getTime() : 0;
-                  if (dRaw.discordLive.source === 'bot' && loc?.source !== 'bot') {
-                    state.user.discordLive = dRaw.discordLive;
-                  } else if (!locTs || cloudTs >= locTs) {
-                    state.user.discordLive = dRaw.discordLive;
-                  }
+                  if (!locTs || cloudTs >= locTs) state.user.discordLive = dRaw.discordLive;
                 }
                 if (typeof dRaw.coins === 'number') {
                   state.user.coins = typeof state.user.coins === 'number' ? Math.max(state.user.coins, dRaw.coins) : dRaw.coins;
@@ -1171,10 +1167,33 @@
 
     function applyLiveToVisibleCard(p, live){
       if (!p) return false;
+      const incoming = live && typeof live === 'object' ? live : null;
+      // Ne pas écraser un seek Spotify local (updatedAt plus récent) avec un poll bot périmé
+      if (p.discordLive && incoming) {
+        const locTs = p.discordLive.updatedAt ? new Date(p.discordLive.updatedAt).getTime() : 0;
+        const inTs = incoming.updatedAt ? new Date(incoming.updatedAt).getTime() : 0;
+        if (locTs > inTs) {
+          try {
+            const TQ = window.MatefindrTitlesQuests;
+            if (TQ && typeof TQ.patchDiscordActivityProgressFromLive === 'function') {
+              TQ.patchDiscordActivityProgressFromLive(p.discordLive);
+            }
+          } catch (_) {}
+          return false;
+        }
+      }
       const prev = liveFingerprint(p.discordLive);
-      const next = liveFingerprint(live);
-      if (prev === next) return false;
-      p.discordLive = live && typeof live === 'object' ? live : null;
+      const next = liveFingerprint(incoming);
+      if (prev === next) {
+        try {
+          const TQ = window.MatefindrTitlesQuests;
+          if (incoming && TQ && typeof TQ.patchDiscordActivityProgressFromLive === 'function') {
+            TQ.patchDiscordActivityProgressFromLive(incoming);
+          }
+        } catch (_) {}
+        return false;
+      }
+      p.discordLive = incoming;
       const cached = (_remoteProfiles || []).find(x => x.uid === p.uid);
       if (cached) cached.discordLive = p.discordLive;
       if (_sharedProfile && _sharedProfile.uid === p.uid) _sharedProfile.discordLive = p.discordLive;
@@ -1192,6 +1211,9 @@
         : '';
       applyDiscordFloorToCard(card, floorHtml, TQ);
       syncCardStatusDot(card, p);
+      if (p.discordLive && typeof TQ.patchDiscordActivityProgressFromLive === 'function') {
+        TQ.patchDiscordActivityProgressFromLive(p.discordLive);
+      }
       return true;
     }
 
@@ -1327,6 +1349,14 @@
     });
     window.__mfRefreshDiscordLive = () => { try { refreshVisibleDiscordLive(); } catch(_){} };
     window.__mfRerenderDiscordFloor = () => { try { rerenderVisibleDiscordFloor(); } catch(_){} };
+    window.__mfPatchDiscordProgress = (live) => {
+      try {
+        const TQ = window.MatefindrTitlesQuests;
+        if (TQ && typeof TQ.patchDiscordActivityProgressFromLive === 'function') {
+          TQ.patchDiscordActivityProgressFromLive(live || (state.user && state.user.discordLive));
+        }
+      } catch(_){}
+    };
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
@@ -1876,12 +1906,8 @@
             const loc = my.discordLive;
             const locTs = loc?.updatedAt ? new Date(loc.updatedAt).getTime() : 0;
             const cloudTs = cloudLive.updatedAt ? new Date(cloudLive.updatedAt).getTime() : 0;
-            // Bot Gateway = source de vérité : ne pas l'écraser avec le WS client local.
-            if (cloudLive.source === 'bot' && loc?.source !== 'bot') {
-              my.discordLive = cloudLive;
-            } else if (!locTs || cloudTs >= locTs) {
-              my.discordLive = cloudLive;
-            }
+            // Le plus récent gagne (seek Spotify client vs bot) — plus de bot-always-wins
+            if (!locTs || cloudTs >= locTs) my.discordLive = cloudLive;
           }
           const mergedDaily = mergeDailyLogin(my.dailyLogin, cloudData?.dailyLogin);
           if (mergedDaily) {
