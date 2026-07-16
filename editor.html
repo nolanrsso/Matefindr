@@ -611,12 +611,12 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
   .tool-sep{margin:0 1px;flex:0 0 auto}
 }
 
-/* Volume musique — à droite des presets (bas-gauche) */
-.mf-vol{--mf-vol-btn-size:42px;--mf-vol-bar:78px;--mf-vol-bg:rgba(8,6,20,.13);position:static;display:flex;align-items:center;gap:0;border:1px solid transparent;border-radius:14px;box-sizing:border-box;transition:background .18s ease,border-color .18s ease,padding .22s ease;flex:0 0 auto;align-self:flex-end}
+/* Volume musique — même glass discret que le swipe (pas le verre violet presets) */
+.mf-vol{--mf-vol-btn-size:53px;--mf-vol-bar:78px;--mf-vol-bg:rgba(8,6,20,.13);position:static;display:flex;align-items:center;gap:0;border:1px solid transparent;border-radius:18px;box-sizing:border-box;transition:background .18s ease,border-color .18s ease,padding .22s ease;flex:0 0 auto;align-self:flex-end}
 .mf-vol:hover,.mf-vol.mf-vol--open{background:var(--mf-vol-bg);border-color:var(--stroke-2);padding-right:6px}
-.mf-vol-btn{width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:12px;border:1px solid var(--stroke-2);background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
+.mf-vol-btn{width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:18px;border:1px solid var(--stroke-2);background:var(--mf-vol-bg);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
 .mf-vol:hover .mf-vol-btn,.mf-vol.mf-vol--open .mf-vol-btn{background:transparent;border-color:transparent}
-.mf-vol-btn svg{width:20px;height:20px;display:block}
+.mf-vol-btn svg{width:26px;height:26px;display:block}
 .mf-vol-slash{display:none}
 .mf-vol.muted .mf-vol-wave{display:none}
 .mf-vol.muted .mf-vol-slash{display:block}
@@ -640,9 +640,9 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 .pset-toggle:hover{background:rgba(145,70,255,.16)}
 @media(max-width:600px){
   .ed-bl{left:10px;bottom:18px;gap:8px}
-  .mf-vol{--mf-vol-btn-size:40px;--mf-vol-bar:61px;border-radius:12px}
-  .mf-vol-btn{border-radius:12px}
-  .mf-vol-btn svg{width:20px;height:20px}
+  .mf-vol{--mf-vol-btn-size:46px;--mf-vol-bar:61px;border-radius:16px}
+  .mf-vol-btn{border-radius:15px}
+  .mf-vol-btn svg{width:22px;height:22px}
   .pset-panel{padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   .pset-toggle{display:grid;background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(18,12,42,.92));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 28px rgba(0,0,0,.45)}
   .pset-panel.open .pset-toggle{border-color:rgba(179,128,255,.9);background:rgba(145,70,255,.22)}

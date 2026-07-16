@@ -639,14 +639,14 @@
     background:#FFFFFF;color:#FF4FA0;font-size:12px;font-weight:800;
     display:grid;place-items:center;border:2px solid #0D0B1E;
   }
-  /* Volume musique — même verre violet que l'éditeur + barre au survol */
+  /* Volume musique — glass discret + barre blanche au survol (à droite) */
   .mf-vol{
-    --mf-vol-btn-size:42px;
+    --mf-vol-btn-size:53px;
     --mf-vol-bar:78px;
-    --mf-vol-bg:rgba(8,6,20,.18);
+    --mf-vol-bg:rgba(8,6,20,.13);
     position:fixed;z-index:45;display:none;align-items:center;gap:0;
     top:auto;bottom:18px;left:14px;
-    border:1px solid transparent;border-radius:14px;box-sizing:border-box;
+    border:1px solid transparent;border-radius:18px;box-sizing:border-box;
     transition:background .18s ease,border-color .18s ease,padding .22s ease;
   }
   body[data-auth="in"][data-screen="swipe"] .mf-vol,
@@ -671,14 +671,12 @@
     background:var(--mf-vol-bg);border-color:var(--stroke-2);padding-right:6px;
   }
   .mf-vol-btn{
-    width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:12px;border:1px solid var(--stroke-2);
-    background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));
-    color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;
+    width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:18px;border:1px solid var(--stroke-2);
+    background:var(--mf-vol-bg);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;
     transition:background .18s ease,border-color .18s ease;box-sizing:border-box;
-    box-shadow:0 10px 28px rgba(0,0,0,.35);
   }
-  .mf-vol:hover .mf-vol-btn,.mf-vol.mf-vol--open .mf-vol-btn{background:transparent;border-color:transparent;box-shadow:none}
-  .mf-vol-btn svg{width:20px;height:20px;display:block}
+  .mf-vol:hover .mf-vol-btn,.mf-vol.mf-vol--open .mf-vol-btn{background:transparent;border-color:transparent}
+  .mf-vol-btn svg{width:26px;height:26px;display:block}
   .mf-vol-slash{display:none}
   .mf-vol.muted .mf-vol-wave{display:none}
   .mf-vol.muted .mf-vol-slash{display:block}
@@ -696,7 +694,7 @@
   .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
   .mf-vol-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
   @media(max-width:520px){
-    .mf-vol{--mf-vol-btn-size:40px;--mf-vol-bar:61px;bottom:10px;border-radius:12px}
+    .mf-vol{--mf-vol-btn-size:46px;--mf-vol-bar:61px;bottom:10px;border-radius:16px}
     body[data-auth="in"][data-screen="swipe"]:not([data-preview="true"]) .mf-vol{
       left:calc(12px + 52px + 8px);
       bottom:calc(10px + (52px - var(--mf-vol-btn-size)) / 2);
@@ -706,8 +704,8 @@
       left:10px;
       bottom:calc(10px + (52px - var(--mf-vol-btn-size)) / 2);
     }
-    .mf-vol-btn{border-radius:12px}
-    .mf-vol-btn svg{width:20px;height:20px}
+    .mf-vol-btn{border-radius:15px}
+    .mf-vol-btn svg{width:22px;height:22px}
   }
 
   /* Messages panel — slide-out drawer */
