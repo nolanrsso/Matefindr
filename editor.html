@@ -2682,7 +2682,7 @@ function renderGifsSheet(sh){
 let _lastGifPlace=null;
 function addGif(url){
   if(S.gifs.length>=GIF_MAX){toast('Limite : '+GIF_MAX+' GIFs');return;}
-  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:105,y:50,w:48};
+  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-50,y:50,w:48};
   const g={url,x:spawn.x,y:spawn.y,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.gifs.push(g);
   _lastGifPlace={x:g.x,y:g.y,w:g.w};
@@ -2800,7 +2800,7 @@ function renderPhotosSheet(sh){
 let _lastPhotoPlace=null;
 function addPhotoFile(f){
   if(f.size>PHOTO_MAX_BYTES){ toast('⚠️ '+f.name+' trop lourde — 5 Mo max'); return; }
-  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:105,y:50,w:48};
+  const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-50,y:50,w:48};
   const p={url:URL.createObjectURL(f),x:spawn.x,y:spawn.y,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.photos.push(p);
   _lastPhotoPlace={x:p.x,y:p.y,w:p.w};

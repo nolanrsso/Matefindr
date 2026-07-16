@@ -40,12 +40,15 @@
   function defaultSpawnPos() {
     const card = $('card');
     const layer = layerEl();
-    if (!card || !layer) return { x: 105, y: 50, w: W_DEFAULT };
+    // Fallback : à gauche de la carte (coords % du .card-frame)
+    if (!card || !layer) return { x: -50, y: 50, w: W_DEFAULT };
     const cr = card.getBoundingClientRect();
     const lr = layer.getBoundingClientRect();
-    const spawnScreenX = cr.right + cr.width * 0.12;
+    // Milieu entre le bord gauche de l'écran et le centre de la carte
+    const cardCenterX = cr.left + cr.width / 2;
+    const spawnScreenX = cardCenterX / 2;
     const x = ((spawnScreenX - lr.left) / Math.max(1, lr.width)) * 100;
-    return { x: Math.round(clampN(x, 0, 130) * 10) / 10, y: 50, w: W_DEFAULT };
+    return { x: Math.round(clampN(x, -90, 130) * 10) / 10, y: 50, w: W_DEFAULT };
   }
 
   function getKind(el) {
