@@ -207,8 +207,20 @@
     function setSwatchBg(el, hex) {
       if (!el) return;
       const c = normHex6(hex) || '#9146FF';
-      el.style.background = c;
       el.dataset.hex = c;
+      const n = parseInt(c.slice(1), 16);
+      const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      /* Couleurs très claires : damier sombre derrière → pas de carré blanc cramé sur UI dark */
+      if (luma > 210) {
+        el.style.background =
+          'linear-gradient(' + c + ',' + c + ') center / calc(100% - 10px) calc(100% - 10px) no-repeat,' +
+          'repeating-conic-gradient(#3a3a48 0% 25%, #1a1a24 0% 50%) 0 0 / 10px 10px';
+        el.style.backgroundColor = '#1a1a24';
+      } else {
+        el.style.background = c;
+        el.style.backgroundColor = c;
+      }
     }
 
     return { open, close, bindSwatch, setSwatchBg, ensure, normHex6 };

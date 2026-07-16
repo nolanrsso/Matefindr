@@ -497,11 +497,23 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 }
 .username--boost::after{content:" ✦";-webkit-text-fill-color:#FFD83D;color:#FFD83D}
 /* Bouton bascule du style doré dans le popup pseudo */
-.uname-color{display:flex;align-items:center;gap:11px;margin:12px 0 2px}
+#unameInput{
+  width:100%;padding:10px 12px;border-radius:10px;color:#fff;outline:none;
+  background:rgba(255,255,255,.05);border:1.5px solid var(--stroke-2);
+  font-family:inherit;font-size:13px;box-sizing:border-box;
+}
+#unameInput:focus{border-color:rgba(145,70,255,.55);box-shadow:0 0 0 4px rgba(145,70,255,.16)}
+#unameInput::placeholder{color:rgba(255,255,255,.35)}
+.uname-color{
+  display:flex;align-items:center;gap:11px;margin:12px 0 2px;
+  padding:8px 10px;border-radius:12px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+}
 .uname-color[hidden]{display:none}
 .uname-color-swatch{position:relative;width:40px;height:40px;border-radius:12px;overflow:hidden;flex:0 0 auto;cursor:pointer;
-  box-shadow:0 3px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4) inset;border:2px solid rgba(255,255,255,.18);padding:0;font:inherit;background:#fff}
-.uname-color-lbl{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--dim)}
+  box-shadow:0 3px 12px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.4) inset;border:2px solid rgba(255,255,255,.18);padding:0;font:inherit;
+  background:#2a2a36}
+.uname-color-lbl{flex:1;min-width:0;font-size:13px;font-weight:700;color:rgba(255,255,255,.72)}
 .uname-color-def{padding:8px 13px;border-radius:10px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;font:inherit;font-weight:700;font-size:12px;cursor:pointer;transition:.15s}
 .uname-color-def:hover{background:rgba(255,255,255,.1)}
 .divider{height:1px;background:rgba(255,255,255,.08);margin:4px 0 2px}
@@ -1883,7 +1895,11 @@ function applyTagBlur(){
   slot.addEventListener('click',openUnamePop);
   back.addEventListener('click',closeUnamePop);
   DarkColorPicker.bindSwatch(colorInp,()=>nameSwatchColor(),hex=>applyNameColorVal(hex));
-  colorDef.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(colorInp,'#FFFFFF'); toast('Pseudo remis en blanc'); });
+  colorDef.addEventListener('click',()=>{
+    applyNameColorVal(null);
+    DarkColorPicker.setSwatchBg(colorInp, nameSwatchColor());
+    toast('Pseudo remis au défaut');
+  });
   $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; setEditableText(slot,v); applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
@@ -3061,7 +3077,11 @@ function renderColorPanel(){
   const cpNC=p.querySelector('#cpNameColor');
   if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>{ applyNameColorVal(hex); DarkColorPicker.setSwatchBg(cpNC,hex); });
   const cpND=p.querySelector('#cpNameDef');
-  if(cpND) cpND.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(cpNC,'#FFFFFF'); toast('Pseudo remis en blanc'); });
+  if(cpND) cpND.addEventListener('click',()=>{
+    applyNameColorVal(null);
+    DarkColorPicker.setSwatchBg(cpNC, nameSwatchColor());
+    toast('Pseudo remis au défaut');
+  });
   const cpConnTgl=p.querySelector('#cpConnUniformTgl');
   const cpConnRow=p.querySelector('#cpConnColorRow');
   const cpConnSw=p.querySelector('#cpConnColor');
