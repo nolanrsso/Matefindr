@@ -1225,6 +1225,7 @@
       const reactorId = await getReactorId();
       // Mise à jour optimiste locale (réactive immédiatement, avant la confirmation réseau).
       const rec = _reactionsCache[profileId] || { ratings: [], mine: null, total: 0 };
+      const isNewVote = rec.mine == null;
       if (rec.mine != null) { const idx = rec.ratings.indexOf(rec.mine); if (idx !== -1) rec.ratings.splice(idx, 1); }
       rec.ratings.push(rating);
       rec.mine = rating;
@@ -1236,6 +1237,9 @@
         const { error } = await window.__supa.from('profile_reactions')
           .upsert({ profile_id: profileId, reactor_id: reactorId, rating }, { onConflict: 'profile_id,reactor_id' });
         if (error) console.warn('[Matefindr] send reaction', error.message || error);
+        else if (isNewVote && window.MatefindrTitlesQuests && typeof window.MatefindrTitlesQuests.bumpVotesGiven === 'function') {
+          window.MatefindrTitlesQuests.bumpVotesGiven(1);
+        }
       } catch(e){ console.warn('[Matefindr] send reaction error', e); }
     }
     /* Compteur de vues : +1 une seule fois par navigateur pour ce profil (même mécanique

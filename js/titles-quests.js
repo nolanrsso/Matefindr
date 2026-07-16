@@ -398,11 +398,12 @@
         safe(() => sb.from('matches').select('id', { count: 'exact' }).or(`user_a.eq.${uid},user_b.eq.${uid}`)),
         safe(() => sb.from('likes').select('id', { count: 'exact' }).eq('liker_id', uid)),
         safe(() => sb.from('likes').select('id', { count: 'exact' }).eq('liked_id', uid)),
-        safe(() => sb.from('profile_reactions').select('id', { count: 'exact', head: true }).eq('profile_id', uid)),
+        // PK = (profile_id, reactor_id) — pas de colonne id
+        safe(() => sb.from('profile_reactions').select('profile_id', { count: 'exact', head: true }).eq('profile_id', uid)),
         safe(() => sb.from('profiles').select('views').eq('id', uid).maybeSingle()),
         safe(() => sb.from('messages').select('match_id').eq('sender_id', uid).limit(5000)),
         ...voteIds.map(rid => safe(() =>
-          sb.from('profile_reactions').select('id', { count: 'exact' }).eq('reactor_id', rid)
+          sb.from('profile_reactions').select('profile_id', { count: 'exact', head: true }).eq('reactor_id', rid)
         )),
       ]);
       const mCount = countFromRes(mRes);
@@ -461,6 +462,20 @@
     s.user.questStats = stats;
     writeSite(s);
     return stats;
+  }
+
+  /** Incrémente les notes envoyées (appelé après un nouveau vote réussi). */
+  function bumpVotesGiven(n) {
+    const s = readSite();
+    s.user = s.user || {};
+    const prev = (s.user.questStats && typeof s.user.questStats === 'object') ? s.user.questStats : {};
+    const next = Math.max(0, (typeof prev.votesGiven === 'number' ? prev.votesGiven : 0) + (n || 1));
+    s.user.questStats = Object.assign({}, prev, { votesGiven: next });
+    writeSite(s);
+    if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
+    if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
+    try { updateQuestButtonBadge(s.user.questStats); } catch (_) {}
+    return next;
   }
 
   function missionProgress(m, stats) {
@@ -1727,6 +1742,7 @@
     saveTitlesData,
     fetchStats,
     syncStatsLocal,
+    bumpVotesGiven,
     processQuestCoinRewards,
     questCoinReward,
     applyQuestProgress,
