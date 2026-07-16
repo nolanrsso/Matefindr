@@ -1591,9 +1591,10 @@
     if (hitEnd && !global.__mfDaEndHandling) {
       global.__mfDaEndHandling = true;
       try {
+        if (typeof global.__mfPruneEndedDiscordActs === 'function') global.__mfPruneEndedDiscordActs();
         if (typeof global.__mfRerenderDiscordFloor === 'function') global.__mfRerenderDiscordFloor();
       } catch (_) {}
-      [0, 800, 2500, 5500].forEach((ms) => {
+      [0, 600, 1500, 3000, 5500].forEach((ms) => {
         setTimeout(() => {
           try { if (typeof global.__mfRefreshDiscordLive === 'function') global.__mfRefreshDiscordLive(); } catch (_) {}
         }, ms);

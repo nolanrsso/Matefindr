@@ -4107,9 +4107,11 @@ async function syncToDb(){
       const cloud=liveRow?.data;
       const cloudLive=cloud?.discordLive;
       if(cloudLive&&typeof cloudLive==='object'){
-        const locTs=my.discordLive?.updatedAt?new Date(my.discordLive.updatedAt).getTime():0;
+        const loc=my.discordLive;
+        const locTs=loc?.updatedAt?new Date(loc.updatedAt).getTime():0;
         const cloudTs=cloudLive.updatedAt?new Date(cloudLive.updatedAt).getTime():0;
-        if(!locTs||cloudTs>=locTs) my.discordLive=cloudLive;
+        if(cloudLive.source==='bot'&&loc?.source!=='bot') my.discordLive=cloudLive;
+        else if(!locTs||cloudTs>=locTs) my.discordLive=cloudLive;
       }
       const cD=cloud?.dailyLogin, lD=my.dailyLogin;
       if(cD&&typeof cD==='object'){

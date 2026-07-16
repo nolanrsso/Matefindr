@@ -508,9 +508,14 @@
                 if (Array.isArray(dRaw.presets) && !Array.isArray(state.user.presets)) state.user.presets = dRaw.presets;
                 if (typeof dRaw.sharePresetIdx === 'number' && typeof state.user.sharePresetIdx !== 'number') state.user.sharePresetIdx = dRaw.sharePresetIdx;
                 if (dRaw.discordLive) {
-                  const locTs = state.user.discordLive?.updatedAt ? new Date(state.user.discordLive.updatedAt).getTime() : 0;
+                  const loc = state.user.discordLive;
+                  const locTs = loc?.updatedAt ? new Date(loc.updatedAt).getTime() : 0;
                   const cloudTs = dRaw.discordLive.updatedAt ? new Date(dRaw.discordLive.updatedAt).getTime() : 0;
-                  if (!locTs || cloudTs >= locTs) state.user.discordLive = dRaw.discordLive;
+                  if (dRaw.discordLive.source === 'bot' && loc?.source !== 'bot') {
+                    state.user.discordLive = dRaw.discordLive;
+                  } else if (!locTs || cloudTs >= locTs) {
+                    state.user.discordLive = dRaw.discordLive;
+                  }
                 }
                 if (typeof dRaw.coins === 'number') {
                   state.user.coins = typeof state.user.coins === 'number' ? Math.max(state.user.coins, dRaw.coins) : dRaw.coins;
@@ -1149,31 +1154,109 @@
     }
 
     /** Rafraîchit discordLive (bot Gateway) sur la carte visible sans rebuild complet. */
+    let _discordLiveRt = null;
+    let _discordLiveRtUid = null;
+    let _discordLiveFetchGen = 0;
+
+    function liveFingerprint(live){
+      if (!live || typeof live !== 'object') return '';
+      try {
+        return JSON.stringify({
+          status: live.status || 'offline',
+          activities: live.activities || [],
+          lastOnlineAt: live.lastOnlineAt || null,
+        });
+      } catch (_) { return ''; }
+    }
+
+    function applyLiveToVisibleCard(p, live){
+      if (!p) return false;
+      const prev = liveFingerprint(p.discordLive);
+      const next = liveFingerprint(live);
+      if (prev === next) return false;
+      p.discordLive = live && typeof live === 'object' ? live : null;
+      const cached = (_remoteProfiles || []).find(x => x.uid === p.uid);
+      if (cached) cached.discordLive = p.discordLive;
+      if (_sharedProfile && _sharedProfile.uid === p.uid) _sharedProfile.discordLive = p.discordLive;
+      if (p.isMe && state.user) {
+        state.user.discordLive = p.discordLive;
+        try { save(); } catch(_){}
+      }
+      const wrap = document.getElementById('swipeWrap');
+      const card = wrap && wrap.querySelector('.swipe-card');
+      if (!card) return true;
+      const TQ = window.MatefindrTitlesQuests;
+      if (!TQ || typeof TQ.discordFloorHtml !== 'function') return true;
+      const floorHtml = p.discordLive
+        ? TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr })
+        : '';
+      applyDiscordFloorToCard(card, floorHtml, TQ);
+      syncCardStatusDot(card, p);
+      return true;
+    }
+
+    function syncCardStatusDot(card, p){
+      if (!card || !p) return;
+      const discPrefs = typeof discordConnPrefs === 'function' ? discordConnPrefs(p) : null;
+      const discLive = p.discordLive;
+      let cardStatus = p.status || 'offline';
+      if (discPrefs?.showStatus && discLive?.status) {
+        cardStatus = discLive.status === 'invisible' ? 'offline' : discLive.status;
+      } else if (!discPrefs?.showStatus) return;
+      const dot = card.querySelector('.avatar-wrap .status-dot');
+      if (!dot) return;
+      const moon = (typeof STATUS_MOON_SVG !== 'undefined') ? STATUS_MOON_SVG : '';
+      dot.className = 'status-dot ' + cardStatus;
+      dot.innerHTML = (cardStatus === 'offline' || cardStatus === 'idle') ? moon : '';
+    }
+
+    function unsubscribeDiscordLiveRt(){
+      if (_discordLiveRt && window.__supa) {
+        try { window.__supa.removeChannel(_discordLiveRt); } catch(_){}
+      }
+      _discordLiveRt = null;
+      _discordLiveRtUid = null;
+    }
+
+    function subscribeDiscordLiveFor(uid){
+      if (!window.__supa || !uid) { unsubscribeDiscordLiveRt(); return; }
+      if (_discordLiveRtUid === String(uid) && _discordLiveRt) return;
+      unsubscribeDiscordLiveRt();
+      _discordLiveRtUid = String(uid);
+      try {
+        _discordLiveRt = window.__supa.channel('discord-live-' + uid)
+          .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'id=eq.' + uid,
+          }, (payload) => {
+            try {
+              const p = currentSwipeProfile();
+              if (!p || String(p.uid) !== String(uid)) return;
+              const live = payload?.new?.data?.discordLive;
+              applyLiveToVisibleCard(p, live && typeof live === 'object' ? live : null);
+            } catch (_) {}
+          })
+          .subscribe();
+      } catch (_) {
+        _discordLiveRt = null;
+        _discordLiveRtUid = null;
+      }
+    }
+
     async function refreshVisibleDiscordLive(){
       if (!window.__supa) return;
       if (document.body.getAttribute('data-screen') !== 'swipe') return;
+      if (typeof document !== 'undefined' && document.hidden) return;
       const p = currentSwipeProfile();
       if (!p || !p.uid) return;
+      subscribeDiscordLiveFor(p.uid);
+      const gen = ++_discordLiveFetchGen;
       try {
         const { data: row } = await window.__supa.from('profiles').select('data').eq('id', p.uid).maybeSingle();
+        if (gen !== _discordLiveFetchGen) return; // réponse périmée
+        const still = currentSwipeProfile();
+        if (!still || still.uid !== p.uid) return;
         const live = row?.data?.discordLive;
-        if (!live || typeof live !== 'object') return;
-        const prev = p.discordLive ? JSON.stringify(p.discordLive) : '';
-        if (prev === JSON.stringify(live)) return;
-        p.discordLive = live;
-        const cached = (_remoteProfiles || []).find(x => x.uid === p.uid);
-        if (cached) cached.discordLive = live;
-        if (p.isMe && state.user) {
-          state.user.discordLive = live;
-          try { save(); } catch(_){}
-        }
-        const wrap = document.getElementById('swipeWrap');
-        const card = wrap && wrap.querySelector('.swipe-card');
-        if (!card) return;
-        const TQ = window.MatefindrTitlesQuests;
-        if (!TQ || typeof TQ.discordFloorHtml !== 'function') return;
-        const floorHtml = TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr });
-        applyDiscordFloorToCard(card, floorHtml, TQ);
+        applyLiveToVisibleCard(still, live && typeof live === 'object' ? live : null);
       } catch (_) {}
     }
     /** Discord floor = 1er bloc sous le hr (haut du profil). */
@@ -1213,9 +1296,34 @@
         if (!TQ || typeof TQ.discordFloorHtml !== 'function') return;
         const floorHtml = TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr });
         applyDiscordFloorToCard(card, floorHtml, TQ);
+        syncCardStatusDot(card, p);
       } catch (_) {}
     }
-    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 10000);
+    /** Exposé pour titles-quests (prune Spotify fini, etc.). */
+    window.__mfCurrentSwipeProfile = () => { try { return currentSwipeProfile(); } catch(_){ return null; } };
+    window.__mfPruneEndedDiscordActs = () => {
+      try {
+        const p = currentSwipeProfile();
+        if (!p?.discordLive || !Array.isArray(p.discordLive.activities)) return false;
+        const now = Date.now();
+        const next = p.discordLive.activities.filter(a => {
+          if (!a || a.type !== 2) return true;
+          const end = a.timestamps && a.timestamps.end != null ? Number(a.timestamps.end) : NaN;
+          if (!Number.isFinite(end)) return true;
+          return end > now;
+        });
+        if (next.length === p.discordLive.activities.length) return false;
+        p.discordLive = Object.assign({}, p.discordLive, { activities: next });
+        const cached = (_remoteProfiles || []).find(x => x.uid === p.uid);
+        if (cached) cached.discordLive = p.discordLive;
+        if (p.isMe && state.user) state.user.discordLive = p.discordLive;
+        return true;
+      } catch (_) { return false; }
+    };
+    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 3000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) try { refreshVisibleDiscordLive(); } catch(_){}
+    });
     window.__mfRefreshDiscordLive = () => { try { refreshVisibleDiscordLive(); } catch(_){} };
     window.__mfRerenderDiscordFloor = () => { try { rerenderVisibleDiscordFloor(); } catch(_){} };
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
@@ -1764,9 +1872,15 @@
           const cloudData = liveRow?.data;
           const cloudLive = cloudData?.discordLive;
           if (cloudLive && typeof cloudLive === 'object') {
-            const locTs = my.discordLive?.updatedAt ? new Date(my.discordLive.updatedAt).getTime() : 0;
+            const loc = my.discordLive;
+            const locTs = loc?.updatedAt ? new Date(loc.updatedAt).getTime() : 0;
             const cloudTs = cloudLive.updatedAt ? new Date(cloudLive.updatedAt).getTime() : 0;
-            if (!locTs || cloudTs >= locTs) my.discordLive = cloudLive;
+            // Bot Gateway = source de vérité : ne pas l'écraser avec le WS client local.
+            if (cloudLive.source === 'bot' && loc?.source !== 'bot') {
+              my.discordLive = cloudLive;
+            } else if (!locTs || cloudTs >= locTs) {
+              my.discordLive = cloudLive;
+            }
           }
           const mergedDaily = mergeDailyLogin(my.dailyLogin, cloudData?.dailyLogin);
           if (mergedDaily) {
@@ -2148,6 +2262,7 @@
       ));
       if (!opts.force && existing && (sameUid || sameMe) && !cardLeaving) {
         softRefreshSwipeCard();
+        try { refreshVisibleDiscordLive(); } catch(_){}
         return;
       }
 
@@ -2163,6 +2278,7 @@
           renderSwipeGifs(_sharedProfile);
           renderSwipePhotos(_sharedProfile);
           playProfileEntryMusic(_sharedProfile);
+          try { refreshVisibleDiscordLive(); } catch(_){}
         } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
         return;
       }
@@ -2180,6 +2296,7 @@
         renderSwipeGifs(p);
         renderSwipePhotos(p);
         playProfileEntryMusic(p);
+        try { refreshVisibleDiscordLive(); } catch(_){}
       } catch (err) {
         console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
         wrap.innerHTML = '';

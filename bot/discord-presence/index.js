@@ -27,7 +27,7 @@ const SB_URL = process.env.SUPABASE_URL || '';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 /* Court : fin de musique / changement de jeu doit arriver vite côté site */
-const DEBOUNCE_MS = 1200;
+const DEBOUNCE_MS = 500;
 const OFFLINE_TYPES = new Set(['offline', 'invisible']);
 
 if (!BOT_TOKEN || !GUILD_ID || !SB_URL || !SB_KEY) {

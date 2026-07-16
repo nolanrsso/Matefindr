@@ -79,7 +79,7 @@
       activities: nextActs,
       updatedAt: now,
       lastOnlineAt: online ? now : (wasOnline ? now : (prev.lastOnlineAt || null)),
-      source: prev.source || 'client',
+      source: 'client',
     };
     st.user.discordLive = live;
     try{ if(typeof global.__matefindrSave === 'function') global.__matefindrSave(); }catch(_){}
