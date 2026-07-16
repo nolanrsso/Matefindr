@@ -276,15 +276,6 @@
         const sameAccount = !rawPrev.discordId || !user.discordId || rawPrev.discordId === user.discordId;
         if (!sameAccount) { state.profile = null; }
         const prev = sameAccount ? rawPrev : {};
-        const keepBanner = prev.bannerCustom && prev.bannerUrl;
-        const keepDeco   = prev.decoCustom && prev.decorationUrl;
-        // Photo de profil importée + son recadrage : sinon le merge Discord
-        // (user.avatarUrl = avatar Discord) écrase la pdp custom à chaque login.
-        const keepAvatar = prev.avatarCustom && prev.avatarUrl;
-        // Pseudo renommé manuellement (éditeur) : sinon CHAQUE login (donc chaque
-        // entrée en aperçu, qui recharge la page) réécrasait le pseudo custom avec
-        // le nom Discord d'origine.
-        const keepName = prev.nameCustom && prev.displayName;
         // Serveurs Discord : ne jamais écraser une liste connue par [] (token OAuth absent/expiré).
         if ((!user.guilds || !user.guilds.length) && user.discordId && window.__refreshDiscordGuilds) {
           try {
@@ -295,11 +286,28 @@
         if ((!user.guilds || !user.guilds.length) && sameAccount && Array.isArray(prev.guilds) && prev.guilds.length) {
           user.guilds = prev.guilds;
         }
-        state.user = Object.assign({}, prev, user);
-        if (keepBanner) { state.user.bannerUrl = prev.bannerUrl; state.user.bannerCustom = true; }
-        if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
-        if (keepAvatar) { state.user.avatarUrl = prev.avatarUrl; state.user.avatarCustom = true; state.user.avatarPos = prev.avatarPos || null; }
-        if (keepName)   { state.user.displayName = prev.displayName; state.user.nameCustom = true; }
+        // Profil Matefindr déjà créé → plus de sync Discord visuelle (avatar, bannière,
+        // déco, pseudo, nitro, accent). Seulement username, serveurs, email.
+        const hadProfile = sameAccount && !!state.profile;
+        if (hadProfile) {
+          state.user = Object.assign({}, prev, {
+            discordId: user.discordId || prev.discordId,
+            discordTag: user.discordTag || prev.discordTag,
+            email: user.email || prev.email,
+            guilds: (user.guilds && user.guilds.length) ? user.guilds : prev.guilds,
+            mode: user.mode || prev.mode || 'discord',
+          });
+        } else {
+          const keepBanner = prev.bannerCustom && prev.bannerUrl;
+          const keepDeco   = prev.decoCustom && prev.decorationUrl;
+          const keepAvatar = prev.avatarCustom && prev.avatarUrl;
+          const keepName = prev.nameCustom && prev.displayName;
+          state.user = Object.assign({}, prev, user);
+          if (keepBanner) { state.user.bannerUrl = prev.bannerUrl; state.user.bannerCustom = true; }
+          if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
+          if (keepAvatar) { state.user.avatarUrl = prev.avatarUrl; state.user.avatarCustom = true; state.user.avatarPos = prev.avatarPos || null; }
+          if (keepName)   { state.user.displayName = prev.displayName; state.user.nameCustom = true; }
+        }
         if (sameAccount && prev.discordLive) state.user.discordLive = prev.discordLive;
         // Restore an archived profile if we have one for this Discord ID
         try {
@@ -400,11 +408,24 @@
                   userOrbs: Array.isArray(d.orbs) ? d.orbs : [],
                   pseudo: d.name || '',
                 };
-                // Identité/déco : on restaure les CUSTOMS (le Discord frais reste le défaut).
-                if (d.name && d.name !== su.displayName) { su.displayName = d.name; su.nameCustom = true; }
-                if (d.avatarUrl && !/cdn\.discordapp\.com/i.test(d.avatarUrl)) { su.avatarUrl = d.avatarUrl; su.avatarCustom = true; su.avatarPos = d.avatarPos || null; }
-                if (d.bannerUrl && !/cdn\.discordapp\.com/i.test(d.bannerUrl)) { su.bannerUrl = d.bannerUrl; su.bannerCustom = true; }
+                // Identité visuelle : on restaure ce qui était sauvé en base (pas le Discord
+                // frais du login). Avatar/bannière CDN Discord figés au dernier save.
+                if (d.name) { su.displayName = d.name; }
+                if (d.avatarUrl) {
+                  su.avatarUrl = d.avatarUrl;
+                  if (!/cdn\.discordapp\.com/i.test(d.avatarUrl)) { su.avatarCustom = true; su.avatarPos = d.avatarPos || null; }
+                  else { su.avatarPos = d.avatarPos || su.avatarPos || null; }
+                }
+                if (d.discordAvatarUrl) su.discordAvatarUrl = d.discordAvatarUrl;
+                if (d.bannerUrl) {
+                  su.bannerUrl = d.bannerUrl;
+                  if (!/cdn\.discordapp\.com/i.test(d.bannerUrl)) su.bannerCustom = true;
+                }
                 if (d.decorationUrl) { su.decorationUrl = d.decorationUrl; su.decoCustom = true; }
+                // Username / email / serveurs : toujours la valeur Discord fraîche du login.
+                if (user && user.discordTag) su.discordTag = user.discordTag;
+                if (user && user.email) su.email = user.email;
+                if (user && Array.isArray(user.guilds) && user.guilds.length) su.guilds = user.guilds;
                 if (d.profileColor)  su.profileColor  = d.profileColor;
                 if (d.profileColor2) su.profileColor2 = d.profileColor2;
                 if (d.nameColor)     su.nameColor     = d.nameColor;
@@ -808,6 +829,23 @@
         ] },
     ];
     let deckIdx = 0;
+    /** Resync Discord limité : username (tag) + serveurs + email — rien d'autre. */
+    function applyLimitedDiscordResync(u, d, guilds){
+      if (!u) return false;
+      let dirty = false;
+      if (d) {
+        if (d.id && u.discordId !== d.id) { u.discordId = d.id; dirty = true; }
+        const tag = (d.username || '').replace(/#0$/, '');
+        if (tag && u.discordTag !== tag) { u.discordTag = tag; dirty = true; }
+        if (d.email && u.email !== d.email) { u.email = d.email; dirty = true; }
+      }
+      if (Array.isArray(guilds) && guilds.length) {
+        u.guilds = guilds;
+        dirty = true;
+      }
+      return dirty;
+    }
+
     let _guildRefreshPending = false;
     function refreshMyGuildsIfNeeded(){
       const u = state.user;
@@ -6193,29 +6231,19 @@
           return;
         }
 
-        // Merge fresh Discord data into state.user — Boost user's custom assets are preserved.
+        // Merge limité : username Discord + serveurs + email — pas d'avatar/bannière/pseudo Matefindr.
         state.user = state.user || {};
         const u = state.user;
-        u.discordId    = d.id || u.discordId;
-        if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
-        u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
-        if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
-        if (d.avatar) u.discordAvatarUrl = discordAvatarUrl(d.id, d.avatar);
-        // Bannière : si l'utilisateur a importé sa propre bannière (bannerCustom), on la garde
-        if (!u.bannerCustom) {
-          u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
+        let guilds = null;
+        if (window.__refreshDiscordGuilds && (d.id || u.discordId)) {
+          guilds = await window.__refreshDiscordGuilds(d.id || u.discordId);
         }
-        // Décoration : si l'utilisateur a choisi une déco custom (decoCustom), on la garde
-        if (!u.decoCustom) {
-          u.decorationUrl = d.avatar_decoration_data?.asset
-            ? discordDecorationUrl(d.avatar_decoration_data.asset)
-            : null;
-        }
-        u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
-        u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
-        u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
-        if (window.__refreshDiscordGuilds && u.discordId) {
-          const guilds = await window.__refreshDiscordGuilds(u.discordId);
+        if (typeof applyLimitedDiscordResync === 'function') {
+          applyLimitedDiscordResync(u, d, guilds);
+        } else {
+          u.discordId = d.id || u.discordId;
+          u.discordTag = (d.username || '').replace(/#0$/, '') || u.discordTag;
+          if (d.email) u.email = d.email;
           if (guilds && guilds.length) u.guilds = guilds;
         }
         save();
@@ -6224,7 +6252,7 @@
         refreshMyStatusUI();
         try { if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); } catch(_){}
 
-        label.textContent = 'Profil Discord à jour ✓';
+        label.textContent = 'Username & serveurs à jour ✓';
         setTimeout(() => { btn.disabled = false; label.textContent = oldLabel; }, 1800);
       });
     })();
@@ -7749,11 +7777,9 @@
           }
         });
 
-        /* === Auto-resync avec Discord ===
-           Re-fetch le profil Discord (avatar/banner/déco/flags/etc.) toutes les 5min
-           et à chaque fois que l'onglet redevient visible. Préserve bannerCustom +
-           decoCustom (les Boost users qui ont une bannière/déco custom ne sont pas
-           écrasés). */
+        /* === Auto-resync Discord (limité) ===
+           Une fois le profil créé, on ne resynchronise PLUS avatar / bannière / déco /
+           pseudo Matefindr / nitro / accent. Seulement username, serveurs, email. */
         async function autoResyncDiscord(){
           try {
             try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
@@ -7762,39 +7788,27 @@
             const stored = typeof getStoredDiscordToken === 'function' ? getStoredDiscordToken(u.discordId) : null;
             if (!stored) return;
             const d = await fetchDiscordProfile(stored);
-            let guildsDirty = false;
+            let guilds = null;
             if (window.__refreshDiscordGuilds) {
-              const guilds = await window.__refreshDiscordGuilds(u.discordId);
-              if (guilds && guilds.length) { u.guilds = guilds; guildsDirty = true; }
+              guilds = await window.__refreshDiscordGuilds(u.discordId);
             }
-            if (!d && !guildsDirty) return;
-            if (d) {
-              u.discordId    = d.id || u.discordId;
-              // Pseudo / avatar personnalisés (renommé ou photo importée dans l'éditeur) :
-              // on NE les écrase PAS avec ceux de Discord (sinon « le pseudo/la photo ne se sauvegarde pas »).
-              if (!u.nameCustom)   u.displayName = d.global_name || d.username || u.displayName;
-              u.discordTag   = (d.username || '').replace(/#0$/, '') || u.discordTag;
-              if (!u.avatarCustom) u.avatarUrl = d.avatar ? discordAvatarUrl(d.id, d.avatar) : u.avatarUrl;
-              if (d.avatar) u.discordAvatarUrl = discordAvatarUrl(d.id, d.avatar);
-              if (!u.bannerCustom) u.bannerUrl = d.banner ? discordBannerUrl(d.id, d.banner) : null;
-              if (!u.decoCustom) {
-                u.decorationUrl = d.avatar_decoration_data?.asset
-                  ? discordDecorationUrl(d.avatar_decoration_data.asset)
-                  : null;
+            try {
+              if (window.__supa) {
+                const { data: { session } } = await window.__supa.auth.getSession();
+                const em = session && (session.user?.email || session.user?.user_metadata?.email);
+                if (em && (!d || !d.email) && u.email !== em) u.email = em;
               }
-              u.publicFlags  = (typeof d.public_flags === 'number') ? d.public_flags : (u.publicFlags || 0);
-              u.premiumType  = (typeof d.premium_type === 'number') ? d.premium_type : (u.premiumType || 0);
-              u.accentColor  = (typeof d.accent_color === 'number') ? d.accent_color : (u.accentColor || null);
-            }
+            } catch(_){}
+            const dirty = applyLimitedDiscordResync(u, d, guilds);
+            if (!dirty && !d && !(guilds && guilds.length)) return;
             save();
-            if (guildsDirty && typeof scheduleCloudSync === 'function') scheduleCloudSync();
+            if (guilds && guilds.length && typeof scheduleCloudSync === 'function') scheduleCloudSync();
             if (typeof updateChip === 'function') updateChip();
             if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
-            // Soft refresh : ne pas rejouer l'anim d'entrée de la carte swipe.
             if (document.body.getAttribute('data-screen') === 'swipe') {
               if (typeof softRefreshSwipeCard === 'function') softRefreshSwipeCard();
             }
-            console.log('[Matefindr] auto-resync Discord OK');
+            console.log('[Matefindr] auto-resync Discord OK (tag/guilds/email only)');
           } catch (e) { console.warn('[Matefindr] auto-resync failed', e); }
         }
         // Toutes les 5 minutes

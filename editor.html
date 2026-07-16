@@ -1512,7 +1512,7 @@ html.perf-lite *{
       <label><span>Afficher le statut (en ligne / hors ligne)</span><input type="checkbox" id="connDiscordStatus" checked></label>
       <label><span>Afficher le username au survol</span><input type="checkbox" id="connShowLabel" checked></label>
     </div>
-    <button type="button" class="conn-discord-refresh" id="connDiscordRefresh">Actualiser avatar &amp; statut Discord</button>
+    <button type="button" class="conn-discord-refresh" id="connDiscordRefresh">Actualiser statut Discord</button>
   </div>
   <div id="connAddLinkPanel">
     <div class="conn-url-field">
@@ -4122,18 +4122,19 @@ async function refreshDiscordFromOAuth(btn){
     if(!d){ toast('Token expiré — reconnecte Discord'); return; }
     const st=readSite();
     st.user=st.user||{};
+    // Profil déjà créé : on ne touche qu'au username Discord (+ avatar Discord pour la
+    // connexion, sans écraser la photo Matefindr).
+    st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
     if(d.avatar&&typeof discordAvatarUrl==='function'){
       st.user.discordAvatarUrl=discordAvatarUrl(d.id,d.avatar);
-      if(!st.user.avatarCustom) st.user.avatarUrl=st.user.discordAvatarUrl;
     }
-    if(!st.user.nameCustom) st.user.displayName=d.global_name||d.username||st.user.displayName;
-    st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
+    if(d.email) st.user.email=d.email;
     try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
     if(window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
     if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
-    toast('Profil Discord actualisé');
+    toast('Statut & username Discord actualisés');
   }catch(_){ toast('Échec de la synchronisation Discord'); }
-  finally{ if(el){ el.disabled=false; el.textContent=old||'Actualiser avatar & statut Discord'; } }
+  finally{ if(el){ el.disabled=false; el.textContent=old||'Actualiser statut Discord'; } }
 }
 if($('connDiscordRefresh')) $('connDiscordRefresh').addEventListener('click',function(){ refreshDiscordFromOAuth(this); });
 function hydrateFromSite(){
