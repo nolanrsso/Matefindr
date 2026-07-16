@@ -323,7 +323,14 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .sticker{position:absolute;transform-origin:center center;pointer-events:none;touch-action:none;cursor:grab;box-sizing:border-box}
 .sticker-inner{pointer-events:auto;cursor:grab}
 .sticker.dragging,.sticker.dragging .sticker-inner{cursor:grabbing}
-.sticker-inner{width:100%;position:relative;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.55);line-height:0;transform-origin:center center;box-sizing:border-box}
+/* Même contour que l'aperçu (.swipe-gif) : liseré blanc 2px hors cadre (content-box)
+   pour ne pas rogner 4px du crop — cf. css/app.css .swipe-gifs-bg .swipe-gif */
+.sticker-inner{
+  width:100%;position:relative;border-radius:12px;overflow:hidden;line-height:0;
+  transform-origin:center center;box-sizing:content-box;
+  border:2px solid rgba(255,255,255,.20);
+  box-shadow:0 10px 28px rgba(0,0,0,.5);
+}
 .sticker-inner img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;object-fit:cover;object-position:center center;box-sizing:border-box}
 /* Poignées (retirer/pivoter/redimensionner) — position mises à jour en JS sur .sticker-inner */
 .sk-handle{position:absolute;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.5);z-index:9;
@@ -945,9 +952,8 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 .sh-contour-tgl.on .sw{background:#9146FF}
 .sh-contour-tgl.on .sw::after{transform:translateX(12px)}
 /* Contour désactivable sur les PHOTOS et les GIFs (indépendamment l'un de l'autre,
-   cf. S.photoContour/S.gifContour) : retire le liseré blanc + halo violet ET
-   l'ombre portée — sinon l'ombre rectangulaire trahit encore "une image collée"
-   même sans bordure visible. */
+   cf. S.photoContour/S.gifContour) : retire le liseré blanc + l'ombre portée —
+   sinon l'ombre rectangulaire trahit encore "une image collée" même sans bordure. */
 #photoLayer.no-contour .sticker-inner,
 #stickerLayer.no-contour .sticker-inner{border:none;box-shadow:none}
 
