@@ -174,7 +174,7 @@ body[data-canvas="portrait"] .card{width:min(71vw,276px);height:min(60dvh,460px)
    +10px de marge. Le "56px" du vrai site (index.html mobile) chevauche en fait
    l'avatar de ~86px — bug préexistant côté site, pas reproduit ici volontairement
    pour ne pas répéter le chevauchement signalé. */
-body[data-canvas="portrait"] .card .body{position:absolute;inset:152px 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:0 14px 18px;gap:9px}
+body[data-canvas="portrait"] .card .body{position:absolute;inset:142px 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:0 14px 18px;gap:8px}
 /* Contenu de la carte à l'échelle réelle du swipe mobile (index.html, bloc
    @media max-width:600px .swipe-card ...) — sans ça avatar/texte gardent leur
    taille "bureau" (140px d'avatar etc.) dans une carte 3x plus étroite = ça
@@ -352,13 +352,13 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 
 /* ===================== CARTE DE PROFIL (style .swipe-card) ===================== */
 .card{
-  /* Hauteur FIXE, identique à .swipe-wrap (index.html) : min(100vh-240px,713px) ×1.15.
+  /* Hauteur FIXE, identique à .swipe-wrap (index.html), +15% vs gabarit historique 380×620.
      Sans ça, la hauteur de la carte éditeur dépend du contenu (bio, connexions,
      vocal...) alors que la vraie carte a toujours cette même hauteur (le corps
      défile en interne) → cardRect.height diffère entre éditeur et vrai swipe,
      et TOUTES les bulles/GIFs (positionnés en % de cette hauteur) atterrissent
      un peu à côté de leur position dans l'éditeur. */
-  position:relative;z-index:60;width:min(92vw,437px);height:min(calc(1.15 * (100vh - 240px)),713px);
+  position:relative;z-index:60;width:min(96vw,437px);height:min(calc(100vh - 120px),713px);
   border-radius:20px;overflow:hidden;isolation:isolate;
   /* Couleur pleine sous le dégradé → coins arrondis opaques (pas de fond d'eau visible). */
   background-color:var(--c2);
@@ -417,11 +417,13 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
    a maintenant une hauteur FIXE (cf. .card ci-dessus) → le corps défile en interne
    (overflow-y:auto) au lieu de pousser la carte à grandir, comme la vraie carte. */
 /* z-index > avatar : l'overlay ✎ du pseudo n'est plus caché par le cadre photo */
-.body{position:absolute;inset:216px 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
+/* inset 200 : sous l'avatar (top 74 + 140 = 214) avec léger chevauchement comme le swipe
+   (banner 120 + padding-top 96 ≈ 216, un peu resserré pour coller le pseudo à l'avatar). */
+.body{position:absolute;inset:200px 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:0 18px 18px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
 /* Bloc pseudo + @tag + titre — même regroupement que .swipe-card .body > div (buildCard). */
 .card-meta-head{display:flex;flex-direction:column;gap:0;align-items:flex-start;margin:0;padding:0;overflow:visible;position:relative;z-index:2}
 .username{
-  margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.05;
+  margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1;
   display:inline-flex;align-items:center;gap:8px;align-self:flex-start;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4);
   overflow:visible;max-width:100%;box-sizing:border-box;position:relative;isolation:isolate;
 }
@@ -552,8 +554,10 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
   background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
   font-size:12px;font-weight:900;line-height:1;
   box-shadow:0 4px 12px rgba(145,70,255,.65),0 0 0 2px rgba(20,18,36,.85);
-  pointer-events:none;opacity:1;transform:none;
+  pointer-events:none;opacity:0;transform:scale(.6);transition:opacity .18s ease,transform .18s ease;
 }
+.editable:hover > .ed-badge,
+.editable:focus-within > .ed-badge{opacity:1;transform:scale(1)}
 .banner.editable > .ed-badge{top:8px;right:8px}
 .avatar.editable > .ed-badge{top:2px;right:2px}
 .username.editable{overflow:visible;z-index:5;padding:0 26px 0 0;outline-offset:2px}
@@ -1386,7 +1390,7 @@ html.perf-lite *{
 }
 
 /* ---- Titre profil (éditeur) : texte brut + petit bouton edit ---- */
-#edProfileTitle{margin:2px 0 0;padding:0;min-height:0;line-height:1;display:block}
+#edProfileTitle{margin:0;padding:0;min-height:0;line-height:1;display:block}
 .ed-title-inline{display:inline-flex;align-items:center;gap:6px;max-width:100%}
 .ed-title-text{
   font-family:var(--title-font,"Cinzel Decorative",serif);
@@ -1405,9 +1409,13 @@ html.perf-lite *{
   font-size:11px;font-weight:900;line-height:1;cursor:pointer;
   display:grid;place-items:center;
   box-shadow:0 0 0 1px rgba(145,70,255,.55),0 2px 8px rgba(145,70,255,.28);
-  transition:background .14s ease,transform .14s ease,box-shadow .14s ease;
+  opacity:0;transform:scale(.6);
+  transition:opacity .18s ease,transform .18s ease,background .14s ease,box-shadow .14s ease;
 }
-.ed-title-edit-btn:hover{background:rgba(145,70,255,.62);transform:scale(1.04);box-shadow:0 0 0 1px rgba(194,130,255,.75),0 3px 12px rgba(145,70,255,.38)}
+.ed-title-inline:hover .ed-title-edit-btn,
+#edProfileTitle:hover .ed-title-edit-btn,
+.ed-title-edit-btn:focus-visible{opacity:1;transform:scale(1)}
+.ed-title-edit-btn:hover{background:rgba(145,70,255,.62);box-shadow:0 0 0 1px rgba(194,130,255,.75),0 3px 12px rgba(145,70,255,.38)}
 </style>
 <link rel="stylesheet" href="css/dark-color-picker.css">
 <link rel="stylesheet" href="css/titles-quests.css">
