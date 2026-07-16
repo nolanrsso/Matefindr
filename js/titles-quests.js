@@ -1458,6 +1458,18 @@
     btn.setAttribute('aria-label', daily.claimable
       ? `Réclamer bonus jour ${daily.btnDay}`
       : `Bonus jour ${daily.btnDay} demain`);
+    // Pastille notif quand le bonus journalier est réclamable
+    let notif = btn.querySelector('.tq-daily-notif');
+    if (daily.claimable) {
+      if (!notif) {
+        notif = document.createElement('span');
+        notif.className = 'tq-daily-notif';
+        notif.setAttribute('aria-hidden', 'true');
+        btn.appendChild(notif);
+      }
+    } else if (notif) {
+      notif.remove();
+    }
     if (!btn.dataset.tqDailyBound) {
       btn.dataset.tqDailyBound = '1';
       btn.addEventListener('click', () => {
