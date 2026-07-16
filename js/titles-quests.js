@@ -1342,7 +1342,10 @@
     if (!m) return '';
     if (isRatingTitle(m)) {
       const idx = RATING_TITLES.findIndex(r => r.id === m.id);
-      return idx >= 0 ? `Lvl ${idx + 1}` : '';
+      if (idx < 0) return '';
+      const r = RATING_TITLES[idx];
+      const max = r.max > 5 ? 5 : r.max;
+      return `Lvl ${idx + 1} · ${r.min.toFixed(1)}–${max.toFixed(1)}★`;
     }
     const lvl = missionCoinLevel(m);
     return lvl >= 0 ? `Lvl ${lvl + 1}` : '';
@@ -1574,13 +1577,14 @@
     const soon = !owned && soonIds.has(meta.id);
     const pending = td.pending.includes(meta.id);
     const price = opts.shop ? titleCoinPrice(meta) : null;
-    let badge = '';
     const lvl = missionLevelLabel(meta);
-    if (owned) badge = '';
-    else if (price != null) badge = `<span class="tq-price"><span class="tq-price-ico" aria-hidden="true">🪙</span>${price}</span>`;
-    else if (pending) badge = '<span class="tq-soon tq-soon--ready">Quête prête</span>';
-    else if (soon) badge = `<span class="tq-soon">Bientôt</span>`;
-    else if (lvl) badge = `<span class="tq-lvl-badge">${esc(lvl)}</span>`;
+    // Niveau toujours visible (y compris titres possédés) — plus précis pour Esthétisme
+    const lvlHtml = lvl ? `<span class="tq-lvl-badge">${esc(lvl)}</span>` : '';
+    let status = '';
+    if (!owned && price != null) status = `<span class="tq-price"><span class="tq-price-ico" aria-hidden="true">🪙</span>${price}</span>`;
+    else if (!owned && pending) status = '<span class="tq-soon tq-soon--ready">Quête prête</span>';
+    else if (!owned && soon) status = `<span class="tq-soon">Bientôt</span>`;
+    const badge = `${lvlHtml}${status}`;
     const typo = titleTypoCss(meta);
     const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}${opts.beautyTop ? ' tq-title-pick--beauty-top' : ''}${opts.beautyChild ? ' tq-title-pick--beauty-child' : ''}${opts.expandable ? ' tq-title-pick--expandable' : ''}`;
     const canBuy = opts.shop && price != null && getCoins() >= price;

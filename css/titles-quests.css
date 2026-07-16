@@ -391,9 +391,10 @@
 .tq-mission-title{font-weight:800;font-size:14px;color:#fff;letter-spacing:-.01em}
 .tq-mission-head-left{display:inline-flex;align-items:center;gap:7px;min-width:0;flex:1}
 .tq-lvl-badge{
-  font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  font-size:10px;font-weight:800;letter-spacing:.02em;text-transform:none;
   color:#C7A5FF;padding:2px 7px;border-radius:999px;
   background:rgba(145,70,255,.16);border:1px solid rgba(145,70,255,.35);white-space:nowrap;
+  font-variant-numeric:tabular-nums;flex:0 0 auto;position:relative;z-index:1;
 }
 .tq-beauty-next-title{
   text-align:center;margin:0 0 7px;font-size:12.5px;color:var(--dim);
@@ -573,14 +574,17 @@
   letter-spacing:0;text-transform:none;padding-left:8px;
 }
 .tq-beauty-owned{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
-.tq-title-pick--expandable{padding-left:28px}
+.tq-title-pick--expandable{padding-left:22px}
 .tq-beauty-drop{
-  position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:2;
-  width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;
-  color:#0a0a0a;font-size:13px;font-weight:900;line-height:1;cursor:pointer;
-  user-select:none;background:rgba(255,255,255,.88);border-radius:4px;
+  position:absolute;left:6px;top:50%;transform:translateY(-50%);z-index:2;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:14px;height:14px;padding:0;margin:0;
+  color:#fff;font-size:12px;font-weight:700;line-height:1;cursor:pointer;
+  user-select:none;background:none;border:none;border-radius:0;box-shadow:none;
+  opacity:.8;
 }
-.tq-beauty-drop.is-open{/* état ouvert via ▴ */}
+.tq-beauty-drop:hover,.tq-beauty-drop:focus-visible{opacity:1;outline:none}
+.tq-beauty-drop.is-open{opacity:1}
 .tq-beauty-owned-lower{display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:2px solid rgba(255,126,182,.25);margin-left:16px}
 .tq-beauty-owned-lower[hidden]{display:none!important}
 .tq-title-pick--beauty-child{opacity:.92}
