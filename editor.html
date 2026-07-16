@@ -1611,7 +1611,6 @@ html.perf-lite *{
       <label><span>Afficher le statut (en ligne / hors ligne)</span><input type="checkbox" id="connDiscordStatus" checked></label>
       <label><span>Afficher le username</span><input type="checkbox" id="connShowLabel" checked></label>
     </div>
-    <button type="button" class="conn-discord-refresh" id="connDiscordRefresh">Actualiser statut Discord</button>
   </div>
   <div id="connAddLinkPanel">
     <div class="conn-url-field">
@@ -4381,46 +4380,6 @@ function renderEditorCardMeta(){
   titleBox.innerHTML=TQ.editorTitleSlotHtml(prof, esc);
 }
 window.renderEditorCardMeta=renderEditorCardMeta;
-async function refreshDiscordFromOAuth(btn){
-  const u=connReadUser();
-  if(!u.discordId){ toast('Connecte-toi avec Discord d\'abord'); return; }
-  const el=btn||$('connDiscordRefresh');
-  const old=el?el.textContent:'';
-  if(el){ el.disabled=true; el.textContent='Synchronisation…'; }
-  try{
-    let token=typeof getStoredDiscordToken==='function'?getStoredDiscordToken(u.discordId):null;
-    if(!token){
-      token=localStorage.getItem('matefindr_discord_token');
-      const uid=localStorage.getItem('matefindr_discord_token_uid');
-      const ts=parseInt(localStorage.getItem('matefindr_discord_token_ts')||'0',10);
-      if(!token||uid!==String(u.discordId)||(Date.now()-ts)>7*24*3600*1000) token=null;
-    }
-    if(!token||typeof fetchDiscordProfile!=='function'){
-      toast('Reconnecte-toi avec Discord pour actualiser');
-      return;
-    }
-    const d=await fetchDiscordProfile(token);
-    if(!d){ toast('Token expiré — reconnecte Discord'); return; }
-    const st=readSite();
-    st.user=st.user||{};
-    // Profil déjà créé : username Discord + PDP Discord (sans écraser photo Matefindr custom).
-    st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
-    if(d.avatar&&typeof discordAvatarUrl==='function'){
-      const avi=discordAvatarUrl(d.id,d.avatar);
-      st.user.discordAvatarUrl=avi;
-      const custom=!!st.user.avatarCustom
-        ||(st.user.avatarUrl&&!/cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(st.user.avatarUrl));
-      if(!custom&&avi) st.user.avatarUrl=avi;
-    }
-    if(d.email) st.user.email=d.email;
-    try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
-    if(window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
-    if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
-    toast('Statut & username Discord actualisés');
-  }catch(_){ toast('Échec de la synchronisation Discord'); }
-  finally{ if(el){ el.disabled=false; el.textContent=old||'Actualiser statut Discord'; } }
-}
-if($('connDiscordRefresh')) $('connDiscordRefresh').addEventListener('click',function(){ refreshDiscordFromOAuth(this); });
 function hydrateFromSite(){
   const st=readSite(); const u=st.user||{}, p=st.profile||{};
   const note=document.querySelector('.note'); // peut ne plus exister (topbar simplifiée)
