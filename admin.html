@@ -702,7 +702,7 @@
         const stats={
           views:(a.prof&&a.prof.views)||0,
           matches:mC||0,
-          likesGiven:lC||0,
+          likesGiven:Math.max(lC||0, mC||0),
           likesReceived:lrC||0,
           votesGiven:vC||0,
           votesReceived:vrC||0,

@@ -351,10 +351,6 @@
   async function resolveQuestUid(opts, u, sb) {
     if (opts && opts.uid) return opts.uid;
     if (u && u.uid) return u.uid;
-    try {
-      const rid = localStorage.getItem('matefindr_reactor_id');
-      if (rid) return rid;
-    } catch (_) {}
     if (typeof global.__mfMyUid === 'string' && global.__mfMyUid) return global.__mfMyUid;
     if (sb && sb.auth && typeof sb.auth.getSession === 'function') {
       try {
@@ -362,6 +358,18 @@
         if (data && data.session && data.session.user && data.session.user.id) return data.session.user.id;
       } catch (_) {}
     }
+    // Dernier recours : id anonyme (votes hors compte) — pas pour likes/matchs
+    try {
+      const rid = localStorage.getItem('matefindr_reactor_id');
+      if (rid) return rid;
+    } catch (_) {}
+    return null;
+  }
+
+  function countFromRes(res) {
+    if (!res || res.error) return null;
+    if (typeof res.count === 'number') return res.count;
+    if (Array.isArray(res.data)) return res.data.length;
     return null;
   }
 
@@ -379,26 +387,38 @@
     let newChats = typeof prev.newChats === 'number' ? prev.newChats : 0;
     const sb = opts.supa || global.__supa;
     const uid = await resolveQuestUid(opts, u, sb);
+    let anonReactor = null;
+    try { anonReactor = localStorage.getItem('matefindr_reactor_id'); } catch (_) {}
     if (sb && uid) {
       // Une requête qui plante ne doit PAS annuler les autres (ex. messages RLS).
       const safe = async (fn) => { try { return await fn(); } catch (_) { return null; } };
-      const [mRes, lRes, lrRes, vRes, vrRes, viewsRes, msgRes] = await Promise.all([
+      const voteIds = [uid];
+      if (anonReactor && anonReactor !== uid) voteIds.push(anonReactor);
+      const [mRes, lRes, lrRes, vrRes, viewsRes, msgRes, ...voteResList] = await Promise.all([
         safe(() => sb.from('matches').select('id', { count: 'exact' }).or(`user_a.eq.${uid},user_b.eq.${uid}`)),
-        safe(() => sb.from('likes').select('id', { count: 'exact', head: true }).eq('liker_id', uid)),
-        safe(() => sb.from('likes').select('id', { count: 'exact', head: true }).eq('liked_id', uid)),
-        safe(() => sb.from('profile_reactions').select('id', { count: 'exact', head: true }).eq('reactor_id', uid)),
+        safe(() => sb.from('likes').select('id', { count: 'exact' }).eq('liker_id', uid)),
+        safe(() => sb.from('likes').select('id', { count: 'exact' }).eq('liked_id', uid)),
         safe(() => sb.from('profile_reactions').select('id', { count: 'exact', head: true }).eq('profile_id', uid)),
         safe(() => sb.from('profiles').select('views').eq('id', uid).maybeSingle()),
         safe(() => sb.from('messages').select('match_id').eq('sender_id', uid).limit(5000)),
+        ...voteIds.map(rid => safe(() =>
+          sb.from('profile_reactions').select('id', { count: 'exact' }).eq('reactor_id', rid)
+        )),
       ]);
-      if (mRes && !mRes.error) {
-        const fromCount = typeof mRes.count === 'number' ? mRes.count : null;
-        const fromData = Array.isArray(mRes.data) ? mRes.data.length : 0;
-        matches = fromCount != null ? fromCount : fromData;
-      }
-      if (lRes && !lRes.error && typeof lRes.count === 'number') likesGiven = lRes.count;
-      if (lrRes && !lrRes.error && typeof lrRes.count === 'number') likesReceived = lrRes.count;
-      if (vRes && !vRes.error && typeof vRes.count === 'number') votesGiven = vRes.count;
+      const mCount = countFromRes(mRes);
+      if (mCount != null) matches = mCount;
+      const lCount = countFromRes(lRes);
+      if (lCount != null) likesGiven = lCount;
+      const lrCount = countFromRes(lrRes);
+      if (lrCount != null) likesReceived = lrCount;
+      // Votes : compte auth + id anonyme (notes avant connexion)
+      let votesSum = 0;
+      let votesOk = false;
+      voteResList.forEach(res => {
+        const c = countFromRes(res);
+        if (c != null) { votesSum += c; votesOk = true; }
+      });
+      if (votesOk) votesGiven = votesSum;
       if (vrRes && !vrRes.error && typeof vrRes.count === 'number') votesReceived = vrRes.count;
       if (msgRes && !msgRes.error) {
         const chatIds = new Set();
@@ -424,6 +444,8 @@
     try {
       if (Array.isArray(global.CONVOS) && global.CONVOS.length > matches) matches = global.CONVOS.length;
     } catch (_) {}
+    // Un match implique au moins un like envoyé
+    if (matches > likesGiven) likesGiven = matches;
     let ratingRec = opts.ratingRec || null;
     if (typeof ratingRec === 'function') {
       try { ratingRec = await ratingRec(); } catch (_) { ratingRec = null; }
@@ -642,6 +664,77 @@
     if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
   }
 
+  /** Clé jour locale YYYY-MM-DD */
+  function localDayKey(d) {
+    const x = d || new Date();
+    const y = x.getFullYear();
+    const m = String(x.getMonth() + 1).padStart(2, '0');
+    const day = String(x.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function yesterdayKey() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return localDayKey(d);
+  }
+
+  function getDailyLogin() {
+    const u = readSite().user || {};
+    const d = u.dailyLogin && typeof u.dailyLogin === 'object' ? u.dailyLogin : {};
+    return {
+      streak: typeof d.streak === 'number' ? d.streak : 0,
+      lastClaim: typeof d.lastClaim === 'string' ? d.lastClaim : null,
+    };
+  }
+
+  function saveDailyLogin(data) {
+    const s = readSite();
+    s.user = s.user || {};
+    s.user.dailyLogin = {
+      streak: Math.max(0, Math.floor(data.streak || 0)),
+      lastClaim: data.lastClaim || null,
+    };
+    writeSite(s);
+    if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
+    if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
+  }
+
+  /** Jour N → N × 50 pièces (jour 1 = 50, jour 2 = 100, …). */
+  function dailyLoginReward(day) {
+    const n = Math.max(1, Math.floor(day || 1));
+    return n * 50;
+  }
+
+  function evalDailyLogin() {
+    const cur = getDailyLogin();
+    const today = localDayKey();
+    if (cur.lastClaim === today) {
+      return {
+        streak: cur.streak || 1,
+        claimable: false,
+        reward: dailyLoginReward(cur.streak || 1),
+        dayLabel: cur.streak || 1,
+      };
+    }
+    const nextStreak = (cur.lastClaim === yesterdayKey()) ? (cur.streak || 0) + 1 : 1;
+    return {
+      streak: nextStreak,
+      claimable: true,
+      reward: dailyLoginReward(nextStreak),
+      dayLabel: nextStreak,
+    };
+  }
+
+  function claimDailyLogin() {
+    const state = evalDailyLogin();
+    if (!state.claimable) return null;
+    setCoins(getCoins() + state.reward);
+    saveDailyLogin({ streak: state.streak, lastClaim: localDayKey() });
+    updateQuestButtonBadge();
+    return { gained: state.reward, streak: state.streak, coins: getCoins() };
+  }
+
   function processQuestCoinRewards(stats) {
     refreshPending(stats);
     return 0;
@@ -653,7 +746,9 @@
       questCoinClaims: getQuestCoinClaims(),
       titlesData: getTitlesData(),
     }, { autoClaimCoins: false });
-    return result.claimable || [];
+    const ids = result.claimable || [];
+    if (evalDailyLogin().claimable) ids.push('daily_login');
+    return ids;
   }
 
   function updateQuestButtonBadge(stats) {
@@ -1208,11 +1303,30 @@
     const td = getTitlesData();
     const claims = getQuestCoinClaims();
     const coins = getCoins();
+    const daily = evalDailyLogin();
     let html = `<div class="tq-quests-top">
       <div class="tq-coins tq-coins--quests" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
       <button type="button" class="tq-spend-btn" data-open-titles>Dépenser · acheter des titres</button>
     </div>
     <div class="tq-scroll tq-quests-list">`;
+    html += `<article class="tq-mission tq-mission--daily${daily.claimable ? ' tq-mission--ready' : ' tq-mission--done'}">
+      <div class="tq-mission-head">
+        <span class="tq-mission-head-left">
+          <span class="tq-mission-title">Bonus connexion quotidienne</span>
+          <span class="tq-lvl-badge">Jour ${daily.dayLabel}</span>
+        </span>
+        <span class="tq-mission-head-right">
+          <span class="tq-coin-reward">+${daily.reward} 🪙</span>
+        </span>
+      </div>
+      <p class="tq-mission-desc tq-mission-desc--show">Connecte-toi chaque jour : jour 1 = 50, jour 2 = 100, jour 3 = 150…</p>
+      <div class="tq-mission-foot">
+        <span class="tq-mission-count">${daily.claimable ? 'Disponible aujourd\'hui' : 'Déjà réclamé aujourd\'hui'}</span>
+        ${daily.claimable
+          ? `<button type="button" class="tq-collect" data-claim-daily>Réclamer · +${daily.reward} 🪙</button>`
+          : '<span class="tq-done-lbl">OK</span>'}
+      </div>
+    </article>`;
     QUEST_TRACKS.forEach(track => {
       if (track.isRating) {
         const arrow = beautyArrow(stats);
@@ -1286,6 +1400,15 @@
         global.MatefindrTitlesQuests.openQuests({ refresh: true, stats });
       });
     });
+    const dailyBtn = body.querySelector('[data-claim-daily]');
+    if (dailyBtn) {
+      dailyBtn.addEventListener('click', () => {
+        const res = claimDailyLogin();
+        if (!res) return;
+        tqToast(`Jour ${res.streak} · +${res.gained.toLocaleString('fr-FR')} pièces !`);
+        global.MatefindrTitlesQuests.openQuests({ refresh: true, stats });
+      });
+    }
     const toggleBtn = body.querySelector('[data-toggle-beauty-titles]');
     const panel = body.querySelector('#tqBeautyTitles');
     if (toggleBtn && panel) {
@@ -1595,6 +1718,8 @@
     refreshPending,
     collectMission,
     claimQuestReward,
+    claimDailyLogin,
+    evalDailyLogin,
     updateQuestButtonBadge,
     beautyArrow,
     cardTitleHtml,
