@@ -901,6 +901,32 @@
       }
     };
 
+    // Suppression RÉELLE du compte (auth + toutes les données liées) via l'edge
+    // function delete-account (cf. supabase/functions/delete-account) -- appelée
+    // depuis le panneau Paramètres après confirmation textuelle ("tape SUPPRIMER").
+    // Renvoie { ok:true } ou { ok:false, error }. N'échoue jamais silencieusement :
+    // le panneau affiche l'erreur et laisse l'utilisateur réessayer.
+    window.__mfDeleteAccount = async function(){
+      try {
+        if (!window.__supa) return { ok:false, error:'Connexion au serveur indisponible.' };
+        const { data:{ session } } = await window.__supa.auth.getSession();
+        if (!session) return { ok:false, error:'Session expirée — reconnecte-toi puis réessaie.' };
+        const res = await fetch(SUPABASE_URL + '/functions/v1/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) return { ok:false, error: data.detail || data.error || ('Échec (HTTP ' + res.status + ').') };
+        return { ok:true };
+      } catch (e) {
+        return { ok:false, error: (e && e.message) ? e.message.slice(0,120) : 'Erreur réseau.' };
+      }
+    };
+
     // ---------- Onboarding (welcome → age → genre → pays → perso) ----------
     const draft = { age:null, gender:null, country:null, countryFlag:'', pseudo:'', bio:'', color1:null, color2:null, avatar:null, termsAccepted:false };
     function selectOpt(container, value){
