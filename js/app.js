@@ -266,9 +266,9 @@
       // Premier reveal (boot) : loader même si l'écran HTML est déjà "landing".
       // Pendant le loader le DOM se charge, mais rien n'est affiché (CSS mf-page-loading).
       const firstReveal = document.documentElement.classList.contains('mf-boot-hidden');
-      // Accueil → swipe : pas de loader (profils préchargés sur l'index).
-      const fromLandingToSwipe = changing && prev === 'landing' && name === 'swipe' && !_previewMode;
-      const loadGen = (!fromLandingToSwipe && (changing || firstReveal)) ? showPageLoader() : null;
+      // Accueil → swipe : pas de loader (profils préchargés). Aperçu non plus (carte locale).
+      const skipLoader = name === 'swipe' && (_previewMode || prev === 'landing');
+      const loadGen = (!skipLoader && (changing || firstReveal)) ? showPageLoader() : null;
 
       document.body.setAttribute('data-screen', name);
       revealApp();
