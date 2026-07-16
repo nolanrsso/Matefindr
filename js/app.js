@@ -145,7 +145,13 @@
         // (pas dans #screen-swipe) -> pas caché par le changement d'écran, il
         // faut le retirer explicitement en quittant le swipe, sinon il reste
         // visible par-dessus le menu (landing) au retour.
-        const _sb = document.getElementById('swipeStickersBg'); if (_sb) _sb.remove();
+        // Pareil pour #swipeOrbit : sans clear, les bulles du dernier profil
+        // restaient visibles au retour / après un swipe interrompu.
+        if (typeof clearSwipeDecor === 'function') clearSwipeDecor();
+        else {
+          const _sb = document.getElementById('swipeStickersBg'); if (_sb) _sb.remove();
+          const _orb = document.getElementById('swipeOrbit'); if (_orb) _orb.innerHTML = '';
+        }
         _previewMode = false; _previewProfile = null; _previewFromEditor = false;
         document.body.removeAttribute('data-preview'); // sort du mode aperçu
         try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
@@ -1896,7 +1902,9 @@
     function ensureDeck(force){
       // Rendu IMMÉDIAT (depuis le cache + ta propre carte) → jamais d'écran blanc/bloqué
       // en attendant le réseau Supabase. Le rafraîchissement se fait en arrière-plan.
-      ensureDeckSync();
+      // force=true DOIT être transmis à ensureDeckSync (sinon soft-refresh sur une carte
+      // opacity:0 post-swipe → bulles/stickers du profil précédent restent à l'écran).
+      ensureDeckSync(force ? { force: true } : {});
       const wasEmpty = document.body.getAttribute('data-swipe-empty') === 'true';
       // Profil actuellement affiché AVANT le refresh réseau -- si un admin le désactive
       // (ou le supprime) pendant qu'il est déjà à l'écran, fetchOtherProfiles() le retire
@@ -1952,9 +1960,7 @@
         const total = pool.length + offset;
         if (deckIdx >= total) {
           wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
-          renderOrbs(null);
-          renderSwipeGifs(null);
-          renderSwipePhotos(null);
+          clearSwipeDecor();
           playProfileEntryMusic(null);
           if (typeof applyBgChoice === 'function') applyBgChoice(null);
           document.body.setAttribute('data-swipe-empty', 'true');
@@ -1966,17 +1972,25 @@
 
       if (!p) {
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        clearSwipeDecor();
+        playProfileEntryMusic(null);
         if (typeof applyBgChoice === 'function') applyBgChoice(null);
         document.body.setAttribute('data-swipe-empty', 'true');
         return;
       }
 
       // Même profil déjà affiché → soft update (pas d'anim d'entrée, pas de reset musique/orbs)
+      // SAUF si la carte est en train de partir (opacity 0 / transform swipe) : un soft
+      // refresh laissait alors bulles + stickers du profil « swipé » collés à l'écran.
       const existing = wrap.querySelector('.swipe-card');
       const sameUid = existing && p.uid && existing.dataset.profileUid === String(p.uid);
       const sameMe = existing && p.isMe && existing.dataset.profileMe === '1'
         && (!p.uid || existing.dataset.profileUid === String(p.uid));
-      if (!opts.force && existing && (sameUid || sameMe)) {
+      const cardLeaving = !!(existing && (
+        existing.style.opacity === '0' ||
+        (existing.style.transform && /translate\([^)]*[1-9]\d{2,}px/.test(existing.style.transform))
+      ));
+      if (!opts.force && existing && (sameUid || sameMe) && !cardLeaving) {
         softRefreshSwipeCard();
         return;
       }
@@ -2064,6 +2078,20 @@
          défini dans l'éditeur fonctionne entre GIFs et photos, pas seulement au sein d'un type
        - positions calculées en pixels viewport à partir des % de la carte
        - se mettent à jour à chaque resize */
+    /** Retire bulles + stickers du swipe (profil qui part / écran quitté / deck vide). */
+    function clearSwipeDecor(){
+      try {
+        if (typeof renderOrbs === 'function') renderOrbs(null);
+        else {
+          const orbit = document.getElementById('swipeOrbit');
+          if (orbit) orbit.innerHTML = '';
+        }
+      } catch(_){}
+      try { if (typeof renderSwipeGifs === 'function') renderSwipeGifs(null); } catch(_){}
+      try { if (typeof renderSwipePhotos === 'function') renderSwipePhotos(null); } catch(_){}
+      const layer = document.getElementById('swipeStickersBg');
+      if (layer) layer.remove();
+    }
     function ensureSwipeStickersLayer() {
       let layer = document.getElementById('swipeStickersBg');
       if (!layer) {
@@ -3863,7 +3891,7 @@
         card.style.transition = '';
         // En mode aperçu / lien perso : la carte rebondit toujours au centre (pas de
         // swipe au drag -- le lien perso ne like que via le bouton cœur dédié).
-        if (!_previewMode && !_sharedProfile && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
+        if (!_previewMode && !_sharedProfile && !_swipeBusy && Math.abs(dx) > 110) commitSwipe(dx > 0 ? 'yes' : 'no', card);
         else {
           // Retour au centre avec un léger ressort.
           card.style.transition = 'transform .55s cubic-bezier(.34,1.4,.5,1)';
@@ -3876,21 +3904,29 @@
       card.addEventListener('mousedown', onDown);
       card.addEventListener('touchstart', onDown, { passive:true });
     }
+    let _swipeBusy = false;
     function commitSwipe(dir, cardEl){
       if (_previewMode) return; // pas de swipe en mode aperçu
+      if (_swipeBusy || !cardEl) return;
+      _swipeBusy = true;
       // Lien de partage : ❤️/✖️ animent la carte puis déclenchent l'action (compte + replay).
       if (_sharedProfile) {
         const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
         cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
         cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
         cardEl.style.opacity = '0';
+        clearSwipeDecor();
         handleSharedAction(dir === 'yes' ? 'like' : 'dislike');
+        _swipeBusy = false;
         return;
       }
       const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
       cardEl.style.transition = 'transform .35s ease-out, opacity .35s';
       cardEl.style.transform = `translate(${off}px, ${dir === 'yes' ? -80 : 80}px) rotate(${dir === 'yes' ? 22 : -22}deg)`;
       cardEl.style.opacity = '0';
+      // Bulles + stickers partent tout de suite avec la carte (sinon le « profil » reste
+      // collé à l'écran pendant/après le swipe — soft-refresh possible sur carte opacity:0).
+      clearSwipeDecor();
       const actions = document.querySelector('#screen-swipe .swipe-actions');
       if (actions) actions.classList.remove('dir-right', 'dir-left');
       state.user = state.user || {};
@@ -3908,7 +3944,13 @@
       }
       save();
       refreshSwipeTools();
-      setTimeout(() => { deckIdx++; ensureDeck(); }, 320);
+      setTimeout(() => {
+        try { if (cardEl && cardEl.parentNode) cardEl.remove(); } catch(_){}
+        deckIdx++;
+        _swipeBusy = false;
+        // force=true : jamais de soft-refresh sur l'ancienne carte opacity:0
+        ensureDeck(true);
+      }, 320);
     }
 
     /* Swipe toolbar : update counts + filter / music labels */
