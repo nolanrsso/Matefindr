@@ -604,12 +604,12 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
   .tool-sep{margin:0 1px;flex:0 0 auto}
 }
 
-/* Volume musique — haut-gauche (style bouton glass + barre au survol) */
-.mf-vol{--mf-vol-btn-size:53px;--mf-vol-bar:78px;--mf-vol-bg:rgba(8,6,20,.13);position:fixed;top:70px;left:14px;z-index:39;display:flex;align-items:center;gap:0;border:1px solid transparent;border-radius:18px;box-sizing:border-box;transition:background .18s ease,border-color .18s ease,padding .22s ease}
+/* Volume musique — à droite des presets (bas-gauche) */
+.mf-vol{--mf-vol-btn-size:42px;--mf-vol-bar:78px;--mf-vol-bg:rgba(8,6,20,.13);position:static;display:flex;align-items:center;gap:0;border:1px solid transparent;border-radius:14px;box-sizing:border-box;transition:background .18s ease,border-color .18s ease,padding .22s ease;flex:0 0 auto;align-self:flex-end}
 .mf-vol:hover,.mf-vol.mf-vol--open{background:var(--mf-vol-bg);border-color:var(--stroke-2);padding-right:6px}
-.mf-vol-btn{width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:18px;border:1px solid var(--stroke-2);background:var(--mf-vol-bg);color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
+.mf-vol-btn{width:var(--mf-vol-btn-size);height:var(--mf-vol-btn-size);border-radius:12px;border:1px solid var(--stroke-2);background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));color:#fff;cursor:pointer;display:grid;place-items:center;flex:0 0 auto;padding:0;transition:background .18s ease,border-color .18s ease;box-sizing:border-box}
 .mf-vol:hover .mf-vol-btn,.mf-vol.mf-vol--open .mf-vol-btn{background:transparent;border-color:transparent}
-.mf-vol-btn svg{width:26px;height:26px;display:block}
+.mf-vol-btn svg{width:20px;height:20px;display:block}
 .mf-vol-slash{display:none}
 .mf-vol.muted .mf-vol-wave{display:none}
 .mf-vol.muted .mf-vol-slash{display:block}
@@ -619,17 +619,24 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 .mf-vol-range{-webkit-appearance:none;appearance:none;width:var(--mf-vol-bar);height:6px;border-radius:999px;outline:none;cursor:pointer;display:block;background:linear-gradient(90deg,#fff var(--mf-vol-pct,50%),rgba(255,255,255,.22) var(--mf-vol-pct,50%))}
 .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
 .mf-vol-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
-@media(max-width:600px){.mf-vol{--mf-vol-btn-size:46px;--mf-vol-bar:61px;top:58px;left:10px;border-radius:16px}.mf-vol-btn{border-radius:15px}.mf-vol-btn svg{width:22px;height:22px}}
 
-/* Presets de profil (Boost) — bas-gauche */
-.pset-panel{position:fixed;left:22px;bottom:26px;z-index:38;display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
+/* Cluster bas-gauche : presets + volume (toujours à gauche, Boost ou non) */
+.ed-bl{position:fixed;left:22px;bottom:26px;z-index:39;display:flex;align-items:flex-end;gap:10px}
+.ed-bl .pset-panel{position:relative;left:auto;bottom:auto}
+
+/* Presets de profil (Boost) — dans .ed-bl */
+.pset-panel{display:flex;flex-direction:column;gap:7px;padding:9px 9px 10px;border-radius:16px;
   background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 12px 34px rgba(0,0,0,.45)}
 .pset-head{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px;padding:0 2px 1px}
 .pset-toggle{display:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;place-items:center}
 .pset-toggle svg{width:20px;height:20px}
 .pset-toggle:hover{background:rgba(145,70,255,.16)}
 @media(max-width:600px){
-  .pset-panel{left:10px;bottom:18px;padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .ed-bl{left:10px;bottom:18px;gap:8px}
+  .mf-vol{--mf-vol-btn-size:40px;--mf-vol-bar:61px;border-radius:12px}
+  .mf-vol-btn{border-radius:12px}
+  .mf-vol-btn svg{width:20px;height:20px}
+  .pset-panel{padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   .pset-toggle{display:grid;background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(18,12,42,.92));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 28px rgba(0,0,0,.45)}
   .pset-panel.open .pset-toggle{border-color:rgba(179,128,255,.9);background:rgba(145,70,255,.22)}
   .pset-body{display:none;position:absolute;bottom:46px;left:0;padding:8px;border-radius:14px;
@@ -1373,21 +1380,6 @@ html.perf-lite *{
   </div>
 </header>
 
-<!-- Volume musique — haut-gauche (style bouton glass + barre au survol) -->
-<div class="mf-vol" id="mfVol" aria-label="Volume de la musique">
-  <button class="mf-vol-btn" type="button" aria-label="Couper / rétablir le son">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 9v6h4l5 4V5L8 9H4z"/>
-      <path class="mf-vol-wave" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
-      <path class="mf-vol-wave" d="M19 6.5a7 7 0 0 1 0 11"/>
-      <path class="mf-vol-slash" d="M3 3l18 18"/>
-    </svg>
-  </button>
-  <div class="mf-vol-track">
-    <input class="mf-vol-range" type="range" min="0" max="100" value="50" aria-label="Volume de la musique">
-  </div>
-</div>
-
 <main class="stage">
   <div class="card-zone">
     <!-- Sélecteur d'orientation : édite la disposition (bulles/GIFs) séparément selon l'écran.
@@ -1462,7 +1454,8 @@ html.perf-lite *{
 
 <div class="drop-guide" id="dropGuide" aria-hidden="true"></div>
 
-<!-- Presets de profil (Boost) — bas-gauche -->
+<!-- Presets + volume — bas-gauche (volume juste à droite des presets) -->
+<div class="ed-bl" id="edBottomLeft">
 <aside class="pset-panel" id="psetPanel" aria-label="Presets de profil">
   <button class="pset-toggle" id="psetToggle" type="button" aria-label="Presets" title="Presets">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
@@ -1472,6 +1465,20 @@ html.perf-lite *{
     <div class="pset-slots" id="psetSlots"></div>
   </div>
 </aside>
+<div class="mf-vol" id="mfVol" aria-label="Volume de la musique">
+  <button class="mf-vol-btn" type="button" aria-label="Couper / rétablir le son">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9v6h4l5 4V5L8 9H4z"/>
+      <path class="mf-vol-wave" d="M16.5 9a3.5 3.5 0 0 1 0 6"/>
+      <path class="mf-vol-wave" d="M19 6.5a7 7 0 0 1 0 11"/>
+      <path class="mf-vol-slash" d="M3 3l18 18"/>
+    </svg>
+  </button>
+  <div class="mf-vol-track">
+    <input class="mf-vol-range" type="range" min="0" max="100" value="50" aria-label="Volume de la musique">
+  </div>
+</div>
+</div>
 
 <!-- Mon lien — bas-droite, même verre que les presets -->
 <aside class="link-panel" id="linkPanel" aria-label="Mon lien de profil">
