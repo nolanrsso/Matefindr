@@ -448,15 +448,15 @@
 .tq-mission--rating{border-color:rgba(255,126,182,.25)}
 .tq-beauty-arrow{
   display:flex;align-items:baseline;justify-content:center;gap:10px;
-  margin:2px 0 6px;font-variant-numeric:tabular-nums;
+  margin:2px 0 8px;font-variant-numeric:tabular-nums;
 }
 .tq-beauty-from,.tq-beauty-to{
-  font-family:"Clash Display",sans-serif;font-weight:800;font-size:22px;letter-spacing:-.03em;line-height:1;
+  font-family:"Clash Display",sans-serif;font-weight:800;font-size:24px;letter-spacing:-.03em;line-height:1;
 }
 .tq-beauty-from{color:#FF7EB6}
 .tq-beauty-to{color:#FFD15C}
 .tq-beauty-chevron{
-  font-size:18px;font-weight:800;color:rgba(255,255,255,.55);transform:translateY(-1px);
+  font-size:19px;font-weight:800;color:rgba(255,255,255,.55);transform:translateY(-1px);
 }
 .tq-beauty-unit{
   align-self:center;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
