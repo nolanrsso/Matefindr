@@ -331,11 +331,13 @@
 }
 .tq-spend-btn:hover{background:rgba(255,209,92,.22);border-color:rgba(255,209,92,.6)}
 .tq-event-note{
-  margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.02em;
-  color:#FFD15C;padding:5px 10px;border-radius:999px;display:inline-block;
+  margin:0;font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap;
+  color:#FFD15C;padding:4px 9px;border-radius:999px;display:inline-block;
   background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.3);
 }
 .tq-mission--event{border-color:rgba(255,209,92,.28)}
+.tq-mission-head-right{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
+.tq-coin-reward{margin-left:0;flex-shrink:0}
 @media (max-width:520px){
   .tq-bar--lg{height:18px}
   .tq-mission-title{font-size:14px}
@@ -368,8 +370,6 @@
 }
 .tq-mission-title{font-weight:800;font-size:15px;color:#fff;letter-spacing:-.01em}
 .tq-mission-head-left{display:inline-flex;align-items:center;gap:8px;min-width:0;flex:1}
-.tq-mission-head-right{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
-.tq-coin-reward{margin-left:auto;flex-shrink:0}
 .tq-lvl-badge{
   font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
   color:#C7A5FF;padding:3px 8px;border-radius:999px;
@@ -380,10 +380,12 @@
 }
 .tq-beauty-next-title b{color:#FFD15C;font-weight:800}
 .tq-beauty-titles-btn{
-  padding:7px 12px;border-radius:999px;border:1px solid rgba(255,126,182,.35);
-  background:rgba(255,126,182,.1);color:#FF7EB6;font:inherit;font-size:12px;font-weight:800;cursor:pointer;
+  padding:7px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.1);color:#fff;font:inherit;font-size:12px;font-weight:800;cursor:pointer;
 }
-.tq-beauty-titles-btn:hover,.tq-beauty-titles-btn.is-open{background:rgba(255,126,182,.2);border-color:rgba(255,126,182,.55)}
+.tq-beauty-titles-btn:hover,.tq-beauty-titles-btn.is-open{
+  background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.55);color:#fff;
+}
 .tq-beauty-titles{
   margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
   display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;
@@ -439,8 +441,9 @@
 .tq-coin-reward{
   color:#FFD15C;font-weight:800;font-size:12.5px;white-space:nowrap;
   padding:4px 9px;border-radius:999px;background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.28);
-  margin-left:auto;flex-shrink:0;
+  flex-shrink:0;
 }
+.tq-mission-head > .tq-coin-reward{margin-left:auto}
 .tq-mission--rating{border-color:rgba(255,126,182,.25)}
 .tq-beauty-arrow{
   display:flex;align-items:baseline;justify-content:center;gap:12px;

@@ -1254,9 +1254,11 @@
             <span class="tq-mission-title">${esc(track.label)}</span>
             ${lvlLbl ? `<span class="tq-lvl-badge">${esc(lvlLbl)}</span>` : ''}
           </span>
-          ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
+          <span class="tq-mission-head-right">
+            ${track.eventNote ? `<span class="tq-event-note">${esc(track.eventNote)}</span>` : ''}
+            ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
+          </span>
         </div>
-        ${track.eventNote ? `<p class="tq-event-note">${esc(track.eventNote)}</p>` : ''}
         <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct.toFixed(1)}%"></span></div>
         <div class="tq-mission-foot">
           <span class="tq-mission-count">${Math.floor(p.current)} / ${p.target}</span>
