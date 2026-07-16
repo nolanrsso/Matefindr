@@ -161,6 +161,7 @@
     if (!id) return false;
     if (id === BETA_TESTER_ID || id === DISCORDIEN_ID || EXCLUSIVE_TITLE_IDS.includes(id)) return true;
     if (String(id).startsWith('rt_')) return true;
+    if (String(id).startsWith('custom_')) return true;
     return false;
   }
 
@@ -183,7 +184,19 @@
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
   function defaultTitlesData() {
-    return { collected: [], pending: [], equipped: null, color: '#C7A5FF' };
+    return { collected: [], pending: [], equipped: null, color: '#C7A5FF', custom: {} };
+  }
+
+  function cloneCustomMap(src) {
+    if (!src || typeof src !== 'object') return {};
+    const out = {};
+    Object.keys(src).forEach(id => {
+      const c = src[id];
+      if (c && typeof c === 'object' && c.title) {
+        out[id] = { title: String(c.title), rarity: typeof c.rarity === 'number' ? c.rarity : 10 };
+      }
+    });
+    return out;
   }
 
   function getTitlesData(user) {
@@ -200,6 +213,11 @@
     td = td || defaultTitlesData();
     if (!Array.isArray(td.collected)) td.collected = [];
     if (!Array.isArray(td.pending)) td.pending = [];
+    td.custom = cloneCustomMap(td.custom);
+    // Garde les custom dans collected si définis
+    Object.keys(td.custom).forEach(id => {
+      if (!td.collected.includes(id)) td.collected.push(id);
+    });
     if (!td.collected.includes(BETA_TESTER_ID)) td.collected.push(BETA_TESTER_ID);
     grantDiscordienTitle(td, { forceEquip: false });
     if (!td.equipped) td.equipped = DISCORDIEN_ID;
@@ -214,9 +232,21 @@
       pending: Array.isArray(raw.pending) ? [...raw.pending] : [],
       equipped: raw.equipped,
       color: raw.color,
+      custom: raw.custom,
     });
     if (isOwnerDiscordTag(p)) grantOwnerTitles(result);
     return result;
+  }
+
+  function resolveTitleMeta(id, td) {
+    if (!id) return null;
+    const m = getMission(id);
+    if (m) return m;
+    const c = td && td.custom && td.custom[id];
+    if (c && c.title) {
+      return { id, title: String(c.title), rarity: typeof c.rarity === 'number' ? c.rarity : 10, noTranslate: true, custom: true };
+    }
+    return null;
   }
 
   function saveTitlesData(patch) {
@@ -614,12 +644,17 @@
     let equipped = srcTd.equipped || DISCORDIEN_ID;
     if (!equipped || equipped === BETA_TESTER_ID) equipped = DISCORDIEN_ID;
     const color = srcTd.color || '#C7A5FF';
+    const custom = cloneCustomMap(srcTd.custom);
     const equippedWasBeauty = ratingIds.includes(srcTd.equipped) || ratingIds.includes(equipped);
 
-    // Titres missions / boutique retirés : on ne garde que Esthétisme + exclusifs
+    // Titres missions / boutique retirés : on ne garde que Esthétisme + exclusifs + custom admin
     collected = collected.filter(id => isKeepableTitleId(id));
     // Retire les titres de note qui ne matchent plus la note actuelle (descente → titres plus bas)
     collected = collected.filter(id => !ratingIds.includes(id) || eligible.includes(id));
+    // Réinjecte les custom définis
+    Object.keys(custom).forEach(id => {
+      if (!collected.includes(id)) collected.push(id);
+    });
 
     const newBeautyTitles = [];
     eligible.forEach(id => {
@@ -663,7 +698,7 @@
     return {
       coins,
       questCoinClaims: claims,
-      titlesData: { collected, pending, equipped, color },
+      titlesData: { collected, pending, equipped, color, custom },
       gainedCoins,
       newBeautyTitles,
       eligible,
@@ -990,7 +1025,7 @@
 
   function equippedTitleMeta(td) {
     if (!td?.equipped) return null;
-    return getMission(td.equipped) || null;
+    return resolveTitleMeta(td.equipped, td);
   }
 
   const TITLE_TYPO_POOL = [
@@ -1577,6 +1612,11 @@
     const ownedOther = MISSIONS
       .filter(m => td.collected.includes(m.id) && isKeepableTitleId(m.id) && !ratingIds.includes(m.id))
       .sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
+    const ownedCustom = Object.keys(td.custom || {})
+      .filter(id => td.collected.includes(id))
+      .map(id => resolveTitleMeta(id, td))
+      .filter(Boolean)
+      .sort((a, b) => (b.rarity || 0) - (a.rarity || 0));
     const titleColor = td.color || '#C7A5FF';
     let html = `<div class="tq-titles-toolbar">
       <div class="tq-coins" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
@@ -1585,7 +1625,7 @@
         <button type="button" class="mf-color-swatch" id="tqTitleColorSw" aria-label="Teinte du titre" data-hex="${esc(titleColor)}" style="background:${esc(titleColor)}"></button>
       </div>
     </div><div class="tq-scroll tq-titles-list">`;
-    if (ownedBeauty.length || ownedOther.length) {
+    if (ownedBeauty.length || ownedOther.length || ownedCustom.length) {
       html += '<div class="tq-section-label">Mes titres</div>';
       if (ownedBeauty.length) {
         const top = ownedBeauty[0];
@@ -1600,6 +1640,7 @@
         html += `</div>`;
       }
       ownedOther.forEach(m => { html += renderTitlePickRow(getMission(m.id) || m, td, soonIds); });
+      ownedCustom.forEach(m => { html += renderTitlePickRow(m, td, soonIds); });
     }
     html += `<div class="tq-section-label">Boutique</div>
       <p class="tq-titles-empty">L’achat de titres arrive bientôt — garde tes pièces 🪙</p>`;
@@ -1844,5 +1885,10 @@
     openQuests,
     openTitles,
     globalTitleStats,
+    getMission,
+    resolveTitleMeta,
+    titleDisplay,
+    isKeepableTitleId,
+    RATING_TITLES,
   };
 })(window);

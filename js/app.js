@@ -451,6 +451,7 @@
                 if (Array.isArray(d.questCoinClaims)) su.questCoinClaims = d.questCoinClaims;
                 if (typeof d.editorActiveMs === 'number') su.editorActiveMs = Math.max(Number(su.editorActiveMs) || 0, d.editorActiveMs);
                 if (d.beautyQuestUnlocked) su.beautyQuestUnlocked = true;
+                if (d.lastEditedAt) su.lastEditedAt = d.lastEditedAt;
                 console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
               } else if (dRaw) {
                 // Même si le profil local existe déjà, ne pas perdre presets / sharePresetIdx / quêtes
@@ -471,6 +472,12 @@
                   state.user.editorActiveMs = Math.max(Number(state.user.editorActiveMs) || 0, dRaw.editorActiveMs);
                 }
                 if (dRaw.beautyQuestUnlocked) state.user.beautyQuestUnlocked = true;
+                // Ne jamais écraser un lastEditedAt local plus récent ; sinon restaurer le cloud
+                if (dRaw.lastEditedAt) {
+                  const locTs = state.user.lastEditedAt ? new Date(state.user.lastEditedAt).getTime() : 0;
+                  const cloudTs = new Date(dRaw.lastEditedAt).getTime();
+                  if (!locTs || cloudTs >= locTs) state.user.lastEditedAt = dRaw.lastEditedAt;
+                }
               }
             }
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
@@ -1098,6 +1105,11 @@
         // effacerait silencieusement le message du staff / le flag disabled / le compteur.
         disabled: !!u.disabled, disabledReason: u.disabledReason || null, disabledCount: u.disabledCount || 0,
         lastSeenAt: u.lastSeenAt || null,
+        // Posé uniquement par l'éditeur sur une vraie modif visuelle — passthrough obligatoire
+        // sinon un sync (notes → titres) écrase lastEditedAt et l'admin croit à une modif.
+        lastEditedAt: u.lastEditedAt || null,
+        staffMessage: u.staffMessage || null,
+        forceLogoutAt: u.forceLogoutAt || null,
         discordLive: u.discordLive || null,
         discordTag: u.discordTag || null,
         publicFlags: u.publicFlags || 0,
@@ -5050,6 +5062,7 @@
       // lien perso (sharedHeartBtn) apparaissait par-dessus l'aperçu "Mon profil".
       _sharedProfile = null;
       document.body.removeAttribute('data-shared');
+      document.body.removeAttribute('data-shared-own');
       _previewMode = true;
       _previewProfile = profile || null;
       // Aperçu D'UN TIERS (chat/qui-t'a-liké) : "Quitter" doit revenir là où on
