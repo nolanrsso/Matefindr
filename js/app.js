@@ -1047,9 +1047,9 @@
     }
 
     /**
-     * Serveurs en commun TOUJOURS à droite du titre.
-     * Si le titre est long : abrège « serveur » → « serv », puis réduit un peu la pastille.
-     * (Plus de stack au-dessus — ça cassait la ligne titre.)
+     * Serveurs en commun TOUJOURS en haut à droite du titre (1re ligne).
+     * Escalade si titre long : « serv » → compact → cache icônes → shrink titre
+     * pour éviter le wrap moche (« ME » seul sur une 2e ligne).
      */
     function syncTitleGuildsLayout(card){
       if (!card) return;
@@ -1063,25 +1063,45 @@
         return;
       }
 
-      guilds.classList.remove('card-guilds--compact');
+      guilds.classList.remove('card-guilds--compact', 'card-guilds--icons-hidden');
       setGuildsLabelText(guilds, false);
 
       const text = titleSlot.querySelector('.card-profile-title-text') || titleSlot;
-      const prevWs = text.style.whiteSpace;
-      text.style.whiteSpace = 'nowrap';
-      const titleW = text.scrollWidth;
-      text.style.whiteSpace = prevWs;
+      text.classList.remove('is-title-fit');
+      text.style.removeProperty('font-size');
+      text.style.removeProperty('letter-spacing');
 
       const gap = 10;
       const avail = row.clientWidth || 0;
+      const measureTitle = () => {
+        const prevWs = text.style.whiteSpace;
+        text.style.whiteSpace = 'nowrap';
+        const w = text.scrollWidth;
+        text.style.whiteSpace = prevWs;
+        return w;
+      };
+      let titleW = measureTitle();
       const fits = () => titleW + (guilds.offsetWidth || 0) + gap <= avail + 1;
 
-      // Titre long / pas la place → « serv » au lieu de « serveur »
+      // 1) « serv » au lieu de « serveur »
       if (avail > 0 && !fits()) setGuildsLabelText(guilds, true);
-      // Encore serré → pastille un peu plus petite
+      // 2) pastille un peu plus petite
       if (avail > 0 && !fits()) guilds.classList.add('card-guilds--compact');
+      // 3) cache les icônes serveurs (garder le libellé)
+      if (avail > 0 && !fits()) guilds.classList.add('card-guilds--icons-hidden');
+      // 4) titre un peu plus petit pour rester sur 1 ligne (comme le 1er screen)
+      if (avail > 0 && !fits()) {
+        text.classList.add('is-title-fit');
+        const base = parseFloat(getComputedStyle(text).fontSize) || 11;
+        let fs = base;
+        for (let i = 0; i < 8 && !fits(); i++) {
+          fs = Math.max(8, fs - 0.45);
+          text.style.fontSize = fs + 'px';
+          titleW = measureTitle();
+        }
+      }
 
-      const gw = Math.max(guilds.offsetWidth || 0, 72);
+      const gw = Math.max(guilds.offsetWidth || 0, 64);
       row.style.setProperty('--guilds-w', gw + 'px');
     }
 
@@ -8266,49 +8286,50 @@
       }
       capProviderToken();
 
+      // Important : s'abonner AVANT getSession, et ne jamais traiter un getSession()
+      // null comme une déconnexion. Au refresh, getSession peut renvoyer null le temps
+      // que le client hydrate le storage → setAuth(false) flashait "Se connecter" ~0.5s
+      // puis INITIAL_SESSION / SIGNED_IN reconnectait. La source de vérité "pas de
+      // session" = INITIAL_SESSION sans session, ou SIGNED_OUT explicite.
+      function clearSessionLocal(){
+        clearDiscordTokenKeys();
+        state = { user: null, profile: null };
+        try { localStorage.removeItem(KEY); } catch(_){}
+        setAuth(false);
+        if (typeof refreshLandingCta === 'function') refreshLandingCta();
+      }
+
+      window.__supa.auth.onAuthStateChange(async (event, s) => {
+        console.log('[Matefindr] auth event:', event, 'provider_token:', !!s?.provider_token);
+        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !s)) {
+          clearSessionLocal();
+          return;
+        }
+        if (s) {
+          // Save token from session if present (Supabase may include it in SIGNED_IN)
+          if (s.provider_token) {
+            localStorage.setItem('matefindr_discord_token', s.provider_token);
+            localStorage.setItem('matefindr_discord_token_ts', String(Date.now()));
+            try {
+              const m = s.user?.user_metadata || {};
+              localStorage.setItem('matefindr_discord_token_uid', m.provider_id || m.sub || s.user?.id || '');
+            } catch(_){}
+          }
+          const u = await userFromSupabaseSession(s);
+          if (u) window.__matefindr.onLogin(u);
+          if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
+        }
+      });
+
       try {
         const { data: { session } } = await window.__supa.auth.getSession();
         console.log('[Matefindr] Supabase session:', !!session, 'provider_token:', !!session?.provider_token);
+        // Eager hydrate si déjà dispo — jamais de setAuth(false) sur null ici.
         if (session) {
           const u = await userFromSupabaseSession(session);
           if (u) window.__matefindr.onLogin(u);
-          if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
-        } else {
-          // Pas de session → personne connecté. setAuth(false) renvoie aussi à la
-          // landing si on était resté bloqué sur l'onboarding (bug "Hey toi" + Se connecter).
-          if (state.user) {
-            clearDiscordTokenKeys();
-            state = { user: null, profile: null };
-            try { localStorage.removeItem(KEY); } catch(_){}
-          }
-          setAuth(false);
+          if (window.__rtStart) window.__rtStart();
         }
-        window.__supa.auth.onAuthStateChange(async (event, s) => {
-          console.log('[Matefindr] auth event:', event, 'provider_token:', !!s?.provider_token);
-          if (event === 'SIGNED_OUT') {
-            // Déconnexion réelle → personne connecté (pas de fantôme Matefindr_user)
-            clearDiscordTokenKeys();
-            state = { user: null, profile: null };
-            try { localStorage.removeItem(KEY); } catch(_){}
-            setAuth(false);
-            if (typeof refreshLandingCta === 'function') refreshLandingCta();
-            return;
-          }
-          if (s) {
-            // Save token from session if present (Supabase may include it in SIGNED_IN)
-            if (s.provider_token) {
-              localStorage.setItem('matefindr_discord_token', s.provider_token);
-              localStorage.setItem('matefindr_discord_token_ts', String(Date.now()));
-              try {
-                const m = s.user?.user_metadata || {};
-                localStorage.setItem('matefindr_discord_token_uid', m.provider_id || m.sub || s.user?.id || '');
-              } catch(_){}
-            }
-            const u = await userFromSupabaseSession(s);
-            if (u) window.__matefindr.onLogin(u);
-            if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
-          }
-        });
 
         /* === Auto-resync Discord (limité) ===
            Une fois le profil créé, on ne resynchronise PLUS avatar / bannière / déco /

@@ -99,6 +99,25 @@
 <link rel="stylesheet" href="css/titles-quests.css" />
 </head>
 <body data-screen="landing" data-auth="out">
+<!-- Auth optimiste : si un profil local + token Supabase existent, éviter le flash
+     "Se connecter" avant que js/app.js hydrate la session (~0.5s). -->
+<script>
+(function(){
+  try{
+    var raw = localStorage.getItem('matefindr_state');
+    if (!raw) return;
+    var st = JSON.parse(raw);
+    var u = st && st.user;
+    if (!u || (!u.discordId && !u.uid && !u.email)) return;
+    var hasSb = false;
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('sb-') === 0 && k.indexOf('-auth-token') !== -1) { hasSb = true; break; }
+    }
+    if (hasSb) document.body.setAttribute('data-auth', 'in');
+  }catch(e){}
+})();
+</script>
 
 <!-- ===== Accès privé : page mot de passe (barrière côté client, mémorisée par appareil) ===== -->
 <div id="gate" hidden>
