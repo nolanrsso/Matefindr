@@ -422,7 +422,16 @@
                 if (dRaw.boostNextPayment) state.user.boostNextPayment = dRaw.boostNextPayment;
               }
               if (dRaw && dRaw.slugChangedAt) state.user.slugChangedAt = dRaw.slugChangedAt;
-              const d = (dRaw && dRaw.name) ? dRaw : null;
+              // Compte existant = déjà passé par l'onboarding (âge/genre/pays/orbes…)
+              // — pas seulement `data.name` (sinon → "Hey, toi !" à chaque reconnexion).
+              const hasCloudProfile = !!(dRaw && (
+                dRaw.name || dRaw.age || dRaw.gender || dRaw.country
+                || (Array.isArray(dRaw.orbs) && dRaw.orbs.length)
+                || (dRaw.dailyLogin && dRaw.dailyLogin.lastClaim)
+                || (Array.isArray(dRaw.gifs) && dRaw.gifs.length)
+                || (Array.isArray(dRaw.photos) && dRaw.photos.length)
+              ));
+              const d = hasCloudProfile ? dRaw : null;
               if (!state.profile && d) {
                 const su = state.user;
                 state.profile = {
@@ -474,6 +483,8 @@
                 if (d.titlesData) su.titlesData = d.titlesData;
                 if (typeof d.coins === 'number') su.coins = d.coins;
                 if (Array.isArray(d.questCoinClaims)) su.questCoinClaims = d.questCoinClaims;
+                if (d.dailyLogin) su.dailyLogin = mergeDailyLogin(su.dailyLogin, d.dailyLogin);
+                if (d.questStats && typeof d.questStats === 'object') su.questStats = Object.assign({}, d.questStats);
                 if (typeof d.editorActiveMs === 'number') su.editorActiveMs = Math.max(Number(su.editorActiveMs) || 0, d.editorActiveMs);
                 if (d.beautyQuestUnlocked) su.beautyQuestUnlocked = true;
                 if (d.lastEditedAt) su.lastEditedAt = d.lastEditedAt;
@@ -493,6 +504,24 @@
                 }
                 if (Array.isArray(dRaw.questCoinClaims)) {
                   state.user.questCoinClaims = [...new Set([...(state.user.questCoinClaims || []), ...dRaw.questCoinClaims])];
+                }
+                if (dRaw.dailyLogin) {
+                  state.user.dailyLogin = mergeDailyLogin(state.user.dailyLogin, dRaw.dailyLogin);
+                }
+                if (dRaw.questStats && typeof dRaw.questStats === 'object') {
+                  const locQs = (state.user.questStats && typeof state.user.questStats === 'object') ? state.user.questStats : {};
+                  state.user.questStats = Object.assign({}, locQs, dRaw.questStats);
+                  // Garde le max pour chaque compteur (évite de régresser la note / votes)
+                  ['views','matches','likesGiven','likesReceived','votesGiven','votesReceived','newChats','ratingVotes'].forEach(k => {
+                    const a = Number(locQs[k]) || 0, b = Number(dRaw.questStats[k]) || 0;
+                    if (a || b) state.user.questStats[k] = Math.max(a, b);
+                  });
+                  if (typeof locQs.rating === 'number' || typeof dRaw.questStats.rating === 'number') {
+                    const locV = Number(locQs.ratingVotes) || 0, cloudV = Number(dRaw.questStats.ratingVotes) || 0;
+                    state.user.questStats.rating = cloudV >= locV
+                      ? (typeof dRaw.questStats.rating === 'number' ? dRaw.questStats.rating : locQs.rating)
+                      : (typeof locQs.rating === 'number' ? locQs.rating : dRaw.questStats.rating);
+                  }
                 }
                 if (dRaw.titlesData && dRaw.titlesData.collected) {
                   const loc = (state.user.titlesData && state.user.titlesData.collected) || [];
@@ -525,6 +554,8 @@
         }
         save(); setAuth(true);
         if (window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
+        // Sync quêtes (note / votes) dès la connexion — init() a souvent tourné avant l'auth.
+        try { await refreshQuestsAfterLogin(); } catch(_){}
         // Sync AVANT l'appel Discord (awaited) : discord-join-dm lit profiles.data.boost
         // pour synchroniser le rôle Discord "Boost" → il faut que la base soit à jour
         // (ex: juste après un achat Boost) avant que la fonction ne la lise.
@@ -978,6 +1009,32 @@
         </div>`;
     }
 
+    /**
+     * Serveurs en commun à droite du titre par défaut.
+     * Si le titre (1 ligne) + pastille ne tiennent pas → stack (serveurs juste au-dessus).
+     */
+    function syncTitleGuildsLayout(card){
+      if (!card) return;
+      const row = card.querySelector('.card-title-guilds-row');
+      if (!row) return;
+      const guilds = row.querySelector('.card-guilds--head');
+      const titleSlot = row.querySelector('.card-title-slot:not(.card-title-slot--empty)');
+      if (!guilds || !titleSlot) {
+        row.classList.remove('card-title-guilds-row--stack');
+        return;
+      }
+      row.classList.remove('card-title-guilds-row--stack');
+      const text = titleSlot.querySelector('.card-profile-title-text') || titleSlot;
+      const prevWs = text.style.whiteSpace;
+      text.style.whiteSpace = 'nowrap';
+      const titleW = text.scrollWidth;
+      text.style.whiteSpace = prevWs;
+      const guildsW = Math.max(guilds.offsetWidth || 0, 96);
+      const gap = 14;
+      const needsStack = titleW + guildsW + gap > row.clientWidth + 1;
+      row.classList.toggle('card-title-guilds-row--stack', needsStack);
+    }
+
     /** Met à jour la carte déjà à l'écran (guilds / vues) sans wipe ni anim cardIn. */
     function softRefreshSwipeCard(){
       const wrap = document.getElementById('swipeWrap');
@@ -1003,12 +1060,9 @@
             if (body) body.appendChild(row);
           }
         }
-        // Titre long → serveurs AU-DESSUS (stack), pas à droite qui tronque
         if (titleSlot) {
-          row.classList.add('card-title-guilds-row--stack');
           if (!row.contains(titleSlot)) row.appendChild(titleSlot);
         } else if (!row.querySelector('.card-title-slot')) {
-          row.classList.remove('card-title-guilds-row--stack');
           const empty = document.createElement('span');
           empty.className = 'card-title-slot card-title-slot--empty';
           empty.setAttribute('aria-hidden', 'true');
@@ -1028,6 +1082,7 @@
           row.insertBefore(gEl, tEl);
         }
         card.classList.add('has-common-guilds');
+        requestAnimationFrame(() => syncTitleGuildsLayout(card));
       } else {
         const oldG = card.querySelector('.card-guilds--head');
         if (oldG) oldG.remove();
@@ -1241,6 +1296,10 @@
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         coins: typeof u.coins === 'number' ? u.coins : 0,
         questCoinClaims: Array.isArray(u.questCoinClaims) ? u.questCoinClaims : [],
+        // Quêtes / connexion quotidienne — passthrough obligatoire sinon sync cloud
+        // écrase lastClaim et on peut re-réclamer la récompense du jour.
+        dailyLogin: (u.dailyLogin && typeof u.dailyLogin === 'object') ? u.dailyLogin : null,
+        questStats: (u.questStats && typeof u.questStats === 'object') ? u.questStats : null,
         editorActiveMs: typeof u.editorActiveMs === 'number' ? u.editorActiveMs : 0,
         beautyQuestUnlocked: !!u.beautyQuestUnlocked,
         isMe: true,
@@ -1317,6 +1376,28 @@
         document.querySelectorAll('.card-reactions[data-mine="true"]').forEach(el => el.setAttribute('data-uid', _myUidCache));
         if (typeof loadReactions === 'function') loadReactions(_myUidCache);
       } catch (e) { console.warn('[Matefindr] refresh my stats', e); }
+    }
+    /** Après login : uid + notes + progression quêtes (sinon badge/note périmés jusqu'à ouvrir Quêtes). */
+    async function refreshQuestsAfterLogin(){
+      const TQ = window.MatefindrTitlesQuests;
+      if (!TQ || !window.__supa) return;
+      try {
+        const { data: { session } } = await window.__supa.auth.getSession();
+        if (!session) return;
+        _myUidCache = session.user.id;
+        try { window.__mfMyUid = _myUidCache; } catch (_) {}
+        if (state.user) state.user.uid = _myUidCache;
+        await loadReactions(_myUidCache);
+        const stats = await TQ.fetchStats({
+          supa: window.__supa,
+          uid: _myUidCache,
+          ratingRec: () => _reactionsCache[_myUidCache] || null,
+        });
+        TQ.syncStatsLocal(stats);
+        TQ.refreshPending(stats);
+        TQ.updateQuestButtonBadge(stats);
+        save();
+      } catch (e) { console.warn('[Matefindr] refresh quests after login', e); }
     }
     /* Identité du votant : le vrai compte si connecté, sinon un id anonyme persisté en
        localStorage (généré une fois, réutilisé partout) -- pas besoin d'être connecté pour
@@ -1522,6 +1603,22 @@
       clearTimeout(_syncTimer);
       _syncTimer = setTimeout(syncMyProfileToCloud, 800);
     }
+    /** Garde le claim quotidien le plus avancé (évite re-réclamer après reconnexion). */
+    function mergeDailyLogin(a, b){
+      const A = (a && typeof a === 'object') ? a : null;
+      const B = (b && typeof b === 'object') ? b : null;
+      if (!A && !B) return null;
+      if (!A) return { streak: Math.max(0, Math.floor(B.streak || 0)), lastClaim: B.lastClaim || null };
+      if (!B) return { streak: Math.max(0, Math.floor(A.streak || 0)), lastClaim: A.lastClaim || null };
+      const la = typeof A.lastClaim === 'string' ? A.lastClaim : '';
+      const lb = typeof B.lastClaim === 'string' ? B.lastClaim : '';
+      if (lb && (!la || lb > la)) return { streak: Math.max(0, Math.floor(B.streak || A.streak || 0)), lastClaim: lb };
+      if (la && (!lb || la > lb)) return { streak: Math.max(0, Math.floor(A.streak || B.streak || 0)), lastClaim: la };
+      return {
+        streak: Math.max(0, Math.floor(A.streak || 0), Math.floor(B.streak || 0)),
+        lastClaim: la || lb || null,
+      };
+    }
     async function syncMyProfileToCloud(){
       try {
         if (!window.__supa) return;
@@ -1542,15 +1639,20 @@
           updated_at: new Date().toISOString(),
         };
         if (state.user && state.user.discordId) base.discord_id = state.user.discordId;
-        // discordLive est surtout écrit par le bot Gateway (bot/discord-presence).
-        // Ne jamais l'écraser avec une valeur locale plus vieille / vide.
+        // discordLive / dailyLogin : ne jamais écraser le cloud avec une valeur locale vide/vieille.
         try {
           const { data: liveRow } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
-          const cloudLive = liveRow?.data?.discordLive;
+          const cloudData = liveRow?.data;
+          const cloudLive = cloudData?.discordLive;
           if (cloudLive && typeof cloudLive === 'object') {
             const locTs = my.discordLive?.updatedAt ? new Date(my.discordLive.updatedAt).getTime() : 0;
             const cloudTs = cloudLive.updatedAt ? new Date(cloudLive.updatedAt).getTime() : 0;
             if (!locTs || cloudTs >= locTs) my.discordLive = cloudLive;
+          }
+          const mergedDaily = mergeDailyLogin(my.dailyLogin, cloudData?.dailyLogin);
+          if (mergedDaily) {
+            my.dailyLogin = mergedDaily;
+            if (state.user) state.user.dailyLogin = mergedDaily;
           }
         } catch (_) {}
         // ANTI-ÉCRASEMENT : un profil "vide" (identité Discord seule, onboarding pas
@@ -1570,6 +1672,9 @@
               tag: my.tag || prevData.tag || null,
               guildIds,
             });
+            // Preserve / merge daily claim even on guildIds-only sync
+            const dMerged = mergeDailyLogin(my.dailyLogin, prevData.dailyLogin);
+            if (dMerged) merged.dailyLogin = dMerged;
             const { error } = await window.__supa.from('profiles').upsert({ ...base, data: merged }, { onConflict: 'id' });
             if (error) console.warn('[Matefindr] sync guildIds failed', error.message || error);
           } else {
@@ -2479,7 +2584,7 @@
       if (hasDiscordFloor) c.classList.add('has-discord-floor');
       if (viewsHtml || joinedHtml) c.classList.add('has-bottom-stack');
       const titleGuildsRow = (titleHtml || guildsHtml)
-        ? `<div class="card-title-guilds-row${(titleHtml && guildsHtml) ? ' card-title-guilds-row--stack' : ''}">${guildsHtml}${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}</div>`
+        ? `<div class="card-title-guilds-row">${guildsHtml}${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}</div>`
         : '';
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
@@ -2578,6 +2683,10 @@
       bindCardVoice(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
       c.addEventListener('animationend', (ev) => { if (ev.animationName === 'cardIn') c.classList.remove('entering'); }, { once:true });
+      // Titre + serveurs : même ligne si ça tient, sinon serveurs juste au-dessus
+      if (titleHtml && guildsHtml) {
+        requestAnimationFrame(() => syncTitleGuildsLayout(c));
+      }
       return c;
     }
 

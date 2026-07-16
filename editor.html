@@ -174,15 +174,15 @@ body[data-canvas="portrait"] .card{width:min(62vw,240px);height:min(52dvh,400px)
    +10px de marge. Le "56px" du vrai site (index.html mobile) chevauche en fait
    l'avatar de ~86px — bug préexistant côté site, pas reproduit ici volontairement
    pour ne pas répéter le chevauchement signalé. */
-body[data-canvas="portrait"] .card .body{position:absolute;inset:152px 0 0 0;overflow-y:auto;padding:0 14px 18px;gap:9px}
+body[data-canvas="portrait"] .card .body{position:absolute;inset:152px 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:10px 14px 18px;gap:9px}
 /* Contenu de la carte à l'échelle réelle du swipe mobile (index.html, bloc
    @media max-width:600px .swipe-card ...) — sans ça avatar/texte gardent leur
    taille "bureau" (140px d'avatar etc.) dans une carte 3x plus étroite = ça
    déborde et se chevauche. */
 body[data-canvas="portrait"] .card .banner{height:86px}
-body[data-canvas="portrait"] .card .avatar{top:48px;left:14px;width:94px;height:94px;border-width:5px}
+body[data-canvas="portrait"] .card .avatar{top:48px;left:14px;width:104px;height:104px}
 body[data-canvas="portrait"] .card .avatar .ph{font-size:26px}
-body[data-canvas="portrait"] .card .avatar-deco{top:48px;left:14px;width:94px;height:94px}
+body[data-canvas="portrait"] .card .avatar-deco{top:48px;left:14px;width:104px;height:104px}
 body[data-canvas="portrait"] .card .username{font-size:20px}
 body[data-canvas="portrait"] .card .tag{font-size:11px}
 body[data-canvas="portrait"] .card .bio{font-size:11.5px;padding:8px 10px}
@@ -368,15 +368,15 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
   transition:box-shadow .4s ease;
 }
 .banner{
-  position:relative;height:120px;overflow:hidden;cursor:pointer;
+  position:relative;height:120px;overflow:visible;cursor:pointer;
   border-radius:20px 20px 0 0;
   /* Transparent : le dégradé unique de .card monte derrière (comme swipe-card).
      Évite la double teinte qui déborde aux coins hauts autour de la bannière. */
   background:transparent;
 }
-.banner img,.banner .ph{position:absolute;inset:0;width:100%;height:100%}
+.banner img,.banner .ph{position:absolute;inset:0;width:100%;height:100%;border-radius:20px 20px 0 0;overflow:hidden}
 .banner img{object-fit:cover}
-.banner .ph{display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600;letter-spacing:.03em}
+.banner .ph{display:grid;place-items:center;color:rgba(255,255,255,.6);font-size:12.5px;font-weight:600;letter-spacing:.03em;clip-path:inset(0 round 20px 20px 0 0)}
 .banner-del{
   position:absolute;top:8px;left:8px;z-index:5;width:28px;height:28px;border-radius:50%;border:none;
   background:rgba(10,10,14,.62);color:#fff;display:grid;place-items:center;cursor:pointer;
@@ -388,28 +388,42 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .banner-del:hover{background:rgba(237,66,69,.9);transform:scale(1.06)}
 .banner-del svg{width:14px;height:14px}
 .avatar{
-  /* Identique à la vraie carte (.swipe-card .avatar-wrap) : 140px, anneau 8px, top 74 / left 20 */
+  /* Wrapper SANS border-radius : un cercle + overflow coupe la pastille ✎ (bug Chromium).
+     Le rond / clip image sont sur .avatar-media et .ph uniquement. */
   position:absolute;left:20px;top:74px;
-  width:140px;height:140px;border-radius:50%;cursor:pointer;z-index:3;
-  border:8px solid var(--card);overflow:hidden; /* clippe l'image (zoom inclus) dans le cercle */
+  width:156px;height:156px; /* 140 + bordure 8×2 */
+  border-radius:0;cursor:pointer;z-index:3;
+  overflow:visible;background:transparent;border:none;box-shadow:none;
+}
+.avatar-media,.avatar > .ph{
+  position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  border:8px solid var(--card);box-sizing:border-box;
   background:linear-gradient(135deg, var(--pink), var(--violet));
   box-shadow:0 8px 26px rgba(145,70,255,.5);
 }
-.avatar img{width:100%;height:100%;object-fit:cover}
-.avatar .ph{width:100%;height:100%;display:grid;place-items:center;font-size:52px;font-weight:800;font-family:"Clash Display",sans-serif;color:#fff}
+/* Fallback si une img est encore enfant direct (sans .avatar-media) */
+.avatar > img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  border-radius:50%;border:8px solid var(--card);box-sizing:border-box;
+  box-shadow:0 8px 26px rgba(145,70,255,.5);
+}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.avatar .ph{width:100%;height:100%;display:grid;place-items:center;font-size:52px;font-weight:800;font-family:"Clash Display",sans-serif;color:#fff;margin:0}
 /* Couche séparée (NON clippée) pour la déco + le statut, alignée sur l'avatar → la déco peut dépasser. */
-.avatar-deco{position:absolute;left:20px;top:74px;width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:6}
+.avatar-deco{position:absolute;left:20px;top:74px;width:156px;height:156px;border-radius:50%;pointer-events:none;z-index:3}
 .avatar-deco .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain}
 .avatar-deco .status-dot{display:none} /* rond de statut retiré */
 /* position:absolute + inset (au lieu de position:relative + padding-top) : la carte
    a maintenant une hauteur FIXE (cf. .card ci-dessus) → le corps défile en interne
    (overflow-y:auto) au lieu de pousser la carte à grandir, comme la vraie carte. */
-.body{position:absolute;inset:216px 0 0 0;overflow-y:auto;padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
+/* z-index > avatar : l'overlay ✎ / outline du pseudo n'est plus caché par le cadre photo */
+.body{position:absolute;inset:216px 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:14px 18px 18px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
 /* Bloc pseudo + @tag + titre — même regroupement que .swipe-card .body > div (buildCard). */
-.card-meta-head{display:flex;flex-direction:column;gap:0;align-items:flex-start;margin:0;padding:0}
+.card-meta-head{display:flex;flex-direction:column;gap:0;align-items:flex-start;margin:0;padding:4px 14px 2px 2px;overflow:visible;position:relative;z-index:2}
 .username{
-  margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.05;
+  margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.2;
   display:inline-flex;align-items:center;gap:8px;align-self:flex-start;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4);
+  overflow:visible;max-width:100%;box-sizing:border-box;position:relative;isolation:isolate;
 }
 .username input{font:inherit;color:#fff;background:rgba(0,0,0,.25);border:1.5px solid rgba(255,255,255,.6);border-radius:10px;padding:2px 10px;outline:none;max-width:240px}
 .card-meta-head .tag{color:#b9bbbe;font-size:13px;margin-top:-6px;margin-bottom:0;line-height:1.25}
@@ -421,7 +435,7 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
    carte de swipe (index.html), posé par-dessus la bannière/l'avatar (pas dans
    le flux du corps de carte). Copié 1:1 depuis css/app.css (.swipe-card ...). */
 .card-age-badge{
-  position:absolute;top:128px;right:16px;z-index:6;
+  position:absolute;top:128px;right:16px;z-index:9;
   display:flex;align-items:center;gap:8px;
   padding:8px 16px;border-radius:999px;
   background:rgba(0,0,0,.65);
@@ -444,7 +458,7 @@ body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14p
 body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
 /* Vues du profil : identique à .swipe-card .card-views (css/app.css). */
 .card .card-views{
-  position:absolute;left:14px;bottom:14px;z-index:6;
+  position:absolute;left:14px;bottom:14px;z-index:9;
   display:inline-flex;align-items:center;gap:7px;
   color:#fff;font-size:18px;font-weight:400;font-family:"Clash Display",sans-serif;
   text-shadow:0 2px 8px rgba(0,0,0,.6);
@@ -456,7 +470,7 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
    mais TOUJOURS révélé (jamais de teaser) -- ici c'est TON profil, la logique "caché
    tant que je n'ai pas noté" ne s'applique pas puisqu'on ne se note pas soi-même. */
 .card .card-reactions{
-  position:absolute;right:7px;bottom:14px;z-index:6;
+  position:absolute;right:7px;bottom:14px;z-index:9;
   display:flex;flex-direction:column;align-items:center;gap:8px;
   color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);
   pointer-events:none;
@@ -521,16 +535,31 @@ body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20
 .music-chip .empty{color:rgba(255,255,255,.7);font-size:13px;flex:1}
 
 /* ===================== AFFORDANCE D'ÉDITION ===================== */
-.editable{position:relative;transition:outline-color .18s ease;outline:2px solid transparent;outline-offset:2px;border-radius:13px}
-.banner.editable{border-radius:0}
-.avatar.editable{border-radius:50%;position:absolute}
+.editable{position:relative;transition:outline-color .18s ease;outline:2px solid transparent;outline-offset:3px;border-radius:13px}
+.banner.editable{border-radius:0;overflow:visible}
+.avatar.editable{border-radius:0;position:absolute;overflow:visible;outline:none}
+.avatar.editable:hover{outline:none}
+.avatar.editable:hover .avatar-media,
+.avatar.editable:hover > .ph{outline:2px solid rgba(255,255,255,.55);outline-offset:2px}
 .editable:hover{outline-color:rgba(255,255,255,.55)}
-.editable::after{content:"✎";position:absolute;top:-8px;right:-8px;z-index:5;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;font-size:11px;font-weight:900;opacity:0;transform:scale(.6);transition:.18s ease;box-shadow:0 4px 12px rgba(145,70,255,.6);pointer-events:none}
-.editable:hover::after{opacity:1;transform:scale(1)}
+/* Plus de ::after (clipés par overflow/border-radius) → pastilles .ed-badge en DOM */
+.editable::after,.editable::before{content:none!important;display:none!important}
 .editable.editing{outline-color:#fff}
-.editable.editing::after{display:none}
-.banner.editable::after{top:8px;right:8px}
-.avatar.editable::after{top:0;right:0}
+.editable.editing > .ed-badge{display:none}
+.ed-badge{
+  position:absolute;top:-7px;right:-7px;z-index:30;
+  width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(135deg,#FF7EB6,#9146FF);color:#fff;
+  font-size:12px;font-weight:900;line-height:1;
+  box-shadow:0 4px 12px rgba(145,70,255,.65),0 0 0 2px rgba(20,18,36,.85);
+  pointer-events:none;opacity:1;transform:none;
+}
+.banner.editable > .ed-badge{top:8px;right:8px}
+.avatar.editable > .ed-badge{top:2px;right:2px}
+.username.editable{overflow:visible;z-index:5;padding:6px 30px 6px 6px;outline-offset:0}
+.username.editable > .ed-badge{top:4px;right:4px}
+.bio.editable > .ed-badge,.voice.editable > .ed-badge{top:6px;right:6px}
+/* Tip avatar (survol) via title natif + aria — pas de ::before clipé */
 
 /* ===================== TOOLBAR (icônes seules) ===================== */
 .toolbar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:40;display:flex;gap:6px;padding:9px;border-radius:20px;
@@ -1425,23 +1454,23 @@ html.perf-lite *{
     <div class="orb-layer" id="orbLayer"></div>
     <button class="eye-dot eye-dot--card" data-eye="card" title="Masquer la carte (aperçu)" aria-label="Masquer la carte"></button>
     <section class="card" id="card">
-      <div class="banner editable" id="bannerSlot" title="Changer la bannière"><div class="ph">Clique pour ajouter une bannière (image ou GIF)</div></div>
+      <div class="banner editable" id="bannerSlot" title="Changer la bannière"><div class="ph">Clique pour ajouter une bannière (image ou GIF)</div><span class="ed-badge" aria-hidden="true">✎</span></div>
       <button type="button" class="banner-del" id="bannerDelBtn" title="Supprimer la bannière" aria-label="Supprimer la bannière" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil"><div class="ph">T</div></div>
+      <div class="avatar editable" id="avatarSlot" title="Changer la photo de profil" data-tip="Changer la photo de profil" aria-label="Changer la photo de profil"><div class="ph">T</div><span class="ed-badge" aria-hidden="true">✎</span></div>
       <div class="avatar-deco" id="avatarDeco" aria-hidden="true"></div>
       <div class="card-age-badge" id="ageBadge" hidden></div>
       <span class="card-views" id="edCardViews" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b></b></span>
       <span class="card-reactions" id="edCardReactions" hidden></span>
       <div class="body">
         <div class="card-meta-head">
-          <h1 class="username editable" id="usernameSlot">Matefindr_user</h1>
+          <h1 class="username editable" id="usernameSlot">Matefindr_user<span class="ed-badge" aria-hidden="true">✎</span></h1>
           <div class="tag">@matefindr · en ligne sur Matefindr</div>
           <div id="edProfileTitle"></div>
         </div>
         <div class="divider"></div>
-        <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨</div>
+        <div class="bio editable" id="bioSlot">Clique ici pour écrire ta bio ✨<span class="ed-badge" aria-hidden="true">✎</span></div>
         <div class="label-mini">Vocal du profil</div>
-        <div class="voice editable" id="voiceSlot"><span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span><span class="empty">Clique pour enregistrer un vocal</span></div>
+        <div class="voice editable" id="voiceSlot"><span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span><span class="empty">Clique pour enregistrer un vocal</span><span class="ed-badge" aria-hidden="true">✎</span></div>
         <div class="label-mini">Connexions</div>
         <div class="connections" id="connections"></div>
       </div>
@@ -1847,11 +1876,11 @@ function applyTagBlur(){
   back.addEventListener('click',closeUnamePop);
   DarkColorPicker.bindSwatch(colorInp,()=>nameSwatchColor(),hex=>applyNameColorVal(hex));
   colorDef.addEventListener('click',()=>{ applyNameColorVal('#ffffff'); DarkColorPicker.setSwatchBg(colorInp,'#FFFFFF'); toast('Pseudo remis en blanc'); });
-  $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; slot.textContent=v; applyUsernameBoostStyle(); persist(); closeUnamePop(); });
+  $('unameSave').addEventListener('click',()=>{ const v=inp.value.trim()||S.username; S.username=v; S.nameCustom=true; setEditableText(slot,v); applyUsernameBoostStyle(); persist(); closeUnamePop(); });
   $('unameCancel').addEventListener('click',closeUnamePop);
   inp.addEventListener('keydown',e=>{ if(e.key==='Enter')$('unameSave').click(); if(e.key==='Escape')closeUnamePop(); });
 })();
-(function(){const slot=$('bioSlot');const PH='Clique ici pour écrire ta bio ✨';slot.addEventListener('click',()=>{if(slot.classList.contains('editing'))return;slot.classList.add('editing');slot.innerHTML='';const ta=document.createElement('textarea');ta.value=S.bio;ta.maxLength=280;ta.placeholder='Parle un peu de toi…';slot.appendChild(ta);ta.focus();const done=()=>{S.bio=ta.value.trim();slot.classList.remove('editing');slot.textContent=S.bio||PH;persist();};ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();done();}if(e.key==='Escape')done();});ta.addEventListener('blur',done);});})();
+(function(){const slot=$('bioSlot');const PH='Clique ici pour écrire ta bio ✨';slot.addEventListener('click',()=>{if(slot.classList.contains('editing'))return;slot.classList.add('editing');slot.innerHTML='';const ta=document.createElement('textarea');ta.value=S.bio;ta.maxLength=280;ta.placeholder='Parle un peu de toi…';slot.appendChild(ta);ta.focus();const done=()=>{S.bio=ta.value.trim();slot.classList.remove('editing');setEditableText(slot,S.bio||PH);persist();};ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();done();}if(e.key==='Escape')done();});ta.addEventListener('blur',done);});})();
 
 /* ===== CROP (photo + bannière) ===== */
 const crop={url:null,shape:'circle',tx:0,ty:0,scale:1,nw:0,nh:0,onOk:null,maxX:0,maxY:0};
@@ -1916,9 +1945,27 @@ function clampMediaPos(data){
   let y=Number(data.posY);if(!Number.isFinite(y))y=50;
   return Object.assign({},data,{scale:s,posX:Math.max(0,Math.min(100,x)),posY:Math.max(0,Math.min(100,y))});
 }
+function ensureEditBadge(el){
+  if(!el||!el.classList||!el.classList.contains('editable')) return;
+  if(el.querySelector(':scope > .ed-badge')) return;
+  const b=document.createElement('span');
+  b.className='ed-badge';
+  b.setAttribute('aria-hidden','true');
+  b.textContent='✎';
+  el.appendChild(b);
+}
+function ensureAllEditBadges(){
+  document.querySelectorAll('#card .editable').forEach(ensureEditBadge);
+}
+/** textContent sans perdre la pastille ✎ */
+function setEditableText(el, text){
+  if(!el) return;
+  el.textContent = text;
+  ensureEditBadge(el);
+}
 function setCroppedMedia(slot,data,ph){
   slot.innerHTML='';
-  if(!data){slot.innerHTML=ph;slot.style.background='';return;}
+  if(!data){slot.innerHTML=ph;ensureEditBadge(slot);slot.style.background='';return;}
   data=clampMediaPos(data);
   const img=document.createElement('img');img.src=data.url;img.style.objectPosition=data.posX+'% '+data.posY+'%';
   // transform-origin DOIT matcher object-position : object-fit:cover positionne déjà le
@@ -1926,8 +1973,18 @@ function setCroppedMedia(slot,data,ph){
   // au lieu du point de pan, le zoom dérive vers une autre zone que celle prévisualisée
   // dans le recadrage dès que scale≠1 ET posX/posY≠50 (donc presque toujours en pratique).
   img.style.transformOrigin=data.posX+'% '+data.posY+'%';
-  img.style.transform='scale('+data.scale+')';slot.appendChild(img);
-  slot.style.background=(slot.id==='avatarSlot')?'#1c1d22':'transparent';
+  img.style.transform='scale('+data.scale+')';
+  // Avatar : clip dans .avatar-media (overflow:hidden) pour laisser pastille ✎ + tip visibles hors cercle.
+  if(slot.id==='avatarSlot'){
+    const wrap=document.createElement('div');
+    wrap.className='avatar-media';
+    wrap.appendChild(img);
+    slot.appendChild(wrap);
+  }else{
+    slot.appendChild(img);
+  }
+  ensureEditBadge(slot);
+  slot.style.background=(slot.id==='avatarSlot')?'transparent':'transparent';
 }
 const BANNER_PH='<div class="ph">Clique pour ajouter une bannière (image ou GIF)</div>';
 function renderBanner(){
@@ -2040,7 +2097,7 @@ let voiceAudio=null;
 const VMIC_SVG='<span class="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5M9 21.5h6"/></svg></span>';
 const VPLAY_SVG='<svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5z"/></svg>';
 const VPAUSE_SVG='<svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
-function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.innerHTML=VPLAY_SVG;const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.innerHTML=VPLAY_SVG;return;}voiceAudio=new Audio(S.voice.url);voiceAudio.volume=editorEffectiveVol();voiceAudio.play();play.innerHTML=VPAUSE_SVG;voiceAudio.addEventListener('ended',()=>play.innerHTML=VPLAY_SVG);});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
+function renderVoice(){const slot=$('voiceSlot');if(!S.voice){slot.innerHTML=VMIC_SVG+'<span class="empty">Clique pour enregistrer un vocal</span>';ensureEditBadge(slot);return;}slot.innerHTML='';const play=document.createElement('span');play.className='vp';play.innerHTML=VPLAY_SVG;const wave=document.createElement('span');wave.className='vw';for(let i=0;i<26;i++){const b=document.createElement('i');b.style.height=(5+Math.abs(Math.sin(i*.8))*16)+'px';wave.appendChild(b);}const t=document.createElement('span');t.className='vt';t.textContent=fmt(S.voice.dur);const del=document.createElement('button');del.className='vdel';del.title='Supprimer le vocal';del.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';slot.append(play,wave,t,del);ensureEditBadge(slot);play.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio&&!voiceAudio.paused){voiceAudio.pause();play.innerHTML=VPLAY_SVG;return;}voiceAudio=new Audio(S.voice.url);voiceAudio.volume=editorEffectiveVol();voiceAudio.play();play.innerHTML=VPAUSE_SVG;voiceAudio.addEventListener('ended',()=>play.innerHTML=VPLAY_SVG);});del.addEventListener('click',e=>{e.stopPropagation();if(voiceAudio){voiceAudio.pause();voiceAudio=null;}S.voice=null;renderVoice();persist();toast('Vocal supprimé');});}
 
 /* ===== SHEET ===== */
 let activeTool=null;
@@ -3940,6 +3997,8 @@ function buildDbProfile(st){
     titlesData:u.titlesData||null,
     coins:typeof u.coins==='number'?u.coins:0,
     questCoinClaims:Array.isArray(u.questCoinClaims)?u.questCoinClaims:[],
+    dailyLogin:(u.dailyLogin&&typeof u.dailyLogin==='object')?u.dailyLogin:null,
+    questStats:(u.questStats&&typeof u.questStats==='object')?u.questStats:null,
     editorActiveMs:typeof u.editorActiveMs==='number'?u.editorActiveMs:0,
     beautyQuestUnlocked:!!u.beautyQuestUnlocked,
     slugChangedAt:u.slugChangedAt||null,
@@ -3956,14 +4015,23 @@ async function syncToDb(){
     const { data:{ session } } = await sb.auth.getSession();
     if(!session){ return; }
     const st=readSite(); const my=buildDbProfile(st); if(!my) return;
-    // Préserver discordLive du bot si plus récent que le local
+    // Préserver discordLive / dailyLogin du cloud si plus récents (sinon sync éditeur efface le claim du jour)
     try{
       const { data:liveRow }=await sb.from('profiles').select('data').eq('id',session.user.id).maybeSingle();
-      const cloudLive=liveRow?.data?.discordLive;
+      const cloud=liveRow?.data;
+      const cloudLive=cloud?.discordLive;
       if(cloudLive&&typeof cloudLive==='object'){
         const locTs=my.discordLive?.updatedAt?new Date(my.discordLive.updatedAt).getTime():0;
         const cloudTs=cloudLive.updatedAt?new Date(cloudLive.updatedAt).getTime():0;
         if(!locTs||cloudTs>=locTs) my.discordLive=cloudLive;
+      }
+      const cD=cloud?.dailyLogin, lD=my.dailyLogin;
+      if(cD&&typeof cD==='object'){
+        const la=typeof lD?.lastClaim==='string'?lD.lastClaim:'';
+        const lb=typeof cD.lastClaim==='string'?cD.lastClaim:'';
+        if(lb&&(!la||lb>la)) my.dailyLogin={streak:Math.max(0,Math.floor(cD.streak||lD?.streak||0)),lastClaim:lb};
+        else if(la&&lb&&la===lb) my.dailyLogin={streak:Math.max(0,Math.floor(lD?.streak||0),Math.floor(cD.streak||0)),lastClaim:la};
+        else if(!la&&lb) my.dailyLogin={streak:Math.max(0,Math.floor(cD.streak||0)),lastClaim:lb};
       }
     }catch(_){}
     const base={ id:session.user.id, display_name:my.name||null, avatar_url:my.avatarUrl||null, banner_url:my.bannerUrl||null, decoration_url:my.decorationUrl||null, bio:my.bio||null, look_for:my.looking||null, updated_at:new Date().toISOString() };
@@ -4101,6 +4169,14 @@ async function edEnsureLocalProfile(){
       if(d.titlesData) su.titlesData=d.titlesData;
       if(typeof d.coins==='number') su.coins=d.coins;
       if(Array.isArray(d.questCoinClaims)) su.questCoinClaims=d.questCoinClaims;
+      if(d.dailyLogin&&typeof d.dailyLogin==='object'){
+        const loc=su.dailyLogin&&typeof su.dailyLogin==='object'?su.dailyLogin:null;
+        const la=typeof loc?.lastClaim==='string'?loc.lastClaim:'';
+        const lb=typeof d.dailyLogin.lastClaim==='string'?d.dailyLogin.lastClaim:'';
+        if(lb&&(!la||lb>la)) su.dailyLogin={streak:Math.max(0,Math.floor(d.dailyLogin.streak||loc?.streak||0)),lastClaim:lb};
+        else if(!su.dailyLogin) su.dailyLogin={streak:Math.max(0,Math.floor(d.dailyLogin.streak||0)),lastClaim:lb||null};
+      }
+      if(d.questStats&&typeof d.questStats==='object') su.questStats=Object.assign({},su.questStats||{},d.questStats);
       if(typeof d.editorActiveMs==='number') su.editorActiveMs=Math.max(Number(su.editorActiveMs)||0, d.editorActiveMs);
       if(d.beautyQuestUnlocked) su.beautyQuestUnlocked=true;
       if(d.discordLive) su.discordLive=d.discordLive;
@@ -4245,7 +4321,7 @@ function hydrateFromSite(){
   }
   if(note) note.textContent='Relié à ton profil Matefindr — tes modifs sont sauvegardées';
   showDisabledBanner(u.disabled?u.disabledReason:null);
-  if(u.displayName){ S.username=u.displayName; $('usernameSlot').textContent=u.displayName; }
+  if(u.displayName){ S.username=u.displayName; setEditableText($('usernameSlot'),u.displayName); }
   S.nameCustom=!!u.nameCustom;
   if(u.discordTag){ document.querySelector('.tag').textContent='@'+u.discordTag+' · en ligne sur Matefindr'; }
   // Âge / genre / pays — posés à l'onboarding (site), affichés en lecture seule ici,
@@ -4273,7 +4349,7 @@ function hydrateFromSite(){
   document.body.classList.toggle('not-boost', !u.boost); // outils Boost en or pour les non-Boost
   S.handleBlur=!!u.handleBlur; S.boostShowName=(u.boostShowName!==false);
   applyTagBlur(); applyUsernameBoostStyle();
-  if(typeof p.bio==='string' && p.bio.trim()){ S.bio=p.bio.trim(); $('bioSlot').textContent=S.bio; }
+  if(typeof p.bio==='string' && p.bio.trim()){ S.bio=p.bio.trim(); setEditableText($('bioSlot'),S.bio); }
   if(u.avatarUrl){ S.avatar=clampMediaPos({url:u.avatarUrl,posX:50,posY:50,scale:1,...((u.avatarPos&&typeof u.avatarPos==='object')?u.avatarPos:{})}); S.avatarCustom=!!u.avatarCustom; setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+(u.displayName||'T').charAt(0).toUpperCase()+'</div>'); }
   // Décoration d'avatar + point de statut Discord → la carte éditeur colle au vrai profil.
   _decorationUrl = u.decorationUrl || null;
@@ -4356,6 +4432,7 @@ function hydrateFromSite(){
   if(u.profileVoice){ S.voice={url:u.profileVoice,dur:5}; renderVoice(); }
   if(p.connections && typeof p.connections==='object'){ S.connections=Object.assign({},p.connections); if(typeof renderConnections==='function') renderConnections(); }
   if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
+  ensureAllEditBadges();
 }
 
 document.body.classList.add('not-boost'); // par défaut non-Boost (hydrate corrige si Boost)
@@ -4572,8 +4649,8 @@ function applyPreset(snap, opts){
     S.handleBlur=!!c.handleBlur; S.boostShowName=(c.boostShowName!==false);
     S.nameCustom=!!c.nameCustom; S.avatarCustom=!!c.avatarCustom;
     S.addBubblePos=(c.addBubblePos&&typeof c.addBubblePos.x==='number'&&typeof c.addBubblePos.y==='number')?c.addBubblePos:null;
-    $('usernameSlot').textContent=S.username; applyUsernameBoostStyle(); applyTagBlur();
-    $('bioSlot').textContent=S.bio||'Clique ici pour écrire ta bio ✨';
+    setEditableText($('usernameSlot'),S.username); applyUsernameBoostStyle(); applyTagBlur();
+    setEditableText($('bioSlot'),S.bio||'Clique ici pour écrire ta bio ✨');
     applyColors(S.c1,S.c2);
     applyBg(c.bg||{type:'preset',value:'default'});
     setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">'+((S.username||'T').charAt(0).toUpperCase())+'</div>');

@@ -1198,10 +1198,31 @@
     return p.discordAvatarUrl || p.avatarUrl || '';
   }
 
+  function listPlayableActivities(activities) {
+    return (activities || []).filter(a =>
+      a && typeof a === 'object' && a.type !== 4 && String(a.name || '') !== 'Custom Status'
+    );
+  }
+
   function pickBestActivity(activities) {
-    const list = (activities || []).filter(Boolean);
+    const list = listPlayableActivities(activities);
     if (!list.length) return null;
     return list.find(a => a.type === 2) || list.find(a => a.type === 0) || list[0];
+  }
+
+  function rankActivities(activities) {
+    const list = listPlayableActivities(activities).slice();
+    const score = (x) => (x.type === 2 ? 0 : x.type === 0 ? 1 : x.type === 1 ? 2 : 3);
+    list.sort((a, b) => score(a) - score(b));
+    return list;
+  }
+
+  function discordActivitySubLine(act) {
+    if (!act) return '';
+    const head = discordActivityHeader(act);
+    const detail = act.details || act.state || '';
+    if (detail && detail !== act.name) return `${head} · ${detail}`;
+    return head;
   }
 
   function discordActivityArt(act) {
@@ -1294,9 +1315,8 @@
 
   function discordFloorHtml(p, helpers) {
     const head = discordCardHeadHtml(p, helpers);
-    const act = discordCardActivityHtml(p, helpers);
-    if (!head && !act) return '';
-    return `${head}${act}`;
+    if (!head) return '';
+    return head;
   }
 
   function discordCardHeadHtml(p, helpers) {
@@ -1317,10 +1337,29 @@
       ? `<img src="${escH(avi)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">`
       : `<span>${escH((p.initial || tag || '?').charAt(0).toUpperCase())}</span>`;
 
-    const sub = discordStatusLine(live, showStatus, helpers.fmtRelative);
+    const acts = showActivity ? rankActivities(live?.activities) : [];
+    const primary = acts[0] || null;
+    const extras = acts.slice(1);
+    const statusSub = discordStatusLine(live, showStatus, helpers.fmtRelative);
+
+    // Une seule ligne compacte ; au survol → détail de TOUTES les activités
+    let subHtml = '';
+    if (primary) {
+      const line = discordActivitySubLine(primary);
+      const moreN = extras.length;
+      const detailCards = acts.map(a => discordActivityCardHtml(a, escH)).join('');
+      subHtml = `<span class="discord-floor-act" tabindex="0">
+        <span class="discord-floor-sub discord-floor-sub--activity">${escH(line)}</span>
+        ${moreN ? `<span class="discord-floor-more">+${moreN}</span>` : ''}
+        <span class="discord-floor-act-detail" role="tooltip">${detailCards}</span>
+      </span>`;
+    } else if (statusSub) {
+      subHtml = `<span class="discord-floor-sub">${escH(statusSub)}</span>`;
+    }
+
     const dotCls = discordDotClass(live);
 
-    return `<div class="discord-floor discord-floor--head" aria-label="Discord">
+    return `<div class="discord-floor discord-floor--head${primary ? ' discord-floor--has-act' : ''}" aria-label="Discord">
       <div class="discord-floor-head">
         <div class="discord-floor-avi">
           <div class="discord-floor-avi-inner">${aviInner}</div>
@@ -1328,22 +1367,14 @@
         </div>
         <div class="discord-floor-meta">
           <b class="discord-floor-name">${escH(tag || p.discordTag || p.tag || 'discord')}</b>
-          ${sub ? `<span class="discord-floor-sub">${escH(sub)}</span>` : ''}
+          ${subHtml}
         </div>
       </div>
     </div>`;
   }
 
-  function discordCardActivityHtml(p, helpers) {
-    helpers = helpers || {};
-    const escH = helpers.esc || esc;
-    const MC = global.MatefindrConnections;
-    if (!MC || !p.connections || !MC.connIsSet(p.connections, 'discord')) return '';
-    const e = MC.connGet(p.connections, 'discord');
-    if (!e || e.showActivity === false) return '';
-    const act = pickBestActivity(p.discordLive?.activities);
-    if (!act) return '';
-    return `<div class="discord-floor discord-floor--activity">${discordActivityCardHtml(act, escH)}</div>`;
+  function discordCardActivityHtml() {
+    return '';
   }
 
   function discordPreviewHtml(user, helpers) {

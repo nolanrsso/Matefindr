@@ -2,9 +2,9 @@
 .discord-floor{
   display:flex;flex-direction:column;gap:8px;width:100%;padding:10px 12px;margin:0 0 10px;
   border-radius:10px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.08);
-  box-sizing:border-box;
+  box-sizing:border-box;overflow:visible;
 }
-.discord-floor--head{margin:6px 0 4px;background:rgba(0,0,0,.32)}
+.discord-floor--head{margin:6px 0 4px;background:rgba(0,0,0,.32);overflow:visible}
 .discord-floor--activity{margin:0;padding:0;background:transparent;border:none}
 .discord-floor--activity .discord-activity{margin:0}
 .discord-floor-head{display:flex;align-items:center;gap:12px;width:100%}
@@ -21,16 +21,39 @@
 .discord-floor-dot.online{background:#23a559}
 .discord-floor-dot.idle{background:#f0b232}
 .discord-floor-dot.dnd{background:#f23f43}
-.discord-floor-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.discord-floor-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;overflow:visible}
 .discord-floor-name{
   font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   letter-spacing:-.01em;
 }
+/* Ligne compacte unique ; détail des activités au survol */
+.discord-floor-act{
+  position:relative;display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;
+  cursor:default;outline:none;
+}
 .discord-floor-sub{
   font-size:12px;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  min-width:0;flex:1;
 }
+.discord-floor-sub--activity{color:#b5bac1}
+.discord-floor-more{
+  flex:0 0 auto;font-size:11px;font-weight:800;color:#fff;
+  background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;padding:1px 7px;line-height:1.35;user-select:none;
+}
+.discord-floor-act-detail{
+  display:none;position:absolute;left:0;top:calc(100% + 8px);z-index:40;
+  width:min(280px,72vw);padding:8px;border-radius:12px;
+  background:rgba(12,10,24,.97);border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 14px 36px rgba(0,0,0,.55);
+  flex-direction:column;gap:8px;
+}
+.discord-floor-act:hover .discord-floor-act-detail,
+.discord-floor-act:focus-within .discord-floor-act-detail{display:flex}
+.discord-floor-act-detail .discord-activity{margin:0}
+.discord-floor--has-act{overflow:visible}
 
-/* Discord activity (Spotify…) — aussi dans le floor */
+/* Discord activity (Spotify…) — détail au survol */
 .discord-floor .discord-activity,
 .swipe-card .discord-activity{
   background:#2b2d31;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;

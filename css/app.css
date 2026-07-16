@@ -1895,8 +1895,9 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
-  /* Discord servers in common — à droite du titre SI court ; sinon stack
-     (serveurs AU-DESSUS) pour laisser le titre en entier. */
+  /* Discord servers in common — à droite du titre si ça tient ;
+     sinon .card-title-guilds-row--stack (serveurs juste AU-DESSUS, titre pleine largeur).
+     Le bascule est décidé en JS (syncTitleGuildsLayout). */
   .swipe-card .card-title-guilds-row{
     display:block;position:relative;margin-top:6px;min-height:0;width:100%;
   }
@@ -2102,7 +2103,8 @@
     .swipe-card .card-guilds--head .cg-label{font-size:9px}
     .swipe-card .card-guilds--head .cg-icon{width:16px;height:16px}
     .swipe-card .card-guilds--head .cg-more{min-width:16px;height:16px;font-size:7px}
-    .swipe-card .card-title-guilds-row .card-title-slot{max-width:calc(100% - 102px)}
+    .swipe-card .card-title-guilds-row:not(.card-title-guilds-row--stack):has(.card-guilds--head) .card-title-slot{max-width:calc(100% - 102px)}
+    .swipe-card .card-title-guilds-row--stack .card-title-slot{max-width:100%}
     .swipe-card .card-guilds{gap:8px}
     .swipe-card .cg-icon,
     .swipe-card .cg-more{width:22px;height:22px;font-size:10px}
