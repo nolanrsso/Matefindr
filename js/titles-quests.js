@@ -646,11 +646,16 @@
     const color = srcTd.color || '#C7A5FF';
     const custom = cloneCustomMap(srcTd.custom);
     const equippedWasBeauty = ratingIds.includes(srcTd.equipped) || ratingIds.includes(equipped);
+    // Stats Esthétisme fiables = assez de votants. Sinon un fetch partiel (0 votes)
+    // ne doit PAS stripper les titres ni forcer Discordien (bug « titre qui saute »).
+    const beautyStatsReliable = (Number(stats && stats.ratingVotes) || 0) >= RATING_MIN_VOTERS;
 
     // Titres missions / boutique retirés : on ne garde que Esthétisme + exclusifs + custom admin
     collected = collected.filter(id => isKeepableTitleId(id));
-    // Retire les titres de note qui ne matchent plus la note actuelle (descente → titres plus bas)
-    collected = collected.filter(id => !ratingIds.includes(id) || eligible.includes(id));
+    if (beautyStatsReliable) {
+      // Retire les titres de note qui ne matchent plus la note actuelle (descente → titres plus bas)
+      collected = collected.filter(id => !ratingIds.includes(id) || eligible.includes(id));
+    }
     // Réinjecte les custom définis
     Object.keys(custom).forEach(id => {
       if (!collected.includes(id)) collected.push(id);
@@ -667,10 +672,17 @@
 
     const highestBeauty = highestCollectedBeautyId(collected);
     // Si un titre Esthétisme est (était) équipé : coller au plus haut encore valide (montée ou descente)
+    // — uniquement quand les stats notes sont fiables, sinon on garde l'équipé actuel.
     if (equippedWasBeauty) {
-      equipped = highestBeauty || DISCORDIEN_ID;
+      if (beautyStatsReliable) {
+        equipped = highestBeauty || (collected.includes(srcTd.equipped) ? srcTd.equipped : null) || DISCORDIEN_ID;
+      } else if (srcTd.equipped && collected.includes(srcTd.equipped)) {
+        equipped = srcTd.equipped;
+      } else if (highestBeauty) {
+        equipped = highestBeauty;
+      }
     } else if (equipped && !collected.includes(equipped)) {
-      equipped = highestBeauty || collected[0] || DISCORDIEN_ID;
+      equipped = highestBeauty || collected.find(id => id !== BETA_TESTER_ID) || DISCORDIEN_ID;
     }
 
     let claims = Array.isArray(snapshot.questCoinClaims) ? snapshot.questCoinClaims.slice() : [];
@@ -895,18 +907,30 @@
   }
 
   function refreshPending(stats) {
-    const beforeBeauty = (getTitlesData().collected || []).filter(id => String(id).startsWith('rt_')).length;
+    const before = getTitlesData();
+    const beforeBeauty = (before.collected || []).filter(id => String(id).startsWith('rt_')).length;
     const result = applyQuestProgress(stats, {
       coins: getCoins(),
       questCoinClaims: getQuestCoinClaims(),
-      titlesData: getTitlesData(),
+      titlesData: before,
     }, { autoClaimCoins: false });
-    saveTitlesData({
-      collected: result.titlesData.collected,
-      pending: result.titlesData.pending,
-      equipped: result.titlesData.equipped,
-      color: result.titlesData.color,
-    });
+    const next = result.titlesData;
+    const sameCollected = next.collected.length === before.collected.length
+      && next.collected.every((id, i) => id === before.collected[i]);
+    const samePending = next.pending.length === (before.pending || []).length
+      && next.pending.every((id, i) => id === before.pending[i]);
+    const sameEquipped = next.equipped === before.equipped;
+    const sameColor = (next.color || '#C7A5FF') === (before.color || '#C7A5FF');
+    // Évite les saves/sync inutiles qui réécrivent Discordien en boucle
+    if (!(sameCollected && samePending && sameEquipped && sameColor)) {
+      saveTitlesData({
+        collected: next.collected,
+        pending: next.pending,
+        equipped: next.equipped,
+        color: next.color,
+        custom: next.custom,
+      });
+    }
     if (result.newBeautyTitles.length) {
       result.newBeautyTitles.forEach(id => bumpGlobalStat(id));
       tqToast(result.newBeautyTitles.length === 1 ? 'Titre Esthétisme débloqué !' : 'Titres Esthétisme débloqués !');
@@ -917,12 +941,12 @@
       tqToast(claimN === 1 ? '1 quête à réclamer !' : `${claimN} quêtes à réclamer !`);
     }
     if (typeof global.__scheduleCloudSync === 'function'
-      && (result.newBeautyTitles.length || result.titlesData.collected.filter(id => String(id).startsWith('rt_')).length !== beforeBeauty
-        || (result.claimable || []).length !== (getTitlesData().pending || []).length)) {
+      && (result.newBeautyTitles.length || next.collected.filter(id => String(id).startsWith('rt_')).length !== beforeBeauty
+        || !samePending || !sameEquipped)) {
       global.__scheduleCloudSync();
     }
     updateQuestButtonBadge(stats);
-    return result.titlesData.pending;
+    return next.pending;
   }
 
   function collectMission(id) {

@@ -133,7 +133,9 @@
         // faut le retirer explicitement en quittant le swipe, sinon il reste
         // visible par-dessus le menu (landing) au retour.
         const _sb = document.getElementById('swipeStickersBg'); if (_sb) _sb.remove();
-        _previewMode = false; _previewProfile = null; document.body.removeAttribute('data-preview'); // sort du mode aperçu
+        _previewMode = false; _previewProfile = null; _previewFromEditor = false;
+        document.body.removeAttribute('data-preview'); // sort du mode aperçu
+        try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
       }
     }
     function setAuth(on){
@@ -466,7 +468,17 @@
                 if (dRaw.titlesData && dRaw.titlesData.collected) {
                   const loc = (state.user.titlesData && state.user.titlesData.collected) || [];
                   const merged = [...new Set([...loc, ...dRaw.titlesData.collected])];
-                  state.user.titlesData = Object.assign({}, state.user.titlesData || {}, dRaw.titlesData, { collected: merged });
+                  const locTd = state.user.titlesData || {};
+                  const cloudTd = dRaw.titlesData || {};
+                  let equipped = cloudTd.equipped || locTd.equipped || null;
+                  // Garde-fou : un Discordien/Beta cloud (souvent un reset parasite) ne doit
+                  // pas écraser un titre local volontaire encore dans la collection.
+                  if (locTd.equipped && locTd.equipped !== 'discordien' && locTd.equipped !== 'beta_tester'
+                    && merged.includes(locTd.equipped)
+                    && (!cloudTd.equipped || cloudTd.equipped === 'discordien' || cloudTd.equipped === 'beta_tester')) {
+                    equipped = locTd.equipped;
+                  }
+                  state.user.titlesData = Object.assign({}, locTd, cloudTd, { collected: merged, equipped });
                 }
                 if (typeof dRaw.editorActiveMs === 'number') {
                   state.user.editorActiveMs = Math.max(Number(state.user.editorActiveMs) || 0, dRaw.editorActiveMs);
@@ -522,6 +534,9 @@
           const wantShared = !_hadPendingShared && typeof getSharedSlug === 'function' && !!getSharedSlug();
           if (wantPreview && typeof enterPreviewMode === 'function') {
             _previewFromEditor = true;
+            // Consommer le flag immédiatement — sinon un retour landing +
+            // "Commencer à swiper" / re-login rouvre l'aperçu tout seul.
+            try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
             enterPreviewMode();
             try { history.replaceState(null, '', location.pathname); } catch(_){}
           } else if (wantShared) {
@@ -531,7 +546,17 @@
           }
         }
       },
-      go(screen){ setScreen(screen); },
+      go(screen){
+        // "Commencer à swiper" / navigation volontaire → jamais rouvrir l'aperçu éditeur
+        if (screen === 'swipe') {
+          _previewMode = false;
+          _previewProfile = null;
+          _previewFromEditor = false;
+          try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
+          document.body.removeAttribute('data-preview');
+        }
+        setScreen(screen);
+      },
       hasProfile(){ return !!state.profile; },
     };
 
@@ -7566,6 +7591,7 @@
             // (ma carte uniquement, figée). Avant on cherchait #accPreviewFull qui
             // n'existe plus → fallback sur le hub normal = aperçu cassé (carte absente).
             _previewFromEditor = true; // "Quitter l'aperçu" devra revenir sur editor.html
+            try { sessionStorage.removeItem('mf_from_editor'); } catch(_){}
             enterPreviewMode();
           } else {
             // L'écran Paramètres a été retiré → les réglages sont dans l'éditeur.
