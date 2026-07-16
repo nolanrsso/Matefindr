@@ -1223,9 +1223,14 @@
   }
 
   function listPlayableActivities(activities) {
-    return (activities || []).filter(a =>
-      a && typeof a === 'object' && a.type !== 4 && String(a.name || '') !== 'Custom Status'
-    );
+    const now = Date.now();
+    return (activities || []).filter(a => {
+      if (!a || typeof a !== 'object') return false;
+      if (a.type === 4 || String(a.name || '') === 'Custom Status') return false;
+      // Piste terminée → ne plus afficher (sans attendre le bot / debounce)
+      if (a.type === 2 && a.timestamps?.end != null && now >= Number(a.timestamps.end)) return false;
+      return true;
+    });
   }
 
   function pickBestActivity(activities) {
@@ -1250,7 +1255,7 @@
   }
 
   function discordActivityArt(act) {
-    /* URL déjà résolue côté bot (discord.js largeImageURL) — jeux type Palworld */
+    /* URL déjà résolue côté bot (discord.js largeImageURL / app-icon) */
     if (act.assets?.large_image_url) return String(act.assets.large_image_url);
     if (act.assets?.small_image_url) return String(act.assets.small_image_url);
     const img = act.assets?.large_image || act.assets?.small_image;
@@ -1266,7 +1271,6 @@
         return decodeURIComponent(encoded);
       } catch (_) { return null; }
     }
-    /* Proxy média Discord (autres formats) */
     if (s.startsWith('mp:')) {
       return 'https://media.discordapp.net/' + s.slice(3);
     }
@@ -1278,6 +1282,46 @@
       }
     }
     return null;
+  }
+
+  const _appIconCache = new Map();
+  async function fetchDiscordAppIconUrl(applicationId) {
+    const id = String(applicationId || '');
+    if (!id) return null;
+    if (_appIconCache.has(id)) return _appIconCache.get(id);
+    try {
+      const res = await fetch('https://discord.com/api/v10/applications/' + encodeURIComponent(id) + '/rpc');
+      if (!res.ok) { _appIconCache.set(id, null); return null; }
+      const d = await res.json();
+      const url = d?.icon
+        ? ('https://cdn.discordapp.com/app-icons/' + id + '/' + d.icon + '.png?size=128')
+        : null;
+      _appIconCache.set(id, url);
+      return url;
+    } catch (_) {
+      _appIconCache.set(id, null);
+      return null;
+    }
+  }
+
+  /** Remplace les placeholders jeu par l'icône d'app Discord (Palworld, etc.). */
+  function hydrateDiscordActivityCovers(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('.discord-activity-cover--ph[data-app-id]').forEach(el => {
+      const appId = el.getAttribute('data-app-id');
+      if (!appId || el.dataset.mfHydrating === '1') return;
+      el.dataset.mfHydrating = '1';
+      fetchDiscordAppIconUrl(appId).then(url => {
+        if (!url || !el.isConnected) return;
+        const img = document.createElement('img');
+        img.className = 'discord-activity-cover';
+        img.src = url;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.referrerPolicy = 'no-referrer';
+        el.replaceWith(img);
+      }).catch(() => {});
+    });
   }
 
   function discordActivityHeader(act) {
@@ -1329,9 +1373,10 @@
     const prog = discordActivityProgress(act);
     const isSpotify = /spotify/i.test(act.name || '');
     const brand = isSpotify ? 'https://cdn.simpleicons.org/spotify/1DB954' : '';
+    const appId = act.application_id || act.applicationId || '';
     const cover = art
       ? `<img class="discord-activity-cover" src="${escH(art)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
-      : `<span class="discord-activity-cover discord-activity-cover--ph">${discordActivityCoverFallback(act)}</span>`;
+      : `<span class="discord-activity-cover discord-activity-cover--ph"${appId ? ` data-app-id="${escH(String(appId))}"` : ''}>${discordActivityCoverFallback(act)}</span>`;
     const progHtml = prog
       ? `<div class="discord-activity-progress" data-start="${prog.start}" data-end="${prog.end}"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
           <div class="discord-activity-times" data-start="${prog.start}" data-end="${prog.end}"><span class="da-cur">${prog.current}</span><span class="da-tot">${prog.total}</span></div>`
@@ -1542,14 +1587,18 @@
         el.dataset.ended = '1';
       }
     });
-    /* Fin de piste → refresh activité (nouveau titre / fin) après un court délai */
-    if (hitEnd && typeof global.__mfRefreshDiscordLive === 'function') {
-      if (!global.__mfDaEndRefreshTimer) {
-        global.__mfDaEndRefreshTimer = setTimeout(() => {
-          global.__mfDaEndRefreshTimer = null;
-          try { global.__mfRefreshDiscordLive(); } catch (_) {}
-        }, 1200);
-      }
+    /* Fin de piste → retire tout de suite l'activité écoute, puis refetch cloud */
+    if (hitEnd && !global.__mfDaEndHandling) {
+      global.__mfDaEndHandling = true;
+      try {
+        if (typeof global.__mfRerenderDiscordFloor === 'function') global.__mfRerenderDiscordFloor();
+      } catch (_) {}
+      [0, 800, 2500, 5500].forEach((ms) => {
+        setTimeout(() => {
+          try { if (typeof global.__mfRefreshDiscordLive === 'function') global.__mfRefreshDiscordLive(); } catch (_) {}
+        }, ms);
+      });
+      setTimeout(() => { global.__mfDaEndHandling = false; }, 6000);
     }
   }
 
@@ -2103,6 +2152,7 @@
     });
     bindDiscordActPopovers(box);
     tickDiscordActivityProgress(box);
+    hydrateDiscordActivityCovers(box);
   }
 
   global.MatefindrTitlesQuests = {
@@ -2140,6 +2190,8 @@
     updateDiscordPreview,
     bindDiscordActPopovers,
     tickDiscordActivityProgress,
+    hydrateDiscordActivityCovers,
+    discordActivityArt,
     init,
     openQuests,
     openTitles,

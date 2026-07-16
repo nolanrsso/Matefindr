@@ -1169,10 +1169,43 @@
         card.classList.add('has-discord-floor');
         if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(stack);
         if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(stack);
+        if (typeof TQ.hydrateDiscordActivityCovers === 'function') TQ.hydrateDiscordActivityCovers(stack);
+      } catch (_) {}
+    }
+    function rerenderVisibleDiscordFloor(){
+      try {
+        const p = currentSwipeProfile();
+        if (!p) return;
+        const wrap = document.getElementById('swipeWrap');
+        const card = wrap && wrap.querySelector('.swipe-card');
+        if (!card) return;
+        const TQ = window.MatefindrTitlesQuests;
+        if (!TQ || typeof TQ.discordFloorHtml !== 'function') return;
+        const floorHtml = TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr });
+        let stack = card.querySelector('.card-discord-conn-stack');
+        if (!floorHtml) {
+          stack?.querySelectorAll('.discord-floor').forEach(el => el.remove());
+          return;
+        }
+        if (!stack) {
+          stack = document.createElement('div');
+          stack.className = 'card-discord-conn-stack';
+          const bio = card.querySelector('.bio');
+          const body = card.querySelector('.body');
+          if (bio) bio.insertAdjacentElement('afterend', stack);
+          else if (body) body.appendChild(stack);
+        }
+        stack.querySelectorAll('.discord-floor').forEach(el => el.remove());
+        stack.insertAdjacentHTML('afterbegin', floorHtml);
+        card.classList.add('has-discord-floor');
+        if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(stack);
+        if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(stack);
+        if (typeof TQ.hydrateDiscordActivityCovers === 'function') TQ.hydrateDiscordActivityCovers(stack);
       } catch (_) {}
     }
     setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 10000);
     window.__mfRefreshDiscordLive = () => { try { refreshVisibleDiscordLive(); } catch(_){} };
+    window.__mfRerenderDiscordFloor = () => { try { rerenderVisibleDiscordFloor(); } catch(_){} };
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
@@ -2801,7 +2834,10 @@
       }
       const TQ2 = window.MatefindrTitlesQuests;
       if (TQ2 && typeof TQ2.bindDiscordActPopovers === 'function') {
-        requestAnimationFrame(() => TQ2.bindDiscordActPopovers(c));
+        requestAnimationFrame(() => {
+          TQ2.bindDiscordActPopovers(c);
+          if (typeof TQ2.hydrateDiscordActivityCovers === 'function') TQ2.hydrateDiscordActivityCovers(c);
+        });
       }
       return c;
     }

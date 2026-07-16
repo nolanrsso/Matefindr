@@ -26,7 +26,8 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID || '';
 const SB_URL = process.env.SUPABASE_URL || '';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-const DEBOUNCE_MS = 8000;
+/* Court : fin de musique / changement de jeu doit arriver vite côté site */
+const DEBOUNCE_MS = 1200;
 const OFFLINE_TYPES = new Set(['offline', 'invisible']);
 
 if (!BOT_TOKEN || !GUILD_ID || !SB_URL || !SB_KEY) {
@@ -40,27 +41,80 @@ const supabase = createClient(SB_URL, SB_KEY, {
 
 const pending = new Map(); // discordId → timer
 const lastFp = new Map(); // discordId → fingerprint
+const appIconCache = new Map(); // applicationId → url|null
 
-function normalizeActivity(a) {
+/** Icône d'application Discord (jeux sans Rich Presence assets, ex. Palworld). */
+async function resolveAppIconUrl(applicationId) {
+  const id = String(applicationId || '');
+  if (!id) return null;
+  if (appIconCache.has(id)) return appIconCache.get(id);
+  try {
+    const res = await fetch(`https://discord.com/api/v10/applications/${id}/rpc`);
+    if (!res.ok) {
+      appIconCache.set(id, null);
+      return null;
+    }
+    const d = await res.json();
+    const url = d?.icon
+      ? `https://cdn.discordapp.com/app-icons/${id}/${d.icon}.png?size=128`
+      : null;
+    appIconCache.set(id, url);
+    return url;
+  } catch (_) {
+    appIconCache.set(id, null);
+    return null;
+  }
+}
+
+function resolveAssetUrlFromKey(key, applicationId) {
+  if (!key) return null;
+  const s = String(key);
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith('spotify:')) return 'https://i.scdn.co/image/' + s.slice(8);
+  if (s.startsWith('mp:external/')) {
+    try {
+      const encoded = s.split('/').slice(2).join('/');
+      return decodeURIComponent(encoded);
+    } catch (_) { return null; }
+  }
+  if (s.startsWith('mp:')) return 'https://media.discordapp.net/' + s.slice(3);
+  if (applicationId && /^[a-zA-Z0-9_-]+$/.test(s)) {
+    return `https://cdn.discordapp.com/app-assets/${applicationId}/${s}.png?size=128`;
+  }
+  return null;
+}
+
+async function normalizeActivity(a) {
   if (!a) return null;
   const type = typeof a.type === 'number' ? a.type : ActivityType.Playing;
+  const applicationId = a.applicationId ? String(a.applicationId) : '';
   const assets = {};
   if (a.assets) {
     if (a.assets.largeImage) assets.large_image = a.assets.largeImage;
     if (a.assets.smallImage) assets.small_image = a.assets.smallImage;
     if (a.assets.largeText) assets.large_text = a.assets.largeText;
     if (a.assets.smallText) assets.small_text = a.assets.smallText;
-    /* URLs résolues par discord.js (Spotify, mp:external, app-assets jeux type Palworld) */
     try {
       if (typeof a.assets.largeImageURL === 'function') {
-        const u = a.assets.largeImageURL({ size: 128 });
+        const u = a.assets.largeImageURL({ size: 128, extension: 'png' });
         if (u) assets.large_image_url = u;
       }
       if (typeof a.assets.smallImageURL === 'function') {
-        const u = a.assets.smallImageURL({ size: 128 });
+        const u = a.assets.smallImageURL({ size: 128, extension: 'png' });
         if (u) assets.small_image_url = u;
       }
     } catch (_) {}
+    if (!assets.large_image_url && assets.large_image) {
+      assets.large_image_url = resolveAssetUrlFromKey(assets.large_image, applicationId);
+    }
+    if (!assets.small_image_url && assets.small_image) {
+      assets.small_image_url = resolveAssetUrlFromKey(assets.small_image, applicationId);
+    }
+  }
+  /* Jeux Detected (Palworld…) : souvent sans assets RP → icône de l'application Discord */
+  if (!assets.large_image_url && applicationId) {
+    const icon = await resolveAppIconUrl(applicationId);
+    if (icon) assets.large_image_url = icon;
   }
   let timestamps = null;
   if (a.timestamps && (a.timestamps.start || a.timestamps.end)) {
@@ -74,7 +128,7 @@ function normalizeActivity(a) {
     name: a.name || '',
     details: a.details || '',
     state: a.state || '',
-    application_id: a.applicationId ? String(a.applicationId) : '',
+    application_id: applicationId,
     assets,
     timestamps,
   };
@@ -86,17 +140,21 @@ function presenceFingerprint(status, activities) {
     activities: (activities || []).map((a) => ({
       t: a.type, n: a.name, d: a.details, s: a.state,
       st: a.timestamps?.start || null, en: a.timestamps?.end || null,
+      img: a.assets?.large_image_url || a.assets?.large_image || null,
     })),
   });
 }
 
-function buildLive(presence, prevLive) {
+async function buildLive(presence, prevLive) {
   const status = presence?.status || 'offline';
-  const activities = (presence?.activities || [])
-    .map(normalizeActivity)
-    .filter(Boolean)
-    // Ignore "Custom Status" alone as primary signal noise if desired — keep all
-    .filter((a) => a.type !== ActivityType.Custom || a.state || a.name);
+  const raw = presence?.activities || [];
+  const activities = [];
+  for (const a of raw) {
+    const n = await normalizeActivity(a);
+    if (!n) continue;
+    if (n.type === ActivityType.Custom && !(n.state || n.name)) continue;
+    activities.push(n);
+  }
   const now = new Date().toISOString();
   const online = status && !OFFLINE_TYPES.has(status);
   const wasOnline = prevLive?.status && !OFFLINE_TYPES.has(prevLive.status);
@@ -152,7 +210,7 @@ function scheduleWrite(discordId, presence) {
         .eq('discord_id', id)
         .maybeSingle();
       const prevLive = row?.data?.discordLive || null;
-      const live = buildLive(presence, prevLive);
+      const live = await buildLive(presence, prevLive);
       const fp = presenceFingerprint(live.status, live.activities);
       if (lastFp.get(id) === fp) return;
       const ok = await writeDiscordLive(id, live);
@@ -163,7 +221,7 @@ function scheduleWrite(discordId, presence) {
           '[presence]',
           id,
           live.status,
-          act ? `${act.name}${act.details ? ' · ' + act.details : ''}` : '(no activity)',
+          act ? `${act.name}${act.details ? ' · ' + act.details : ''}${act.assets?.large_image_url ? ' · 🖼' : ''}` : '(no activity)',
         );
       }
     } catch (e) {

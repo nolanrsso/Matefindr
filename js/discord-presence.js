@@ -13,17 +13,54 @@
     }catch(_){ return null; }
   }
 
+  function resolveAssetUrl(key, applicationId){
+    if(!key) return null;
+    const s = String(key);
+    if(/^https?:\/\//i.test(s)) return s;
+    if(s.startsWith('spotify:')) return 'https://i.scdn.co/image/' + s.slice(8);
+    if(s.startsWith('mp:external/')){
+      try{ return decodeURIComponent(s.split('/').slice(2).join('/')); }catch(_){ return null; }
+    }
+    if(s.startsWith('mp:')) return 'https://media.discordapp.net/' + s.slice(3);
+    if(applicationId && /^[a-zA-Z0-9_-]+$/.test(s))
+      return `https://cdn.discordapp.com/app-assets/${applicationId}/${s}.png?size=128`;
+    return null;
+  }
+
   function normalizeActivity(a){
     if(!a || typeof a !== 'object') return null;
+    const application_id = a.application_id || a.applicationId || '';
+    const rawAssets = a.assets || {};
+    const assets = Object.assign({}, rawAssets);
+    if(!assets.large_image_url && (assets.large_image || rawAssets.large_image))
+      assets.large_image_url = resolveAssetUrl(assets.large_image || rawAssets.large_image, application_id);
+    if(!assets.small_image_url && (assets.small_image || rawAssets.small_image))
+      assets.small_image_url = resolveAssetUrl(assets.small_image || rawAssets.small_image, application_id);
     return {
       type: typeof a.type === 'number' ? a.type : 0,
       name: a.name || '',
       details: a.details || '',
       state: a.state || '',
-      application_id: a.application_id || '',
-      assets: a.assets || {},
+      application_id,
+      assets,
       timestamps: a.timestamps || null,
     };
+  }
+
+  /** Garde les URLs d'art déjà résolues (bot) si le Gateway local n'en a pas. */
+  function mergeActivityArt(nextActs, prevActs){
+    if(!Array.isArray(nextActs) || !Array.isArray(prevActs)) return nextActs || [];
+    return nextActs.map(a => {
+      if(a?.assets?.large_image_url) return a;
+      const prev = prevActs.find(p => p && p.name === a.name && p.type === a.type);
+      if(prev?.assets?.large_image_url){
+        a.assets = Object.assign({}, a.assets || {}, {
+          large_image_url: prev.assets.large_image_url,
+          small_image_url: a.assets?.small_image_url || prev.assets.small_image_url,
+        });
+      }
+      return a;
+    });
   }
 
   function applyPresence(status, activities){
@@ -33,17 +70,23 @@
     const now = new Date().toISOString();
     const online = status && !['offline','invisible'].includes(status);
     const wasOnline = prev.status && !['offline','invisible'].includes(prev.status);
+    const nextActs = mergeActivityArt(
+      (activities || []).map(normalizeActivity).filter(Boolean),
+      prev.activities || []
+    );
     const live = {
       status: status || 'offline',
-      activities: (activities || []).map(normalizeActivity).filter(Boolean),
+      activities: nextActs,
       updatedAt: now,
       lastOnlineAt: online ? now : (wasOnline ? now : (prev.lastOnlineAt || null)),
+      source: prev.source || 'client',
     };
     st.user.discordLive = live;
     try{ if(typeof global.__matefindrSave === 'function') global.__matefindrSave(); }catch(_){}
     try{ if(typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync(); }catch(_){}
     try{
-      if(typeof global.__matefindrRefreshCard === 'function') global.__matefindrRefreshCard();
+      if(typeof global.__mfRerenderDiscordFloor === 'function') global.__mfRerenderDiscordFloor();
+      else if(typeof global.__matefindrRefreshCard === 'function') global.__matefindrRefreshCard();
     }catch(_){}
   }
 
