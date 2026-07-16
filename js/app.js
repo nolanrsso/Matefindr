@@ -113,11 +113,81 @@
       // Retire le cache anti-flash posé par index.html (lien de partage / retour éditeur).
       document.documentElement.classList.remove('mf-boot-hidden');
     }
+
+    /* ---- Petit loader de transition entre écrans ---- */
+    let _pageLoaderGen = 0;
+    let _pageLoaderShownAt = 0;
+    let _pageLoaderHideT = null;
+    const PAGE_LOADER_MIN_MS = 240;
+
+    function showPageLoader(){
+      _pageLoaderGen++;
+      const gen = _pageLoaderGen;
+      if (_pageLoaderHideT) { clearTimeout(_pageLoaderHideT); _pageLoaderHideT = null; }
+      const el = document.getElementById('mfPageLoader');
+      if (el) {
+        el.classList.remove('is-leaving');
+        el.hidden = false;
+        el.setAttribute('aria-hidden', 'false');
+        el.setAttribute('aria-busy', 'true');
+      }
+      document.body.classList.add('mf-page-loading');
+      _pageLoaderShownAt = Date.now();
+      return gen;
+    }
+
+    function hidePageLoader(gen){
+      if (gen != null && gen !== _pageLoaderGen) return;
+      const elapsed = Date.now() - _pageLoaderShownAt;
+      const wait = Math.max(0, PAGE_LOADER_MIN_MS - elapsed);
+      const finish = () => {
+        if (gen != null && gen !== _pageLoaderGen) return;
+        const el = document.getElementById('mfPageLoader');
+        if (!el || el.hidden) {
+          document.body.classList.remove('mf-page-loading');
+          return;
+        }
+        el.classList.add('is-leaving');
+        el.setAttribute('aria-busy', 'false');
+        setTimeout(() => {
+          if (gen != null && gen !== _pageLoaderGen) return;
+          el.hidden = true;
+          el.classList.remove('is-leaving');
+          el.setAttribute('aria-hidden', 'true');
+          document.body.classList.remove('mf-page-loading');
+        }, 200);
+      };
+      if (_pageLoaderHideT) clearTimeout(_pageLoaderHideT);
+      _pageLoaderHideT = setTimeout(finish, wait);
+    }
+
+    function hidePageLoaderWhenReady(gen, checkFn){
+      const start = Date.now();
+      const tick = () => {
+        if (gen != null && gen !== _pageLoaderGen) return;
+        let ready = false;
+        try { ready = typeof checkFn === 'function' ? !!checkFn() : true; } catch (_) { ready = true; }
+        if (ready || Date.now() - start > 2800) {
+          hidePageLoader(gen);
+          return;
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+
+    window.__mfShowPageLoader = showPageLoader;
+    window.__mfHidePageLoader = hidePageLoader;
+
     function setScreen(name){
       // Profil désactivé par un admin (admin.html) : garde-fou -- même si quelque chose
       // tente de rouvrir le swipe (onglet déjà ouvert, retour navigateur…), on renvoie
       // systématiquement vers l'éditeur, seul endroit accessible tant que non réactivé.
       if (name === 'swipe' && state.user && state.user.disabled) { location.href = 'editor.html'; return; }
+      const prev = document.body.getAttribute('data-screen');
+      const changing = prev !== name;
+      const loadGen = changing ? showPageLoader() : null;
+
       document.body.setAttribute('data-screen', name);
       revealApp();
       if (name === 'account') renderAccount();
@@ -137,6 +207,19 @@
           }
         }
         deckIdx = 0; ensureDeck(true); refreshMyStatusUI(); refreshSwipeTools();
+        if (loadGen != null) {
+          hidePageLoaderWhenReady(loadGen, () => {
+            const wrap = document.getElementById('swipeWrap');
+            if (!wrap) return false;
+            return !!(wrap.querySelector('.swipe-card') || wrap.querySelector('.swipe-empty')
+              || document.body.getAttribute('data-swipe-empty') === 'true');
+          });
+        }
+      } else if (loadGen != null) {
+        // Laisse le nouvel écran peindre, puis retire le loader
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => hidePageLoader(loadGen));
+        });
       }
       if (name !== 'swipe')   {
         stopSwipeMusic();
