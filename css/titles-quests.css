@@ -109,10 +109,11 @@
 .editor-page .card .card-profile-title-text{
   position:relative;z-index:3;display:block;
   font-family:var(--title-font,"Cinzel Decorative","Clash Display",serif);
-  font-weight:var(--title-weight,700);font-size:11px;line-height:1.15;
+  font-weight:var(--title-weight,700);font-size:11px;line-height:1.25;
   letter-spacing:var(--title-spacing,.16em);
   text-transform:var(--title-transform,uppercase);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(100%,280px);
+  white-space:normal;overflow:visible;text-overflow:unset;
+  max-width:100%;word-break:break-word;overflow-wrap:anywhere;
   color:var(--title-color,#C7A5FF);
   background:linear-gradient(180deg,#fff 0%,var(--title-color,#C7A5FF) 42%,color-mix(in srgb,var(--title-color,#C7A5FF) 72%,#120818) 100%);
   -webkit-background-clip:text;background-clip:text;

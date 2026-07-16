@@ -1895,16 +1895,29 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
-  /* Discord servers in common — texte au-dessus, logos en dessous.
-     Position absolute à droite : n'augmente PAS la hauteur de la ligne
-     (le hr / bio restent exactement où ils étaient). */
+  /* Discord servers in common — à droite du titre SI court ; sinon stack
+     (serveurs AU-DESSUS) pour laisser le titre en entier. */
   .swipe-card .card-title-guilds-row{
     display:block;position:relative;margin-top:6px;min-height:0;width:100%;
   }
   .swipe-card .card-title-guilds-row .card-title-slot{
-    display:block;max-width:calc(100% - 118px);min-width:0;
+    display:block;max-width:100%;min-width:0;
+  }
+  /* Réserve la place à droite SEULEMENT si serveurs en absolute (pas en stack) */
+  .swipe-card .card-title-guilds-row:not(.card-title-guilds-row--stack):has(.card-guilds--head) .card-title-slot{
+    max-width:calc(100% - 118px);
   }
   .swipe-card .card-title-guilds-row .card-title-slot--empty{display:block;min-height:0;max-width:0;overflow:hidden}
+  .swipe-card .card-title-guilds-row--stack{
+    display:flex;flex-direction:column;align-items:stretch;gap:6px;
+  }
+  .swipe-card .card-title-guilds-row--stack .card-title-slot{
+    max-width:100%;width:100%;
+  }
+  .swipe-card .card-title-guilds-row--stack .card-guilds--head{
+    position:static;top:auto;right:auto;transform:none;
+    align-self:flex-end;max-width:min(100%,160px);pointer-events:none;
+  }
   .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
   .swipe-card .card-guilds--head{
     position:absolute;right:0;top:50%;transform:translateY(-50%);

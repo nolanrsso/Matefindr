@@ -987,20 +987,35 @@
             if (body) body.appendChild(row);
           }
         }
-        if (titleSlot && !row.contains(titleSlot)) row.appendChild(titleSlot);
-        else if (!titleSlot && !row.querySelector('.card-title-slot')) {
+        // Titre long → serveurs AU-DESSUS (stack), pas à droite qui tronque
+        if (titleSlot) {
+          row.classList.add('card-title-guilds-row--stack');
+          if (!row.contains(titleSlot)) row.appendChild(titleSlot);
+        } else if (!row.querySelector('.card-title-slot')) {
+          row.classList.remove('card-title-guilds-row--stack');
           const empty = document.createElement('span');
           empty.className = 'card-title-slot card-title-slot--empty';
           empty.setAttribute('aria-hidden', 'true');
-          row.insertBefore(empty, row.firstChild);
+          row.appendChild(empty);
         }
         const oldG = row.querySelector('.card-guilds--head');
         if (oldG) oldG.outerHTML = guildsHtml;
-        else row.insertAdjacentHTML('beforeend', guildsHtml);
+        else {
+          const titleEl = row.querySelector('.card-title-slot');
+          if (titleEl) titleEl.insertAdjacentHTML('beforebegin', guildsHtml);
+          else row.insertAdjacentHTML('afterbegin', guildsHtml);
+        }
+        // Remet le titre après les guilds si l'ordre a dérivé
+        const gEl = row.querySelector('.card-guilds--head');
+        const tEl = row.querySelector('.card-title-slot');
+        if (gEl && tEl && gEl.compareDocumentPosition(tEl) & Node.DOCUMENT_POSITION_PRECEDING) {
+          row.insertBefore(gEl, tEl);
+        }
         card.classList.add('has-common-guilds');
       } else {
         const oldG = card.querySelector('.card-guilds--head');
         if (oldG) oldG.remove();
+        if (row) row.classList.remove('card-title-guilds-row--stack');
         if (row && !row.querySelector('.card-title-slot:not(.card-title-slot--empty)') && !row.querySelector('.card-guilds')) {
           row.remove();
         }
@@ -2392,7 +2407,7 @@
       if (hasDiscordFloor) c.classList.add('has-discord-floor');
       if (viewsHtml || joinedHtml) c.classList.add('has-bottom-stack');
       const titleGuildsRow = (titleHtml || guildsHtml)
-        ? `<div class="card-title-guilds-row">${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}${guildsHtml}</div>`
+        ? `<div class="card-title-guilds-row${(titleHtml && guildsHtml) ? ' card-title-guilds-row--stack' : ''}">${guildsHtml}${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}</div>`
         : '';
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
