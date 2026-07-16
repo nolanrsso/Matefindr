@@ -4686,11 +4686,13 @@ function openSettingsSheet(){
   if(window.MatefindrTitlesQuests){
     MatefindrTitlesQuests.init({
       questButtons:['btnQuests'],
+      getUid:()=> (readSite().user||{}).uid || window.__mfMyUid || null,
       getRatingRec: async ()=>{
         const sb=edSupa(); if(!sb) return null;
         try{
           const { data:{ session } }=await sb.auth.getSession();
           if(!session) return null;
+          try{ window.__mfMyUid=session.user.id; }catch(_){}
           const { data }=await sb.from('profile_reactions').select('rating').eq('profile_id', session.user.id).limit(5000);
           const ratings=[];
           (data||[]).forEach(r=>{ const v=parseFloat(r.rating); if(!Number.isNaN(v)) ratings.push(v); });

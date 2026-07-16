@@ -269,6 +269,23 @@
     return sum / rec.ratings.length;
   }
 
+  async function resolveQuestUid(opts, u, sb) {
+    if (opts && opts.uid) return opts.uid;
+    if (u && u.uid) return u.uid;
+    try {
+      const rid = localStorage.getItem('matefindr_reactor_id');
+      if (rid) return rid;
+    } catch (_) {}
+    if (typeof global.__mfMyUid === 'string' && global.__mfMyUid) return global.__mfMyUid;
+    if (sb && sb.auth && typeof sb.auth.getSession === 'function') {
+      try {
+        const { data } = await sb.auth.getSession();
+        if (data && data.session && data.session.user && data.session.user.id) return data.session.user.id;
+      } catch (_) {}
+    }
+    return null;
+  }
+
   async function fetchStats(opts) {
     opts = opts || {};
     const s = readSite();
@@ -282,34 +299,52 @@
     let votesReceived = typeof prev.votesReceived === 'number' ? prev.votesReceived : 0;
     let newChats = typeof prev.newChats === 'number' ? prev.newChats : 0;
     const sb = opts.supa || global.__supa;
-    const uid = opts.uid || u.uid;
+    const uid = await resolveQuestUid(opts, u, sb);
     if (sb && uid) {
-      try {
-        const [{ count: mC }, { count: lC }, { count: lrC }, { count: vC }, { count: vrC }, viewsRes, msgRes] = await Promise.all([
-          sb.from('matches').select('*', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
-          sb.from('likes').select('*', { count: 'exact', head: true }).eq('liker_id', uid),
-          sb.from('likes').select('*', { count: 'exact', head: true }).eq('liked_id', uid),
-          sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('reactor_id', uid),
-          sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('profile_id', uid),
-          sb.from('profiles').select('views').eq('id', uid).maybeSingle(),
-          // Conversations = matchs où j'ai envoyé au moins 1 message
-          sb.from('messages').select('match_id').eq('sender_id', uid).limit(5000),
-        ]);
-        matches = mC || 0;
-        likesGiven = lC || 0;
-        likesReceived = lrC || 0;
-        votesGiven = vC || 0;
-        votesReceived = vrC || 0;
+      // Une requête qui plante ne doit PAS annuler les autres (ex. messages RLS).
+      const safe = async (fn) => { try { return await fn(); } catch (_) { return null; } };
+      const [mRes, lRes, lrRes, vRes, vrRes, viewsRes, msgRes] = await Promise.all([
+        safe(() => sb.from('matches').select('id', { count: 'exact' }).or(`user_a.eq.${uid},user_b.eq.${uid}`)),
+        safe(() => sb.from('likes').select('id', { count: 'exact', head: true }).eq('liker_id', uid)),
+        safe(() => sb.from('likes').select('id', { count: 'exact', head: true }).eq('liked_id', uid)),
+        safe(() => sb.from('profile_reactions').select('id', { count: 'exact', head: true }).eq('reactor_id', uid)),
+        safe(() => sb.from('profile_reactions').select('id', { count: 'exact', head: true }).eq('profile_id', uid)),
+        safe(() => sb.from('profiles').select('views').eq('id', uid).maybeSingle()),
+        safe(() => sb.from('messages').select('match_id').eq('sender_id', uid).limit(5000)),
+      ]);
+      if (mRes && !mRes.error) {
+        const fromCount = typeof mRes.count === 'number' ? mRes.count : null;
+        const fromData = Array.isArray(mRes.data) ? mRes.data.length : 0;
+        matches = fromCount != null ? fromCount : fromData;
+      }
+      if (lRes && !lRes.error && typeof lRes.count === 'number') likesGiven = lRes.count;
+      if (lrRes && !lrRes.error && typeof lrRes.count === 'number') likesReceived = lrRes.count;
+      if (vRes && !vRes.error && typeof vRes.count === 'number') votesGiven = vRes.count;
+      if (vrRes && !vrRes.error && typeof vrRes.count === 'number') votesReceived = vrRes.count;
+      if (msgRes && !msgRes.error) {
         const chatIds = new Set();
-        (msgRes && msgRes.data ? msgRes.data : []).forEach(row => {
-          if (row && row.match_id) chatIds.add(row.match_id);
-        });
+        (msgRes.data || []).forEach(row => { if (row && row.match_id) chatIds.add(row.match_id); });
         newChats = chatIds.size;
-        if (typeof opts.views !== 'number' && viewsRes && viewsRes.data && typeof viewsRes.data.views === 'number') {
-          views = viewsRes.data.views;
-        }
-      } catch (_) {}
+      } else if (matches > 0 && !newChats) {
+        newChats = matches; // fallback si messages inaccessible
+      }
+      if (typeof opts.views !== 'number' && viewsRes && viewsRes.data && typeof viewsRes.data.views === 'number') {
+        views = viewsRes.data.views;
+      }
+      // Persiste l'uid pour les prochains appels (app.js ne le met pas toujours dans state.user)
+      if (!u.uid) {
+        try {
+          const st = readSite();
+          st.user = st.user || {};
+          st.user.uid = uid;
+          writeSite(st);
+        } catch (_) {}
+      }
     }
+    // Fallback UI app : conversations déjà chargées
+    try {
+      if (Array.isArray(global.CONVOS) && global.CONVOS.length > matches) matches = global.CONVOS.length;
+    } catch (_) {}
     let ratingRec = opts.ratingRec || null;
     if (typeof ratingRec === 'function') {
       try { ratingRec = await ratingRec(); } catch (_) { ratingRec = null; }
@@ -1016,6 +1051,61 @@
     return discordFloorHtml(p, helpers);
   }
 
+  function missionLevelLabel(m) {
+    if (!m) return '';
+    if (isRatingTitle(m)) {
+      const idx = RATING_TITLES.findIndex(r => r.id === m.id);
+      return idx >= 0 ? `Lvl ${idx + 1}` : '';
+    }
+    const lvl = missionCoinLevel(m);
+    return lvl >= 0 ? `Lvl ${lvl + 1}` : '';
+  }
+
+  function nextBeautyTitleMeta(stats) {
+    const arrow = beautyArrow(stats);
+    if (arrow.locked || arrow.maxed) return null;
+    const r = RATING_TITLES.find(t => stats.rating < t.min) || RATING_TITLES[RATING_TITLES.length - 1];
+    if (!r) return null;
+    return getMission(r.id) || {
+      id: r.id,
+      title: r.label.charAt(0).toUpperCase() + r.label.slice(1),
+      rarity: r.rarity,
+      ratingMin: r.min,
+      ratingMax: r.max,
+      noTranslate: true,
+      stat: 'rating',
+    };
+  }
+
+  function renderBeautyTitlesPanel(stats, td) {
+    const soon = nextBeautyTitleMeta(stats);
+    const rating = Number(stats.rating) || 0;
+    const unlocked = (stats.ratingVotes || 0) >= RATING_MIN_VOTERS;
+    let rows = '';
+    RATING_TITLES.forEach((r, i) => {
+      const meta = getMission(r.id);
+      const owned = td.collected.includes(r.id);
+      const isSoon = soon && soon.id === r.id;
+      const isCurrent = unlocked && rating >= r.min && rating < r.max;
+      const typo = titleTypoCss(meta || { id: r.id, title: r.label, rarity: r.rarity, noTranslate: true });
+      const cls = `tq-beauty-title-row${owned ? ' is-owned' : ''}${isSoon ? ' is-soon' : ''}${isCurrent ? ' is-current' : ''}`;
+      rows += `<div class="${cls}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}">
+        <span class="tq-beauty-title-lvl">Lvl ${i + 1}</span>
+        <span class="tq-beauty-title-name">${esc(titleDisplay(meta) || (r.label.charAt(0).toUpperCase() + r.label.slice(1)))}</span>
+        <span class="tq-beauty-title-range">${r.min.toFixed(1)} – ${(r.max > 5 ? 5 : r.max).toFixed(1)}</span>
+        ${owned ? '<span class="tq-done-lbl">Obtenu</span>' : (isSoon ? '<span class="tq-soon">Bientôt</span>' : '')}
+      </div>`;
+    });
+    return `<div class="tq-beauty-titles" id="tqBeautyTitles" hidden>
+      ${soon && !arrowLocked(stats) ? `<div class="tq-beauty-soon-banner">Bientôt : <b>${esc(titleDisplay(soon))}</b> · ${Number(soon.ratingMin || soon.threshold || 0).toFixed(1)}★</div>` : ''}
+      ${rows}
+    </div>`;
+  }
+
+  function arrowLocked(stats) {
+    return (stats.ratingVotes || 0) < RATING_MIN_VOTERS;
+  }
+
   function nextMissionForTrack(track, stats) {
     if (track.isRating) {
       if ((stats.ratingVotes || 0) < RATING_MIN_VOTERS) {
@@ -1051,10 +1141,14 @@
     QUEST_TRACKS.forEach(track => {
       if (track.isRating) {
         const arrow = beautyArrow(stats);
+        const soonMeta = nextBeautyTitleMeta(stats);
         html += `<article class="tq-mission tq-mission--hero tq-mission--rating${arrow.maxed ? ' tq-mission--done' : ''}">
           <div class="tq-mission-head">
             <span class="tq-mission-title">${esc(track.label)}</span>
-            ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : '<span class="tq-auto-lbl">Auto</span>'}
+            <span class="tq-mission-head-right">
+              ${soonMeta ? `<span class="tq-lvl-badge">${esc(missionLevelLabel(soonMeta))}</span>` : ''}
+              ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : '<span class="tq-auto-lbl">Auto</span>'}
+            </span>
           </div>
           <p class="tq-mission-desc">${arrow.locked
             ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
@@ -1065,12 +1159,15 @@
             <span class="tq-beauty-to">${esc(arrow.labelTo)}</span>
             ${arrow.locked ? '<span class="tq-beauty-unit">votants</span>' : ''}
           </div>
+          ${soonMeta && !arrow.locked ? `<div class="tq-beauty-next-title">Bientôt : <b>${esc(titleDisplay(soonMeta))}</b></div>` : ''}
           <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(arrow.pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${arrow.pct.toFixed(1)}%"></span></div>
           <div class="tq-mission-foot">
             <span class="tq-mission-count">${arrow.locked
               ? `${arrow.from} / ${arrow.to} votants`
               : `Note ${arrow.labelFrom} / 5`}</span>
+            <button type="button" class="tq-beauty-titles-btn" data-toggle-beauty-titles>Titres par note</button>
           </div>
+          ${renderBeautyTitlesPanel(stats, td)}
         </article>`;
         return;
       }
@@ -1083,10 +1180,14 @@
       const coinLvl = missionCoinLevel(m);
       const coinReward = coinLvl >= 0 ? questCoinReward(coinLvl) : 0;
       const pct = ready ? 100 : p.pct;
+      const lvlLbl = missionLevelLabel(m);
       html += `<article class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
         <div class="tq-mission-head">
           <span class="tq-mission-title">${esc(track.label)}</span>
-          ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
+          <span class="tq-mission-head-right">
+            ${lvlLbl ? `<span class="tq-lvl-badge">${esc(lvlLbl)}</span>` : ''}
+            ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
+          </span>
         </div>
         <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct.toFixed(1)}%"></span></div>
         <div class="tq-mission-foot">
@@ -1109,6 +1210,17 @@
         global.MatefindrTitlesQuests.openQuests({ refresh: true, stats });
       });
     });
+    const toggleBtn = body.querySelector('[data-toggle-beauty-titles]');
+    const panel = body.querySelector('#tqBeautyTitles');
+    if (toggleBtn && panel) {
+      toggleBtn.addEventListener('click', () => {
+        const open = panel.hasAttribute('hidden');
+        if (open) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+        toggleBtn.textContent = open ? 'Masquer les titres' : 'Titres par note';
+        toggleBtn.classList.toggle('is-open', open);
+      });
+    }
   }
 
   function renderShopTitleRow(meta, td) {
@@ -1117,6 +1229,7 @@
     const typo = titleTypoCss(meta);
     const canBuy = getCoins() >= price;
     return `<div class="tq-shop-row" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}">
+      <span class="tq-lvl-badge">${esc(missionLevelLabel(meta) || '')}</span>
       <span class="tq-title-label">${esc(titleDisplay(meta))}</span>
       <button type="button" class="tq-buy-btn"${canBuy ? '' : ' disabled'} data-buy="${esc(meta.id)}" data-price="${price}">Acheter · ${price.toLocaleString('fr-FR')} 🪙</button>
     </div>`;
@@ -1129,10 +1242,12 @@
     const pending = td.pending.includes(meta.id);
     const price = opts.shop ? titleCoinPrice(meta) : null;
     let badge = '';
-    if (owned) badge = '';
+    const lvl = missionLevelLabel(meta);
+    if (owned) badge = lvl ? `<span class="tq-lvl-badge">${esc(lvl)}</span>` : '';
     else if (price != null) badge = `<span class="tq-price"><span class="tq-price-ico" aria-hidden="true">🪙</span>${price}</span>`;
     else if (pending) badge = '<span class="tq-soon tq-soon--ready">Quête prête</span>';
-    else if (soon) badge = '<span class="tq-soon">Bientôt</span>';
+    else if (soon) badge = `<span class="tq-soon">Bientôt</span>${lvl ? `<span class="tq-lvl-badge">${esc(lvl)}</span>` : ''}`;
+    else if (lvl) badge = `<span class="tq-lvl-badge">${esc(lvl)}</span>`;
     const typo = titleTypoCss(meta);
     const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}`;
     const canBuy = opts.shop && price != null && getCoins() >= price;
@@ -1266,9 +1381,10 @@
     opts = opts || {};
     ensureModals();
     bindButtons(opts.questButtons || ['navQuests', 'btnQuests'], async () => {
+      const uid = (typeof opts.getUid === 'function' ? opts.getUid() : null) || null;
       const stats = await fetchStats({
         supa: global.__supa,
-        uid: readSite().user?.uid,
+        uid: uid || undefined,
         ratingRec: opts.getRatingRec,
       });
       syncStatsLocal(stats);
@@ -1280,7 +1396,7 @@
       const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable, .ed-title-edit-btn');
       if (t) {
         e.preventDefault();
-        openTitles({ getRatingRec: opts.getRatingRec });
+        openTitles({ getRatingRec: opts.getRatingRec, getUid: opts.getUid });
       }
     });
     const u = readSite().user || {};
@@ -1292,9 +1408,10 @@
     }
     (async () => {
       try {
+        const uid = (typeof opts.getUid === 'function' ? opts.getUid() : null) || null;
         const stats = await fetchStats({
           supa: global.__supa,
-          uid: u.uid,
+          uid: uid || undefined,
           ratingRec: opts.getRatingRec,
         });
         syncStatsLocal(stats);
@@ -1305,9 +1422,10 @@
 
   async function openQuests(o) {
     o = o || {};
+    const uid = (typeof o.getUid === 'function' ? o.getUid() : null) || global.__mfMyUid || null;
     const stats = o.stats || await fetchStats({
       supa: global.__supa,
-      uid: readSite().user?.uid,
+      uid: uid || readSite().user?.uid,
       ratingRec: o.ratingRec || o.getRatingRec,
     });
     syncStatsLocal(stats);
@@ -1317,9 +1435,10 @@
 
   async function openTitles(o) {
     o = o || {};
+    const uid = (typeof o.getUid === 'function' ? o.getUid() : null) || global.__mfMyUid || null;
     const stats = o.stats || await fetchStats({
       supa: global.__supa,
-      uid: readSite().user?.uid,
+      uid: uid || readSite().user?.uid,
       ratingRec: o.ratingRec || o.getRatingRec,
     });
     refreshPending(stats);

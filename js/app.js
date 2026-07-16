@@ -1174,6 +1174,7 @@
         const { data: { session } } = await window.__supa.auth.getSession();
         if (!session) return;
         _myUidCache = session.user.id;
+        try { window.__mfMyUid = _myUidCache; } catch (_) {}
         const { data } = await window.__supa.from('profiles').select('views').eq('id', _myUidCache).maybeSingle();
         _myViewsCache = (data && data.views) || 0;
         document.querySelectorAll('.card-views[data-mine="true"] b').forEach(b => { b.textContent = _myViewsCache.toLocaleString('fr-FR'); });
@@ -7258,6 +7259,7 @@
       if (window.MatefindrTitlesQuests) {
         window.MatefindrTitlesQuests.init({
           questButtons: ['navQuests'],
+          getUid: () => _myUidCache || window.__mfMyUid || null,
           getRatingRec: async () => {
             if (!_myUidCache) return null;
             if (!_reactionsCache[_myUidCache] && typeof loadReactions === 'function') {

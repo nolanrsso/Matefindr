@@ -341,8 +341,46 @@
   box-shadow:0 0 0 1px rgba(145,70,255,.2),0 12px 32px rgba(145,70,255,.18);
 }
 .tq-mission--done{opacity:.78}
-.tq-mission-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
-.tq-mission-title{font-weight:800;font-size:15px;color:#fff;letter-spacing:-.01em}
+.tq-mission-head-right{display:inline-flex;align-items:center;gap:8px;flex-shrink:0}
+.tq-lvl-badge{
+  font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:#C7A5FF;padding:3px 8px;border-radius:999px;
+  background:rgba(145,70,255,.16);border:1px solid rgba(145,70,255,.35);white-space:nowrap;
+}
+.tq-beauty-next-title{
+  text-align:center;margin:-2px 0 12px;font-size:13px;color:var(--dim);
+}
+.tq-beauty-next-title b{color:#FFD15C;font-weight:800}
+.tq-beauty-titles-btn{
+  padding:7px 12px;border-radius:999px;border:1px solid rgba(255,126,182,.35);
+  background:rgba(255,126,182,.1);color:#FF7EB6;font:inherit;font-size:12px;font-weight:800;cursor:pointer;
+}
+.tq-beauty-titles-btn:hover,.tq-beauty-titles-btn.is-open{background:rgba(255,126,182,.2);border-color:rgba(255,126,182,.55)}
+.tq-beauty-titles{
+  margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
+  display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;
+}
+.tq-beauty-titles[hidden]{display:none!important}
+.tq-beauty-soon-banner{
+  font-size:12.5px;color:#e8e6f2;padding:8px 10px;border-radius:10px;
+  background:rgba(255,209,92,.1);border:1px solid rgba(255,209,92,.28);margin-bottom:4px;
+}
+.tq-beauty-soon-banner b{color:#FFD15C}
+.tq-beauty-title-row{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);
+}
+.tq-beauty-title-row.is-soon{border-color:rgba(255,209,92,.45);background:rgba(255,209,92,.08)}
+.tq-beauty-title-row.is-current{border-color:rgba(255,126,182,.4);background:rgba(255,126,182,.08)}
+.tq-beauty-title-row.is-owned{opacity:.75}
+.tq-beauty-title-lvl{flex:0 0 auto;font-size:10px;font-weight:800;color:#C7A5FF;letter-spacing:.04em;text-transform:uppercase}
+.tq-beauty-title-name{
+  flex:1;min-width:0;font-family:var(--title-font,"Cinzel Decorative",serif);
+  font-weight:var(--title-weight,700);font-size:11.5px;letter-spacing:var(--title-spacing,.1em);
+  text-transform:var(--title-transform,uppercase);color:var(--title-color,#C7A5FF);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.tq-beauty-title-range{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
 .tq-mission-rarity{display:none}
 .tq-mission-desc{font-size:12.5px;color:var(--dim);margin:0 0 12px;line-height:1.4}
 .tq-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
