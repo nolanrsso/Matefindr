@@ -1121,50 +1121,25 @@
       if (!sameUid && !sameMe) return;
 
       const guildsHtml = guildsBlockHtml(commonGuildsForProfile(p));
-      let row = card.querySelector('.card-title-guilds-row');
-      const titleSlot = card.querySelector('.card-title-slot');
+      const oldG = card.querySelector(':scope > .card-guilds--head');
       if (guildsHtml) {
-        if (!row) {
-          row = document.createElement('div');
-          row.className = 'card-title-guilds-row';
-          const handle = card.querySelector('.handle');
-          if (handle && handle.parentElement) {
-            handle.insertAdjacentElement('afterend', row);
-          } else {
-            const body = card.querySelector('.body > div');
-            if (body) body.appendChild(row);
-          }
-        }
-        if (titleSlot) {
-          if (!row.contains(titleSlot)) row.appendChild(titleSlot);
-        } else if (!row.querySelector('.card-title-slot')) {
-          const empty = document.createElement('span');
-          empty.className = 'card-title-slot card-title-slot--empty';
-          empty.setAttribute('aria-hidden', 'true');
-          row.appendChild(empty);
-        }
-        const oldG = row.querySelector('.card-guilds--head');
         if (oldG) oldG.outerHTML = guildsHtml;
         else {
-          const titleEl = row.querySelector('.card-title-slot');
-          if (titleEl) titleEl.insertAdjacentHTML('beforebegin', guildsHtml);
-          else row.insertAdjacentHTML('afterbegin', guildsHtml);
+          const age = card.querySelector('.card-age-badge');
+          if (age) age.insertAdjacentHTML('afterend', guildsHtml);
+          else {
+            const banner = card.querySelector('.banner');
+            if (banner) banner.insertAdjacentHTML('afterend', guildsHtml);
+            else card.insertAdjacentHTML('afterbegin', guildsHtml);
+          }
         }
-        // Remet le titre après les guilds si l'ordre a dérivé
-        const gEl = row.querySelector('.card-guilds--head');
-        const tEl = row.querySelector('.card-title-slot');
-        if (gEl && tEl && gEl.compareDocumentPosition(tEl) & Node.DOCUMENT_POSITION_PRECEDING) {
-          row.insertBefore(gEl, tEl);
-        }
+        // Nettoie une éventuelle ancienne pastille dans la ligne titre
+        const rowG = card.querySelector('.card-title-guilds-row .card-guilds--head');
+        if (rowG) rowG.remove();
         card.classList.add('has-common-guilds');
-        requestAnimationFrame(() => syncTitleGuildsLayout(card));
       } else {
-        const oldG = card.querySelector('.card-guilds--head');
         if (oldG) oldG.remove();
-        if (row) row.classList.remove('card-title-guilds-row--stack');
-        if (row && !row.querySelector('.card-title-slot:not(.card-title-slot--empty)') && !row.querySelector('.card-guilds')) {
-          row.remove();
-        }
+        card.querySelectorAll('.card-guilds--head').forEach(el => el.remove());
         card.classList.remove('has-common-guilds');
       }
 
@@ -2821,8 +2796,8 @@
       if (connKeys.length > 0) c.classList.add('has-card-connections');
       if (hasDiscordFloor) c.classList.add('has-discord-floor');
       if (viewsHtml || joinedHtml) c.classList.add('has-bottom-stack');
-      const titleGuildsRow = (titleHtml || guildsHtml)
-        ? `<div class="card-title-guilds-row">${guildsHtml}${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}</div>`
+      const titleGuildsRow = titleHtml
+        ? `<div class="card-title-guilds-row">${titleHtml}</div>`
         : '';
       const s = p.socials || {};
       const cleanHandle = (h) => (h || '').replace(/^@+/, '').trim();
@@ -2874,6 +2849,7 @@
         ${reactionBadgeHtml(p)}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
+        ${guildsHtml}
         <div class="avatar-wrap${(p.nitro && !fakeDeco) ? ' nitro' : ''}${fakeDeco ? ' has-fake-deco' : ''}">
           ${fakeDecoHtml}
           <div class="avi" ${aviStyle}>${aviInner}</div>
@@ -2921,8 +2897,8 @@
       bindCardVoice(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
       c.addEventListener('animationend', (ev) => { if (ev.animationName === 'cardIn') c.classList.remove('entering'); }, { once:true });
-      // Titre + serveurs : même ligne si ça tient, sinon serveurs juste au-dessus
-      if (titleHtml && guildsHtml) {
+      // Titre : plus de pastille serveurs sur cette ligne (elle est sous âge/drapeau)
+      if (titleHtml) {
         requestAnimationFrame(() => syncTitleGuildsLayout(c));
       }
       const TQ2 = window.MatefindrTitlesQuests;
