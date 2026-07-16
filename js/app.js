@@ -1009,7 +1009,7 @@
       if (_sharedProfile && !_previewMode) return _sharedProfile;
       if (_previewMode) return _previewProfile || buildUserProfile() || buildMinimalProfile();
       const pool = genderFilteredProfiles();
-      return pool[deckIdx] || null;
+      return pool[0] || null;
     }
 
     function commonGuildsForProfile(p){
@@ -1630,7 +1630,7 @@
     function currentReactTarget(){
       if (_sharedProfile) return _sharedProfile;
       const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
-      return pool[deckIdx] || null;
+      return pool[0] || null;
     }
     /* ===== Slider à étoiles : glisser la poignée bleue vers la droite par-dessus les
        étoiles (jaunes au fur et à mesure). Note affichée au-dessus pendant le glissé.
@@ -2044,8 +2044,8 @@
     window.__recordLike = recordLike;
     window.__refreshLikesReceived = refreshLikesReceived;
 
-    /* Profils déjà swipés — ne doivent PAS revenir tant qu'on n'a pas vidé le set.
-       Persisté pour survivre au refresh (sinon le même profil revient après F5). */
+    /* Profils déjà swipés — exclus du deck POUR DE BON (survit au F5 / faux logout).
+       File d'attente : on montre toujours pool[0] (pas de deckIdx qui dérive). */
     const SWIPED_KEY = 'matefindr_swiped_uids';
     const SWIPED_UIDS = (() => {
       try {
@@ -2053,46 +2053,51 @@
         return new Set(Array.isArray(raw) ? raw.filter(Boolean).map(String) : []);
       } catch(_){ return new Set(); }
     })();
-    function markSwipedUid(uid){
-      if (!uid) return;
-      SWIPED_UIDS.add(String(uid));
+    function persistSwipedUids(){
       try {
         const arr = [...SWIPED_UIDS];
-        // Cap pour ne pas faire exploser localStorage
-        localStorage.setItem(SWIPED_KEY, JSON.stringify(arr.slice(-400)));
+        localStorage.setItem(SWIPED_KEY, JSON.stringify(arr.slice(-800)));
       } catch(_){}
+    }
+    function markSwipedUid(uid){
+      if (!uid) return;
+      const id = String(uid);
+      if (SWIPED_UIDS.has(id)) return;
+      SWIPED_UIDS.add(id);
+      persistSwipedUids();
+    }
+    function isSwipedUid(uid){
+      return !!(uid && SWIPED_UIDS.has(String(uid)));
     }
 
     function genderFilteredProfiles(){
       const f = state.user && state.user.boost && state.user.genderFilter;
-      let pool = (_remoteProfiles || []).filter(p => p && p.uid && !SWIPED_UIDS.has(String(p.uid)));
+      let pool = (_remoteProfiles || []).filter(p => p && p.uid && !isSwipedUid(p.uid));
       if (!f || f === 'all') return pool;
       const map = { il:['male','il'], elle:['female','elle'] };
       const accept = map[f] || [];
       return pool.filter(p => accept.includes(p.gender));
     }
     function ensureDeck(force){
-      // Rendu IMMÉDIAT (depuis le cache + ta propre carte) → jamais d'écran blanc/bloqué
-      // en attendant le réseau Supabase. Le rafraîchissement se fait en arrière-plan.
-      // force=true DOIT être transmis à ensureDeckSync (sinon soft-refresh sur une carte
-      // opacity:0 post-swipe → bulles/stickers du profil précédent restent à l'écran).
+      // Rendu IMMÉDIAT (depuis le cache) → jamais d'écran blanc/bloqué.
+      // force=true force le rebuild DOM ; le fetch réseau n'est PAS forcé à chaque
+      // swipe (sinon reshuffle + mêmes têtes qui reviennent).
       ensureDeckSync(force ? { force: true } : {});
       const wasEmpty = document.body.getAttribute('data-swipe-empty') === 'true';
-      // Profil actuellement affiché AVANT le refresh réseau -- si un admin le désactive
-      // (ou le supprime) pendant qu'il est déjà à l'écran, fetchOtherProfiles() le retire
-      // de _remoteProfiles mais la carte déjà rendue restait affichée indéfiniment tant
-      // qu'on ne swipait pas dessus (le deck n'était re-rendu QUE si vide auparavant).
       let shownUid = null;
-      try { const pool = genderFilteredProfiles(); shownUid = (pool[deckIdx] && pool[deckIdx].uid) || null; } catch(_){}
-      fetchOtherProfiles(force).then(() => {
+      try {
+        const pool = genderFilteredProfiles();
+        shownUid = (pool[0] && pool[0].uid) || null;
+      } catch(_){}
+      // Soft refresh cache (pas force) sauf si deck vraiment vide
+      fetchOtherProfiles(!!wasEmpty).then(() => {
         if (document.body.getAttribute('data-screen') !== 'swipe') return;
-        // Mode aperçu : une seule carte figée — ne jamais re-rendre le deck quand
-        // les profils distants arrivent (sinon on remplace l'aperçu par le deck normal).
         if (_previewMode) return;
-        // On re-rend si le deck était vide (nouveaux profils arrivés), OU si le profil
-        // affiché à l'écran a disparu du pool entre-temps (désactivé/supprimé).
         if (wasEmpty) { ensureDeckSync({ force: true }); return; }
-        if (shownUid && !genderFilteredProfiles().some(p => p.uid === shownUid)) ensureDeckSync({ force: true });
+        // Profil affiché disparu du pool (swipé / désactivé) → carte suivante
+        if (shownUid && !genderFilteredProfiles().some(p => String(p.uid) === String(shownUid))) {
+          ensureDeckSync({ force: true });
+        }
       }).catch(() => {});
     }
     function syncSwipeWrapGradient(p){
@@ -2130,6 +2135,8 @@
         const pool = _previewMode ? [] : genderFilteredProfiles();
         const offset = inPreview ? 1 : 0;
         const total = pool.length + offset;
+        // File d'attente : toujours le 1er non-swipé (deckIdx ignoré en découverte).
+        if (!inPreview) deckIdx = 0;
         if (deckIdx >= total) {
           wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
           clearSwipeDecor();
@@ -2139,7 +2146,7 @@
           return;
         }
         document.body.removeAttribute('data-swipe-empty');
-        p = inPreview ? previewP : pool[deckIdx];
+        p = inPreview ? previewP : pool[0];
       }
 
       if (!p) {
@@ -4146,7 +4153,14 @@
       state.user.stats = state.user.stats || { viewed:0, liked:0 };
       state.user.stats.viewed++;
       const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
-      const swiped = pool[deckIdx]; // mode normal : le deck ne contient que les autres
+      // Toujours le profil affiché (carte) — pas pool[deckIdx] qui peut diverger.
+      const cardUid = cardEl.dataset.profileUid || null;
+      const swiped = (cardUid && pool.find(x => String(x.uid) === String(cardUid)))
+        || pool[0]
+        || null;
+      // Marque TOUT DE SUITE (avant l'anim) → ne peut pas revenir dans la file / au F5
+      if (swiped && !swiped.isMe && swiped.uid) markSwipedUid(swiped.uid);
+      else if (cardUid) markSwipedUid(cardUid);
       if (swiped && !swiped.isMe && swiped.uid && typeof bumpProfileViewOnce === 'function') bumpProfileViewOnce(swiped);
       // LIKE → enregistre un vrai like dans Supabase (match auto si l'autre m'a déjà liké)
       if (dir === 'yes') {
@@ -4159,13 +4173,11 @@
       refreshSwipeTools();
       setTimeout(() => {
         try { if (cardEl && cardEl.parentNode) cardEl.remove(); } catch(_){}
-        // Marque comme vu : filtré hors du pool → le prochain glisse à deckIdx (pas de ++)
-        // sinon après F5 / re-fetch le même profil revenait.
-        if (swiped && !swiped.isMe && swiped.uid) markSwipedUid(swiped.uid);
-        else deckIdx++;
+        deckIdx = 0;
         _swipeBusy = false;
-        // force=true : jamais de soft-refresh sur l'ancienne carte opacity:0
-        ensureDeck(true);
+        // Rebuild sans force-fetch (évite reshuffle qui ressortait les mêmes têtes)
+        ensureDeckSync({ force: true });
+        fetchOtherProfiles(false).catch(() => {});
       }, 320);
     }
 
@@ -8370,7 +8382,8 @@
         clearDiscordTokenKeys();
         state = { user: null, profile: null };
         try { localStorage.removeItem(KEY); } catch(_){}
-        try { localStorage.removeItem('matefindr_swiped_uids'); } catch(_){}
+        // Ne PAS vider matefindr_swiped_uids : les profils déjà vus restent exclus
+        // même après déco / refresh / faux logout auth.
         setAuth(false);
         if (typeof refreshLandingCta === 'function') refreshLandingCta();
       }
