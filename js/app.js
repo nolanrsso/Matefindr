@@ -1022,9 +1022,16 @@
     function guildsBlockHtml(commonGuilds){
       const nGuild = commonGuilds.length;
       if (!nGuild) return '';
-      const guildIconHtml = (g) => g.iconUrl
-        ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
-        : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
+      const guildIconHtml = (g) => {
+        let url = g && g.iconUrl;
+        if (!url && g && g.id && g.icon) {
+          const ext = String(g.icon).startsWith('a_') ? 'gif' : 'png';
+          url = `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.${ext}?size=64`;
+        }
+        return url
+          ? `<img class="cg-icon" src="${url}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
+          : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini((g && g.name) || '')}">${escapeHtmlMini(((g && g.name) || '?').charAt(0).toUpperCase())}</span>`;
+      };
       const guildLabel = nGuild === 1
         ? `<b>1</b> serveur commun`
         : `<b>${nGuild}</b> serveurs communs`;
@@ -1048,8 +1055,8 @@
 
     /**
      * Serveurs en commun TOUJOURS en haut à droite du titre (1re ligne).
-     * Escalade si titre long : « serv » → compact → cache icônes → shrink titre
-     * pour éviter le wrap moche (« ME » seul sur une 2e ligne).
+     * Escalade si titre long : « serv » → compact → shrink titre.
+     * Les icônes restent TOUJOURS visibles (jamais cachées).
      */
     function syncTitleGuildsLayout(card){
       if (!card) return;
@@ -1085,11 +1092,9 @@
 
       // 1) « serv » au lieu de « serveur »
       if (avail > 0 && !fits()) setGuildsLabelText(guilds, true);
-      // 2) pastille un peu plus petite
+      // 2) pastille un peu plus petite (icônes gardées)
       if (avail > 0 && !fits()) guilds.classList.add('card-guilds--compact');
-      // 3) cache les icônes serveurs (garder le libellé)
-      if (avail > 0 && !fits()) guilds.classList.add('card-guilds--icons-hidden');
-      // 4) titre un peu plus petit pour rester sur 1 ligne (comme le 1er screen)
+      // 3) titre un peu plus petit pour rester sur 1 ligne
       if (avail > 0 && !fits()) {
         text.classList.add('is-title-fit');
         const base = parseFloat(getComputedStyle(text).fontSize) || 11;
@@ -1944,7 +1949,13 @@
           const ratingMap = await fetchProfileRatingMap(uids);
           const mediaCount = (p) => (Array.isArray(p.photos) ? p.photos.length : 0) + (Array.isArray(p.gifs) ? p.gifs.length : 0);
           const DISCOVER_RANDOM = 18;
+          const seenUid = new Set();
           _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).filter(p => p.disabled !== true)
+            .filter(p => {
+              if (!p.uid || seenUid.has(p.uid)) return false;
+              seenUid.add(p.uid);
+              return true;
+            })
             .map(p => {
               const r = ratingMap[p.uid] || { avg: 0, count: 0 };
               const voteFactor = r.count >= RATING_MIN_VOTERS_DISCOVER ? 1 : (r.count / RATING_MIN_VOTERS_DISCOVER);
@@ -2033,9 +2044,28 @@
     window.__recordLike = recordLike;
     window.__refreshLikesReceived = refreshLikesReceived;
 
+    /* Profils déjà swipés — ne doivent PAS revenir tant qu'on n'a pas vidé le set.
+       Persisté pour survivre au refresh (sinon le même profil revient après F5). */
+    const SWIPED_KEY = 'matefindr_swiped_uids';
+    const SWIPED_UIDS = (() => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(SWIPED_KEY) || '[]');
+        return new Set(Array.isArray(raw) ? raw.filter(Boolean).map(String) : []);
+      } catch(_){ return new Set(); }
+    })();
+    function markSwipedUid(uid){
+      if (!uid) return;
+      SWIPED_UIDS.add(String(uid));
+      try {
+        const arr = [...SWIPED_UIDS];
+        // Cap pour ne pas faire exploser localStorage
+        localStorage.setItem(SWIPED_KEY, JSON.stringify(arr.slice(-400)));
+      } catch(_){}
+    }
+
     function genderFilteredProfiles(){
       const f = state.user && state.user.boost && state.user.genderFilter;
-      const pool = _remoteProfiles;
+      let pool = (_remoteProfiles || []).filter(p => p && p.uid && !SWIPED_UIDS.has(String(p.uid)));
       if (!f || f === 'all') return pool;
       const map = { il:['male','il'], elle:['female','elle'] };
       const accept = map[f] || [];
@@ -2143,13 +2173,15 @@
 
       if (_sharedProfile && !_previewMode) {
         try {
+          hideSwipeDecorForEntry();
           wrap.appendChild(buildCard(_sharedProfile, true));
           syncSwipeWrapGradient(_sharedProfile);
           renderOrbs(_sharedProfile);
           renderSwipeGifs(_sharedProfile);
           renderSwipePhotos(_sharedProfile);
           playProfileEntryMusic(_sharedProfile);
-        } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
+          revealSwipeDecorAfterCard(wrap.querySelector('.swipe-card'));
+        } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); revealSwipeDecorNow(); } catch(_){} }
         return;
       }
 
@@ -2160,17 +2192,21 @@
       const offset = inPreview ? 1 : 0;
       const total = pool.length + offset;
       try {
+        hideSwipeDecorForEntry();
         wrap.appendChild(buildCard(p, true));
         syncSwipeWrapGradient(p);
         renderOrbs(p);
         renderSwipeGifs(p);
         renderSwipePhotos(p);
         playProfileEntryMusic(p);
+        revealSwipeDecorAfterCard(wrap.querySelector('.swipe-card'));
       } catch (err) {
         console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
         wrap.innerHTML = '';
         if (typeof applyBgChoice === 'function') applyBgChoice(null);
-        if (deckIdx < total - 1) { deckIdx++; ensureDeckSync({ force: true }); return; }
+        if (p && p.uid) markSwipedUid(p.uid);
+        const nextPool = genderFilteredProfiles();
+        if (nextPool.length) { ensureDeckSync({ force: true }); return; }
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
         document.body.setAttribute('data-swipe-empty', 'true');
       }
@@ -2222,6 +2258,7 @@
        - se mettent à jour à chaque resize */
     /** Retire bulles + stickers du swipe (profil qui part / écran quitté / deck vide). */
     function clearSwipeDecor(){
+      document.body.classList.remove('swipe-decor-wait', 'swipe-decor-on');
       try {
         if (typeof renderOrbs === 'function') renderOrbs(null);
         else {
@@ -2233,6 +2270,37 @@
       try { if (typeof renderSwipePhotos === 'function') renderSwipePhotos(null); } catch(_){}
       const layer = document.getElementById('swipeStickersBg');
       if (layer) layer.remove();
+    }
+    /** Cache GIFs/bulles pendant l'entrée de carte ; fade-in rapide une fois cardIn fini. */
+    let _decorRevealTimer = null;
+    function hideSwipeDecorForEntry(){
+      if (_decorRevealTimer) { clearTimeout(_decorRevealTimer); _decorRevealTimer = null; }
+      document.body.classList.add('swipe-decor-wait');
+      document.body.classList.remove('swipe-decor-on');
+    }
+    function revealSwipeDecorNow(){
+      if (_decorRevealTimer) { clearTimeout(_decorRevealTimer); _decorRevealTimer = null; }
+      document.body.classList.remove('swipe-decor-wait');
+      // reflow pour que la transition opacity joue
+      void document.body.offsetWidth;
+      document.body.classList.add('swipe-decor-on');
+    }
+    function revealSwipeDecorAfterCard(card){
+      if (!card || !card.classList.contains('entering')) {
+        revealSwipeDecorNow();
+        return;
+      }
+      const onEnd = (ev) => {
+        if (ev && ev.animationName && ev.animationName !== 'cardIn') return;
+        card.removeEventListener('animationend', onEnd);
+        revealSwipeDecorNow();
+      };
+      card.addEventListener('animationend', onEnd);
+      // Filet si animationend ne fire pas (onglet en arrière-plan, prefers-reduced-motion…)
+      _decorRevealTimer = setTimeout(() => {
+        card.removeEventListener('animationend', onEnd);
+        revealSwipeDecorNow();
+      }, 700);
     }
     function ensureSwipeStickersLayer() {
       let layer = document.getElementById('swipeStickersBg');
@@ -4091,7 +4159,10 @@
       refreshSwipeTools();
       setTimeout(() => {
         try { if (cardEl && cardEl.parentNode) cardEl.remove(); } catch(_){}
-        deckIdx++;
+        // Marque comme vu : filtré hors du pool → le prochain glisse à deckIdx (pas de ++)
+        // sinon après F5 / re-fetch le même profil revenait.
+        if (swiped && !swiped.isMe && swiped.uid) markSwipedUid(swiped.uid);
+        else deckIdx++;
         _swipeBusy = false;
         // force=true : jamais de soft-refresh sur l'ancienne carte opacity:0
         ensureDeck(true);
@@ -8286,27 +8357,43 @@
       }
       capProviderToken();
 
-      // Important : s'abonner AVANT getSession, et ne jamais traiter un getSession()
-      // null comme une déconnexion. Au refresh, getSession peut renvoyer null le temps
-      // que le client hydrate le storage → setAuth(false) flashait "Se connecter" ~0.5s
-      // puis INITIAL_SESSION / SIGNED_IN reconnectait. La source de vérité "pas de
-      // session" = INITIAL_SESSION sans session, ou SIGNED_OUT explicite.
+      // Important : ne JAMAIS déconnecter sur un getSession()/event null trop tôt.
+      // Au refresh, Supabase peut émettre INITIAL_SESSION sans session ou un SIGNED_OUT
+      // parasite pendant le refresh token → clearSessionLocal flashait "déco" puis
+      // reconnectait (et effaçait matefindr_state → éditeur "Matefindr_user").
+      // Déconnexion = confirmée seulement si getSession() est encore null après un court délai.
+      let _logoutTimer = null;
+      function cancelPendingLogout(){
+        if (_logoutTimer) { clearTimeout(_logoutTimer); _logoutTimer = null; }
+      }
       function clearSessionLocal(){
         clearDiscordTokenKeys();
         state = { user: null, profile: null };
         try { localStorage.removeItem(KEY); } catch(_){}
+        try { localStorage.removeItem('matefindr_swiped_uids'); } catch(_){}
         setAuth(false);
         if (typeof refreshLandingCta === 'function') refreshLandingCta();
+      }
+      function scheduleConfirmedLogout(reason){
+        cancelPendingLogout();
+        _logoutTimer = setTimeout(async () => {
+          _logoutTimer = null;
+          try {
+            const { data: { session } } = await window.__supa.auth.getSession();
+            if (session) {
+              console.log('[Matefindr] ignore spurious logout:', reason);
+              return;
+            }
+          } catch(_){}
+          console.log('[Matefindr] confirmed logout:', reason);
+          clearSessionLocal();
+        }, 500);
       }
 
       window.__supa.auth.onAuthStateChange(async (event, s) => {
         console.log('[Matefindr] auth event:', event, 'provider_token:', !!s?.provider_token);
-        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !s)) {
-          clearSessionLocal();
-          return;
-        }
         if (s) {
-          // Save token from session if present (Supabase may include it in SIGNED_IN)
+          cancelPendingLogout();
           if (s.provider_token) {
             localStorage.setItem('matefindr_discord_token', s.provider_token);
             localStorage.setItem('matefindr_discord_token_ts', String(Date.now()));
@@ -8317,7 +8404,11 @@
           }
           const u = await userFromSupabaseSession(s);
           if (u) window.__matefindr.onLogin(u);
-          if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
+          if (window.__rtStart) window.__rtStart();
+          return;
+        }
+        if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+          scheduleConfirmedLogout(event);
         }
       });
 
@@ -8326,6 +8417,7 @@
         console.log('[Matefindr] Supabase session:', !!session, 'provider_token:', !!session?.provider_token);
         // Eager hydrate si déjà dispo — jamais de setAuth(false) sur null ici.
         if (session) {
+          cancelPendingLogout();
           const u = await userFromSupabaseSession(session);
           if (u) window.__matefindr.onLogin(u);
           if (window.__rtStart) window.__rtStart();

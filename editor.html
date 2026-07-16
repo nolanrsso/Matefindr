@@ -3808,7 +3808,9 @@ function writeState(){
   // "Matefindr_user" dans matefindr_state (sinon index te croit connecté après déco).
   if(!hasRealSiteIdentity(st)) return;
   st.user=st.user||{}; st.profile=st.profile||{};
-  st.user.displayName=S.username;
+  // Ne jamais écraser une vraie identité Discord avec le placeholder HTML "Matefindr_user"
+  // (preset vierge / flash au refresh) — sinon index te croit déco / profil fantôme.
+  if(S.username && S.username!=='Matefindr_user') st.user.displayName=S.username;
   if(S.nameCustom) st.user.nameCustom=true;  // pseudo renommé → Discord ne l'écrase plus
   st.user.handleBlur=!!S.handleBlur;        // pseudo Discord flouté (visible par les autres)
   st.user.boostShowName=(S.boostShowName!==false); // style doré Boost sur le pseudo
@@ -4618,7 +4620,16 @@ async function edBootProfile(){
   if(PRESETS.length===0){
     PRESETS.push(snapshotProfile()); savePresetsLS(); _activePresetIdx=0; saveActivePresetIdx();
   } else {
-    applyPreset(PRESETS[_activePresetIdx]);
+    const snap=PRESETS[_activePresetIdx];
+    // Au boot : ne JAMAIS appliquer un preset fantôme "Matefindr_user" par-dessus
+    // un vrai compte (ça flashait le profil vide au refresh — vu en vidéo).
+    if(isGenericPresetSnap(snap) && hasRealSiteIdentity(readSite())){
+      hydrateFromSite();
+      PRESETS[_activePresetIdx]=snapshotProfile();
+      savePresetsLS();
+    } else {
+      applyPreset(PRESETS[_activePresetIdx]);
+    }
   }
   clampSharePresetIdx();
   renderOrbs();

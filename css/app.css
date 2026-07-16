@@ -527,14 +527,26 @@
     pointer-events:none;
   }
   .match-overlay[data-show="true"]{display:flex}
-  /* Pendant le match, on cache la scène swipe derrière (carte + bulles) pour
-     qu'aucun élément (badge lookfor, orbe, etc.) ne transparaisse à travers le backdrop. */
+  /* Pendant le match, on cache la scène swipe derrière (carte + bulles + GIFs)
+     pour qu'aucun élément ne transparaisse à travers le backdrop. */
   body.match-active .swipe-stage .orbit,
+  body.match-active #swipeOrbit,
+  body.match-active #swipeStickersBg,
   body.match-active #swipeWrap,
   body.match-active .swipe-actions,
   body.match-active .blob,
   body.match-active .bg-blobs,
-  body.match-active .grain{visibility:hidden !important}
+  body.match-active .grain{visibility:hidden !important;opacity:0 !important}
+
+  /* GIFs / bulles : invisibles pendant cardIn, fade-in rapide une fois la carte centrée */
+  body.swipe-decor-wait #swipeOrbit,
+  body.swipe-decor-wait #swipeStickersBg{
+    opacity:0 !important;pointer-events:none !important;transition:none !important;
+  }
+  body.swipe-decor-on #swipeOrbit,
+  body.swipe-decor-on #swipeStickersBg{
+    opacity:1;transition:opacity .2s ease;
+  }
   .match-backdrop{
     position:absolute;inset:0;background:var(--mf-backdrop);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
@@ -1944,10 +1956,9 @@
     pointer-events:none;z-index:2;
   }
   .swipe-card .card-guilds--head.card-guilds--compact{
-    padding:3px 5px;gap:2px;max-width:88px;transform:scale(.92);
+    padding:3px 5px;gap:2px;max-width:96px;transform:scale(.92);
     transform-origin:right top;
   }
-  .swipe-card .card-guilds--head.card-guilds--icons-hidden .cg-icons{display:none}
   .swipe-card .card-title-guilds-row .card-profile-title-text.is-title-fit{
     white-space:nowrap;overflow:visible;word-break:normal;overflow-wrap:normal;
   }
