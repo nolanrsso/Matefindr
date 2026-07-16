@@ -1270,12 +1270,25 @@
         });
       } catch (_) { return ''; }
     }
+    /** Clé « quelle activité » (sans seek) — pour comparer bot vs client. */
+    function liveActivityKey(live){
+      if (!live || typeof live !== 'object') return '';
+      try {
+        return JSON.stringify({
+          status: live.status || 'offline',
+          activities: (live.activities || []).map(a => ({
+            t: a && a.type, n: a && a.name, d: a && a.details, s: a && a.state,
+          })),
+        });
+      } catch (_) { return ''; }
+    }
 
     function applyLiveToVisibleCard(p, live){
       if (!p) return false;
       const incoming = live && typeof live === 'object' ? live : null;
-      // Ne pas écraser un seek Spotify local (updatedAt plus récent) avec un poll bot périmé
-      if (p.discordLive && incoming) {
+      // Profil tiers : toujours faire confiance à la DB (poll / realtime).
+      // Profil soi : ne pas écraser un seek Spotify local plus frais par un poll bot périmé.
+      if (p.isMe && p.discordLive && incoming) {
         const locTs = p.discordLive.updatedAt ? new Date(p.discordLive.updatedAt).getTime() : 0;
         const inTs = incoming.updatedAt ? new Date(incoming.updatedAt).getTime() : 0;
         if (locTs > inTs) {
@@ -1359,7 +1372,14 @@
             try {
               const p = currentSwipeProfile();
               if (!p || String(p.uid) !== String(uid)) return;
-              const live = payload?.new?.data?.discordLive;
+              // Sans REPLICA IDENTITY FULL, payload.new n'a souvent que l'id → data absent.
+              // Ne JAMAIS appliquer null ici (ça effaçait l'activité), refetch à la place.
+              const row = payload?.new;
+              if (!row || row.data === undefined) {
+                refreshVisibleDiscordLive();
+                return;
+              }
+              const live = row.data && typeof row.data === 'object' ? row.data.discordLive : null;
               applyLiveToVisibleCard(p, live && typeof live === 'object' ? live : null);
             } catch (_) {}
           })
@@ -1449,7 +1469,7 @@
         return true;
       } catch (_) { return false; }
     };
-    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 3000);
+    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 1500);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) try { refreshVisibleDiscordLive(); } catch(_){}
     });
@@ -2003,17 +2023,26 @@
           updated_at: new Date().toISOString(),
         };
         if (state.user && state.user.discordId) base.discord_id = state.user.discordId;
-        // discordLive / dailyLogin : ne jamais écraser le cloud avec une valeur locale vide/vieille.
+        // discordLive : le bot Gateway est la source de vérité en base.
+        // Le client WS (soi) ne doit JAMAIS écraser un discordLive cloud plus riche /
+        // bot avec une présence locale périmée (updatedAt frais mais mauvaise piste).
         try {
           const { data: liveRow } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
           const cloudData = liveRow?.data;
           const cloudLive = cloudData?.discordLive;
           if (cloudLive && typeof cloudLive === 'object') {
-            const loc = my.discordLive;
-            const locTs = loc?.updatedAt ? new Date(loc.updatedAt).getTime() : 0;
-            const cloudTs = cloudLive.updatedAt ? new Date(cloudLive.updatedAt).getTime() : 0;
-            // Le plus récent gagne (seek Spotify client vs bot) — plus de bot-always-wins
-            if (!locTs || cloudTs >= locTs) my.discordLive = cloudLive;
+            my.discordLive = cloudLive;
+            // Seek Spotify local (même piste, timestamps plus frais) : garde le local en mémoire UI,
+            // mais en base on reste sur le cloud — le bot renverra le seek au prochain update.
+            const loc = state.user && state.user.discordLive;
+            if (loc && loc.source === 'client' && cloudLive.source === 'bot') {
+              const sameTrack = liveActivityKey(loc) === liveActivityKey(cloudLive);
+              const locTs = loc.updatedAt ? new Date(loc.updatedAt).getTime() : 0;
+              const cloudTs = cloudLive.updatedAt ? new Date(cloudLive.updatedAt).getTime() : 0;
+              if (sameTrack && locTs > cloudTs) {
+                // UI locale OK ; cloud intact (my.discordLive déjà = cloudLive)
+              }
+            }
           }
           const mergedDaily = mergeDailyLogin(my.dailyLogin, cloudData?.dailyLogin);
           if (mergedDaily) {

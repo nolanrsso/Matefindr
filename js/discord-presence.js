@@ -92,7 +92,8 @@
     };
     st.user.discordLive = live;
     try{ if(typeof global.__matefindrSave === 'function') global.__matefindrSave(); }catch(_){}
-    try{ if(typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync(); }catch(_){}
+    // Pas de scheduleCloudSync ici : le bot écrit discordLive en base.
+    // Un sync client écrasait souvent la piste bot avec une présence OAuth périmée.
     try{
       // Seek Spotify : maj immédiate des barres, puis re-render du bloc Discord
       if(typeof global.__mfPatchDiscordProgress === 'function') global.__mfPatchDiscordProgress(live);

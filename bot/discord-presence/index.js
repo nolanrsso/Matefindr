@@ -29,7 +29,7 @@ const SB_URL = process.env.SUPABASE_URL || '';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 /* Court : fin de musique / changement de jeu doit arriver vite côté site */
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = 100;
 const OFFLINE_TYPES = new Set(['offline', 'invisible']);
 const DISCORD_CDN_AVATAR_RE = /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i;
 
@@ -275,12 +275,21 @@ function scheduleWrite(discordId, presence) {
       const prevLive = row?.data?.discordLive || null;
       const live = await buildLive(presence, prevLive);
       const fp = presenceFingerprint(live.status, live.activities);
+      // Seed lastFp depuis la DB si besoin (après restart bot)
+      if (!lastFp.has(id) && prevLive) {
+        lastFp.set(id, presenceFingerprint(prevLive.status, prevLive.activities || []));
+      }
       const presenceChanged = lastFp.get(id) !== fp;
+      if (!presenceChanged) {
+        // Avatar seul éventuel
+        await writeProfileDiscord(id, { user: presence?.user || null });
+        return;
+      }
       const ok = await writeProfileDiscord(id, {
-        live: presenceChanged ? live : null,
+        live,
         user: presence?.user || null,
       });
-      if (ok && presenceChanged) {
+      if (ok) {
         lastFp.set(id, fp);
         const act = live.activities[0];
         console.log(
