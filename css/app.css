@@ -1007,6 +1007,12 @@
       var(--mf-modal-bg,#100c22);
   }
   .conn-pop.settings-pop[hidden]{display:none !important}
+  /* #settingsBody (cible de body.innerHTML dans renderIndexSettings) est le vrai
+     enfant flex de #settingsPop -- .set-layout n'est qu'un descendant à l'intérieur.
+     Sans ça, #settingsBody (display:block par défaut, flex-grow:0) ne se
+     contraint jamais à la hauteur restante et .set-content ne peut pas scroller
+     (toute la page grandit avec son contenu au lieu de défiler). */
+  .settings-pop #settingsBody{flex:1 1 0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .set-page-head{
     flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:16px 22px;
     border-bottom:1px solid var(--stroke-2);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
@@ -1018,8 +1024,8 @@
   }
   .set-back:hover{background:rgba(145,70,255,.18);border-color:rgba(145,70,255,.5)}
   .set-page-head b{font-family:"Clash Display","Inter",sans-serif;font-size:19px;font-weight:800;letter-spacing:-.01em}
-  .set-layout{flex:1 1 auto;min-height:0;display:flex;max-width:1080px;margin:0 auto;width:100%}
-  .set-nav{flex:0 0 216px;padding:18px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;border-right:1px solid var(--stroke-2)}
+  .set-layout{flex:1 1 0;min-height:0;overflow:hidden;display:flex;max-width:1080px;margin:0 auto;width:100%}
+  .set-nav{flex:0 0 216px;min-height:0;padding:18px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;border-right:1px solid var(--stroke-2)}
   .set-nav button{
     display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;border:none;
     background:transparent;color:var(--ink-dim);font-family:inherit;font-weight:700;font-size:13.5px;
@@ -1027,9 +1033,10 @@
   }
   .set-nav button:hover{color:#fff;background:rgba(255,255,255,.05)}
   .set-nav button.on{color:#fff;background:linear-gradient(180deg,rgba(145,70,255,.28),rgba(107,43,255,.16));box-shadow:0 0 0 1px rgba(145,70,255,.35) inset}
-  .set-nav button .ico{font-size:16px;flex:0 0 auto;width:20px;text-align:center}
-  .set-content{flex:1 1 auto;min-width:0;overflow-y:auto;padding:28px 30px 90px}
+  .set-content{flex:1 1 0;min-width:0;min-height:0;overflow-y:auto;padding:28px 30px 90px;scroll-behavior:smooth}
   .set-panel[hidden]{display:none}
+  .set-panel{scroll-margin-top:10px}
+  .set-panel + .set-panel{margin-top:10px;padding-top:32px;border-top:1px solid var(--stroke-2)}
   .set-panel h2{font-family:"Clash Display","Inter",sans-serif;font-size:22px;font-weight:800;margin:0 0 4px;letter-spacing:-.01em}
   .set-panel .set-panel-sub{color:var(--ink-dim);font-size:13.5px;margin:0 0 22px;line-height:1.5}
   .set-card{background:rgba(255,255,255,.03);border:1px solid var(--stroke-2);border-radius:16px;padding:18px 20px;margin-bottom:16px}

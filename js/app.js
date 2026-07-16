@@ -8238,12 +8238,11 @@
         body.innerHTML = `
           <div class="set-layout">
             <nav class="set-nav">
-              <button type="button" class="on" data-sec="compte"><span class="ico">👤</span>Compte</button>
-              <button type="button" data-sec="notifs"><span class="ico">🔔</span>Notifications</button>
-              <button type="button" data-sec="abo"><span class="ico">💎</span>Abonnement</button>
-              <button type="button" data-sec="legal"><span class="ico">📋</span>Confidentialité &amp; légal</button>
-              <button type="button" data-sec="prefs"><span class="ico">⚙️</span>Préférences</button>
-              <button type="button" data-sec="danger"><span class="ico">⚠️</span>Zone dangereuse</button>
+              <button type="button" class="on" data-sec="compte">Compte</button>
+              <button type="button" data-sec="notifs">Notifications</button>
+              <button type="button" data-sec="abo">Abonnement</button>
+              <button type="button" data-sec="legal">Confidentialité &amp; légal</button>
+              <button type="button" data-sec="prefs">Préférences</button>
             </nav>
             <div class="set-content">
 
@@ -8285,9 +8284,23 @@
                     </div>
                   </div>
                 </div>
+                <div class="set-card ss-danger">
+                  <h3>Déconnexion &amp; suppression</h3>
+                  <button type="button" class="btn" id="ssLogout" data-i18n="logout">Se déconnecter</button>
+                  <button type="button" class="btn ghost-danger" id="ssDelete" data-i18n="set_delete">Supprimer mon compte</button>
+                  <div class="ss-delete-confirm" id="ssDeleteConfirm" hidden>
+                    <p data-i18n="set_delete_warn">Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
+                    <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="${DELETE_WORD}" />
+                    <div class="ss-delete-actions">
+                      <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled data-i18n="set_delete_confirm_btn">Supprimer définitivement</button>
+                      <button type="button" class="btn" id="ssDeleteCancelBtn" data-i18n="set_cancel">Annuler</button>
+                    </div>
+                    <div class="ss-delete-status" id="ssDeleteStatus"></div>
+                  </div>
+                </div>
               </section>
 
-              <section class="set-panel" data-sec="notifs" hidden>
+              <section class="set-panel" data-sec="notifs">
                 <h2>Notifications Discord</h2>
                 <p class="set-panel-sub">Reçois un message privé sur Discord (via un webhook perso) à chaque like, match ou message.</p>
                 <div class="set-card">
@@ -8314,13 +8327,13 @@
                 </div>
               </section>
 
-              <section class="set-panel" data-sec="abo" hidden>
+              <section class="set-panel" data-sec="abo">
                 <h2>Abonnement &amp; facturation</h2>
                 <p class="set-panel-sub">Gère ton abonnement Matefindr Boost — formule, échéance et résiliation.</p>
                 <div class="set-card"><div class="acc-billing" id="accBilling"></div></div>
               </section>
 
-              <section class="set-panel" data-sec="legal" hidden>
+              <section class="set-panel" data-sec="legal">
                 <h2>Confidentialité &amp; légal</h2>
                 <p class="set-panel-sub">Tes droits sur tes données, et les règles du site.</p>
                 <div class="set-legal-warn">⚠️ <span><b>Les Conditions d'utilisation sont un brouillon</b> — rédigées pour encadrer l'usage du site, pas encore relues par un juriste. On te préviendra ici en cas de changement important.</span></div>
@@ -8330,7 +8343,7 @@
                 </div>
                 <div class="set-card">
                   <h3>Tes données</h3>
-                  <p class="set-card-hint">Droit d'accès : exporte une copie complète de ton profil. Droit à l'effacement : supprime ton compte depuis la Zone dangereuse.</p>
+                  <p class="set-card-hint">Droit d'accès : exporte une copie complète de ton profil. Droit à l'effacement : supprime ton compte depuis la partie Compte.</p>
                   <button type="button" class="acc-btn acc-btn--ghost" id="ssExportData" style="width:100%">⬇️ Exporter mes données (JSON)</button>
                 </div>
                 <div class="set-card">
@@ -8340,7 +8353,7 @@
                 </div>
               </section>
 
-              <section class="set-panel" data-sec="prefs" hidden>
+              <section class="set-panel" data-sec="prefs">
                 <h2>Préférences</h2>
                 <p class="set-panel-sub">Langue et réglages audio.</p>
                 <div class="set-card">
@@ -8356,23 +8369,6 @@
                 </div>
               </section>
 
-              <section class="set-panel" data-sec="danger" hidden>
-                <h2 data-i18n="set_danger">Zone dangereuse</h2>
-                <div class="set-card ss-danger">
-                  <button type="button" class="btn" id="ssLogout" data-i18n="logout">Se déconnecter</button>
-                  <button type="button" class="btn ghost-danger" id="ssDelete" data-i18n="set_delete">Supprimer mon compte</button>
-                  <div class="ss-delete-confirm" id="ssDeleteConfirm" hidden>
-                    <p data-i18n="set_delete_warn">Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
-                    <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="${DELETE_WORD}" />
-                    <div class="ss-delete-actions">
-                      <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled data-i18n="set_delete_confirm_btn">Supprimer définitivement</button>
-                      <button type="button" class="btn" id="ssDeleteCancelBtn" data-i18n="set_cancel">Annuler</button>
-                    </div>
-                    <div class="ss-delete-status" id="ssDeleteStatus"></div>
-                  </div>
-                </div>
-              </section>
-
             </div>
           </div>`;
         // Les data-i18n ci-dessus viennent d'être insérés dans le DOM -- applyLang() ne
@@ -8381,14 +8377,44 @@
         // si l'utilisateur avait déjà choisi l'anglais.
         if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(lang, { persist:false });
 
-        // ----- Navigation entre sections -----
+        // ----- Navigation : toutes les sections sont empilées à droite, la nav
+        // de gauche se contente de scroller jusqu'à la zone concernée (et se
+        // met à jour toute seule selon ce qui est visible au scroll). -----
         const navBtns = body.querySelectorAll('.set-nav button[data-sec]');
         const panels = body.querySelectorAll('.set-panel[data-sec]');
-        function showSec(sec){
-          navBtns.forEach(b => b.classList.toggle('on', b.dataset.sec === sec));
-          panels.forEach(pnl => { pnl.hidden = (pnl.dataset.sec !== sec); });
+        const setContent = body.querySelector('.set-content');
+        navBtns.forEach(b => b.addEventListener('click', () => {
+          const target = body.querySelector('.set-panel[data-sec="' + b.dataset.sec + '"]');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }));
+        if (setContent && panels.length) {
+          const panelList = Array.from(panels);
+          let tickingSec = false;
+          function updateActiveSec(){
+            tickingSec = false;
+            // Tout en bas : la dernière section ne peut pas forcément atteindre le
+            // haut du cadre (pas assez de contenu après elle pour la faire remonter),
+            // donc la seuiller comme les autres la laisserait jamais "active".
+            const nearBottom = (setContent.scrollTop + setContent.clientHeight) >= (setContent.scrollHeight - 4);
+            let current = panelList[0];
+            if (nearBottom) {
+              current = panelList[panelList.length - 1];
+            } else {
+              const threshold = setContent.scrollTop + setContent.clientHeight * 0.25;
+              for (const pnl of panelList) {
+                if (pnl.offsetTop <= threshold) current = pnl; else break;
+              }
+            }
+            const sec = current.dataset.sec;
+            navBtns.forEach(b => b.classList.toggle('on', b.dataset.sec === sec));
+          }
+          setContent.addEventListener('scroll', () => {
+            if (tickingSec) return;
+            tickingSec = true;
+            requestAnimationFrame(updateActiveSec);
+          }, { passive: true });
+          updateActiveSec();
         }
-        navBtns.forEach(b => b.addEventListener('click', () => showSec(b.dataset.sec)));
 
         // ----- Compte : âge / genre / pays -----
         const ageEl = body.querySelector('#ssAge');
