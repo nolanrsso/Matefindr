@@ -441,14 +441,14 @@
         +   'border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px);'
         +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
         +   '<div style="font-size:44px;margin-bottom:10px">📋</div>'
-        +   '<h1 style="margin:0 0 10px;font-size:20px">Conditions d\'utilisation</h1>'
-        +   '<p style="color:#b9bbbe;font-size:14px;line-height:1.55;margin:0 0 20px">Pour continuer à utiliser Matefindr, confirme que tu as 18 ans ou plus et que tu acceptes nos <a href="rules.html" target="_blank" rel="noopener" style="color:#c7a5ff">Conditions d\'utilisation</a> (pas de nudité/violence dans les images, pas de musique protégée par le droit d\'auteur dans les vocaux).</p>'
+        +   '<h1 style="margin:0 0 10px;font-size:20px">' + tx('terms_gate_title') + '</h1>'
+        +   '<p style="color:#b9bbbe;font-size:14px;line-height:1.55;margin:0 0 20px">' + tx('terms_gate_desc') + '</p>'
         +   '<button id="mfTermsAccept" type="button" style="display:block;width:100%;padding:13px;border-radius:13px;font-weight:800;font-size:15px;color:#fff;'
         +     'background:linear-gradient(180deg,#9146FF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.4);border:none;cursor:pointer;box-sizing:border-box;margin-bottom:10px">'
-        +     'J\'ai 18 ans et j\'accepte'
+        +     tx('terms_gate_accept')
         +   '</button>'
         +   '<button id="mfTermsLogout" type="button" style="display:block;width:100%;padding:11px;border-radius:13px;font-weight:700;font-size:13px;color:#b9bbbe;'
-        +     'background:rgba(255,255,255,.06);border:none;cursor:pointer;box-sizing:border-box">Refuser et me déconnecter</button>'
+        +     'background:rgba(255,255,255,.06);border:none;cursor:pointer;box-sizing:border-box">' + tx('terms_gate_refuse') + '</button>'
         + '</div>';
       document.body.appendChild(ov);
       document.getElementById('mfTermsAccept').addEventListener('click', () => {
@@ -8214,6 +8214,9 @@
         const MV = window.MatefindrVolume;
         const volPct = Math.round((MV ? MV.getVol() : 0.5) * 100);
         const lang = (typeof window.__mfCurrentLang === 'function') ? window.__mfCurrentLang() : 'FR';
+        // Mot de confirmation attendu pour la suppression — dépend de la langue courante
+        // (SUPPRIMER en FR, DELETE en EN), pas figé en dur.
+        const DELETE_WORD = lang === 'EN' ? 'DELETE' : 'SUPPRIMER';
         let bill;
         if (u.boost) {
           const lifetime = u.boostPlan === 'lifetime';
@@ -8221,45 +8224,50 @@
           bill = `<b>Matefindr Boost</b> ${promo ? '· <span style="color:#5ee6a0">offert (code)</span>' : ''}<br>`
             + `<small>${lifetime ? 'Accès à vie — aucun prélèvement' : ('Mensuel · prochain paiement ' + (u.boostNextPayment ? fmtDate(u.boostNextPayment) : '—'))}</small>`;
         } else {
-          bill = `<b>Gratuit</b><br><small>Aucun abonnement actif</small>`;
+          bill = `<b data-i18n="set_free">Gratuit</b><br><small data-i18n="set_free_sub">Aucun abonnement actif</small>`;
         }
         body.innerHTML = `
           <div class="set-sheet">
             <div class="ss-group">
-              <div class="ss-lbl">Langue</div>
+              <div class="ss-lbl" data-i18n="acc_lang">Langue</div>
               <div class="ss-lang" id="ssLang">
-                <button type="button" data-code="FR" class="${lang==='FR'?'on':''}">🇫🇷 Français</button>
-                <button type="button" data-code="EN" class="${lang==='EN'?'on':''}">🇬🇧 English</button>
+                <button type="button" data-code="FR" class="${lang==='FR'?'on':''}" data-i18n="set_lang_fr">🇫🇷 Français</button>
+                <button type="button" data-code="EN" class="${lang==='EN'?'on':''}" data-i18n="set_lang_en">🇬🇧 English</button>
               </div>
             </div>
             <div class="ss-group">
-              <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${volPct}%</span></div>
+              <div class="ss-lbl"><span data-i18n="set_volume">Volume de la musique</span> <span id="ssVolVal">${volPct}%</span></div>
               <input type="range" id="ssVol" min="0" max="100" value="${volPct}">
             </div>
             <div class="ss-group">
-              <div class="ss-lbl">Abonnement &amp; facturation</div>
+              <div class="ss-lbl" data-i18n="set_billing">Abonnement &amp; facturation</div>
               <div class="ss-bill">${bill}</div>
-              ${u.boost ? '' : '<button type="button" class="btn primary" id="ssBoost" style="width:100%;margin-top:9px">Passer à Matefindr Boost</button>'}
+              ${u.boost ? '' : '<button type="button" class="btn primary" id="ssBoost" style="width:100%;margin-top:9px" data-i18n="set_upgrade">Passer à Matefindr Boost</button>'}
             </div>
             <div class="ss-group">
-              <div class="ss-lbl">Légal</div>
-              <a class="ss-legal-link" href="rules.html" target="_blank" rel="noopener">📋 Conditions d'utilisation</a>
+              <div class="ss-lbl" data-i18n="set_legal">Légal</div>
+              <a class="ss-legal-link" href="rules.html" target="_blank" rel="noopener" data-i18n="set_terms_link">📋 Conditions d'utilisation</a>
             </div>
             <div class="ss-group ss-danger">
-              <div class="ss-lbl">Zone dangereuse</div>
-              <button type="button" class="btn" id="ssLogout">Se déconnecter</button>
-              <button type="button" class="btn ghost-danger" id="ssDelete">Supprimer mon compte</button>
+              <div class="ss-lbl" data-i18n="set_danger">Zone dangereuse</div>
+              <button type="button" class="btn" id="ssLogout" data-i18n="logout">Se déconnecter</button>
+              <button type="button" class="btn ghost-danger" id="ssDelete" data-i18n="set_delete">Supprimer mon compte</button>
               <div class="ss-delete-confirm" id="ssDeleteConfirm" hidden>
-                <p>Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
-                <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="SUPPRIMER" />
+                <p data-i18n="set_delete_warn">Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
+                <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="${DELETE_WORD}" />
                 <div class="ss-delete-actions">
-                  <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled>Supprimer définitivement</button>
-                  <button type="button" class="btn" id="ssDeleteCancelBtn">Annuler</button>
+                  <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled data-i18n="set_delete_confirm_btn">Supprimer définitivement</button>
+                  <button type="button" class="btn" id="ssDeleteCancelBtn" data-i18n="set_cancel">Annuler</button>
                 </div>
                 <div class="ss-delete-status" id="ssDeleteStatus"></div>
               </div>
             </div>
           </div>`;
+        // Les data-i18n ci-dessus viennent d'être insérés dans le DOM -- applyLang() ne
+        // les a jamais vus (il ne scanne qu'au chargement / à un clic de switch), donc
+        // on le rejoue explicitement sur le document pour les traduire immédiatement
+        // si l'utilisateur avait déjà choisi l'anglais.
+        if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(lang, { persist:false });
         body.querySelector('#ssLang').addEventListener('click', (e) => {
           const b = e.target.closest('button[data-code]'); if (!b) return;
           if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(b.dataset.code);
@@ -8309,7 +8317,7 @@
           delBtn.hidden = false;
         });
         delInput?.addEventListener('input', () => {
-          delConfirmBtn.disabled = delInput.value.trim().toUpperCase() !== 'SUPPRIMER';
+          delConfirmBtn.disabled = delInput.value.trim().toUpperCase() !== DELETE_WORD;
         });
         delConfirmBtn?.addEventListener('click', async () => {
           delConfirmBtn.disabled = true;
