@@ -329,7 +329,7 @@
   font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.05;margin:0;
 }
 .tq-daily-btn{
-  position:relative;overflow:visible;
+  position:relative;overflow:visible!important;
   margin:0;padding:6px 11px;border-radius:999px;border:1px solid rgba(120,220,160,.45);
   background:rgba(59,209,124,.16);color:#9ff0c0;font:inherit;font-size:11.5px;font-weight:800;
   cursor:pointer;white-space:nowrap;flex:0 1 auto;
@@ -341,18 +341,26 @@
   border-color:rgba(255,255,255,.14);color:rgba(255,255,255,.55);
 }
 .tq-daily-notif{
-  position:absolute;top:-4px;right:-4px;width:11px;height:11px;border-radius:50%;
+  position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;
   background:linear-gradient(135deg,#FF2D55,#FF7EB6);
   box-shadow:0 0 0 2px rgba(12,10,24,.95),0 0 10px rgba(255,45,85,.65);
-  pointer-events:none;z-index:2;
+  pointer-events:none;z-index:6;
   animation:tq-badge-pop .45s ease-out;
 }
 .tq-daily-btn.is-claimable{animation:tq-quest-pulse 1.4s ease-in-out infinite}
 .tq-quests-top{
   display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;
-  margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.08);
+  margin:0 0 10px;padding:8px 6px 9px 0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  overflow:visible;
 }
-.tq-quests-top-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.tq-quests-top-left{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0;
+  overflow:visible;position:relative;z-index:2;
+}
+/* Laisse la pastille Jour dépasser sans se faire clipper par le body overflow:hidden */
+.tq-modal--quests .tq-body{overflow:visible;display:flex;flex-direction:column;min-height:0;flex:1}
+.tq-modal--quests .tq-scroll{overflow-y:auto;flex:1;min-height:0}
 .tq-coins--quests{font-size:13px}
 .tq-spend-btn{
   padding:7px 13px;border-radius:999px;border:1px solid rgba(255,209,92,.4);
