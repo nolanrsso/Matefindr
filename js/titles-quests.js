@@ -435,8 +435,9 @@
     });
 
     if ((stats.ratingVotes || 0) >= RATING_MIN_VOTERS) {
+      // Possession cumulative : atteindre un palier débloque aussi tous les titres en dessous
       RATING_TITLES.forEach(r => {
-        if (stats.rating >= r.min && stats.rating < r.max) eligible.push(r.id);
+        if (stats.rating >= r.min) eligible.push(r.id);
       });
     }
     return [...new Set(eligible)];
