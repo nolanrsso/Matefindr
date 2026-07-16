@@ -3742,6 +3742,9 @@ function writeState(){
   // l'ancienne URL dans l'état → repoussée en DB → toujours visible par les autres.
   st.user.profileVoice = S.voice ? S.voice.url : null;
   st.profile.connections=Object.assign({},S.connections);
+  // Snapshot du preset actif AVANT de l'embarquer dans l'état cloud — sinon le lien
+  // perso (sharePreset) partait avec un preset sans le dernier crop/stretch.
+  if(typeof syncActivePreset==='function') syncActivePreset();
   // Presets + preset du lien (indépendant de l'équipé) → cloud via buildDbProfile
   if(typeof PRESETS!=='undefined') st.user.presets=PRESETS.slice(0,PSET_MAX);
   if(typeof _sharePresetIdx!=='undefined') st.user.sharePresetIdx=_sharePresetIdx;
@@ -3750,7 +3753,6 @@ function writeState(){
   _lastVisualFingerprint=_fp;
   try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
   scheduleDbSync(); // ← pousse aussi vers Supabase à chaque modif
-  if(typeof syncActivePreset==='function') syncActivePreset(); // sauvegarde aussi dans le preset actif
   if(typeof markStorageSynced==='function') markStorageSynced();
 }
 function persist(){ if(_suppressPersist) return; clearTimeout(_persistT); _persistT=setTimeout(writeState,400); }

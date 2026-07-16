@@ -7418,18 +7418,53 @@
             return out;
           });
         }
+        const mapStickerFields = (g) => {
+          if (!g || typeof g !== 'object') return {};
+          const o = {};
+          if (g.posX != null) { o.posX = g.posX; o.posY = g.posY; o.scale = g.scale; }
+          if (g.cropT) o.cropT = g.cropT;
+          if (g.cropR) o.cropR = g.cropR;
+          if (g.cropB) o.cropB = g.cropB;
+          if (g.cropL) o.cropL = g.cropL;
+          if (g.scaleX != null && g.scaleX !== 1) o.scaleX = g.scaleX;
+          if (g.scaleY != null && g.scaleY !== 1) o.scaleY = g.scaleY;
+          if (typeof g.z === 'number') o.z = g.z;
+          return o;
+        };
         const mapSticker = (g, urlKey) => {
           const pm = g.posByMode || {};
           const d = pm.desktop || { x: g.x, y: g.y, w: g.w, rot: g.rot };
           const url = g[urlKey] || g.url || g.preview || g.full || '';
+          const fields = mapStickerFields(g);
           const out = Object.assign({
             preview: url, full: url, url,
             x: d.x, y: d.y, w: d.w, rot: d.rot,
-          }, g.crop ? { crop: g.crop } : {}, g.z != null ? { z: g.z } : {});
-          if (pm.portrait) out.portrait = Object.assign({ x: pm.portrait.x, y: pm.portrait.y, w: pm.portrait.w, rot: pm.portrait.rot }, pm.portrait.crop ? { crop: pm.portrait.crop } : {});
-          if (pm.landscape) out.landscape = Object.assign({ x: pm.landscape.x, y: pm.landscape.y, w: pm.landscape.w, rot: pm.landscape.rot }, pm.landscape.crop ? { crop: pm.landscape.crop } : {});
-          if (g.portrait) out.portrait = g.portrait;
-          if (g.landscape) out.landscape = g.landscape;
+          }, fields);
+          if (pm.portrait) {
+            out.portrait = Object.assign(
+              { x: pm.portrait.x, y: pm.portrait.y, w: pm.portrait.w, rot: pm.portrait.rot },
+              fields, mapStickerFields(pm.portrait)
+            );
+          }
+          if (pm.landscape) {
+            out.landscape = Object.assign(
+              { x: pm.landscape.x, y: pm.landscape.y, w: pm.landscape.w, rot: pm.landscape.rot },
+              fields, mapStickerFields(pm.landscape)
+            );
+          }
+          // Snapshot writeState / preset : portrait|landscape déjà sérialisés avec crop/stretch
+          if (g.portrait) {
+            out.portrait = Object.assign(
+              { x: g.portrait.x, y: g.portrait.y, w: g.portrait.w, rot: g.portrait.rot },
+              fields, mapStickerFields(g.portrait)
+            );
+          }
+          if (g.landscape) {
+            out.landscape = Object.assign(
+              { x: g.landscape.x, y: g.landscape.y, w: g.landscape.w, rot: g.landscape.rot },
+              fields, mapStickerFields(g.landscape)
+            );
+          }
           return out;
         };
         if (Array.isArray(snap.gifs)) prof.gifs = snap.gifs.map(g => mapSticker(g, 'url'));
