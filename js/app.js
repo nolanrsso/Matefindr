@@ -42,7 +42,7 @@
     window.addEventListener('storage', e => {
       if (e.key !== KEY) return;
       try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
-      if (_previewMode && typeof ensureDeckSync === 'function') ensureDeckSync();
+      if (_previewMode && typeof ensureDeckSync === 'function') ensureDeckSync({ force: true });
     });
 
     function save(){
@@ -819,8 +819,92 @@
         state.user.guilds = g;
         save();
         try { scheduleCloudSync(); } catch(_){}
-        if (document.body.getAttribute('data-screen') === 'swipe') ensureDeckSync();
+        // Soft refresh : met à jour les serveurs en commun SANS rejouer l'anim d'entrée.
+        if (document.body.getAttribute('data-screen') === 'swipe') softRefreshSwipeCard();
       }).catch(() => { _guildRefreshPending = false; });
+    }
+
+    /** Profil actuellement affiché dans #swipeWrap (après ensureDeckSync). */
+    function currentSwipeProfile(){
+      if (_sharedProfile && !_previewMode) return _sharedProfile;
+      if (_previewMode) return _previewProfile || buildUserProfile() || buildMinimalProfile();
+      const pool = genderFilteredProfiles();
+      return pool[deckIdx] || null;
+    }
+
+    function commonGuildsForProfile(p){
+      const myGuilds = (state.user && Array.isArray(state.user.guilds)) ? state.user.guilds : [];
+      if (!p || p.isMe || !Array.isArray(p.guildIds) || !myGuilds.length) return [];
+      const theirs = new Set(p.guildIds.map(String));
+      return myGuilds.filter(g => theirs.has(String(g.id)));
+    }
+
+    function guildsBlockHtml(commonGuilds){
+      const nGuild = commonGuilds.length;
+      if (!nGuild) return '';
+      const guildIconHtml = (g) => g.iconUrl
+        ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
+        : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
+      const guildLabel = nGuild === 1
+        ? `<b>1</b> serveur commun`
+        : `<b>${nGuild}</b> serveurs communs`;
+      return `<div class="card-guilds card-guilds--head" title="${nGuild} serveur${nGuild > 1 ? 's' : ''} Discord en commun">
+          <span class="cg-label">${guildLabel}</span>
+          <div class="cg-icons">
+            ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
+            ${nGuild > 5 ? `<span class="cg-more">+${nGuild - 5}</span>` : ''}
+          </div>
+        </div>`;
+    }
+
+    /** Met à jour la carte déjà à l'écran (guilds / vues) sans wipe ni anim cardIn. */
+    function softRefreshSwipeCard(){
+      const wrap = document.getElementById('swipeWrap');
+      const card = wrap && wrap.querySelector('.swipe-card');
+      const p = currentSwipeProfile();
+      if (!card || !p) return;
+      const sameUid = p.uid && card.dataset.profileUid === String(p.uid);
+      const sameMe = p.isMe && card.dataset.profileMe === '1';
+      if (!sameUid && !sameMe) return;
+
+      const guildsHtml = guildsBlockHtml(commonGuildsForProfile(p));
+      let row = card.querySelector('.card-title-guilds-row');
+      const titleSlot = card.querySelector('.card-title-slot');
+      if (guildsHtml) {
+        if (!row) {
+          row = document.createElement('div');
+          row.className = 'card-title-guilds-row';
+          const handle = card.querySelector('.handle');
+          if (handle && handle.parentElement) {
+            handle.insertAdjacentElement('afterend', row);
+          } else {
+            const body = card.querySelector('.body > div');
+            if (body) body.appendChild(row);
+          }
+        }
+        if (titleSlot && !row.contains(titleSlot)) row.appendChild(titleSlot);
+        else if (!titleSlot && !row.querySelector('.card-title-slot')) {
+          const empty = document.createElement('span');
+          empty.className = 'card-title-slot card-title-slot--empty';
+          empty.setAttribute('aria-hidden', 'true');
+          row.insertBefore(empty, row.firstChild);
+        }
+        const oldG = row.querySelector('.card-guilds--head');
+        if (oldG) oldG.outerHTML = guildsHtml;
+        else row.insertAdjacentHTML('beforeend', guildsHtml);
+        card.classList.add('has-common-guilds');
+      } else {
+        const oldG = card.querySelector('.card-guilds--head');
+        if (oldG) oldG.remove();
+        if (row && !row.querySelector('.card-title-slot:not(.card-title-slot--empty)') && !row.querySelector('.card-guilds')) {
+          row.remove();
+        }
+        card.classList.remove('has-common-guilds');
+      }
+
+      const viewsB = card.querySelector('.card-views b');
+      if (viewsB && typeof p.views === 'number') viewsB.textContent = (p.views || 0).toLocaleString('fr-FR');
+      syncSwipeWrapGradient(p);
     }
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
@@ -1304,7 +1388,7 @@
     window.__matefindrRefreshCard = () => {
       if (typeof ensureDeckSync !== 'function') return;
       if (document.body.getAttribute('data-screen') !== 'swipe') return;
-      if (_previewMode) ensureDeckSync();
+      if (_previewMode) ensureDeckSync({ force: true });
     };
 
     /* Convertit une ligne Supabase (data jsonb OU colonnes legacy) en profil pour buildCard. */
@@ -1513,8 +1597,8 @@
         if (_previewMode) return;
         // On re-rend si le deck était vide (nouveaux profils arrivés), OU si le profil
         // affiché à l'écran a disparu du pool entre-temps (désactivé/supprimé).
-        if (wasEmpty) { ensureDeckSync(); return; }
-        if (shownUid && !genderFilteredProfiles().some(p => p.uid === shownUid)) ensureDeckSync();
+        if (wasEmpty) { ensureDeckSync({ force: true }); return; }
+        if (shownUid && !genderFilteredProfiles().some(p => p.uid === shownUid)) ensureDeckSync({ force: true });
       }).catch(() => {});
     }
     function syncSwipeWrapGradient(p){
@@ -1535,17 +1619,59 @@
         el.style.setProperty('--c2', c2);
       });
     }
-    function ensureDeckSync(){
+    function ensureDeckSync(opts){
+      opts = opts || {};
       refreshMyGuildsIfNeeded();
       const wrap = document.getElementById('swipeWrap');
       if (!wrap) return;
-      wrap.innerHTML = '';
-      // Lien de partage : on montre UNIQUEMENT ce profil (carte + like/dislike, pas de deck).
-      // Jamais en mode aperçu (les deux s'excluent) : sinon la carte partagée peut
-      // rester affichée après avoir quitté l'aperçu (bug de redirection vers /<slug>).
+
+      // ---- Résoudre le profil cible AVANT de vider le DOM ----
+      let p = null;
       if (_sharedProfile && !_previewMode) {
+        p = _sharedProfile;
+      } else {
+        const myP = buildUserProfile() || (_previewMode ? buildMinimalProfile() : null);
+        const previewP = _previewMode ? (_previewProfile || myP) : null;
+        const inPreview = !!(_previewMode && previewP);
+        const pool = _previewMode ? [] : genderFilteredProfiles();
+        const offset = inPreview ? 1 : 0;
+        const total = pool.length + offset;
+        if (deckIdx >= total) {
+          wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+          renderOrbs(null);
+          renderSwipeGifs(null);
+          renderSwipePhotos(null);
+          playProfileEntryMusic(null);
+          if (typeof applyBgChoice === 'function') applyBgChoice(null);
+          document.body.setAttribute('data-swipe-empty', 'true');
+          return;
+        }
         document.body.removeAttribute('data-swipe-empty');
-        if (typeof applyBgChoice === 'function') applyBgChoice(_sharedProfile.bg, _sharedProfile.bgPos);
+        p = inPreview ? previewP : pool[deckIdx];
+      }
+
+      if (!p) {
+        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+        if (typeof applyBgChoice === 'function') applyBgChoice(null);
+        document.body.setAttribute('data-swipe-empty', 'true');
+        return;
+      }
+
+      // Même profil déjà affiché → soft update (pas d'anim d'entrée, pas de reset musique/orbs)
+      const existing = wrap.querySelector('.swipe-card');
+      const sameUid = existing && p.uid && existing.dataset.profileUid === String(p.uid);
+      const sameMe = existing && p.isMe && existing.dataset.profileMe === '1'
+        && (!p.uid || existing.dataset.profileUid === String(p.uid));
+      if (!opts.force && existing && (sameUid || sameMe)) {
+        softRefreshSwipeCard();
+        return;
+      }
+
+      wrap.innerHTML = '';
+      document.body.removeAttribute('data-swipe-empty');
+      if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
+
+      if (_sharedProfile && !_previewMode) {
         try {
           wrap.appendChild(buildCard(_sharedProfile, true));
           syncSwipeWrapGradient(_sharedProfile);
@@ -1556,55 +1682,25 @@
         } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
         return;
       }
+
       const myP = buildUserProfile() || (_previewMode ? buildMinimalProfile() : null);
-      // La carte affichée en mode APERÇU (endroit dédié, figé) : SOIT un profil
-      // tiers explicite (_previewProfile, ouvert depuis un chat/qui-t'a-liké),
-      // SOIT ma propre carte par défaut (comportement historique).
       const previewP = _previewMode ? (_previewProfile || myP) : null;
-      // Une carte n'est dans le deck QU'en mode APERÇU. En mode normal (le hub),
-      // on ne se swipe pas soi-même → deck = uniquement les autres.
       const inPreview = !!(_previewMode && previewP);
-      // En mode APERÇU on ne montre QUE cette carte : jamais d'autres profils, même
-      // si elle manque (sinon on verrait un inconnu sans pouvoir interagir).
       const pool = _previewMode ? [] : genderFilteredProfiles();
       const offset = inPreview ? 1 : 0;
       const total = pool.length + offset;
-      if (deckIdx >= total) {
-        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
-        renderOrbs(null);
-        renderSwipeGifs(null);              // retire les GIFs (plus de carte)
-        renderSwipePhotos(null);            // retire les photos (plus de carte)
-        playProfileEntryMusic(null);        // coupe la musique d'entrée
-        if (typeof applyBgChoice === 'function') applyBgChoice(null);
-        document.body.setAttribute('data-swipe-empty', 'true'); // revert le fond perso
-        return;
-      }
-      document.body.removeAttribute('data-swipe-empty');
-      const p = inPreview ? previewP : pool[deckIdx];
-      if (!p) {
-        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
-        if (typeof applyBgChoice === 'function') applyBgChoice(null);
-        document.body.setAttribute('data-swipe-empty', 'true');
-        return;
-      }
-      // Fond selon le profil affiché : on applique SON choix de fond (p.bg)
-      if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
-      // Filet de sécurité : si un profil défectueux fait planter le rendu, on le SAUTE
-      // au lieu de laisser le deck vide et bloqué (cause du « on ne peut plus swiper »).
       try {
         wrap.appendChild(buildCard(p, true));
         syncSwipeWrapGradient(p);
         renderOrbs(p);
         renderSwipeGifs(p);
         renderSwipePhotos(p);
-        // Musique d'entrée : joue à l'arrivée sur la carte, coupée au swipe suivant
-        // (ensureDeck est rappelé à chaque swipe → stoppe l'ancienne, lance celle de la nouvelle carte)
         playProfileEntryMusic(p);
       } catch (err) {
         console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
         wrap.innerHTML = '';
         if (typeof applyBgChoice === 'function') applyBgChoice(null);
-        if (deckIdx < total - 1) { deckIdx++; ensureDeckSync(); return; }
+        if (deckIdx < total - 1) { deckIdx++; ensureDeckSync({ force: true }); return; }
         wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
         document.body.setAttribute('data-swipe-empty', 'true');
       }
@@ -2069,6 +2165,8 @@
     function buildCard(p, isTop){
       const c = document.createElement('div');
       c.className = 'swipe-card' + (isTop ? ' entering' : '');
+      if (p.uid) c.dataset.profileUid = String(p.uid);
+      if (p.isMe) c.dataset.profileMe = '1';
       c.style.setProperty('--c1', p.c1);
       c.style.setProperty('--c2', p.c2);
       if (!isTop) {
@@ -2139,28 +2237,8 @@
       // (p.guildIds = liste d'IDs stockée dans son profil). On affiche les serveurs via MES
       // propres icônes/noms (je suis forcément dedans aussi). Si l'autre n'a pas encore d'IDs
       // synchronisés → on n'affiche rien (plutôt qu'un faux nombre aléatoire).
-      const myGuilds = (state.user && Array.isArray(state.user.guilds)) ? state.user.guilds : [];
-      let commonGuilds = [];
-      if (!p.isMe && Array.isArray(p.guildIds) && myGuilds.length > 0) {
-        const theirs = new Set(p.guildIds.map(String));
-        commonGuilds = myGuilds.filter(g => theirs.has(String(g.id)));
-      }
-      const guildIconHtml = (g) => g.iconUrl
-        ? `<img class="cg-icon" src="${g.iconUrl}" alt="${escapeHtmlMini(g.name || '')}" title="${escapeHtmlMini(g.name || '')}">`
-        : `<span class="cg-icon cg-icon--ph" title="${escapeHtmlMini(g.name || '')}">${escapeHtmlMini((g.name || '?').charAt(0).toUpperCase())}</span>`;
-      const nGuild = commonGuilds.length;
-      const guildLabel = nGuild === 1
-        ? `<b>1</b> serveur commun`
-        : `<b>${nGuild}</b> serveurs communs`;
-      const guildsHtml = nGuild > 0 ? `
-        <div class="card-guilds card-guilds--head" title="${nGuild} serveur${nGuild > 1 ? 's' : ''} Discord en commun">
-          <span class="cg-label">${guildLabel}</span>
-          <div class="cg-icons">
-            ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
-            ${nGuild > 5 ? `<span class="cg-more">+${nGuild - 5}</span>` : ''}
-          </div>
-        </div>
-      ` : '';
+      const commonGuilds = commonGuildsForProfile(p);
+      const guildsHtml = guildsBlockHtml(commonGuilds);
       const viewsHtml = (p._showViews || p.isMe) ? `<span class="card-views"${p.isMe ? ' data-mine="true"' : ''}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg><b>${(p.views||0).toLocaleString('fr-FR')}</b></span>` : '';
       // Connexions — sous « A rejoint Matefindr », zone flexible jusqu'à ~200px du bas.
       const MC = window.MatefindrConnections;
@@ -7313,7 +7391,7 @@
         if (!localStorage.getItem(seen)) {
           localStorage.setItem(seen, '1');
           window.__supa.rpc('bump_profile_views', { p_id: prof.uid }).then(() => {
-            if (_sharedProfile) { _sharedProfile.views = (_sharedProfile.views || 0) + 1; if (document.body.getAttribute('data-screen') === 'swipe') ensureDeckSync(); }
+            if (_sharedProfile) { _sharedProfile.views = (_sharedProfile.views || 0) + 1; if (document.body.getAttribute('data-screen') === 'swipe') softRefreshSwipeCard(); }
           }).catch(() => {});
         }
       } catch(_){}
@@ -7593,7 +7671,9 @@
       if (dirty) {
         save();
         if (document.body.getAttribute('data-screen') === 'account') renderUserOrbs();
-        if (document.body.getAttribute('data-screen') === 'swipe')   ensureDeck();
+        // Ne pas reconstruire la carte swipe (évite l'anim d'entrée) — les covers
+        // backfillées concernent MES bulles, pas la carte d'autrui à l'écran.
+        if (document.body.getAttribute('data-screen') === 'swipe' && _previewMode) ensureDeckSync({ force: true });
       }
       return dirty;
     }
@@ -7710,8 +7790,10 @@
             if (guildsDirty && typeof scheduleCloudSync === 'function') scheduleCloudSync();
             if (typeof updateChip === 'function') updateChip();
             if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
-            if (typeof ensureDeckSync === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeckSync();
-            else if (typeof ensureDeck === 'function' && document.body.getAttribute('data-screen') === 'swipe') ensureDeck();
+            // Soft refresh : ne pas rejouer l'anim d'entrée de la carte swipe.
+            if (document.body.getAttribute('data-screen') === 'swipe') {
+              if (typeof softRefreshSwipeCard === 'function') softRefreshSwipeCard();
+            }
             console.log('[Matefindr] auto-resync Discord OK');
           } catch (e) { console.warn('[Matefindr] auto-resync failed', e); }
         }
