@@ -56,12 +56,12 @@
     },
   ];
 
-  /* 6 pistes affichées dans la modale Quêtes (bouton quêtes) — pas sur le bloc Discord. */
+  /* Pistes affichées dans la modale Quêtes — Esthétisme en tête. */
   const QUEST_TRACKS = [
+    { group: 'profil', isRating: true, label: 'Esthétisme' },
     { group: 'interaction', statId: 'matches', stat: 'matches', label: 'Matchs' },
     { group: 'interaction', statId: 'votes', stat: 'votesGiven', label: 'Votes sur les autres profils' },
     { group: 'interaction', statId: 'conversations', stat: 'newChats', label: 'Conversations avec de nouvelles personnes' },
-    { group: 'profil', isRating: true, label: 'Beauté' },
     { group: 'profil', statId: 'views', stat: 'views', label: 'Visionnage' },
     { group: 'profil', statId: 'likes_received', stat: 'likesReceived', label: 'Likes sur votre profil' },
   ];
@@ -855,73 +855,52 @@
   function renderQuestsModal(body, stats) {
     refreshPending(stats);
     const td = getTitlesData();
-    const groups = [
-      { id: 'interaction', label: 'Interaction' },
-      { id: 'profil', label: 'Profil' },
-    ];
-    let html = '<div class="tq-scroll">';
-    groups.forEach(g => {
-      html += `<h3 class="tq-group-title">${esc(g.label)}</h3>`;
-      QUEST_TRACKS.filter(t => t.group === g.id).forEach(track => {
-        if (track.isRating) {
-          const m = nextMissionForTrack(track, stats);
-          const p = m ? missionProgress(m, stats) : null;
-          const done = m && td.collected.includes(m.id);
-          const ready = m && td.pending.includes(m.id);
-          const tiersHtml = RATING_TITLES.map(r => {
-            const rm = getMission(r.id);
-            const owned = td.collected.includes(r.id);
-            const active = (stats.ratingVotes || 0) >= RATING_MIN_VOTERS && stats.rating >= r.min && stats.rating < r.max;
-            return `<li class="tq-rating-tier${owned ? ' owned' : ''}${active ? ' active' : ''}"><span>${esc(titleDisplay(rm || { title: r.label, noTranslate: true }))}</span><span class="tq-rating-range">${r.min} – ${r.max}</span></li>`;
-          }).join('');
-          html += `<div class="tq-mission tq-mission--rating${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}">
-            <div class="tq-mission-head">
-              <span class="tq-mission-title">${esc(track.label)}</span>
-              <span class="tq-mission-rarity" data-r="14">★ note</span>
-            </div>
-            <p class="tq-mission-desc">Titres exclusifs selon ta note — <b>pas de pièces</b>, débloqués automatiquement après ${RATING_MIN_VOTERS} votes sur ton profil.</p>
-            ${p ? `<div class="tq-bar"><span style="width:${p.pct.toFixed(1)}%"></span></div>
-            <div class="tq-mission-foot">
-              <span>${p.locked ? `${Math.floor(p.current)}/${RATING_MIN_VOTERS} votants` : `Note ${p.current.toFixed(1)}/5 · ${esc(titleDisplay(m))}`}</span>
-              ${done ? '<span class="tq-done-lbl">Débloqué</span>' : (p.locked ? '' : '<span class="tq-auto-lbl">Auto</span>')}
-            </div>` : ''}
-            <button type="button" class="tq-rating-details-toggle" aria-expanded="false">Voir les titres selon ta note</button>
-            <ul class="tq-rating-tiers" hidden>${tiersHtml}</ul>
-          </div>`;
-          return;
-        }
+    let html = '<div class="tq-scroll tq-quests-list">';
+    QUEST_TRACKS.forEach(track => {
+      if (track.isRating) {
         const m = nextMissionForTrack(track, stats);
-        if (!m) return;
-        const p = missionProgress(m, stats);
-        const done = td.collected.includes(m.id);
-        const ready = td.pending.includes(m.id);
-        const coinLvl = missionCoinLevel(m);
-        const coinReward = coinLvl >= 0 ? questCoinReward(coinLvl) : 0;
-        html += `<div class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
+        const p = m ? missionProgress(m, stats) : null;
+        const done = m && td.collected.includes(m.id);
+        const ready = m && td.pending.includes(m.id);
+        const noteLbl = p
+          ? (p.locked
+            ? `${Math.floor(p.current)} / ${RATING_MIN_VOTERS} votants`
+            : `Note ${Number(p.current).toFixed(1)} / 5`)
+          : '';
+        html += `<article class="tq-mission tq-mission--hero tq-mission--rating${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}">
           <div class="tq-mission-head">
             <span class="tq-mission-title">${esc(track.label)}</span>
-            <span class="tq-mission-rarity" data-r="${m.rarity || 1}">★${m.rarity || 1}</span>
+            ${done ? '<span class="tq-done-lbl">Débloqué</span>' : (p && !p.locked ? '<span class="tq-auto-lbl">Auto</span>' : '')}
           </div>
-          <p class="tq-mission-desc">Prochain titre : <b>${esc(m.title)}</b>${coinReward ? ` · <span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}</p>
-          <div class="tq-bar"><span style="width:${p.pct.toFixed(1)}%"></span></div>
+          <p class="tq-mission-desc">Ta note de profil après ${RATING_MIN_VOTERS} votes — progression automatique.</p>
+          ${p ? `<div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${p.pct.toFixed(1)}%"></span></div>
           <div class="tq-mission-foot">
-            <span>${`${Math.floor(p.current)} / ${p.target}`}</span>
-            ${ready ? `<button type="button" class="tq-collect" data-collect="${esc(m.id)}">Récolter</button>` : (done ? '<span class="tq-done-lbl">Obtenu</span>' : '')}
-          </div>
-        </div>`;
-      });
+            <span class="tq-mission-count">${esc(noteLbl)}</span>
+          </div>` : ''}
+        </article>`;
+        return;
+      }
+      const m = nextMissionForTrack(track, stats);
+      if (!m) return;
+      const p = missionProgress(m, stats);
+      const done = td.collected.includes(m.id);
+      const ready = td.pending.includes(m.id);
+      const coinLvl = missionCoinLevel(m);
+      const coinReward = coinLvl >= 0 ? questCoinReward(coinLvl) : 0;
+      html += `<article class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
+        <div class="tq-mission-head">
+          <span class="tq-mission-title">${esc(track.label)}</span>
+          ${coinReward && !done ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
+        </div>
+        <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(p.pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${p.pct.toFixed(1)}%"></span></div>
+        <div class="tq-mission-foot">
+          <span class="tq-mission-count">${Math.floor(p.current)} / ${p.target}</span>
+          ${ready ? `<button type="button" class="tq-collect" data-collect="${esc(m.id)}">Récolter</button>` : (done ? '<span class="tq-done-lbl">Obtenu</span>' : '')}
+        </div>
+      </article>`;
     });
     html += '</div>';
     body.innerHTML = html;
-    body.querySelectorAll('.tq-rating-details-toggle').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const list = btn.nextElementSibling;
-        const open = list.hasAttribute('hidden');
-        list.toggleAttribute('hidden', !open);
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        btn.textContent = open ? 'Masquer les titres' : 'Voir les titres selon ta note';
-      });
-    });
     body.querySelectorAll('[data-collect]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (collectMission(btn.getAttribute('data-collect'))) {
@@ -1035,10 +1014,14 @@
   }
 
   function ensureModals() {
-    if ($('questsBackdrop')) return;
+    if ($('questsBackdrop')) {
+      const qp = $('questsPop');
+      if (qp && !qp.classList.contains('tq-modal--quests')) qp.classList.add('tq-modal--quests');
+      return;
+    }
     document.body.insertAdjacentHTML('beforeend', `
 <div class="conn-pop-backdrop tq-backdrop" id="questsBackdrop" hidden></div>
-<div class="conn-pop tq-modal" id="questsPop" hidden role="dialog" aria-labelledby="questsTitle">
+<div class="conn-pop tq-modal tq-modal--quests" id="questsPop" hidden role="dialog" aria-labelledby="questsTitle">
   <div class="conn-pick-head"><h3 id="questsTitle">Quêtes</h3><button type="button" class="cp-close tq-close" id="questsClose" aria-label="Fermer">✕</button></div>
   <div class="tq-body" id="questsBody"></div>
 </div>

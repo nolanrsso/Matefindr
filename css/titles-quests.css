@@ -304,47 +304,89 @@
 
 /* Quêtes & titres modales */
 .tq-modal{width:min(94vw,480px);max-height:min(86vh,640px);display:flex;flex-direction:column;padding:18px 18px 16px}
+/* Modale Quêtes : format 4/3, plus aérée */
+.tq-modal--quests{
+  width:min(92vw,560px);
+  aspect-ratio:4 / 3;
+  height:auto;
+  max-height:min(90vh,720px);
+  max-width:min(92vw,calc(min(90vh,720px) * 4 / 3));
+  padding:20px 20px 18px;
+  border-radius:22px;
+  background:linear-gradient(165deg,rgba(32,26,62,.98),rgba(16,12,34,.99));
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 28px 80px rgba(0,0,0,.65),0 0 0 1px rgba(145,70,255,.12) inset;
+}
+.tq-modal--quests .conn-pick-head{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.tq-modal--quests .conn-pick-head h3{font-size:20px;font-weight:800;letter-spacing:-.02em}
 .tq-body{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
 .tq-scroll{overflow-y:auto;flex:1;min-height:0;padding-right:4px;scrollbar-width:thin}
+.tq-quests-list{display:flex;flex-direction:column;gap:10px;padding:2px 2px 8px}
 .tq-group-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin:14px 0 8px}
 .tq-group-title:first-child{margin-top:0}
 .tq-mission{
-  padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.04);margin-bottom:8px;
+  padding:14px 14px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.09);
+  background:rgba(255,255,255,.045);margin-bottom:0;
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease;
 }
-.tq-mission--ready{border-color:rgba(145,70,255,.45);background:rgba(145,70,255,.1)}
-.tq-mission--done{opacity:.72}
-.tq-mission-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.tq-mission-title{font-weight:800;font-size:13.5px;color:#fff}
-.tq-mission-rarity{font-size:11px;color:#FFD15C;font-weight:700}
-.tq-mission-desc{font-size:12px;color:var(--dim);margin:4px 0 8px;line-height:1.35}
+.tq-mission--hero{
+  padding:16px 16px 14px;
+  background:linear-gradient(145deg,rgba(255,126,182,.12),rgba(145,70,255,.08) 55%,rgba(255,255,255,.03));
+  border-color:rgba(255,126,182,.28);
+  box-shadow:0 10px 28px rgba(145,70,255,.12);
+}
+.tq-mission--ready{
+  border-color:rgba(145,70,255,.55);
+  background:rgba(145,70,255,.12);
+  box-shadow:0 0 0 1px rgba(145,70,255,.2),0 12px 32px rgba(145,70,255,.18);
+}
+.tq-mission--done{opacity:.78}
+.tq-mission-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.tq-mission-title{font-weight:800;font-size:15px;color:#fff;letter-spacing:-.01em}
+.tq-mission-rarity{display:none}
+.tq-mission-desc{font-size:12.5px;color:var(--dim);margin:0 0 12px;line-height:1.4}
 .tq-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
-.tq-bar span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#9146FF,#FF7EB6)}
-.tq-mission-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;font-size:11.5px;color:var(--dim)}
+.tq-bar--lg{
+  height:22px;border-radius:12px;background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 3px rgba(0,0,0,.35);
+}
+.tq-bar span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#9146FF,#FF7EB6);transition:width .35s ease}
+.tq-bar--lg span{
+  border-radius:10px;
+  background:linear-gradient(90deg,#7B3FE4 0%,#9146FF 35%,#FF7EB6 100%);
+  box-shadow:0 0 16px rgba(145,70,255,.45),inset 0 1px 0 rgba(255,255,255,.25);
+}
+.tq-mission--rating .tq-bar--lg span{
+  background:linear-gradient(90deg,#E85A9B 0%,#FF7EB6 40%,#FFD15C 100%);
+  box-shadow:0 0 16px rgba(255,126,182,.4),inset 0 1px 0 rgba(255,255,255,.28);
+}
+.tq-mission-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:13px;color:var(--dim)}
+.tq-mission-count{font-weight:700;font-size:13.5px;color:#e8e6f2;font-variant-numeric:tabular-nums}
 .tq-collect{
-  padding:5px 12px;border-radius:999px;border:none;cursor:pointer;font:inherit;font-size:12px;font-weight:800;
+  padding:8px 16px;border-radius:999px;border:none;cursor:pointer;font:inherit;font-size:13px;font-weight:800;
   background:linear-gradient(135deg,#9146FF,#FF7EB6);color:#fff;
+  box-shadow:0 6px 18px rgba(145,70,255,.35);
 }
 .tq-collect:hover{filter:brightness(1.06)}
-.tq-done-lbl{color:#23a559;font-weight:700;font-size:11px}
-.tq-auto-lbl{color:#9146FF;font-weight:700;font-size:11px}
-.tq-coin-reward{color:#FFD15C;font-weight:800;font-size:11.5px;white-space:nowrap}
+.tq-done-lbl{color:#23a559;font-weight:800;font-size:12px}
+.tq-auto-lbl{color:#FF7EB6;font-weight:800;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase}
+.tq-coin-reward{
+  color:#FFD15C;font-weight:800;font-size:12.5px;white-space:nowrap;
+  padding:4px 9px;border-radius:999px;background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.28);
+}
 .tq-mission--rating{border-color:rgba(255,126,182,.25)}
-.tq-rating-details-toggle{
-  margin-top:8px;padding:0;border:none;background:none;cursor:pointer;font:inherit;
-  font-size:11.5px;font-weight:700;color:#FF7EB6;text-decoration:underline;text-underline-offset:2px;
+.tq-rating-details-toggle,.tq-rating-tiers{display:none!important}
+@media (max-width:520px){
+  .tq-modal--quests{
+    width:min(96vw,100%);
+    aspect-ratio:auto;
+    height:min(88vh,720px);
+    max-height:88vh;
+    max-width:96vw;
+  }
+  .tq-bar--lg{height:18px}
+  .tq-mission-title{font-size:14px}
 }
-.tq-rating-details-toggle:hover{color:#fff}
-.tq-rating-tiers{
-  list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;
-}
-.tq-rating-tier{
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:6px 8px;border-radius:8px;background:rgba(255,255,255,.04);font-size:11.5px;color:var(--dim);
-}
-.tq-rating-tier.active{background:rgba(145,70,255,.14);color:#fff;border:1px solid rgba(145,70,255,.35)}
-.tq-rating-tier.owned{color:#23a559}
-.tq-rating-range{font-size:10.5px;color:var(--dim);font-weight:600}
 .tq-shop-row{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:9px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
