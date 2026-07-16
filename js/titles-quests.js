@@ -644,6 +644,7 @@
     const claimable = [];
     eligible.forEach(id => {
       if (ratingIds.includes(id)) return;
+      if (!isVisibleQuestClaimId(id)) return;
       const m = getMission(id);
       const lvl = missionCoinLevel(m);
       if (lvl < 0) return;
@@ -693,7 +694,8 @@
 
   function missionCoinLevel(m) {
     if (!m || isRatingTitle(m) || m.stat === 'beta') return -1;
-    if (m.id === VOTES_UNLOCK.id) return 0;
+    // Déblocage Esthétisme : pas une quête à pièces
+    if (m.id === VOTES_UNLOCK.id) return -1;
     const match = String(m.id).match(/^(\w+)_(\d+)$/);
     if (!match) return -1;
     const th = parseInt(match[2], 10);
@@ -701,6 +703,20 @@
     if (idx >= 0) return idx;
     if (th >= 2500) return MILESTONES.length + Math.floor((th - 2500) / 500);
     return -1;
+  }
+
+  function questTrackStatIds() {
+    const ids = new Set();
+    QUEST_TRACKS.forEach(t => { if (t.statId) ids.add(t.statId); });
+    return ids;
+  }
+
+  /** Uniquement les paliers visibles dans la modale Quêtes (+ bonus quotidien). */
+  function isVisibleQuestClaimId(id) {
+    if (id === 'daily_login') return true;
+    const match = String(id || '').match(/^([a-z_]+)_(\d+)$/i);
+    if (!match) return false;
+    return questTrackStatIds().has(match[1]);
   }
 
   function questCoinReward(levelIndex) {
@@ -811,7 +827,7 @@
       questCoinClaims: getQuestCoinClaims(),
       titlesData: getTitlesData(),
     }, { autoClaimCoins: false });
-    const ids = result.claimable || [];
+    const ids = (result.claimable || []).filter(isVisibleQuestClaimId);
     if (evalDailyLogin().claimable) ids.push('daily_login');
     return ids;
   }
