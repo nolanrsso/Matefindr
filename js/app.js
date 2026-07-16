@@ -120,6 +120,7 @@
           if (!slug) {
             _sharedProfile = null;
             document.body.removeAttribute('data-shared');
+            document.body.removeAttribute('data-shared-own');
           }
         }
         deckIdx = 0; ensureDeck(true); refreshMyStatusUI(); refreshSwipeTools();
@@ -496,6 +497,7 @@
             if (pa && pa.action === 'like' && pa.uid && typeof recordLike === 'function') recordLike({ uid: pa.uid });
             _sharedProfile = null;
             document.body.removeAttribute('data-shared');
+            document.body.removeAttribute('data-shared-own');
             try { history.replaceState(null, '', '/'); } catch(_){}
           }
         } catch(_){}
@@ -5063,6 +5065,11 @@
     // l'éditeur avec #preview (géré dans handleEditorReturn plus bas).
     document.getElementById('accPreviewFull')?.addEventListener('click', enterPreviewMode);
     document.getElementById('previewExitBtn')?.addEventListener('click', () => {
+      // Aperçu de ton propre lien perso (matefindr.com/<slug> en étant connecté)
+      if (document.body.getAttribute('data-shared-own') === 'true' && typeof finishShared === 'function') {
+        finishShared();
+        return;
+      }
       // Signal robuste posé par l'éditeur avant la navigation (survit aux races
       // entre onLogin/handleEditorReturn, contrairement à la variable JS seule).
       let fromEditor = _previewFromEditor;
@@ -7432,32 +7439,30 @@
       } catch(e){ console.warn('[Matefindr] shared profile fetch', e); }
       if (!prof) { try { history.replaceState(null,'','/'); } catch(_){} revealApp(); return; } // slug inconnu → app normale
       if (prof.disabled === true) { try { history.replaceState(null,'','/'); } catch(_){} showAccountDisabledMessage(); return; }
-      // Propriétaire connecté sur son propre lien perso → hub normal (swipe + éditeur),
-      // pas le mode visiteur (like/dislike masqués, une seule carte figée).
+      // Propriétaire connecté sur son propre lien → aperçu visiteur (ne plus renvoyer
+      // silencieusement à l'accueil : ça donnait l'impression que le lien était cassé).
+      let isOwnLink = false;
       try {
         const { data: { session } } = await window.__supa.auth.getSession();
-        if (session && prof.uid === session.user.id) {
-          _sharedProfile = null;
-          document.body.removeAttribute('data-shared');
-          try { history.replaceState(null, '', '/'); } catch(_){}
-          revealApp();
-          if (typeof enterFullApp === 'function') enterFullApp();
-          return;
-        }
+        if (session && prof.uid === session.user.id) isOwnLink = true;
       } catch(_){}
       prof._showViews = true;
       _sharedProfile = prof;
-      document.body.setAttribute('data-shared', 'true'); // masque like/dislike/swipe/FABs, montre cœur + commentaires
-      // Compteur de vues : +1 une seule fois par navigateur pour ce profil.
-      try {
-        const seen = 'mf_viewed_' + prof.uid;
-        if (!localStorage.getItem(seen)) {
-          localStorage.setItem(seen, '1');
-          window.__supa.rpc('bump_profile_views', { p_id: prof.uid }).then(() => {
-            if (_sharedProfile) { _sharedProfile.views = (_sharedProfile.views || 0) + 1; if (document.body.getAttribute('data-screen') === 'swipe') softRefreshSwipeCard(); }
-          }).catch(() => {});
-        }
-      } catch(_){}
+      document.body.setAttribute('data-shared', 'true');
+      if (isOwnLink) document.body.setAttribute('data-shared-own', 'true');
+      else document.body.removeAttribute('data-shared-own');
+      // Compteur de vues : +1 une seule fois par navigateur pour ce profil (pas pour soi).
+      if (!isOwnLink) {
+        try {
+          const seen = 'mf_viewed_' + prof.uid;
+          if (!localStorage.getItem(seen)) {
+            localStorage.setItem(seen, '1');
+            window.__supa.rpc('bump_profile_views', { p_id: prof.uid }).then(() => {
+              if (_sharedProfile) { _sharedProfile.views = (_sharedProfile.views || 0) + 1; if (document.body.getAttribute('data-screen') === 'swipe') softRefreshSwipeCard(); }
+            }).catch(() => {});
+          }
+        } catch(_){}
+      }
       setScreen('swipe'); // ensureDeckSync affiche _sharedProfile
     }
     async function handleSharedAction(action){
@@ -7477,6 +7482,7 @@
     function finishShared(){
       _sharedProfile = null;
       document.body.removeAttribute('data-shared');
+      document.body.removeAttribute('data-shared-own');
       let openEditor = false;
       try { openEditor = sessionStorage.getItem('mf_open_editor') === '1'; sessionStorage.removeItem('mf_open_editor'); } catch(_){}
       if (openEditor) { location.href = 'editor.html'; return; }

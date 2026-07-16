@@ -2205,6 +2205,15 @@
     box-shadow:0 14px 40px rgba(0,0,0,.5);
     position:relative;z-index:400; /* calque le plus haut (hors #gate) -- rien ne doit passer devant */
   }
+  /* Propriétaire sur son propre lien : aperçu visiteur, sans se noter soi-même */
+  body[data-shared-own="true"] .shared-reactions{display:none !important}
+  body[data-shared-own="true"] .preview-exit-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:60px;padding:0 26px;border-radius:20px;cursor:pointer;
+    background:linear-gradient(135deg,#2f3136,#1c1d22);color:#fff;border:1.5px solid rgba(255,255,255,.18);
+    font-family:inherit;font-size:15px;font-weight:700;
+    box-shadow:0 14px 40px rgba(0,0,0,.55);transition:transform .15s ease, background .15s ease;
+  }
+  body[data-shared-own="true"] .preview-exit-btn:hover{transform:translateY(-2px);background:linear-gradient(135deg,#3a3d44,#26272e)}
 
   /* Bouton "react" (entre Passer et Liker) : révèle un popup de 5 emojis au-dessus,
      ne swipe/dismiss JAMAIS la carte -- ne modifie que le graphique de réactions.
