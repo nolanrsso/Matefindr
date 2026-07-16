@@ -61,39 +61,35 @@
 .discord-floor-act-detail .discord-activity{margin:0}
 .discord-floor--has-act{overflow:visible}
 
-/* Discord activity (Spotify…) — détail au survol */
-.discord-floor .discord-activity,
-.swipe-card .discord-activity{
+/* Discord activity (Spotify…) — styles GLOBAUX (aussi hors carte = portail hover) */
+.discord-activity{
   background:#2b2d31;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;
+  box-sizing:border-box;width:100%;max-width:100%;
 }
+.discord-activity--spotify{background:linear-gradient(135deg,#3d1f1f 0%,#2a1515 100%)}
+.discord-activity-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.discord-activity-kind{font-size:11px;font-weight:700;color:#b9bbbe;letter-spacing:.01em}
+.discord-activity-brand{width:16px;height:16px;opacity:.75;flex:0 0 auto;display:block}
+.discord-activity-body{display:flex;align-items:flex-start;gap:10px;min-width:0;width:100%}
+.discord-activity-cover{
+  width:48px !important;height:48px !important;max-width:48px;max-height:48px;
+  border-radius:6px;object-fit:cover;flex:0 0 48px;background:rgba(0,0,0,.25);
+  display:block;box-sizing:border-box;
+}
+.discord-activity-cover--ph{display:grid;place-items:center;overflow:hidden}
+.discord-activity-cover--ph svg{width:22px;height:22px;display:block}
+.discord-activity-meta{flex:1;min-width:0;font-size:12.5px;line-height:1.35}
+.discord-activity-meta b{display:block;font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.discord-activity-meta > span{display:block;color:#b9bbbe;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.discord-activity-progress{height:3px;border-radius:99px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}
+.discord-activity-progress span{display:block;height:100%;background:#fff;border-radius:99px;max-width:100%}
+.discord-activity-times{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.55);margin-top:4px}
+
+/* Alias sous .discord-floor / .swipe-card (rétrocompat) */
+.discord-floor .discord-activity,
+.swipe-card .discord-activity{ /* hérite des règles globales */ }
 .discord-floor .discord-activity--spotify,
 .swipe-card .discord-activity--spotify{background:linear-gradient(135deg,#3d1f1f 0%,#2a1515 100%)}
-.discord-floor .discord-activity-head,
-.swipe-card .discord-activity-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.discord-floor .discord-activity-kind,
-.swipe-card .discord-activity-kind{font-size:11px;font-weight:700;color:#b9bbbe;letter-spacing:.01em}
-.discord-floor .discord-activity-brand,
-.swipe-card .discord-activity-brand{width:16px;height:16px;opacity:.75;flex:0 0 auto}
-.discord-floor .discord-activity-body,
-.swipe-card .discord-activity-body{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.discord-floor .discord-activity-cover,
-.swipe-card .discord-activity-cover{
-  width:48px;height:48px;border-radius:6px;object-fit:cover;flex:0 0 auto;background:rgba(0,0,0,.25);
-}
-.discord-floor .discord-activity-cover--ph,
-.swipe-card .discord-activity-cover--ph{display:grid;place-items:center}
-.discord-floor .discord-activity-meta,
-.swipe-card .discord-activity-meta{flex:1;min-width:0;font-size:12.5px;line-height:1.35}
-.discord-floor .discord-activity-meta b,
-.swipe-card .discord-activity-meta b{display:block;font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.discord-floor .discord-activity-meta > span,
-.swipe-card .discord-activity-meta > span{display:block;color:#b9bbbe;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
-.discord-floor .discord-activity-progress,
-.swipe-card .discord-activity-progress{height:3px;border-radius:99px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}
-.discord-floor .discord-activity-progress span,
-.swipe-card .discord-activity-progress span{display:block;height:100%;background:#fff;border-radius:99px}
-.discord-floor .discord-activity-times,
-.swipe-card .discord-activity-times{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.55);margin-top:4px}
 
 /* Titre de profil — sous le @tag, au-dessus du séparateur */
 

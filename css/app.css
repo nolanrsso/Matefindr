@@ -1720,8 +1720,12 @@
   .swipe-card .discord-activity-kind{font-size:11px;font-weight:700;color:#b9bbbe;letter-spacing:.01em}
   .swipe-card .discord-activity-brand{width:16px;height:16px;opacity:.75;flex:0 0 auto}
   .swipe-card .discord-activity-body{display:flex;align-items:flex-start;gap:10px;min-width:0}
-  .swipe-card .discord-activity-cover{
-    width:48px;height:48px;border-radius:6px;object-fit:cover;flex:0 0 auto;background:rgba(0,0,0,.25);
+  /* Discord activity — taille cover forcée (portail hors .swipe-card aussi) */
+  .swipe-card .discord-activity-cover,
+  .discord-floor-act-detail .discord-activity-cover,
+  .discord-activity-cover{
+    width:48px !important;height:48px !important;max-width:48px;max-height:48px;
+    border-radius:6px;object-fit:cover;flex:0 0 48px;background:rgba(0,0,0,.25);
   }
   .swipe-card .discord-activity-cover--ph{display:grid;place-items:center}
   .swipe-card .discord-activity-meta{flex:1;min-width:0;font-size:12.5px;line-height:1.35}
