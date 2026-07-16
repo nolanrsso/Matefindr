@@ -700,21 +700,26 @@
     if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
   }
 
-  /** Jour N → N × 50 pièces (jour 1 = 50, jour 2 = 100, …). */
+  /** Jour N → 50 + (N−1)×25 (jour 1 = 50, jour 2 = 75, jour 3 = 100…). */
   function dailyLoginReward(day) {
     const n = Math.max(1, Math.floor(day || 1));
-    return n * 50;
+    return 50 + (n - 1) * 25;
   }
 
   function evalDailyLogin() {
     const cur = getDailyLogin();
     const today = localDayKey();
     if (cur.lastClaim === today) {
+      const claimed = cur.streak || 1;
+      const nextDay = claimed + 1;
       return {
-        streak: cur.streak || 1,
+        streak: claimed,
         claimable: false,
-        reward: dailyLoginReward(cur.streak || 1),
-        dayLabel: cur.streak || 1,
+        reward: dailyLoginReward(claimed),
+        // Bouton : prévisualise le prochain jour (non cliquable)
+        btnDay: nextDay,
+        btnReward: dailyLoginReward(nextDay),
+        dayLabel: claimed,
       };
     }
     const nextStreak = (cur.lastClaim === yesterdayKey()) ? (cur.streak || 0) + 1 : 1;
@@ -722,6 +727,8 @@
       streak: nextStreak,
       claimable: true,
       reward: dailyLoginReward(nextStreak),
+      btnDay: nextStreak,
+      btnReward: dailyLoginReward(nextStreak),
       dayLabel: nextStreak,
     };
   }
@@ -1298,35 +1305,40 @@
     return getMission(missionId(track.statId, targetTh));
   }
 
+  function renderQuestsDailyBtn(stats) {
+    const daily = evalDailyLogin();
+    const btn = $('questsDailyBtn');
+    if (!btn) return;
+    btn.textContent = `Jour ${daily.btnDay} = ${daily.btnReward} pièces`;
+    btn.disabled = !daily.claimable;
+    btn.classList.toggle('is-claimable', daily.claimable);
+    btn.classList.toggle('is-locked', !daily.claimable);
+    btn.setAttribute('aria-label', daily.claimable
+      ? `Réclamer bonus jour ${daily.btnDay}`
+      : `Bonus jour ${daily.btnDay} demain`);
+    if (!btn.dataset.tqDailyBound) {
+      btn.dataset.tqDailyBound = '1';
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        const res = claimDailyLogin();
+        if (!res) return;
+        tqToast(`Jour ${res.streak} · +${res.gained.toLocaleString('fr-FR')} pièces !`);
+        global.MatefindrTitlesQuests.openQuests({ refresh: true });
+      });
+    }
+  }
+
   function renderQuestsModal(body, stats) {
     refreshPending(stats);
     const td = getTitlesData();
     const claims = getQuestCoinClaims();
     const coins = getCoins();
-    const daily = evalDailyLogin();
+    renderQuestsDailyBtn(stats);
     let html = `<div class="tq-quests-top">
       <div class="tq-coins tq-coins--quests" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
       <button type="button" class="tq-spend-btn" data-open-titles>Dépenser · acheter des titres</button>
     </div>
     <div class="tq-scroll tq-quests-list">`;
-    html += `<article class="tq-mission tq-mission--daily${daily.claimable ? ' tq-mission--ready' : ' tq-mission--done'}">
-      <div class="tq-mission-head">
-        <span class="tq-mission-head-left">
-          <span class="tq-mission-title">Bonus connexion quotidienne</span>
-          <span class="tq-lvl-badge">Jour ${daily.dayLabel}</span>
-        </span>
-        <span class="tq-mission-head-right">
-          <span class="tq-coin-reward">+${daily.reward} 🪙</span>
-        </span>
-      </div>
-      <p class="tq-mission-desc tq-mission-desc--show">Connecte-toi chaque jour : jour 1 = 50, jour 2 = 100, jour 3 = 150…</p>
-      <div class="tq-mission-foot">
-        <span class="tq-mission-count">${daily.claimable ? 'Disponible aujourd\'hui' : 'Déjà réclamé aujourd\'hui'}</span>
-        ${daily.claimable
-          ? `<button type="button" class="tq-collect" data-claim-daily>Réclamer · +${daily.reward} 🪙</button>`
-          : '<span class="tq-done-lbl">OK</span>'}
-      </div>
-    </article>`;
     QUEST_TRACKS.forEach(track => {
       if (track.isRating) {
         const arrow = beautyArrow(stats);
@@ -1400,15 +1412,6 @@
         global.MatefindrTitlesQuests.openQuests({ refresh: true, stats });
       });
     });
-    const dailyBtn = body.querySelector('[data-claim-daily]');
-    if (dailyBtn) {
-      dailyBtn.addEventListener('click', () => {
-        const res = claimDailyLogin();
-        if (!res) return;
-        tqToast(`Jour ${res.streak} · +${res.gained.toLocaleString('fr-FR')} pièces !`);
-        global.MatefindrTitlesQuests.openQuests({ refresh: true, stats });
-      });
-    }
     const toggleBtn = body.querySelector('[data-toggle-beauty-titles]');
     const panel = body.querySelector('#tqBeautyTitles');
     if (toggleBtn && panel) {
@@ -1554,12 +1557,17 @@
     if ($('questsBackdrop')) {
       const qp = $('questsPop');
       if (qp && !qp.classList.contains('tq-modal--quests')) qp.classList.add('tq-modal--quests');
+      ensureQuestsHead();
       return;
     }
     document.body.insertAdjacentHTML('beforeend', `
 <div class="conn-pop-backdrop tq-backdrop" id="questsBackdrop" hidden></div>
 <div class="conn-pop tq-modal tq-modal--quests" id="questsPop" hidden role="dialog" aria-labelledby="questsTitle">
-  <div class="conn-pick-head"><h3 id="questsTitle">Quêtes</h3><button type="button" class="cp-close tq-close" id="questsClose" aria-label="Fermer">✕</button></div>
+  <div class="conn-pick-head tq-quests-head">
+    <h3 id="questsTitle">Quêtes</h3>
+    <button type="button" class="tq-daily-btn" id="questsDailyBtn">Jour 1 = 50 pièces</button>
+    <button type="button" class="cp-close tq-close" id="questsClose" aria-label="Fermer">✕</button>
+  </div>
   <div class="tq-body" id="questsBody"></div>
 </div>
 <div class="conn-pop-backdrop tq-backdrop" id="titlesBackdrop" hidden></div>
@@ -1571,6 +1579,23 @@
       $(kind + 'Backdrop')?.addEventListener('click', () => closeModal(kind));
       $(kind + 'Close')?.addEventListener('click', () => closeModal(kind));
     });
+  }
+
+  function ensureQuestsHead() {
+    const head = $('questsPop')?.querySelector('.conn-pick-head');
+    if (!head) return;
+    head.classList.add('tq-quests-head');
+    if (!$('questsDailyBtn')) {
+      const h3 = head.querySelector('h3');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tq-daily-btn';
+      btn.id = 'questsDailyBtn';
+      btn.textContent = 'Jour 1 = 50 pièces';
+      if (h3 && h3.nextSibling) head.insertBefore(btn, h3.nextSibling);
+      else if (h3) h3.after(btn);
+      else head.prepend(btn);
+    }
   }
 
   function openModal(kind, renderFn, stats) {
