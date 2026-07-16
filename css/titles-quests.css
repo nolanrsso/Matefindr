@@ -46,10 +46,14 @@
   width:min(280px,72vw);padding:8px;border-radius:12px;
   background:rgba(12,10,24,.97);border:1px solid rgba(255,255,255,.14);
   box-shadow:0 14px 36px rgba(0,0,0,.55);
-  flex-direction:column;gap:8px;
+  flex-direction:column;gap:8px;pointer-events:auto;
 }
-.discord-floor-act:hover .discord-floor-act-detail,
-.discord-floor-act:focus-within .discord-floor-act-detail{display:flex}
+/* Ouvert via JS en portail fixed (hors overflow:hidden de .swipe-card) */
+.discord-floor-act-detail.is-open,
+.discord-floor-act-detail.discord-floor-act-detail--portal{
+  display:flex !important;position:fixed;z-index:10050;
+  max-height:min(70vh,420px);overflow:auto;
+}
 .discord-floor-act-detail .discord-activity{margin:0}
 .discord-floor--has-act{overflow:visible}
 

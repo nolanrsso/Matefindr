@@ -1228,13 +1228,25 @@
   function discordActivityArt(act) {
     const img = act.assets?.large_image || act.assets?.small_image;
     if (!img) return null;
-    if (String(img).startsWith('mp:external/')) {
+    const s = String(img);
+    if (/^https?:\/\//i.test(s)) return s;
+    /* Spotify Rich Presence : spotify:<id> → CDN Spotify */
+    if (s.startsWith('spotify:')) {
+      return 'https://i.scdn.co/image/' + s.slice(8);
+    }
+    if (s.startsWith('mp:external/')) {
       try {
-        const encoded = String(img).split('/').slice(2).join('/');
+        const encoded = s.split('/').slice(2).join('/');
         return decodeURIComponent(encoded);
       } catch (_) { return null; }
     }
-    if (act.application_id) return `https://cdn.discordapp.com/app-assets/${act.application_id}/${img}.png?size=128`;
+    const appId = act.application_id || act.applicationId;
+    if (appId) {
+      const id = s.replace(/^mp:/, '');
+      if (/^[a-zA-Z0-9_]+$/.test(id)) {
+        return `https://cdn.discordapp.com/app-assets/${appId}/${id}.png?size=128`;
+      }
+    }
     return null;
   }
 
@@ -1249,18 +1261,26 @@
     return name || 'Activité';
   }
 
-  function discordActivityProgress(act) {
+  function fmtActivityClock(ms) {
+    const sec = Math.max(0, Math.floor(ms / 1000));
+    return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+  }
+
+  function discordActivityProgress(act, nowMs) {
     const ts = act.timestamps;
     if (!ts || ts.start == null || ts.end == null) return null;
     const start = Number(ts.start), end = Number(ts.end);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
-    const now = Date.now();
+    const now = typeof nowMs === 'number' ? nowMs : Date.now();
     const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-    const fmt = (ms) => {
-      const sec = Math.max(0, Math.floor(ms / 1000));
-      return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-    };
-    return { pct, current: fmt(now - start), total: fmt(end - start) };
+    return { pct, current: fmtActivityClock(now - start), total: fmtActivityClock(end - start), start, end };
+  }
+
+  function discordActivityCoverFallback(act) {
+    const t = typeof act.type === 'number' ? act.type : 0;
+    if (t === 2) return '<svg width="22" height="22" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.6 14.4a.7.7 0 0 1-.96.23c-2.6-1.6-5.9-1.96-9.78-1.07a.7.7 0 1 1-.3-1.37c4.2-.94 7.83-.54 10.7 1.24a.7.7 0 0 1 .23.97Zm1.25-2.78a.88.88 0 0 1-1.2.28c-2.97-1.83-7.5-2.36-11.02-1.3a.88.88 0 0 1-.5-1.69c4-1.2 8.97-.6 12.4 1.5.4.25.55.81.32 1.21Zm.1-2.9c-3.56-2.12-9.44-2.32-12.83-1.28a1.05 1.05 0 1 1-.6-2.02c3.9-1.18 10.4-.95 14.5 1.5a1.05 1.05 0 1 1-1.07 1.8Z"/></svg>';
+    if (t === 0) return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 12h2M9 11v2M14 12h.01M16 13h.01"/></svg>';
+    return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5be9ff" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>';
   }
 
   function discordActivityCardHtml(act, escH) {
@@ -1271,18 +1291,24 @@
     const prog = discordActivityProgress(act);
     const isSpotify = /spotify/i.test(act.name || '');
     const brand = isSpotify ? 'https://cdn.simpleicons.org/spotify/1DB954' : '';
+    const cover = art
+      ? `<img class="discord-activity-cover" src="${escH(art)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+      : `<span class="discord-activity-cover discord-activity-cover--ph">${discordActivityCoverFallback(act)}</span>`;
+    const progHtml = prog
+      ? `<div class="discord-activity-progress" data-start="${prog.start}" data-end="${prog.end}"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
+          <div class="discord-activity-times" data-start="${prog.start}" data-end="${prog.end}"><span class="da-cur">${prog.current}</span><span class="da-tot">${prog.total}</span></div>`
+      : '';
     return `<div class="discord-activity${isSpotify ? ' discord-activity--spotify' : ''}">
       <div class="discord-activity-head">
         <span class="discord-activity-kind">${escH(discordActivityHeader(act))}</span>
         ${brand ? `<img class="discord-activity-brand" src="${brand}" alt="" width="16" height="16" loading="lazy">` : ''}
       </div>
       <div class="discord-activity-body">
-        ${art ? `<img class="discord-activity-cover" src="${escH(art)}" alt="" loading="lazy">` : '<span class="discord-activity-cover discord-activity-cover--ph"></span>'}
+        ${cover}
         <div class="discord-activity-meta">
           ${title ? `<b>${escH(title)}</b>` : ''}
           ${sub ? `<span>${escH(sub)}</span>` : ''}
-          ${prog ? `<div class="discord-activity-progress"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
-          <div class="discord-activity-times"><span>${prog.current}</span><span>${prog.total}</span></div>` : ''}
+          ${progHtml}
         </div>
       </div>
     </div>`;
@@ -1375,6 +1401,106 @@
 
   function discordCardActivityHtml() {
     return '';
+  }
+
+  /* ---- Hover activités : portail fixed hors overflow de la carte ---- */
+  let _daPortalDetail = null;
+  let _daPortalHost = null;
+  let _daLeaveTimer = null;
+
+  function closeDiscordActPortal() {
+    if (_daLeaveTimer) { clearTimeout(_daLeaveTimer); _daLeaveTimer = null; }
+    if (!_daPortalDetail) return;
+    _daPortalDetail.classList.remove('is-open', 'discord-floor-act-detail--portal');
+    _daPortalDetail.style.cssText = '';
+    if (_daPortalHost && _daPortalDetail.parentElement === document.body) {
+      _daPortalHost.appendChild(_daPortalDetail);
+    }
+    _daPortalDetail = null;
+    _daPortalHost = null;
+  }
+
+  function openDiscordActPortal(actEl) {
+    const detail = actEl.querySelector(':scope > .discord-floor-act-detail');
+    if (!detail) return;
+    if (_daPortalHost === actEl && _daPortalDetail === detail) {
+      if (_daLeaveTimer) { clearTimeout(_daLeaveTimer); _daLeaveTimer = null; }
+      return;
+    }
+    closeDiscordActPortal();
+    _daPortalHost = actEl;
+    _daPortalDetail = detail;
+    document.body.appendChild(detail);
+    detail.classList.add('is-open', 'discord-floor-act-detail--portal');
+    const r = actEl.getBoundingClientRect();
+    const w = Math.min(280, window.innerWidth - 16);
+    let left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    let top = r.bottom + 8;
+    detail.style.left = left + 'px';
+    detail.style.top = top + 'px';
+    detail.style.width = w + 'px';
+    requestAnimationFrame(() => {
+      if (_daPortalDetail !== detail) return;
+      const h = detail.offsetHeight || 160;
+      if (top + h > window.innerHeight - 8 && r.top > h + 16) {
+        detail.style.top = Math.max(8, r.top - h - 8) + 'px';
+      }
+      tickDiscordActivityProgress(detail);
+    });
+  }
+
+  function scheduleCloseDiscordActPortal() {
+    if (_daLeaveTimer) clearTimeout(_daLeaveTimer);
+    _daLeaveTimer = setTimeout(closeDiscordActPortal, 140);
+  }
+
+  function bindDiscordActPopovers(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('.discord-floor-act').forEach(act => {
+      if (act.dataset.daPortalBound) return;
+      act.dataset.daPortalBound = '1';
+      const detail = act.querySelector(':scope > .discord-floor-act-detail');
+      if (!detail) return;
+      act.addEventListener('mouseenter', () => openDiscordActPortal(act));
+      act.addEventListener('mouseleave', scheduleCloseDiscordActPortal);
+      act.addEventListener('focusin', () => openDiscordActPortal(act));
+      act.addEventListener('focusout', (e) => {
+        if (!act.contains(e.relatedTarget) && !(_daPortalDetail && _daPortalDetail.contains(e.relatedTarget))) {
+          scheduleCloseDiscordActPortal();
+        }
+      });
+      detail.addEventListener('mouseenter', () => {
+        if (_daLeaveTimer) { clearTimeout(_daLeaveTimer); _daLeaveTimer = null; }
+      });
+      detail.addEventListener('mouseleave', scheduleCloseDiscordActPortal);
+    });
+  }
+
+  /** Fait avancer le chrono Spotify localement (1×/s) sans refetch. */
+  function tickDiscordActivityProgress(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    const now = Date.now();
+    scope.querySelectorAll('.discord-activity-progress[data-start][data-end]').forEach(el => {
+      const start = Number(el.dataset.start);
+      const end = Number(el.dataset.end);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+      const bar = el.querySelector('span');
+      if (bar) bar.style.width = pct.toFixed(1) + '%';
+      const times = el.nextElementSibling;
+      if (times && times.classList.contains('discord-activity-times')) {
+        const cur = times.querySelector('.da-cur');
+        const tot = times.querySelector('.da-tot');
+        if (cur) cur.textContent = fmtActivityClock(now - start);
+        if (tot) tot.textContent = fmtActivityClock(end - start);
+      }
+    });
+  }
+
+  if (!global.__mfDaProgressTimer) {
+    global.__mfDaProgressTimer = setInterval(() => {
+      try { tickDiscordActivityProgress(document); } catch (_) {}
+    }, 1000);
   }
 
   function discordPreviewHtml(user, helpers) {
@@ -1917,6 +2043,8 @@
       fmtRelative: global.__mfFmtRelativeFr,
       esc,
     });
+    bindDiscordActPopovers(box);
+    tickDiscordActivityProgress(box);
   }
 
   global.MatefindrTitlesQuests = {
@@ -1952,6 +2080,8 @@
     discordCardActivityHtml,
     discordPreviewHtml,
     updateDiscordPreview,
+    bindDiscordActPopovers,
+    tickDiscordActivityProgress,
     init,
     openQuests,
     openTitles,

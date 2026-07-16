@@ -1139,9 +1139,11 @@
         stack.querySelectorAll('.discord-floor').forEach(el => el.remove());
         stack.insertAdjacentHTML('afterbegin', floorHtml);
         card.classList.add('has-discord-floor');
+        if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(stack);
+        if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(stack);
       } catch (_) {}
     }
-    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 20000);
+    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 10000);
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
@@ -2353,13 +2355,20 @@
     function discordActivityArt(act){
       const img = act.assets?.large_image || act.assets?.small_image;
       if(!img) return null;
-      if(String(img).startsWith('mp:external/')){
+      const s = String(img);
+      if(/^https?:\/\//i.test(s)) return s;
+      if(s.startsWith('spotify:')) return 'https://i.scdn.co/image/' + s.slice(8);
+      if(s.startsWith('mp:external/')){
         try{
           const encoded = String(img).split('/').slice(2).join('/');
           return decodeURIComponent(encoded);
         }catch(_){ return null; }
       }
-      if(act.application_id) return `https://cdn.discordapp.com/app-assets/${act.application_id}/${img}.png?size=128`;
+      const appId = act.application_id || act.applicationId;
+      if(appId){
+        const id = s.replace(/^mp:/, '');
+        if(/^[a-zA-Z0-9_]+$/.test(id)) return `https://cdn.discordapp.com/app-assets/${appId}/${id}.png?size=128`;
+      }
       return null;
     }
 
@@ -2383,9 +2392,9 @@
       const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
       const fmt = (ms) => {
         const sec = Math.max(0, Math.floor(ms / 1000));
-        return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+        return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
       };
-      return { pct, current: fmt(now - start), total: fmt(end - start) };
+      return { pct, current: fmt(now - start), total: fmt(end - start), start, end };
     }
 
     function cardDiscordActivityHtml(p){
@@ -2400,18 +2409,21 @@
       const prog = discordActivityProgress(act);
       const brand = /spotify/i.test(act.name || '') ? 'https://cdn.simpleicons.org/spotify/1DB954' : '';
       const isSpotify = /spotify/i.test(act.name || '');
+      const cover = art
+        ? `<img class="discord-activity-cover" src="${escapeHtmlMini(art)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : `<span class="discord-activity-cover discord-activity-cover--ph">${activityIcon(act.type === 2 ? 'music' : act.type === 0 ? 'game' : 'call')}</span>`;
       return `<div class="discord-activity${isSpotify ? ' discord-activity--spotify' : ''}">
         <div class="discord-activity-head">
           <span class="discord-activity-kind">${escapeHtmlMini(discordActivityHeader(act))}</span>
           ${brand ? `<img class="discord-activity-brand" src="${brand}" alt="" width="16" height="16" loading="lazy">` : ''}
         </div>
         <div class="discord-activity-body">
-          ${art ? `<img class="discord-activity-cover" src="${escapeHtmlMini(art)}" alt="" loading="lazy">` : `<span class="discord-activity-cover discord-activity-cover--ph">${activityIcon(act.type === 2 ? 'music' : act.type === 0 ? 'game' : 'call')}</span>`}
+          ${cover}
           <div class="discord-activity-meta">
             ${title ? `<b>${escapeHtmlMini(title)}</b>` : ''}
             ${sub ? `<span>${escapeHtmlMini(sub)}</span>` : ''}
-            ${prog ? `<div class="discord-activity-progress"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
-            <div class="discord-activity-times"><span>${prog.current}</span><span>${prog.total}</span></div>` : ''}
+            ${prog ? `<div class="discord-activity-progress" data-start="${prog.start}" data-end="${prog.end}"><span style="width:${prog.pct.toFixed(1)}%"></span></div>
+            <div class="discord-activity-times" data-start="${prog.start}" data-end="${prog.end}"><span class="da-cur">${prog.current}</span><span class="da-tot">${prog.total}</span></div>` : ''}
           </div>
         </div>
       </div>`;
@@ -2686,6 +2698,10 @@
       // Titre + serveurs : même ligne si ça tient, sinon serveurs juste au-dessus
       if (titleHtml && guildsHtml) {
         requestAnimationFrame(() => syncTitleGuildsLayout(c));
+      }
+      const TQ2 = window.MatefindrTitlesQuests;
+      if (TQ2 && typeof TQ2.bindDiscordActPopovers === 'function') {
+        requestAnimationFrame(() => TQ2.bindDiscordActPopovers(c));
       }
       return c;
     }
