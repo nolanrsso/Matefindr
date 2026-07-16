@@ -537,16 +537,6 @@
   body.match-active .blob,
   body.match-active .bg-blobs,
   body.match-active .grain{visibility:hidden !important;opacity:0 !important}
-
-  /* GIFs / bulles : invisibles pendant cardIn, fade-in rapide une fois la carte centrée */
-  body.swipe-decor-wait #swipeOrbit,
-  body.swipe-decor-wait #swipeStickersBg{
-    opacity:0 !important;pointer-events:none !important;transition:none !important;
-  }
-  body.swipe-decor-on #swipeOrbit,
-  body.swipe-decor-on #swipeStickersBg{
-    opacity:1;transition:opacity .2s ease;
-  }
   .match-backdrop{
     position:absolute;inset:0;background:var(--mf-backdrop);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);

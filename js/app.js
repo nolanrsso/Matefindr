@@ -2169,15 +2169,13 @@
 
       if (_sharedProfile && !_previewMode) {
         try {
-          hideSwipeDecorForEntry();
           wrap.appendChild(buildCard(_sharedProfile, true));
           syncSwipeWrapGradient(_sharedProfile);
           renderOrbs(_sharedProfile);
           renderSwipeGifs(_sharedProfile);
           renderSwipePhotos(_sharedProfile);
           playProfileEntryMusic(_sharedProfile);
-          revealSwipeDecorAfterCard(wrap.querySelector('.swipe-card'));
-        } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); revealSwipeDecorNow(); } catch(_){} }
+        } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
         return;
       }
 
@@ -2188,14 +2186,12 @@
       const offset = inPreview ? 1 : 0;
       const total = pool.length + offset;
       try {
-        hideSwipeDecorForEntry();
         wrap.appendChild(buildCard(p, true));
         syncSwipeWrapGradient(p);
         renderOrbs(p);
         renderSwipeGifs(p);
         renderSwipePhotos(p);
         playProfileEntryMusic(p);
-        revealSwipeDecorAfterCard(wrap.querySelector('.swipe-card'));
       } catch (err) {
         console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
         wrap.innerHTML = '';
@@ -2254,7 +2250,6 @@
        - se mettent à jour à chaque resize */
     /** Retire bulles + stickers du swipe (profil qui part / écran quitté / deck vide). */
     function clearSwipeDecor(){
-      document.body.classList.remove('swipe-decor-wait', 'swipe-decor-on');
       try {
         if (typeof renderOrbs === 'function') renderOrbs(null);
         else {
@@ -2266,37 +2261,6 @@
       try { if (typeof renderSwipePhotos === 'function') renderSwipePhotos(null); } catch(_){}
       const layer = document.getElementById('swipeStickersBg');
       if (layer) layer.remove();
-    }
-    /** Cache GIFs/bulles pendant l'entrée de carte ; fade-in rapide une fois cardIn fini. */
-    let _decorRevealTimer = null;
-    function hideSwipeDecorForEntry(){
-      if (_decorRevealTimer) { clearTimeout(_decorRevealTimer); _decorRevealTimer = null; }
-      document.body.classList.add('swipe-decor-wait');
-      document.body.classList.remove('swipe-decor-on');
-    }
-    function revealSwipeDecorNow(){
-      if (_decorRevealTimer) { clearTimeout(_decorRevealTimer); _decorRevealTimer = null; }
-      document.body.classList.remove('swipe-decor-wait');
-      // reflow pour que la transition opacity joue
-      void document.body.offsetWidth;
-      document.body.classList.add('swipe-decor-on');
-    }
-    function revealSwipeDecorAfterCard(card){
-      if (!card || !card.classList.contains('entering')) {
-        revealSwipeDecorNow();
-        return;
-      }
-      const onEnd = (ev) => {
-        if (ev && ev.animationName && ev.animationName !== 'cardIn') return;
-        card.removeEventListener('animationend', onEnd);
-        revealSwipeDecorNow();
-      };
-      card.addEventListener('animationend', onEnd);
-      // Filet si animationend ne fire pas (onglet en arrière-plan, prefers-reduced-motion…)
-      _decorRevealTimer = setTimeout(() => {
-        card.removeEventListener('animationend', onEnd);
-        revealSwipeDecorNow();
-      }, 700);
     }
     function ensureSwipeStickersLayer() {
       let layer = document.getElementById('swipeStickersBg');
