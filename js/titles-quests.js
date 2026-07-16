@@ -1305,7 +1305,7 @@
     return getMission(missionId(track.statId, targetTh));
   }
 
-  function renderQuestsDailyBtn(stats) {
+  function renderQuestsDailyBtn() {
     const daily = evalDailyLogin();
     const btn = $('questsDailyBtn');
     if (!btn) return;
@@ -1333,9 +1333,11 @@
     const td = getTitlesData();
     const claims = getQuestCoinClaims();
     const coins = getCoins();
-    renderQuestsDailyBtn(stats);
     let html = `<div class="tq-quests-top">
-      <div class="tq-coins tq-coins--quests" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
+      <div class="tq-quests-top-left">
+        <div class="tq-coins tq-coins--quests" aria-label="Pièces"><span class="tq-coins-ico" aria-hidden="true">🪙</span><b>${coins.toLocaleString('fr-FR')}</b><span>pièces</span></div>
+        <button type="button" class="tq-daily-btn" id="questsDailyBtn">Jour 1 = 50 pièces</button>
+      </div>
       <button type="button" class="tq-spend-btn" data-open-titles>Dépenser · acheter des titres</button>
     </div>
     <div class="tq-scroll tq-quests-list">`;
@@ -1402,6 +1404,7 @@
     });
     html += '</div>';
     body.innerHTML = html;
+    renderQuestsDailyBtn();
     body.querySelectorAll('[data-claim]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-claim');
@@ -1565,7 +1568,6 @@
 <div class="conn-pop tq-modal tq-modal--quests" id="questsPop" hidden role="dialog" aria-labelledby="questsTitle">
   <div class="conn-pick-head tq-quests-head">
     <h3 id="questsTitle">Quêtes</h3>
-    <button type="button" class="tq-daily-btn" id="questsDailyBtn">Jour 1 = 50 pièces</button>
     <button type="button" class="cp-close tq-close" id="questsClose" aria-label="Fermer">✕</button>
   </div>
   <div class="tq-body" id="questsBody"></div>
@@ -1585,17 +1587,9 @@
     const head = $('questsPop')?.querySelector('.conn-pick-head');
     if (!head) return;
     head.classList.add('tq-quests-head');
-    if (!$('questsDailyBtn')) {
-      const h3 = head.querySelector('h3');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'tq-daily-btn';
-      btn.id = 'questsDailyBtn';
-      btn.textContent = 'Jour 1 = 50 pièces';
-      if (h3 && h3.nextSibling) head.insertBefore(btn, h3.nextSibling);
-      else if (h3) h3.after(btn);
-      else head.prepend(btn);
-    }
+    // Ancien bouton quotidien dans le header → on le retire (il est à côté des pièces)
+    const oldDaily = head.querySelector('#questsDailyBtn, .tq-daily-btn');
+    if (oldDaily) oldDaily.remove();
   }
 
   function openModal(kind, renderFn, stats) {
