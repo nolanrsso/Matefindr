@@ -1920,30 +1920,19 @@
   .swipe-card .common{display:flex;gap:14px;color:#b9bbbe;font-size:12px;margin-top:auto}
   .swipe-card .common b{color:#fff;font-weight:700}
 
-  /* Discord servers in common — à droite du titre si ça tient ;
-     sinon .card-title-guilds-row--stack (serveurs juste AU-DESSUS, titre pleine largeur).
-     Le bascule est décidé en JS (syncTitleGuildsLayout). */
+  /* Discord servers in common — toujours à droite du titre.
+     Si place manquante : libellé « serv » + évent. .card-guilds--compact (JS). */
   .swipe-card .card-title-guilds-row{
     display:block;position:relative;margin-top:2px;min-height:0;width:100%;
+    --guilds-w:112px;
   }
   .swipe-card .card-title-guilds-row .card-title-slot{
     display:block;max-width:100%;min-width:0;
   }
-  /* Réserve la place à droite SEULEMENT si serveurs en absolute (pas en stack) */
-  .swipe-card .card-title-guilds-row:not(.card-title-guilds-row--stack):has(.card-guilds--head) .card-title-slot{
-    max-width:calc(100% - 118px);
+  .swipe-card .card-title-guilds-row:has(.card-guilds--head) .card-title-slot{
+    max-width:calc(100% - var(--guilds-w) - 10px);
   }
   .swipe-card .card-title-guilds-row .card-title-slot--empty{display:block;min-height:0;max-width:0;overflow:hidden}
-  .swipe-card .card-title-guilds-row--stack{
-    display:flex;flex-direction:column;align-items:stretch;gap:3px;
-  }
-  .swipe-card .card-title-guilds-row--stack .card-title-slot{
-    max-width:100%;width:100%;
-  }
-  .swipe-card .card-title-guilds-row--stack .card-guilds--head{
-    position:static;top:auto;right:auto;transform:none;
-    align-self:flex-end;max-width:min(100%,160px);pointer-events:none;
-  }
   .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
   .swipe-card .card-guilds--head{
     position:absolute;right:0;top:50%;transform:translateY(-50%);
@@ -1954,6 +1943,13 @@
     box-shadow:0 4px 14px rgba(0,0,0,.3);
     pointer-events:none;z-index:2;
   }
+  .swipe-card .card-guilds--head.card-guilds--compact{
+    padding:3px 5px;gap:2px;max-width:88px;transform:translateY(-50%) scale(.92);
+    transform-origin:right center;
+  }
+  .swipe-card .card-guilds--head.card-guilds--compact .cg-label{font-size:9px}
+  .swipe-card .card-guilds--head.card-guilds--compact .cg-icon{width:15px;height:15px}
+  .swipe-card .card-guilds--head.card-guilds--compact .cg-more{min-width:15px;height:15px;font-size:7px}
   .swipe-card .card-guilds--head .cg-label{
     font-size:10px;color:#b9bbbe;line-height:1.15;white-space:nowrap;order:0;
   }
@@ -2128,8 +2124,8 @@
     .swipe-card .card-guilds--head .cg-label{font-size:9px}
     .swipe-card .card-guilds--head .cg-icon{width:16px;height:16px}
     .swipe-card .card-guilds--head .cg-more{min-width:16px;height:16px;font-size:7px}
-    .swipe-card .card-title-guilds-row:not(.card-title-guilds-row--stack):has(.card-guilds--head) .card-title-slot{max-width:calc(100% - 102px)}
-    .swipe-card .card-title-guilds-row--stack .card-title-slot{max-width:100%}
+    .swipe-card .card-title-guilds-row{--guilds-w:98px}
+    .swipe-card .card-title-guilds-row:has(.card-guilds--head) .card-title-slot{max-width:calc(100% - var(--guilds-w) - 8px)}
     .swipe-card .card-guilds{gap:8px}
     .swipe-card .cg-icon,
     .swipe-card .cg-more{width:22px;height:22px;font-size:10px}

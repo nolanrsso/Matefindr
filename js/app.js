@@ -1028,7 +1028,7 @@
       const guildLabel = nGuild === 1
         ? `<b>1</b> serveur commun`
         : `<b>${nGuild}</b> serveurs communs`;
-      return `<div class="card-guilds card-guilds--head" title="${nGuild} serveur${nGuild > 1 ? 's' : ''} Discord en commun">
+      return `<div class="card-guilds card-guilds--head" data-count="${nGuild}" title="${nGuild} serveur${nGuild > 1 ? 's' : ''} Discord en commun">
           <span class="cg-label">${guildLabel}</span>
           <div class="cg-icons">
             ${commonGuilds.slice(0, 5).map(guildIconHtml).join('')}
@@ -1037,9 +1037,19 @@
         </div>`;
     }
 
+    function setGuildsLabelText(guildsEl, short){
+      if (!guildsEl) return;
+      const label = guildsEl.querySelector('.cg-label');
+      if (!label) return;
+      const n = Number(guildsEl.dataset.count) || guildsEl.querySelectorAll('.cg-icon').length || 1;
+      if (n === 1) label.innerHTML = short ? `<b>1</b> serv commun` : `<b>1</b> serveur commun`;
+      else label.innerHTML = short ? `<b>${n}</b> serv communs` : `<b>${n}</b> serveurs communs`;
+    }
+
     /**
-     * Serveurs en commun à droite du titre par défaut.
-     * Si le titre (1 ligne) + pastille ne tiennent pas → stack (serveurs juste au-dessus).
+     * Serveurs en commun TOUJOURS à droite du titre.
+     * Si le titre est long : abrège « serveur » → « serv », puis réduit un peu la pastille.
+     * (Plus de stack au-dessus — ça cassait la ligne titre.)
      */
     function syncTitleGuildsLayout(card){
       if (!card) return;
@@ -1047,20 +1057,32 @@
       if (!row) return;
       const guilds = row.querySelector('.card-guilds--head');
       const titleSlot = row.querySelector('.card-title-slot:not(.card-title-slot--empty)');
+      row.classList.remove('card-title-guilds-row--stack');
       if (!guilds || !titleSlot) {
-        row.classList.remove('card-title-guilds-row--stack');
+        row.style.removeProperty('--guilds-w');
         return;
       }
-      row.classList.remove('card-title-guilds-row--stack');
+
+      guilds.classList.remove('card-guilds--compact');
+      setGuildsLabelText(guilds, false);
+
       const text = titleSlot.querySelector('.card-profile-title-text') || titleSlot;
       const prevWs = text.style.whiteSpace;
       text.style.whiteSpace = 'nowrap';
       const titleW = text.scrollWidth;
       text.style.whiteSpace = prevWs;
-      const guildsW = Math.max(guilds.offsetWidth || 0, 96);
-      const gap = 14;
-      const needsStack = titleW + guildsW + gap > row.clientWidth + 1;
-      row.classList.toggle('card-title-guilds-row--stack', needsStack);
+
+      const gap = 10;
+      const avail = row.clientWidth || 0;
+      const fits = () => titleW + (guilds.offsetWidth || 0) + gap <= avail + 1;
+
+      // Titre long / pas la place → « serv » au lieu de « serveur »
+      if (avail > 0 && !fits()) setGuildsLabelText(guilds, true);
+      // Encore serré → pastille un peu plus petite
+      if (avail > 0 && !fits()) guilds.classList.add('card-guilds--compact');
+
+      const gw = Math.max(guilds.offsetWidth || 0, 72);
+      row.style.setProperty('--guilds-w', gw + 'px');
     }
 
     /** Met à jour la carte déjà à l'écran (guilds / vues) sans wipe ni anim cardIn. */
