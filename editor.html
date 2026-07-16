@@ -170,13 +170,13 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
    vrai gabarit sur téléphone). .card garde déjà overflow:hidden (clip propre) ;
    .body défile en interne pour rester accessible (comme sur le vrai swipe). */
 body[data-canvas="portrait"] .card{width:min(71vw,257px);height:min(60dvh,428px);max-height:100%}
-/* Avatar à moitié sur la bannière 5:2 ; body juste sous le bas de l'avatar. */
-body[data-canvas="portrait"] .card .body{position:absolute;inset:calc(40cqi + 39px) 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:0 14px 18px;gap:8px}
+/* Body en flux flex comme le swipe mobile (padding 56px), plus d'inset absolute. */
+body[data-canvas="portrait"] .card .body{position:relative;inset:auto;z-index:5;overflow-y:auto;overflow-x:hidden;padding:56px 14px 62px;gap:8px;flex:1 1 auto;min-height:0}
 /* Contenu de la carte à l'échelle réelle du swipe mobile (index.html, bloc
    @media max-width:600px .swipe-card ...) — sans ça avatar/texte gardent leur
    taille "bureau" (140px d'avatar etc.) dans une carte 3x plus étroite = ça
    déborde et se chevauche. */
-body[data-canvas="portrait"] .card .banner{height:auto;aspect-ratio:5/2;max-height:none}
+body[data-canvas="portrait"] .card .banner{height:auto;aspect-ratio:5/2;max-height:none;flex:0 0 auto}
 body[data-canvas="portrait"] .card .avatar{top:calc(40cqi - 47px);left:14px;width:94px;height:94px}
 body[data-canvas="portrait"] .card .avatar .ph{font-size:26px}
 body[data-canvas="portrait"] .card .avatar-deco{top:calc(40cqi - 47px);left:14px;width:94px;height:94px}
@@ -349,14 +349,12 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 
 /* ===================== CARTE DE PROFIL (style .swipe-card) ===================== */
 .card{
-  /* Hauteur FIXE, identique à .swipe-wrap (index.html). Gabarit 406×663 (−7% vs 437×713).
-     Sans ça, la hauteur de la carte éditeur dépend du contenu (bio, connexions,
-     vocal...) alors que la vraie carte a toujours cette même hauteur (le corps
-     défile en interne) → cardRect.height diffère entre éditeur et vrai swipe,
-     et TOUTES les bulles/GIFs (positionnés en % de cette hauteur) atterrissent
-     un peu à côté de leur position dans l'éditeur. */
+  /* Hauteur FIXE, identique à .swipe-wrap. Layout FLEX comme .swipe-card
+     (banner → body) pour que pseudo/titre aient EXACTEMENT le même placement
+     que l'aperçu. Gabarit 406×663. */
   position:relative;z-index:60;width:min(96vw,406px);height:min(calc(100vh - 120px),663px);
   container-type:inline-size;container-name:profile-card;
+  display:flex;flex-direction:column;
   border-radius:20px;overflow:hidden;isolation:isolate;
   /* Couleur pleine sous le dégradé → coins arrondis opaques (pas de fond d'eau visible). */
   background-color:var(--c2);
@@ -366,11 +364,9 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
   transition:box-shadow .4s ease;
 }
 .banner{
-  /* Format Discord 600×240 → ratio 5:2 (comme le screen) */
-  position:relative;aspect-ratio:5/2;height:auto;overflow:visible;cursor:pointer;
+  /* Format Discord 600×240 → ratio 5:2 — même que .swipe-card .banner */
+  position:relative;aspect-ratio:5/2;height:auto;flex:0 0 auto;overflow:visible;cursor:pointer;
   border-radius:20px 20px 0 0;
-  /* Transparent : le dégradé unique de .card monte derrière (comme swipe-card).
-     Évite la double teinte qui déborde aux coins hauts autour de la bannière. */
   background:transparent;
 }
 .banner img,.banner .ph{position:absolute;inset:0;width:100%;height:100%;border-radius:20px 20px 0 0;overflow:hidden}
@@ -387,12 +383,10 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .banner-del:hover{background:rgba(237,66,69,.9);transform:scale(1.06)}
 .banner-del svg{width:14px;height:14px}
 .avatar{
-  /* Wrapper SANS border-radius : un cercle + overflow coupe la pastille ✎ (bug Chromium).
-     Gabarit = 140px comme .swipe-card .avatar-wrap (bordure sur le média intérieur).
-     top = mi-hauteur bannière 5:2 (40cqi) − rayon avatar → moitié sur la bannière. */
+  /* Même placement que .swipe-card .avatar-wrap : moitié sur bannière 5:2 */
   position:absolute;left:20px;top:calc(40cqi - 70px);
   width:140px;height:140px;
-  border-radius:0;cursor:pointer;z-index:3;
+  border-radius:0;cursor:pointer;z-index:5;
   overflow:visible;background:transparent;border:none;box-shadow:none;
 }
 .avatar-media,.avatar > .ph{
@@ -410,19 +404,21 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
 .avatar .ph{width:100%;height:100%;display:grid;place-items:center;font-size:52px;font-weight:800;font-family:"Clash Display",sans-serif;color:#fff;margin:0}
 /* Couche séparée (NON clippée) pour la déco + le statut, alignée sur l'avatar → la déco peut dépasser. */
-.avatar-deco{position:absolute;left:20px;top:calc(40cqi - 70px);width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:3}
+.avatar-deco{position:absolute;left:20px;top:calc(40cqi - 70px);width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:5}
 .avatar-deco .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain}
 .avatar-deco .status-dot{display:none} /* rond de statut retiré */
-/* position:absolute + inset (au lieu de position:relative + padding-top) : la carte
-   a maintenant une hauteur FIXE (cf. .card ci-dessus) → le corps défile en interne
-   (overflow-y:auto) au lieu de pousser la carte à grandir, comme la vraie carte. */
-/* z-index > avatar : l'overlay ✎ du pseudo n'est plus caché par le cadre photo */
-/* inset sous l'avatar (bannière 5:2 + moitié avatar) — pseudo collé sous la photo */
-.body{position:absolute;inset:calc(40cqi + 58px) 0 0 0;z-index:5;overflow-y:auto;overflow-x:hidden;padding:0 18px 18px;display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg, rgba(28,29,34,.0), rgba(28,29,34,.0))}
+/* Body IDENTIQUE à .swipe-card .body : flux sous la bannière + padding-top 86px
+   (dégagement sous l'avatar). Plus d'inset absolute qui décalait le pseudo. */
+.body{
+  position:relative;flex:1 1 auto;min-height:0;z-index:2;
+  overflow-y:auto;overflow-x:hidden;
+  padding:86px 18px 54px;display:flex;flex-direction:column;gap:10px;
+  background:transparent;
+}
 /* Bloc pseudo + @tag + titre — même regroupement que .swipe-card .body > div (buildCard). */
 .card-meta-head{display:flex;flex-direction:column;gap:0;align-items:flex-start;margin:0;padding:0;overflow:visible;position:relative;z-index:2}
 .username{
-  margin:0;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1;
+  margin:0;font-family:"Clash Display",sans-serif;font-size:32px;font-weight:700;letter-spacing:-.01em;cursor:pointer;line-height:1.05;
   display:inline-flex;align-items:center;gap:8px;align-self:flex-start;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.4);
   overflow:visible;max-width:100%;box-sizing:border-box;position:relative;isolation:isolate;
 }
