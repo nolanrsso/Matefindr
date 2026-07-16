@@ -596,7 +596,9 @@
       },
     };
 
-  // Language switcher
+  // Language switcher — persisté (localStorage) pour s'appliquer aussi une fois connecté
+  // (le sélecteur #langSwitch de la landing est masqué en data-auth="in" -- cf. Paramètres).
+  const LANG_KEY = 'matefindr_lang';
   (() => {
     const root = document.getElementById('langSwitch');
     const btn  = root.querySelector('.ls-btn');
@@ -604,13 +606,19 @@
     const cur  = root.querySelector('.ls-current');
     let open = false;
 
-    function applyLang(code){
-      const dict = I18N[code] || I18N.FR;
+    function applyLang(code, opts){
+      code = (I18N[code] ? code : 'FR');
+      const dict = I18N[code];
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const k = el.getAttribute('data-i18n');
         if (dict[k] != null) el.innerHTML = dict[k];
       });
       document.documentElement.lang = code.toLowerCase();
+      cur.textContent = code;
+      menu.querySelectorAll('li').forEach(li => {
+        li.setAttribute('aria-selected', li.dataset.code === code);
+      });
+      if (!opts || opts.persist !== false) { try { localStorage.setItem(LANG_KEY, code); } catch(_){} }
     }
 
     function setOpen(v){
@@ -620,10 +628,6 @@
       menu.hidden = !v;
     }
     function select(code){
-      cur.textContent = code;
-      menu.querySelectorAll('li').forEach(li => {
-        li.setAttribute('aria-selected', li.dataset.code === code);
-      });
       applyLang(code);
       setOpen(false);
     }
@@ -637,6 +641,15 @@
       if (open && !root.contains(e.target)) setOpen(false);
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) setOpen(false); });
+
+    // Applique la langue déjà choisie (autre visite, ou depuis les Paramètres une fois connecté).
+    let saved = null;
+    try { saved = localStorage.getItem(LANG_KEY); } catch(_){}
+    if (saved && I18N[saved]) applyLang(saved, { persist:false });
+
+    // Exposé pour le panneau Paramètres (js/app.js), qui n'a pas accès à ces closures.
+    window.__mfApplyLang = applyLang;
+    window.__mfCurrentLang = () => (document.documentElement.lang || 'fr').toUpperCase();
   })();
 
   // CTA click — if logged in: go to swipe; otherwise: Discord OAuth

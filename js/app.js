@@ -8187,6 +8187,7 @@
         const u = Object.assign({}, st.user || {}, state.user || {});
         const MV = window.MatefindrVolume;
         const volPct = Math.round((MV ? MV.getVol() : 0.5) * 100);
+        const lang = (typeof window.__mfCurrentLang === 'function') ? window.__mfCurrentLang() : 'FR';
         let bill;
         if (u.boost) {
           const lifetime = u.boostPlan === 'lifetime';
@@ -8199,6 +8200,13 @@
         body.innerHTML = `
           <div class="set-sheet">
             <div class="ss-group">
+              <div class="ss-lbl">Langue</div>
+              <div class="ss-lang" id="ssLang">
+                <button type="button" data-code="FR" class="${lang==='FR'?'on':''}">🇫🇷 Français</button>
+                <button type="button" data-code="EN" class="${lang==='EN'?'on':''}">🇬🇧 English</button>
+              </div>
+            </div>
+            <div class="ss-group">
               <div class="ss-lbl">Volume de la musique <span id="ssVolVal">${volPct}%</span></div>
               <input type="range" id="ssVol" min="0" max="100" value="${volPct}">
             </div>
@@ -8207,12 +8215,30 @@
               <div class="ss-bill">${bill}</div>
               ${u.boost ? '' : '<button type="button" class="btn primary" id="ssBoost" style="width:100%;margin-top:9px">Passer à Matefindr Boost</button>'}
             </div>
+            <div class="ss-group">
+              <div class="ss-lbl">Légal</div>
+              <a class="ss-legal-link" href="rules.html" target="_blank" rel="noopener">📋 Conditions d'utilisation</a>
+            </div>
             <div class="ss-group ss-danger">
               <div class="ss-lbl">Zone dangereuse</div>
               <button type="button" class="btn" id="ssLogout">Se déconnecter</button>
               <button type="button" class="btn ghost-danger" id="ssDelete">Supprimer mon compte</button>
+              <div class="ss-delete-confirm" id="ssDeleteConfirm" hidden>
+                <p>Cette action est <b>définitive</b> : profil, bulles, GIFs/photos, likes, matchs, messages et notes reçues seront supprimés. Tape <code>SUPPRIMER</code> pour confirmer.</p>
+                <input type="text" id="ssDeleteInput" autocomplete="off" placeholder="SUPPRIMER" />
+                <div class="ss-delete-actions">
+                  <button type="button" class="btn ghost-danger" id="ssDeleteConfirmBtn" disabled>Supprimer définitivement</button>
+                  <button type="button" class="btn" id="ssDeleteCancelBtn">Annuler</button>
+                </div>
+                <div class="ss-delete-status" id="ssDeleteStatus"></div>
+              </div>
             </div>
           </div>`;
+        body.querySelector('#ssLang').addEventListener('click', (e) => {
+          const b = e.target.closest('button[data-code]'); if (!b) return;
+          if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(b.dataset.code);
+          body.querySelectorAll('#ssLang button').forEach(x => x.classList.toggle('on', x === b));
+        });
         const vEl = body.querySelector('#ssVol');
         vEl.addEventListener('input', () => {
           const pct = parseInt(vEl.value, 10);
@@ -8239,14 +8265,52 @@
           setScreen('landing');
           if (typeof refreshLandingCta === 'function') refreshLandingCta();
         });
-        body.querySelector('#ssDelete')?.addEventListener('click', () => {
-          if (!confirm('Supprimer définitivement ton compte Matefindr ? Toutes tes données locales seront effacées.')) return;
-          try { localStorage.clear(); } catch (_) {}
-          try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch (_) {}
-          state = { user: null, profile: null };
-          setAuth(false);
-          AM.closeSettingsPop();
-          setScreen('landing');
+        // Suppression réelle (compte + toutes les données côté serveur) : demande une
+        // confirmation textuelle ("tape SUPPRIMER") avant d'appeler l'edge function.
+        const delBtn = body.querySelector('#ssDelete');
+        const delConfirm = body.querySelector('#ssDeleteConfirm');
+        const delInput = body.querySelector('#ssDeleteInput');
+        const delConfirmBtn = body.querySelector('#ssDeleteConfirmBtn');
+        const delStatus = body.querySelector('#ssDeleteStatus');
+        delBtn?.addEventListener('click', () => {
+          delBtn.hidden = true;
+          delConfirm.hidden = false;
+          delInput.value = '';
+          delInput.focus();
+        });
+        body.querySelector('#ssDeleteCancelBtn')?.addEventListener('click', () => {
+          delConfirm.hidden = true;
+          delBtn.hidden = false;
+        });
+        delInput?.addEventListener('input', () => {
+          delConfirmBtn.disabled = delInput.value.trim().toUpperCase() !== 'SUPPRIMER';
+        });
+        delConfirmBtn?.addEventListener('click', async () => {
+          delConfirmBtn.disabled = true;
+          delConfirmBtn.textContent = 'Suppression…';
+          delStatus.textContent = '';
+          try {
+            const ok = (typeof window.__mfDeleteAccount === 'function')
+              ? await window.__mfDeleteAccount()
+              : { ok:false, error:'Fonction de suppression indisponible.' };
+            if (!ok.ok) {
+              delStatus.textContent = '❌ ' + (ok.error || 'Échec — réessaie plus tard.');
+              delConfirmBtn.disabled = false;
+              delConfirmBtn.textContent = 'Supprimer définitivement';
+              return;
+            }
+            clearDiscordTokenKeys();
+            state = { user: null, profile: null };
+            try { localStorage.clear(); } catch (_) {}
+            setAuth(false);
+            AM.closeSettingsPop();
+            setScreen('landing');
+            if (typeof refreshLandingCta === 'function') refreshLandingCta();
+          } catch (e) {
+            delStatus.textContent = '❌ Erreur — ' + ((e && e.message) ? e.message.slice(0, 90) : 'réessaie.');
+            delConfirmBtn.disabled = false;
+            delConfirmBtn.textContent = 'Supprimer définitivement';
+          }
         });
       }
 

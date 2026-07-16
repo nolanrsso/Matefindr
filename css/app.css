@@ -978,6 +978,23 @@
   .set-sheet .ss-danger .btn{width:100%}
   .set-sheet .ss-danger .btn+.btn{margin-top:8px}
   .set-sheet .btn.ghost-danger{color:#FF7EB6;background:transparent;border:1px solid rgba(255,126,182,.35)}
+  .set-sheet .ss-lang{display:flex;gap:8px}
+  .set-sheet .ss-lang button{flex:1;padding:10px;border-radius:11px;border:1.5px solid var(--stroke-2);background:rgba(255,255,255,.03);
+    color:var(--ink-dim);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.14s ease}
+  .set-sheet .ss-lang button:hover{color:#fff}
+  .set-sheet .ss-lang button.on{border-color:#9146FF;background:rgba(145,70,255,.18);color:#fff}
+  .set-sheet .ss-legal-link{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:12px;
+    background:rgba(255,255,255,.04);border:1px solid var(--stroke-2);color:#fff;font-size:13.5px;font-weight:600;text-decoration:none;transition:.14s ease}
+  .set-sheet .ss-legal-link:hover{background:rgba(145,70,255,.14);border-color:rgba(145,70,255,.4)}
+  .set-sheet .ss-delete-confirm{margin-top:10px;padding:13px 14px;border-radius:12px;background:rgba(255,79,160,.08);border:1px solid rgba(255,126,182,.3)}
+  .set-sheet .ss-delete-confirm p{margin:0 0 10px;font-size:12.5px;line-height:1.5;color:#ffd1e2}
+  .set-sheet .ss-delete-confirm code{background:rgba(0,0,0,.3);padding:1px 6px;border-radius:5px;font-weight:800;color:#fff}
+  .set-sheet .ss-delete-confirm input{width:100%;box-sizing:border-box;padding:11px 13px;border-radius:10px;background:rgba(0,0,0,.25);
+    border:1.5px solid rgba(255,126,182,.35);color:#fff;font:inherit;font-weight:700;text-align:center;letter-spacing:.04em;outline:none;margin-bottom:10px}
+  .set-sheet .ss-delete-confirm input:focus{border-color:#FF7EB6;box-shadow:0 0 0 4px rgba(255,126,182,.16)}
+  .set-sheet .ss-delete-actions{display:flex;gap:8px}
+  .set-sheet .ss-delete-actions .btn{width:auto;flex:1;margin-top:0 !important}
+  .set-sheet .ss-delete-status{margin-top:8px;font-size:12.5px;color:#ff8a9a;min-height:16px}
 
   /* ===== Onboarding ===== */
   #screen-onboarding{
