@@ -2683,7 +2683,7 @@
       music: 'assets/orb-hint-music.png',
       clip: 'assets/orb-hint-click.png',
     };
-    const ORB_HINT_MAX_OP = 0.48;
+    const ORB_HINT_MAX_OP = 0.624; // +30% vs 0.48
     const ORB_HINT_FADE_MS = 1000;
     const ORB_HINT_HOLD_MS = 1000; // 1s à opacité max avant fade-out
     const ORB_HINT_OFF_MS = 5000;  // 5s caché avant réapparition
