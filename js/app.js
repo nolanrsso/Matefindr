@@ -118,7 +118,7 @@
     let _pageLoaderGen = 0;
     let _pageLoaderShownAt = 0;
     let _pageLoaderHideT = null;
-    const PAGE_LOADER_MIN_MS = 1500;
+    const PAGE_LOADER_MIN_MS = 500;
 
     function showPageLoader(){
       _pageLoaderGen++;
@@ -155,7 +155,7 @@
           el.classList.remove('is-leaving');
           el.setAttribute('aria-hidden', 'true');
           document.body.classList.remove('mf-page-loading');
-        }, 200);
+        }, 120);
       };
       if (_pageLoaderHideT) clearTimeout(_pageLoaderHideT);
       _pageLoaderHideT = setTimeout(finish, wait);

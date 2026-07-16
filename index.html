@@ -123,14 +123,8 @@
 })();
 </script>
 
-<!-- Transition d'écran : petit loader pendant le changement de page -->
-<div id="mfPageLoader" class="mf-page-loader" hidden aria-hidden="true" aria-busy="false" role="status">
-  <div class="mf-page-loader-card">
-    <img src="assets/logo.svg" alt="" class="mf-page-loader-logo" width="48" height="48" draggable="false" />
-    <div class="mf-page-loader-spin" aria-hidden="true"></div>
-    <span class="mf-page-loader-txt">Chargement…</span>
-  </div>
-</div>
+<!-- Transition : écran vide (fond sombre) pendant le chargement — pas de logo/spinner -->
+<div id="mfPageLoader" class="mf-page-loader" hidden aria-hidden="true" aria-busy="false" role="status"></div>
 
 <!-- ===== Accès privé : page mot de passe (barrière côté client, mémorisée par appareil) ===== -->
 <div id="gate" hidden>
