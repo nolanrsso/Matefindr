@@ -64,14 +64,14 @@
     {
       group: 'interaction', statId: 'votes', stat: 'votesGiven',
       label: 'Noter les autres profils',
-      eventNote: 'Événement · récompense ×2',
-      coinMult: 2,
+      eventNote: 'Événement · récompense ×1.5',
+      coinMult: 1.5,
     },
     {
       group: 'interaction', statId: 'likes', stat: 'likesGiven',
       label: 'Liker d\'autres profils',
-      eventNote: 'Événement · récompense ×2',
-      coinMult: 2,
+      eventNote: 'Événement · récompense ×1.5',
+      coinMult: 1.5,
     },
     { group: 'profil', statId: 'views', stat: 'views', label: 'Visionnage de mon profil' },
     { group: 'interaction', statId: 'matches', stat: 'matches', label: 'Matchs' },
@@ -154,7 +154,7 @@
   function missionCoinRewardAmount(m) {
     const lvl = missionCoinLevel(m);
     if (lvl < 0) return 0;
-    return questCoinReward(lvl) * missionCoinMult(m);
+    return Math.round(questCoinReward(lvl) * missionCoinMult(m));
   }
 
   function isKeepableTitleId(id) {
