@@ -123,7 +123,7 @@
 .editor-page .card .card-profile-title{
   --title-glow:var(--title-color,#C7A5FF);
   position:relative;display:inline-flex;align-items:center;justify-content:flex-start;
-  margin:2px 0 0;padding:0;border:none;border-radius:0;cursor:default;font:inherit;
+  margin:0;padding:0;border:none;border-radius:0;cursor:default;font:inherit;
   max-width:100%;overflow:visible;isolation:isolate;
   background:none;box-shadow:none;
 }

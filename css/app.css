@@ -1689,7 +1689,7 @@
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
   }
-  .swipe-card .handle{color:#b9bbbe;font-size:13px;display:flex;align-items:center;gap:6px;margin-top:-6px}
+  .swipe-card .handle{color:#b9bbbe;font-size:13px;display:flex;align-items:center;gap:6px;margin-top:-8px}
   .swipe-card .handle .sep{opacity:.6}
   .swipe-card .handle .handle-tag--blur{filter:blur(5px);user-select:none;pointer-events:none}
   .swipe-card hr.div{border:none;border-top:1px solid rgba(255,255,255,.08);margin:4px 0 2px}
@@ -1924,7 +1924,7 @@
      sinon .card-title-guilds-row--stack (serveurs juste AU-DESSUS, titre pleine largeur).
      Le bascule est décidé en JS (syncTitleGuildsLayout). */
   .swipe-card .card-title-guilds-row{
-    display:block;position:relative;margin-top:6px;min-height:0;width:100%;
+    display:block;position:relative;margin-top:2px;min-height:0;width:100%;
   }
   .swipe-card .card-title-guilds-row .card-title-slot{
     display:block;max-width:100%;min-width:0;
@@ -1935,7 +1935,7 @@
   }
   .swipe-card .card-title-guilds-row .card-title-slot--empty{display:block;min-height:0;max-width:0;overflow:hidden}
   .swipe-card .card-title-guilds-row--stack{
-    display:flex;flex-direction:column;align-items:stretch;gap:6px;
+    display:flex;flex-direction:column;align-items:stretch;gap:3px;
   }
   .swipe-card .card-title-guilds-row--stack .card-title-slot{
     max-width:100%;width:100%;
