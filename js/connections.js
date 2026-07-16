@@ -207,18 +207,28 @@
     if(typeof app === 'string') app = connApp(app);
     const escFn = typeof esc === 'function' ? esc : s => String(s);
     const href = buildConnUrl(app, entry);
-    const user = connProfileLabel(app, entry, profileTag);
+    const isDiscord = !!(app && app.id === 'discord');
     const showUser = e.showLabel !== false;
+    // Discord : toujours le label (visible ou flouté). Autres : seulement si coché (révélation au survol).
+    const user = (isDiscord || showUser) ? connProfileLabel(app, entry, profileTag) : '';
     const iconHtml = connIconHtml(app, null, e, uniformColor);
-    const labelHtml = user
-      ? `<span class="card-conn-user${showUser ? '' : ' card-conn-user--blur'}">${escFn(user)}</span>`
-      : '';
+    let userCls = 'card-conn-user';
+    let labelCls = '';
+    if(user){
+      if(isDiscord){
+        if(!showUser){ userCls += ' card-conn-user--blur'; labelCls = ' card-conn--label-blur'; }
+        else labelCls = ' card-conn--label-always';
+      } else {
+        labelCls = ' card-conn--hover-label';
+      }
+    }
+    const labelHtml = user ? `<span class="${userCls}">${escFn(user)}</span>` : '';
     const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
     const name = app ? app.name : 'Connexion';
-    const labelCls = user ? (showUser ? ' card-conn--show-label' : ' card-conn--label-blur') : '';
+    const titleUser = user && (isDiscord ? showUser : true) ? ' · '+escFn(user) : '';
     if(e.mode !== 'text' && href)
-      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn${labelCls}" title="${escFn(name)}${user && showUser ? ' · '+escFn(user) : ''}">${inner}</a>`;
-    return `<span class="card-conn${labelCls}" title="${escFn(name)}${user && showUser ? ' · '+escFn(user) : ''}">${inner}</span>`;
+      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn${labelCls}" title="${escFn(name)}${titleUser}">${inner}</a>`;
+    return `<span class="card-conn${labelCls}" title="${escFn(name)}${titleUser}">${inner}</span>`;
   }
 
   function connDisplayText(app, entry, profileTag){

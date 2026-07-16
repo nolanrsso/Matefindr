@@ -1861,9 +1861,32 @@
     font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;
     max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
   }
+  /* Discord : username toujours visible (ou flouté si option décochée) */
+  .swipe-card .card-conn--label-always .card-conn-user{
+    opacity:1;max-height:1.4em;transform:translateX(-50%);
+  }
   .swipe-card .card-conn-user--blur,
   .swipe-card .card-conn--label-blur .card-conn-user{
     filter:blur(5px);user-select:none;-webkit-user-select:none;color:rgba(185,187,190,.85);
+    opacity:1;max-height:1.4em;
+  }
+  /* Autres réseaux : username uniquement au survol */
+  .swipe-card .card-conn--hover-label .card-conn-user{
+    opacity:0;max-height:0;overflow:hidden;margin:0;
+    transform:translateX(-50%) translateY(4px);
+    transition:opacity .16s ease, transform .16s ease, max-height .16s ease;
+  }
+  @media (hover:hover){
+    .swipe-card .card-conn--hover-label:hover .card-conn-user,
+    .swipe-card .card-conn--hover-label:focus-visible .card-conn-user{opacity:1;max-height:1.4em;transform:translateX(-50%);color:#fff}
+    .swipe-card.light-bg .card-conn--hover-label:hover .card-conn-user,
+    .swipe-card.light-bg .card-conn--hover-label:focus-visible .card-conn-user{color:#101014}
+  }
+  @media (hover:none){
+    .swipe-card .card-conn--hover-label:active .card-conn-user,
+    .swipe-card .card-conn--hover-label:focus-within .card-conn-user{opacity:1;max-height:1.4em;transform:translateX(-50%);color:#fff}
+    .swipe-card.light-bg .card-conn--hover-label:active .card-conn-user,
+    .swipe-card.light-bg .card-conn--hover-label:focus-within .card-conn-user{color:#101014}
   }
   .swipe-card .card-connections--many{gap:10px}
   .swipe-card .card-connections--many .card-conn{width:34px;flex-basis:34px}
