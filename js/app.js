@@ -2315,13 +2315,17 @@
       }).join('');
       const connectionsBlock = connKeys.length
         ? `<div class="card-connections-wrap"><div class="card-connections${connDensity}">${connectionsInner}</div></div>` : '';
-      // Vues seules en bas à gauche (serveurs en commun → zone titre, à droite)
-      const bottomLeftHtml = viewsHtml
-        ? `<div class="card-bottom-left">${viewsHtml}</div>` : '';
+      // Vues + date d'inscription en bas à gauche (serveurs en commun → zone titre)
+      const joinedHtml = p.joinedOn ? `<div class="joined">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              ${tx('joined_on')} ${p.joinedOn}
+            </div>` : '';
+      const bottomLeftHtml = (viewsHtml || joinedHtml)
+        ? `<div class="card-bottom-left">${viewsHtml}${joinedHtml}</div>` : '';
       if (commonGuilds.length > 0) c.classList.add('has-common-guilds');
       if (connKeys.length > 0) c.classList.add('has-card-connections');
       if (hasDiscordFloor) c.classList.add('has-discord-floor');
-      if (viewsHtml) c.classList.add('has-bottom-stack');
+      if (viewsHtml || joinedHtml) c.classList.add('has-bottom-stack');
       const titleGuildsRow = (titleHtml || guildsHtml)
         ? `<div class="card-title-guilds-row">${titleHtml || '<span class="card-title-slot card-title-slot--empty" aria-hidden="true"></span>'}${guildsHtml}</div>`
         : '';
@@ -2338,10 +2342,6 @@
       </div>` : '';
       const bioText = cardBioText(p.bio);
       const bioHtml = bioText ? `<div class="bio"><b>Bio</b>${escapeHtmlMini(bioText)}</div>` : '';
-      const joinedHtml = p.joinedOn ? `<div class="joined">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              ${tx('joined_on')} ${p.joinedOn}
-            </div>` : '';
       const discPrefs = discordConnPrefs(p);
       const discLive = p.discordLive;
       let cardStatus = p.status || 'offline';
@@ -2408,7 +2408,6 @@
             </div>
           ` : (hasDiscordFloor ? '' : cardPresenceHtml(p))}
           ${bioHtml}
-          ${joinedHtml}
           ${(discordFloorHtml || connectionsBlock) ? `<div class="card-discord-conn-stack">${discordFloorHtml}${connectionsBlock}</div>` : ''}
           ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
