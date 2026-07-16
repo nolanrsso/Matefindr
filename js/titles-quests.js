@@ -14,20 +14,22 @@
   }
 
   const RATING_TITLES = [
-    { id: 'rt_subhuman', min: 1, max: 2, label: 'wip', rarity: 2 },
+    { id: 'rt_subhuman', min: 1, max: 2, label: 'subhuman', rarity: 2 },
     { id: 'rt_mid', min: 2, max: 2.5, label: 'mid', rarity: 3 },
-    { id: 'rt_tuff', min: 2.5, max: 3, label: 'clean', rarity: 4 },
+    { id: 'rt_tuff', min: 2.5, max: 3, label: 'tuff', rarity: 4 },
     { id: 'rt_aura', min: 3, max: 3.5, label: 'aura', rarity: 5 },
-    { id: 'rt_aesthetic', min: 3.5, max: 4, label: 'main character', rarity: 6 },
+    { id: 'rt_aesthetic', min: 3.5, max: 4, label: 'aesthetic', rarity: 6 },
     { id: 'rt_peak', min: 4, max: 4.2, label: 'peak', rarity: 7 },
     { id: 'rt_cinema', min: 4.2, max: 4.4, label: 'absolute cinema', rarity: 8 },
-    { id: 'rt_masterpeace', min: 4.4, max: 4.5, label: 'masterpiece', rarity: 9 },
-    { id: 'rt_divine', min: 4.5, max: 4.6, label: 'holy aura', rarity: 10 },
+    { id: 'rt_masterpeace', min: 4.4, max: 4.5, label: 'masterpeace', rarity: 9 },
+    { id: 'rt_divine', min: 4.5, max: 4.6, label: 'divine', rarity: 10 },
     { id: 'rt_goated', min: 4.6, max: 4.7, label: 'goated', rarity: 11 },
     { id: 'rt_beauty', min: 4.7, max: 4.8, label: 'true adam', rarity: 12 },
-    { id: 'rt_perfection', min: 4.8, max: 4.9, label: 'untouchable', rarity: 13 },
+    { id: 'rt_perfection', min: 4.8, max: 4.9, label: 'Perfection', rarity: 13 },
     { id: 'rt_1010', min: 4.9, max: 5.01, label: '10/10', rarity: 14 },
   ];
+
+  const BEAUTY_EDITOR_MS = 2 * 60 * 1000;
 
   const STAT_MISSIONS = [
     {
@@ -534,6 +536,41 @@
     };
   }
 
+  function isBeautyQuestUnlocked() {
+    const u = readSite().user || {};
+    if (u.beautyQuestUnlocked === true) return true;
+    if ((Number(u.editorActiveMs) || 0) >= BEAUTY_EDITOR_MS) return true;
+    // Comptes déjà actifs avant le verrou 2 min
+    const qs = u.questStats || {};
+    if ((qs.matches || 0) > 0 || (qs.votesGiven || 0) > 0 || (qs.likesGiven || 0) > 0 || (qs.views || 0) > 5) return true;
+    const collected = (u.titlesData && Array.isArray(u.titlesData.collected)) ? u.titlesData.collected : [];
+    if (collected.some(id => String(id).startsWith('rt_'))) return true;
+    return false;
+  }
+
+  function beautyUnlockProgress() {
+    if (isBeautyQuestUnlocked()) {
+      return { unlocked: true, ms: BEAUTY_EDITOR_MS, need: BEAUTY_EDITOR_MS, pct: 100 };
+    }
+    const ms = Math.max(0, Math.min(BEAUTY_EDITOR_MS, Number((readSite().user || {}).editorActiveMs) || 0));
+    return { unlocked: false, ms, need: BEAUTY_EDITOR_MS, pct: (ms / BEAUTY_EDITOR_MS) * 100 };
+  }
+
+  function formatUnlockClock(ms) {
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${String(r).padStart(2, '0')}`;
+  }
+
+  function highestCollectedBeautyId(collected) {
+    let best = null;
+    RATING_TITLES.forEach(r => {
+      if (collected.includes(r.id)) best = r.id;
+    });
+    return best;
+  }
+
   function listEligibleMissionIds(stats) {
     const eligible = [];
     if ((stats.votesReceived || 0) >= VOTES_UNLOCK.threshold) eligible.push(VOTES_UNLOCK.id);
@@ -550,7 +587,7 @@
       }
     });
 
-    if ((stats.ratingVotes || 0) >= RATING_MIN_VOTERS) {
+    if (isBeautyQuestUnlocked() && (stats.ratingVotes || 0) >= RATING_MIN_VOTERS) {
       // Possession cumulative : atteindre un palier débloque aussi tous les titres en dessous
       RATING_TITLES.forEach(r => {
         if (stats.rating >= r.min) eligible.push(r.id);
@@ -577,14 +614,12 @@
     let equipped = srcTd.equipped || DISCORDIEN_ID;
     if (!equipped || equipped === BETA_TESTER_ID) equipped = DISCORDIEN_ID;
     const color = srcTd.color || '#C7A5FF';
+    const equippedWasBeauty = ratingIds.includes(srcTd.equipped) || ratingIds.includes(equipped);
 
     // Titres missions / boutique retirés : on ne garde que Esthétisme + exclusifs
     collected = collected.filter(id => isKeepableTitleId(id));
-    // Retire les titres de note qui ne matchent plus la note actuelle
+    // Retire les titres de note qui ne matchent plus la note actuelle (descente → titres plus bas)
     collected = collected.filter(id => !ratingIds.includes(id) || eligible.includes(id));
-    if (equipped && !collected.includes(equipped)) {
-      equipped = collected.find(id => ratingIds.includes(id)) || collected[0] || BETA_TESTER_ID;
-    }
 
     const newBeautyTitles = [];
     eligible.forEach(id => {
@@ -594,6 +629,14 @@
         newBeautyTitles.push(id);
       }
     });
+
+    const highestBeauty = highestCollectedBeautyId(collected);
+    // Si un titre Esthétisme est (était) équipé : coller au plus haut encore valide (montée ou descente)
+    if (equippedWasBeauty) {
+      equipped = highestBeauty || DISCORDIEN_ID;
+    } else if (equipped && !collected.includes(equipped)) {
+      equipped = highestBeauty || collected[0] || DISCORDIEN_ID;
+    }
 
     let claims = Array.isArray(snapshot.questCoinClaims) ? snapshot.questCoinClaims.slice() : [];
     let coins = typeof snapshot.coins === 'number' ? snapshot.coins : 0;
@@ -780,6 +823,7 @@
     ids.forEach(id => {
       const btn = $(id);
       if (!btn) return;
+      btn.style.overflow = 'visible';
       let badge = btn.querySelector('.tq-quest-badge');
       if (!n) {
         if (badge) badge.remove();
@@ -815,6 +859,11 @@
     if (result.newBeautyTitles.length) {
       result.newBeautyTitles.forEach(id => bumpGlobalStat(id));
       tqToast(result.newBeautyTitles.length === 1 ? 'Titre Esthétisme débloqué !' : 'Titres Esthétisme débloqués !');
+    }
+    const claimN = (result.claimable || []).length + (evalDailyLogin().claimable ? 1 : 0);
+    if (claimN > 0 && !refreshPending._notifiedClaim) {
+      refreshPending._notifiedClaim = true;
+      tqToast(claimN === 1 ? '1 quête à réclamer !' : `${claimN} quêtes à réclamer !`);
     }
     if (typeof global.__scheduleCloudSync === 'function'
       && (result.newBeautyTitles.length || result.titlesData.collected.filter(id => String(id).startsWith('rt_')).length !== beforeBeauty
@@ -1241,10 +1290,8 @@
   function missionLevelLabel(m) {
     if (!m) return '';
     if (isRatingTitle(m)) {
-      const r = RATING_TITLES.find(x => x.id === m.id);
-      if (!r) return '';
-      const hi = r.max > 5 ? 5 : r.max;
-      return `${r.min.toFixed(1)}–${hi.toFixed(1)}`;
+      const idx = RATING_TITLES.findIndex(r => r.id === m.id);
+      return idx >= 0 ? `Lvl ${idx + 1}` : '';
     }
     const lvl = missionCoinLevel(m);
     return lvl >= 0 ? `Lvl ${lvl + 1}` : '';
@@ -1271,7 +1318,7 @@
     const rating = Number(stats.rating) || 0;
     const unlocked = (stats.ratingVotes || 0) >= RATING_MIN_VOTERS;
     let rows = '';
-    RATING_TITLES.forEach((r) => {
+    RATING_TITLES.forEach((r, i) => {
       const meta = getMission(r.id);
       const owned = td.collected.includes(r.id);
       const isSoon = soon && soon.id === r.id;
@@ -1279,8 +1326,9 @@
       const typo = titleTypoCss(meta || { id: r.id, title: r.label, rarity: r.rarity, noTranslate: true });
       const cls = `tq-beauty-title-row${owned ? ' is-owned' : ''}${isSoon ? ' is-soon' : ''}${isCurrent ? ' is-current' : ''}`;
       rows += `<div class="${cls}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}">
-        <span class="tq-beauty-title-lvl">${r.min.toFixed(1)}–${(r.max > 5 ? 5 : r.max).toFixed(1)}</span>
+        <span class="tq-beauty-title-lvl">Lvl ${i + 1}</span>
         <span class="tq-beauty-title-name">${esc(titleDisplay(meta) || (r.label.charAt(0).toUpperCase() + r.label.slice(1)))}</span>
+        <span class="tq-beauty-title-range">${r.min.toFixed(1)} – ${(r.max > 5 ? 5 : r.max).toFixed(1)}</span>
         ${owned ? '<span class="tq-done-lbl">Obtenu</span>' : (isSoon ? '<span class="tq-soon">Bientôt</span>' : '')}
       </div>`;
     });
@@ -1359,19 +1407,23 @@
     <div class="tq-scroll tq-quests-list">`;
     QUEST_TRACKS.forEach(track => {
       if (track.isRating) {
+        const unlock = beautyUnlockProgress();
         const arrow = beautyArrow(stats);
-        const soonMeta = nextBeautyTitleMeta(stats);
-        html += `<article class="tq-mission tq-mission--hero tq-mission--rating${arrow.maxed ? ' tq-mission--done' : ''}">
+        const soonMeta = unlock.unlocked ? nextBeautyTitleMeta(stats) : null;
+        const lockedCls = unlock.unlocked ? '' : ' tq-mission--beauty-locked';
+        html += `<article class="tq-mission tq-mission--hero tq-mission--rating${arrow.maxed && unlock.unlocked ? ' tq-mission--done' : ''}${lockedCls}">
           <div class="tq-mission-head">
             <span class="tq-mission-head-left">
               <span class="tq-mission-title">${esc(track.label)}</span>
               ${soonMeta ? `<span class="tq-lvl-badge">${esc(missionLevelLabel(soonMeta))}</span>` : ''}
             </span>
-            ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : ''}
+            ${arrow.maxed && unlock.unlocked ? '<span class="tq-done-lbl">5/5</span>' : ''}
           </div>
-          <p class="tq-mission-desc">${arrow.locked
-            ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
-            : 'Ta note de profil — la barre atteint 100 % à 5/5.'}</p>
+          <p class="tq-mission-desc">${!unlock.unlocked
+            ? 'Personnalise ton profil dans l’éditeur pour activer cette quête.'
+            : (arrow.locked
+              ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
+              : 'Ta note de profil — la barre atteint 100 % à 5/5.')}</p>
           <div class="tq-beauty-arrow" aria-label="${esc(arrow.locked ? 'Votants' : 'Note')}">
             <span class="tq-beauty-from">${esc(arrow.labelFrom)}</span>
             <span class="tq-beauty-chevron" aria-hidden="true">→</span>
@@ -1384,9 +1436,14 @@
             <span class="tq-mission-count">${arrow.locked
               ? `${arrow.from} / ${arrow.to} votants`
               : `Note ${arrow.labelFrom} / 5`}</span>
-            <button type="button" class="tq-beauty-titles-btn" data-toggle-beauty-titles>Titres par note</button>
+            <button type="button" class="tq-beauty-titles-btn" data-toggle-beauty-titles ${unlock.unlocked ? '' : 'disabled'}>Titres par note</button>
           </div>
           ${renderBeautyTitlesPanel(stats, td)}
+          ${!unlock.unlocked ? `<div class="tq-beauty-lock" role="status">
+            <div class="tq-beauty-lock-msg">Passe <b>2 min</b> dans l’éditeur à modifier ton profil pour activer Esthétisme</div>
+            <div class="tq-beauty-lock-bar" aria-hidden="true"><span style="width:${unlock.pct.toFixed(1)}%"></span></div>
+            <div class="tq-beauty-lock-time">${formatUnlockClock(unlock.ms)} / 2:00</div>
+          </div>` : ''}
         </article>`;
         return;
       }
@@ -1474,20 +1531,18 @@
     else if (soon) badge = `<span class="tq-soon">Bientôt</span>`;
     else if (lvl) badge = `<span class="tq-lvl-badge">${esc(lvl)}</span>`;
     const typo = titleTypoCss(meta);
-    const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}${opts.beautyTop ? ' tq-title-pick--beauty-top' : ''}${opts.beautyChild ? ' tq-title-pick--beauty-child' : ''}`;
+    const cls = `tq-title-pick${owned ? ' owned' : ''}${soon ? ' soon' : ''}${opts.shop ? ' shop' : ''}${opts.beautyTop ? ' tq-title-pick--beauty-top' : ''}${opts.beautyChild ? ' tq-title-pick--beauty-child' : ''}${opts.expandable ? ' tq-title-pick--expandable' : ''}`;
     const canBuy = opts.shop && price != null && getCoins() >= price;
+    const expand = opts.expandable
+      ? `<span class="tq-beauty-drop" data-beauty-expand role="button" tabindex="0" aria-expanded="false" aria-label="Afficher les niveaux inférieurs" title="Niveaux inférieurs">▾</span>`
+      : '';
     const pick = `<button type="button" class="${cls}" data-id="${esc(meta.id)}" data-rarity="${meta.rarity || 1}" data-price="${price || ''}" style="--title-color:${esc(td.color || '#C7A5FF')};${typo}" ${owned || canBuy ? '' : 'disabled'}>
         <span class="tq-title-glow" aria-hidden="true"></span>
         <span class="tq-title-aura" aria-hidden="true"></span>
+        ${expand}
         <span class="tq-title-label">${esc(titleDisplay(meta))}</span>
         ${badge}
       </button>`;
-    if (opts.expandable) {
-      return `<div class="tq-beauty-top-row">
-        <button type="button" class="tq-beauty-expand" data-beauty-expand aria-expanded="false" aria-label="Afficher les niveaux inférieurs" title="Niveaux inférieurs">▾</button>
-        ${pick}
-      </div>`;
-    }
     return pick;
   }
 
@@ -1548,7 +1603,7 @@
     const lowerBox = body.querySelector('#tqBeautyOwnedLower');
     const expandBtn = body.querySelector('[data-beauty-expand]');
     if (expandBtn && lowerBox) {
-      expandBtn.addEventListener('click', e => {
+      const toggle = e => {
         e.preventDefault();
         e.stopPropagation();
         const open = lowerBox.hasAttribute('hidden');
@@ -1558,6 +1613,10 @@
         expandBtn.classList.toggle('is-open', open);
         expandBtn.textContent = open ? '▴' : '▾';
         expandBtn.setAttribute('aria-label', open ? 'Masquer les niveaux inférieurs' : 'Afficher les niveaux inférieurs');
+      };
+      expandBtn.addEventListener('click', toggle);
+      expandBtn.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') toggle(e);
       });
     }
     body.querySelectorAll('.tq-title-pick.owned').forEach(btn => {
@@ -1746,6 +1805,8 @@
     processQuestCoinRewards,
     questCoinReward,
     applyQuestProgress,
+    isBeautyQuestUnlocked,
+    beautyUnlockProgress,
     listEligibleMissionIds,
     listClaimableQuestIds,
     refreshPending,

@@ -3731,6 +3731,43 @@ function persist(){ if(_suppressPersist) return; clearTimeout(_persistT); _persi
 function saveNow(){ if(_suppressPersist) return; clearTimeout(_persistT); writeState(); syncToDb(); }
 window.__persist = persist;
 
+/* Compteur 2 min éditeur → débloque la quête Esthétisme */
+(function trackBeautyEditorUnlock(){
+  const NEED=2*60*1000;
+  let last=Date.now();
+  let wroteUnlock=false;
+  setInterval(()=>{
+    try{
+      if(document.hidden){ last=Date.now(); return; }
+      const now=Date.now();
+      const dt=Math.min(2000, Math.max(0, now-last));
+      last=now;
+      if(dt<=0) return;
+      const st=readSite(); st.user=st.user||{};
+      if(st.user.beautyQuestUnlocked) return;
+      if(window.MatefindrTitlesQuests && typeof MatefindrTitlesQuests.isBeautyQuestUnlocked==='function'
+        && MatefindrTitlesQuests.isBeautyQuestUnlocked()){
+        st.user.beautyQuestUnlocked=true;
+        try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
+        scheduleDbSync();
+        return;
+      }
+      const prev=Number(st.user.editorActiveMs)||0;
+      const next=prev+dt;
+      st.user.editorActiveMs=next;
+      if(next>=NEED){
+        st.user.beautyQuestUnlocked=true;
+        if(!wroteUnlock){
+          wroteUnlock=true;
+          try{ toast('Esthétisme du profil débloqué !'); }catch(_){}
+        }
+      }
+      try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
+      if(next>=NEED || next%15000<dt) scheduleDbSync();
+    }catch(_){}
+  },1000);
+})();
+
 /* ===== Undo / Redo (Ctrl+Z / Ctrl+Y) ===== */
 const EDITOR_UNDO_MAX=40;
 let _undoStack=[], _redoStack=[], _undoPrevSnap=null, _undoLastFp=null, _undoLock=false;
@@ -3865,6 +3902,8 @@ function buildDbProfile(st){
     titlesData:u.titlesData||null,
     coins:typeof u.coins==='number'?u.coins:0,
     questCoinClaims:Array.isArray(u.questCoinClaims)?u.questCoinClaims:[],
+    editorActiveMs:typeof u.editorActiveMs==='number'?u.editorActiveMs:0,
+    beautyQuestUnlocked:!!u.beautyQuestUnlocked,
     slugChangedAt:u.slugChangedAt||null,
     // Presets + index affiché sur le lien perso (≠ preset équipé dans l'éditeur)
     presets:Array.isArray(u.presets)?u.presets:(typeof PRESETS!=='undefined'&&Array.isArray(PRESETS)?PRESETS:[]),
@@ -4014,6 +4053,8 @@ async function edEnsureLocalProfile(){
       if(d.titlesData) su.titlesData=d.titlesData;
       if(typeof d.coins==='number') su.coins=d.coins;
       if(Array.isArray(d.questCoinClaims)) su.questCoinClaims=d.questCoinClaims;
+      if(typeof d.editorActiveMs==='number') su.editorActiveMs=Math.max(Number(su.editorActiveMs)||0, d.editorActiveMs);
+      if(d.beautyQuestUnlocked) su.beautyQuestUnlocked=true;
       if(d.discordLive) su.discordLive=d.discordLive;
       if(Array.isArray(d.presets)) su.presets=d.presets;
       if(typeof d.sharePresetIdx==='number') su.sharePresetIdx=d.sharePresetIdx;

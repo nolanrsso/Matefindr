@@ -448,6 +448,8 @@
                 if (d.titlesData) su.titlesData = d.titlesData;
                 if (typeof d.coins === 'number') su.coins = d.coins;
                 if (Array.isArray(d.questCoinClaims)) su.questCoinClaims = d.questCoinClaims;
+                if (typeof d.editorActiveMs === 'number') su.editorActiveMs = Math.max(Number(su.editorActiveMs) || 0, d.editorActiveMs);
+                if (d.beautyQuestUnlocked) su.beautyQuestUnlocked = true;
                 console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
               } else if (dRaw) {
                 // Même si le profil local existe déjà, ne pas perdre presets / sharePresetIdx / quêtes
@@ -464,6 +466,10 @@
                   const merged = [...new Set([...loc, ...dRaw.titlesData.collected])];
                   state.user.titlesData = Object.assign({}, state.user.titlesData || {}, dRaw.titlesData, { collected: merged });
                 }
+                if (typeof dRaw.editorActiveMs === 'number') {
+                  state.user.editorActiveMs = Math.max(Number(state.user.editorActiveMs) || 0, dRaw.editorActiveMs);
+                }
+                if (dRaw.beautyQuestUnlocked) state.user.beautyQuestUnlocked = true;
               }
             }
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
@@ -1107,6 +1113,8 @@
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         coins: typeof u.coins === 'number' ? u.coins : 0,
         questCoinClaims: Array.isArray(u.questCoinClaims) ? u.questCoinClaims : [],
+        editorActiveMs: typeof u.editorActiveMs === 'number' ? u.editorActiveMs : 0,
+        beautyQuestUnlocked: !!u.beautyQuestUnlocked,
         isMe: true,
         views: _myViewsCache,
         // Presets + preset du lien perso (indépendant du profil équipé / deck swipe)

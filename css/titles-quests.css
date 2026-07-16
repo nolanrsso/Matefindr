@@ -484,19 +484,25 @@
 .tq-rating-details-toggle,.tq-rating-tiers{display:none!important}
 
 /* Notif quête à réclamer */
-.nav-ico--quests,.top-btn--quests{position:relative}
+.nav-ico--quests,.top-btn--quests{position:relative;overflow:visible!important}
 .tq-quest-badge{
-  position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;
-  border-radius:999px;background:linear-gradient(135deg,#FF4D6D,#FF7EB6);color:#fff;
-  font-size:10px;font-weight:800;line-height:16px;text-align:center;
-  box-shadow:0 0 0 2px rgba(12,10,24,.95),0 4px 10px rgba(255,77,109,.45);
-  pointer-events:none;
+  position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;
+  border-radius:999px;background:linear-gradient(135deg,#FF2D55,#FF7EB6);color:#fff;
+  font-size:11px;font-weight:900;line-height:18px;text-align:center;
+  box-shadow:0 0 0 2px rgba(12,10,24,.95),0 0 12px rgba(255,45,85,.65);
+  pointer-events:none;z-index:5;
+  animation:tq-badge-pop .45s ease-out;
 }
-.top-btn--quests .tq-quest-badge{top:-4px;right:-4px}
-.tq-quest-has-claim{animation:tq-quest-pulse 1.8s ease-in-out infinite}
+.top-btn--quests .tq-quest-badge{top:-5px;right:-5px}
+.tq-quest-has-claim{animation:tq-quest-pulse 1.4s ease-in-out infinite}
 @keyframes tq-quest-pulse{
-  0%,100%{filter:none}
-  50%{filter:drop-shadow(0 0 6px rgba(255,126,182,.55))}
+  0%,100%{filter:none;box-shadow:none}
+  50%{filter:drop-shadow(0 0 8px rgba(255,45,85,.7))}
+}
+@keyframes tq-badge-pop{
+  0%{transform:scale(.4);opacity:0}
+  70%{transform:scale(1.15)}
+  100%{transform:scale(1);opacity:1}
 }
 @media (max-width:520px){
   .tq-modal--quests{
@@ -567,17 +573,31 @@
   letter-spacing:0;text-transform:none;padding-left:8px;
 }
 .tq-beauty-owned{display:flex;flex-direction:column;gap:6px;margin-bottom:2px}
-.tq-beauty-top-row{display:flex;align-items:stretch;gap:6px}
-.tq-beauty-top-row .tq-title-pick{flex:1;min-width:0}
-.tq-beauty-expand{
-  flex:0 0 36px;border-radius:12px;border:1px solid rgba(255,126,182,.35);
-  background:rgba(255,126,182,.1);color:#FF7EB6;font-size:16px;font-weight:800;
-  cursor:pointer;line-height:1;padding:0;
+.tq-title-pick--expandable{padding-left:28px}
+.tq-beauty-drop{
+  position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:2;
+  width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;
+  color:#0a0a0a;font-size:13px;font-weight:900;line-height:1;cursor:pointer;
+  user-select:none;background:rgba(255,255,255,.88);border-radius:4px;
 }
-.tq-beauty-expand:hover,.tq-beauty-expand.is-open{background:rgba(255,126,182,.2);border-color:rgba(255,126,182,.55)}
+.tq-beauty-drop.is-open{/* état ouvert via ▴ */}
 .tq-beauty-owned-lower{display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:2px solid rgba(255,126,182,.25);margin-left:16px}
 .tq-beauty-owned-lower[hidden]{display:none!important}
 .tq-title-pick--beauty-child{opacity:.92}
+.tq-mission--beauty-locked{position:relative;overflow:hidden}
+.tq-mission--beauty-locked > :not(.tq-beauty-lock){filter:blur(3.5px) brightness(.42);pointer-events:none;user-select:none}
+.tq-beauty-lock{
+  position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:18px 16px;text-align:center;
+  background:rgba(6,4,14,.55);
+}
+.tq-beauty-lock-msg{font-size:13px;font-weight:700;line-height:1.35;color:#fff;max-width:28ch}
+.tq-beauty-lock-msg b{color:#FFD15C}
+.tq-beauty-lock-bar{
+  width:min(220px,80%);height:8px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden;
+}
+.tq-beauty-lock-bar > span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#FF7EB6,#C7A5FF)}
+.tq-beauty-lock-time{font-size:12px;font-weight:800;color:rgba(255,255,255,.7);font-variant-numeric:tabular-nums}
 .tq-price-ico{font-size:12px;line-height:1}
 .tq-title-glow{
   position:absolute;inset:-8px -12px;border-radius:inherit;pointer-events:none;z-index:0;
