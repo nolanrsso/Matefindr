@@ -1857,6 +1857,27 @@
     };
 
     /* Convertit une ligne Supabase (data jsonb OU colonnes legacy) en profil pour buildCard. */
+    function ensureRemoteDiscordConn(p, r){
+      if (!p) return p;
+      const did = (r && r.discord_id) || p.discordId || null;
+      if (!did) return p;
+      p.discordId = p.discordId || String(did);
+      if (!p.connections || typeof p.connections !== 'object') p.connections = {};
+      const tag = p.tag || (r && r.discord_tag) || '';
+      try {
+        const MC = window.MatefindrConnections;
+        if (MC && typeof MC.ensureDiscordConnection === 'function') {
+          MC.ensureDiscordConnection({ discordId: String(did), discordTag: tag }, p.connections);
+        } else if (!p.connections.discord) {
+          p.connections.discord = {
+            v: String(did), mode: 'link',
+            label: String(tag || '').replace(/^@+/, '').replace(/#0$/, ''),
+            showLabel: true, showActivity: true, showStatus: true,
+          };
+        }
+      } catch(_){}
+      return p;
+    }
     function rowToProfile(r){
       if (!r) return null;
       // Profil complet stocké dans data → on l'utilise tel quel
@@ -1867,7 +1888,8 @@
         // Conserver presets / sharePresetIdx pour openSharedProfile (lien perso seulement)
         if (Array.isArray(r.data.presets)) p.presets = r.data.presets;
         if (typeof r.data.sharePresetIdx === 'number') p.sharePresetIdx = r.data.sharePresetIdx;
-        return p;
+        if (r.discord_id) p.discordId = p.discordId || r.discord_id;
+        return ensureRemoteDiscordConn(p, r);
       }
       // Sinon : on reconstruit depuis les colonnes existantes (name/avatar/bio/bulles…)
       if (!r.display_name && !r.avatar_url) return null;
@@ -1884,7 +1906,7 @@
         rank: o.rank || null, customX: o.customX, customY: o.customY,
         posPortrait: o.posPortrait || null, posLandscape: o.posLandscape || null,
       }));
-      return {
+      return ensureRemoteDiscordConn({
         name: r.display_name || 'Matefindr',
         tag: r.discord_tag || (r.discord_id ? String(r.discord_id).slice(0, 8) : 'user'),
         age: r.age || '', gender: r.gender || '', country: r.country || '', countryFlag: '',
@@ -1903,7 +1925,8 @@
         orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null, _showViews: true,
         disabled: !!(r.data && r.data.disabled),
         handleBlur: !!(r.data && r.data.handleBlur),
-      };
+        connections: (r.data && r.data.connections && typeof r.data.connections === 'object') ? Object.assign({}, r.data.connections) : {},
+      }, r);
     }
 
     /* Agrégat des notes profil pour le tri découverte (cache léger par fetch). */
