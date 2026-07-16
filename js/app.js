@@ -3023,7 +3023,7 @@
       const wrapEl = document.getElementById('swipeWrap');
       const cardRect = wrapEl
         ? wrapEl.getBoundingClientRect()
-        : { left: sw/2 - 218.5, top: sh/2 - 356.5, width: 437, height: 713 };
+        : { left: sw/2 - 203, top: sh/2 - 331.5, width: 406, height: 663 };
       const cardCx = cardRect.left + cardRect.width / 2;
       const cardCy = cardRect.top  + cardRect.height / 2;
       // Orientation active (portrait / paysage téléphone / bureau) → détermine
