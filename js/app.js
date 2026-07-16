@@ -154,6 +154,16 @@
     function setAuth(on){
       document.body.setAttribute('data-auth', on ? 'in' : 'out');
       if (on) updateChip();
+      else {
+        // Déconnecté → jamais laisser l'onboarding / compte / swipe "app" visibles
+        // (sinon "Se connecter" + formulaire "Hey, toi !" en même temps).
+        // Exception : carte ouverte via lien perso (consultable hors connexion).
+        const scr = document.body.getAttribute('data-screen');
+        const shared = !!_sharedProfile || document.body.getAttribute('data-shared') === 'true';
+        if (!shared && scr && scr !== 'landing' && typeof setScreen === 'function') {
+          setScreen('landing');
+        }
+      }
       if (typeof refreshLandingCta === 'function') refreshLandingCta();
     }
     /* Ouvre le VRAI reste de l'app (landing/onboarding) -- avec un garde-fou : un
@@ -7904,13 +7914,15 @@
           const u = await userFromSupabaseSession(session);
           if (u) window.__matefindr.onLogin(u);
           if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
-        } else if (state.user) {
-          // Pas de session Supabase mais état local → fantôme / déco incomplète
-          clearDiscordTokenKeys();
-          state = { user: null, profile: null };
-          try { localStorage.removeItem(KEY); } catch(_){}
+        } else {
+          // Pas de session → personne connecté. setAuth(false) renvoie aussi à la
+          // landing si on était resté bloqué sur l'onboarding (bug "Hey toi" + Se connecter).
+          if (state.user) {
+            clearDiscordTokenKeys();
+            state = { user: null, profile: null };
+            try { localStorage.removeItem(KEY); } catch(_){}
+          }
           setAuth(false);
-          if (typeof refreshLandingCta === 'function') refreshLandingCta();
         }
         window.__supa.auth.onAuthStateChange(async (event, s) => {
           console.log('[Matefindr] auth event:', event, 'provider_token:', !!s?.provider_token);
