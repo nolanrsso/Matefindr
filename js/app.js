@@ -2044,27 +2044,16 @@
     window.__recordLike = recordLike;
     window.__refreshLikesReceived = refreshLikesReceived;
 
-    /* Profils déjà swipés — exclus du deck POUR DE BON (survit au F5 / faux logout).
-       File d'attente : on montre toujours pool[0] (pas de deckIdx qui dérive). */
+    /* Profils déjà swipés — exclus du deck PENDANT LA SESSION uniquement.
+       Au F5 / nouvel onglet → tout le monde revient. (Pas de localStorage.)
+       File d'attente : toujours pool[0]. */
     const SWIPED_KEY = 'matefindr_swiped_uids';
-    const SWIPED_UIDS = (() => {
-      try {
-        const raw = JSON.parse(localStorage.getItem(SWIPED_KEY) || '[]');
-        return new Set(Array.isArray(raw) ? raw.filter(Boolean).map(String) : []);
-      } catch(_){ return new Set(); }
-    })();
-    function persistSwipedUids(){
-      try {
-        const arr = [...SWIPED_UIDS];
-        localStorage.setItem(SWIPED_KEY, JSON.stringify(arr.slice(-800)));
-      } catch(_){}
-    }
+    // Purge d'une ancienne version qui persistait au refresh (vidait le deck à tort).
+    try { localStorage.removeItem(SWIPED_KEY); } catch(_){}
+    const SWIPED_UIDS = new Set();
     function markSwipedUid(uid){
       if (!uid) return;
-      const id = String(uid);
-      if (SWIPED_UIDS.has(id)) return;
-      SWIPED_UIDS.add(id);
-      persistSwipedUids();
+      SWIPED_UIDS.add(String(uid));
     }
     function isSwipedUid(uid){
       return !!(uid && SWIPED_UIDS.has(String(uid)));
