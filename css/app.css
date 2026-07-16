@@ -841,14 +841,24 @@
   }
   .account-chip .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover}
 
-  /* Boutons navbar : lien perso + paramètres */
+  /* Boutons navbar : Quêtes / Paramètres / Mon lien — même verre + hover plus clair */
   .nav-ico{
     display:none;align-items:center;justify-content:center;width:42px;height:42px;padding:0;
-    border-radius:12px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:#fff;
-    cursor:pointer;transition:.18s ease;flex:0 0 auto;box-sizing:border-box;
+    border-radius:12px;border:1px solid var(--stroke-2);color:#fff;
+    background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));
+    backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
+    box-shadow:0 8px 22px rgba(0,0,0,.35);
+    cursor:pointer;transition:background .14s ease,border-color .14s ease,transform .12s ease,box-shadow .14s ease;
+    flex:0 0 auto;box-sizing:border-box;
   }
   body[data-auth="in"] .nav-ico{display:inline-flex}
-  .nav-ico:hover{background:rgba(0,0,0,.14);border-color:rgba(255,255,255,.22);transform:translateY(-1px)}
+  .nav-ico:hover{
+    background:linear-gradient(180deg, rgba(52,42,88,.95), rgba(34,26,64,.95));
+    border-color:rgba(255,255,255,.28);
+    box-shadow:0 10px 26px rgba(0,0,0,.4);
+    transform:translateY(-1px);
+  }
+  .nav-ico:active{transform:scale(.97)}
   .nav-ico svg{width:18px;height:18px;display:block}
   .nav-ico--quests svg{width:24px;height:24px}
   #navShareLink{color:#fff}

@@ -109,14 +109,18 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
 .topbar .logo{height:46px;width:auto;display:block;filter:drop-shadow(0 4px 18px rgba(255,31,158,.55))}
 .topbar .crumb{color:var(--dim);font-size:13px;font-weight:600}
 .topbar .note{color:var(--dim);font-size:11.5px;border:1px dashed var(--stroke-2);border-radius:999px;padding:5px 12px}
-/* Boutons topbar (Quêtes / Paramètres) — même verre + hover violet que Mon lien */
+/* Boutons topbar (Quêtes / Paramètres) — même verre que Mon lien, hover plus clair */
 .top-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:8px 14px 8px 12px;border-radius:14px;border:1px solid var(--stroke-2);cursor:pointer;
   background:linear-gradient(180deg, rgba(28,22,58,.86), rgba(18,12,42,.86));
   backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);
   box-shadow:0 10px 28px rgba(0,0,0,.35);
   color:#fff;font-family:inherit;font-weight:800;font-size:13.5px;
   transition:background .14s ease,border-color .14s ease,transform .12s ease,box-shadow .14s ease}
-.top-btn:hover{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.55);box-shadow:0 10px 28px rgba(145,70,255,.22)}
+.top-btn:hover{
+  background:linear-gradient(180deg, rgba(52,42,88,.95), rgba(34,26,64,.95));
+  border-color:rgba(255,255,255,.28);
+  box-shadow:0 10px 28px rgba(0,0,0,.4);
+}
 .top-btn:active{transform:scale(.97)}
 .top-btn svg{width:18px;height:18px;flex:0 0 auto;opacity:.92}
 .top-btn--quests svg{width:20px;height:20px}
@@ -127,7 +131,10 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
   .top-btn span{display:none}
   .top-btn svg{width:20px;height:20px}
   .top-btn--quests svg{width:22px;height:22px}
-  .top-btn:hover{background:rgba(145,70,255,.22);border-color:rgba(179,128,255,.55)}
+  .top-btn:hover{
+    background:linear-gradient(180deg, rgba(52,42,88,.95), rgba(34,26,64,.95));
+    border-color:rgba(255,255,255,.28);
+  }
 }
 
 /* Sélecteur d'orientation (Bureau / Portrait / Paysage) — bloc normal centré
