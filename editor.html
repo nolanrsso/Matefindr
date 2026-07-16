@@ -407,12 +407,11 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .avatar-deco{position:absolute;left:20px;top:calc(34cqi - 70px);width:140px;height:140px;border-radius:50%;pointer-events:none;z-index:5}
 .avatar-deco .avi-deco{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);object-fit:contain}
 .avatar-deco .status-dot{display:none} /* rond de statut retiré */
-/* Body IDENTIQUE à .swipe-card .body : flux sous la bannière + padding-top 86px
-   (dégagement sous l'avatar). Plus d'inset absolute qui décalait le pseudo. */
+/* Body IDENTIQUE à .swipe-card .body : padding-top 72px = juste sous la PFP */
 .body{
   position:relative;flex:1 1 auto;min-height:0;z-index:2;
   overflow-y:auto;overflow-x:hidden;
-  padding:86px 18px 54px;display:flex;flex-direction:column;gap:10px;
+  padding:72px 18px 54px;display:flex;flex-direction:column;gap:10px;
   background:transparent;
 }
 /* Bloc pseudo + @tag + titre — même regroupement que .swipe-card .body > div (buildCard). */
