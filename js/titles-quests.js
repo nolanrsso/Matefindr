@@ -1145,11 +1145,11 @@
         const soonMeta = nextBeautyTitleMeta(stats);
         html += `<article class="tq-mission tq-mission--hero tq-mission--rating${arrow.maxed ? ' tq-mission--done' : ''}">
           <div class="tq-mission-head">
-            <span class="tq-mission-title">${esc(track.label)}</span>
-            <span class="tq-mission-head-right">
+            <span class="tq-mission-head-left">
+              <span class="tq-mission-title">${esc(track.label)}</span>
               ${soonMeta ? `<span class="tq-lvl-badge">${esc(missionLevelLabel(soonMeta))}</span>` : ''}
-              ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : '<span class="tq-auto-lbl">Auto</span>'}
             </span>
+            ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : '<span class="tq-auto-lbl">Auto</span>'}
           </div>
           <p class="tq-mission-desc">${arrow.locked
             ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
@@ -1184,11 +1184,11 @@
       const lvlLbl = missionLevelLabel(m);
       html += `<article class="tq-mission${done ? ' tq-mission--done' : ''}${ready ? ' tq-mission--ready' : ''}" data-id="${esc(m.id)}">
         <div class="tq-mission-head">
-          <span class="tq-mission-title">${esc(track.label)}</span>
-          <span class="tq-mission-head-right">
+          <span class="tq-mission-head-left">
+            <span class="tq-mission-title">${esc(track.label)}</span>
             ${lvlLbl ? `<span class="tq-lvl-badge">${esc(lvlLbl)}</span>` : ''}
-            ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
           </span>
+          ${coinReward && !claimed ? `<span class="tq-coin-reward">+${coinReward} 🪙</span>` : ''}
         </div>
         <div class="tq-bar tq-bar--lg" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct.toFixed(1)}%"></span></div>
         <div class="tq-mission-foot">

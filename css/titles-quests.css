@@ -341,7 +341,13 @@
   box-shadow:0 0 0 1px rgba(145,70,255,.2),0 12px 32px rgba(145,70,255,.18);
 }
 .tq-mission--done{opacity:.78}
-.tq-mission-head-right{display:inline-flex;align-items:center;gap:8px;flex-shrink:0}
+.tq-mission-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;
+}
+.tq-mission-title{font-weight:800;font-size:15px;color:#fff;letter-spacing:-.01em}
+.tq-mission-head-left{display:inline-flex;align-items:center;gap:8px;min-width:0;flex:1}
+.tq-mission-head-right{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
+.tq-coin-reward{margin-left:auto;flex-shrink:0}
 .tq-lvl-badge{
   font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
   color:#C7A5FF;padding:3px 8px;border-radius:999px;
@@ -411,6 +417,7 @@
 .tq-coin-reward{
   color:#FFD15C;font-weight:800;font-size:12.5px;white-space:nowrap;
   padding:4px 9px;border-radius:999px;background:rgba(255,209,92,.12);border:1px solid rgba(255,209,92,.28);
+  margin-left:auto;flex-shrink:0;
 }
 .tq-mission--rating{border-color:rgba(255,126,182,.25)}
 .tq-beauty-arrow{
