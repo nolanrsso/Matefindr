@@ -65,6 +65,12 @@
       eventNote: 'Événement · récompense ×2',
       coinMult: 2,
     },
+    {
+      group: 'interaction', statId: 'likes', stat: 'likesGiven',
+      label: 'Liker d\'autres profils',
+      eventNote: 'Événement · récompense ×2',
+      coinMult: 2,
+    },
     { group: 'profil', statId: 'views', stat: 'views', label: 'Visionnage de mon profil' },
     { group: 'interaction', statId: 'matches', stat: 'matches', label: 'Matchs' },
     { group: 'interaction', statId: 'conversations', stat: 'newChats', label: 'Conversation (par personnes)' },
