@@ -185,7 +185,7 @@
 
   function connProfileLabel(app, entry, profileTag){
     const e = connNormalize(entry);
-    if(!e || e.showLabel === false) return '';
+    if(!e) return '';
     if(e.label) return cleanHandle(e.label);
     if(typeof app === 'string') app = connApp(app);
     if(app && app.id === 'discord'){
@@ -208,14 +208,17 @@
     const escFn = typeof esc === 'function' ? esc : s => String(s);
     const href = buildConnUrl(app, entry);
     const user = connProfileLabel(app, entry, profileTag);
+    const showUser = e.showLabel !== false;
     const iconHtml = connIconHtml(app, null, e, uniformColor);
-    const labelHtml = user ? `<span class="card-conn-user">${escFn(user)}</span>` : '';
+    const labelHtml = user
+      ? `<span class="card-conn-user${showUser ? '' : ' card-conn-user--blur'}">${escFn(user)}</span>`
+      : '';
     const inner = `<span class="card-conn-ico">${iconHtml}</span>${labelHtml}`;
     const name = app ? app.name : 'Connexion';
-    const labelCls = user ? ' card-conn--show-label' : '';
+    const labelCls = user ? (showUser ? ' card-conn--show-label' : ' card-conn--label-blur') : '';
     if(e.mode !== 'text' && href)
-      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn${labelCls}" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</a>`;
-    return `<span class="card-conn${labelCls}" title="${escFn(name)}${user ? ' · '+escFn(user) : ''}">${inner}</span>`;
+      return `<a href="${href}" target="_blank" rel="noopener" class="card-conn${labelCls}" title="${escFn(name)}${user && showUser ? ' · '+escFn(user) : ''}">${inner}</a>`;
+    return `<span class="card-conn${labelCls}" title="${escFn(name)}${user && showUser ? ' · '+escFn(user) : ''}">${inner}</span>`;
   }
 
   function connDisplayText(app, entry, profileTag){

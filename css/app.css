@@ -1855,9 +1855,13 @@
   .swipe-card .card-conn .conn-ico-uniform svg path[stroke],
   .swipe-card .card-conn .conn-ico-uniform svg rect[stroke]{fill:none !important;stroke:currentColor}
   .swipe-card .card-conn-user{
-    position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%) translateY(4px);
+    position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%);
     font-size:11px;font-weight:600;color:#b9bbbe;text-align:center;line-height:1.25;
     max-width:72px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
+  }
+  .swipe-card .card-conn-user--blur,
+  .swipe-card .card-conn--label-blur .card-conn-user{
+    filter:blur(5px);user-select:none;-webkit-user-select:none;color:rgba(185,187,190,.85);
   }
   .swipe-card .card-connections--many{gap:10px}
   .swipe-card .card-connections--many .card-conn{width:34px;flex-basis:34px}
@@ -1868,15 +1872,6 @@
   .swipe-card .card-connections--dense .card-conn-ico{width:27px;height:27px}
   .swipe-card .card-connections--dense .card-conn-user{font-size:9px;max-width:68px}
   .swipe-card .card-connections--dense .card-conn .conn-favicon{transform:scale(1.08)}
-  .swipe-card .card-conn--show-label .card-conn-user{opacity:0;max-height:0;overflow:hidden;margin:0;transform:translateX(-50%) translateY(4px);transition:opacity .16s ease, transform .16s ease, max-height .16s ease}
-  @media (hover:hover){
-    .swipe-card .card-conn--show-label:hover .card-conn-user,.swipe-card .card-conn--show-label:focus-visible .card-conn-user{opacity:1;max-height:1.4em;transform:translateX(-50%);color:#fff}
-    .swipe-card.light-bg .card-conn--show-label:hover .card-conn-user,.swipe-card.light-bg .card-conn--show-label:focus-visible .card-conn-user{color:#101014}
-  }
-  @media (hover:none){
-    .swipe-card .card-conn--show-label:active .card-conn-user,.swipe-card .card-conn--show-label:focus-within .card-conn-user{opacity:1;max-height:1.4em;transform:translateX(-50%);color:#fff}
-    .swipe-card.light-bg .card-conn--show-label:active .card-conn-user,.swipe-card.light-bg .card-conn--show-label:focus-within .card-conn-user{color:#101014}
-  }
   /* Social connections on card (clickable links) */
   .card-socials{display:flex;flex-direction:column;gap:4px;margin-top:-4px;position:relative;z-index:6}
   .card-social{
