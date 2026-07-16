@@ -3343,17 +3343,16 @@
       if (!url) return null;
       const u = String(url).trim();
       // YouTube watch / short / shorts — extract video ID. Use youtube.com (pas nocookie) car
-      // certaines vidéos refusent l'embed nocookie. Le param "playsinline=1" évite les erreurs sur mobile.
+      // certaines vidéos refusent l'embed nocookie. Pas d'autoplay : l'utilisateur clique Play.
       let m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([\w-]{11})/i);
-      if (m) return { type:'iframe', src:`https://www.youtube.com/embed/${encodeURIComponent(m[1])}?autoplay=1&rel=0&playsinline=1`, externalUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(m[1])}` };
-      // Twitch clip
+      if (m) return { type:'iframe', src:`https://www.youtube.com/embed/${encodeURIComponent(m[1])}?autoplay=0&rel=0&playsinline=1`, externalUrl:`https://www.youtube.com/watch?v=${encodeURIComponent(m[1])}` };
+      // Twitch clip — pause jusqu'au clic utilisateur
       m = u.match(/clips\.twitch\.tv\/([\w-]+)/i) || u.match(/twitch\.tv\/\w+\/clip\/([\w-]+)/i);
-      if (m) return { type:'iframe', src:`https://clips.twitch.tv/embed?clip=${encodeURIComponent(m[1])}&parent=${encodeURIComponent(location.hostname)}&autoplay=true` };
+      if (m) return { type:'iframe', src:`https://clips.twitch.tv/embed?clip=${encodeURIComponent(m[1])}&parent=${encodeURIComponent(location.hostname)}&autoplay=false` };
       // Streamable
       m = u.match(/streamable\.com\/([\w-]+)/i);
-      if (m) return { type:'iframe', src:`https://streamable.com/e/${encodeURIComponent(m[1])}?autoplay=1` };
-      // Medal.tv — pas d'autoplay : leur player autoplay empile souvent 2 flux audio.
-      // L'overlay s'ouvre, l'utilisateur lance Play une fois → son unique.
+      if (m) return { type:'iframe', src:`https://streamable.com/e/${encodeURIComponent(m[1])}?autoplay=0` };
+      // Medal.tv — pas d'autoplay (évite aussi le double flux audio)
       m = u.match(/medal\.tv\/clip\/([A-Za-z0-9_-]+)(?:\/([A-Za-z0-9_-]+))?/i);
       if (m) {
         const path = m[2] ? (m[1] + '/' + m[2]) : m[1];
@@ -3372,6 +3371,7 @@
       if (now < _clipOpenLockUntil) return;
       _clipOpenLockUntil = now + 500;
       // Coupe musique d'entrée / preview bulle pour ne pas empiler avec le clip
+      // (le clip reste en pause jusqu'au Play de l'utilisateur).
       try {
         if (_spotifyAudio) {
           _spotifyAudio._userStopped = true;
@@ -3394,7 +3394,7 @@
         content.appendChild(div);
       } else {
         const f = document.createElement('iframe');
-        // Medal : un seul play — pas de reload auto, allow autoplay sans piège muted/unmute
+        // Embeds sans autoplay — l'utilisateur clique Play dans le player.
         f.src = embed.src;
         f.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture');
         f.setAttribute('allowfullscreen', '');
