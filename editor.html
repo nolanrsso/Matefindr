@@ -4071,6 +4071,7 @@ function buildDbProfile(st){
   return {
     name:u.displayName||'Moi', tag:u.discordTag||'moi',
     age:p.age||'', gender:p.gender||'', country:p.country||'', countryFlag:p.countryFlag||'',
+    termsAcceptedAt:p.termsAcceptedAt||null,
     looking:p.looking||'game', status:'online',
     nitro:!!(u.boost&&u.fakeNitro), boost:!!u.boost,
     joinedOn:new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}),

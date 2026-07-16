@@ -426,6 +426,45 @@
       });
     }
 
+    // Écran plein écran bloquant pour les comptes créés AVANT l'ajout de la case CGU
+    // obligatoire (les nouveaux comptes l'acceptent déjà pendant l'onboarding). Ne bloque
+    // pas les syncs réseau en arrière-plan (harmless), juste l'interaction visuelle.
+    function showTermsGate(){
+      if (document.getElementById('mfTermsGate')) return;
+      document.documentElement.style.overflow = 'hidden';
+      const ov = document.createElement('div');
+      ov.id = 'mfTermsGate';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:24px;'
+        + 'background:radial-gradient(1100px 700px at 15% -10%,#201642 0%,transparent 55%),radial-gradient(900px 700px at 95% 0%,#2a1636 0%,transparent 50%),#0D0B1E;';
+      ov.innerHTML = ''
+        + '<div style="width:min(440px,100%);text-align:center;background:linear-gradient(180deg,rgba(30,24,58,.7),rgba(16,12,34,.7));'
+        +   'border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:36px 28px;box-shadow:0 30px 80px rgba(0,0,0,.5);backdrop-filter:blur(14px);'
+        +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
+        +   '<div style="font-size:44px;margin-bottom:10px">📋</div>'
+        +   '<h1 style="margin:0 0 10px;font-size:20px">Conditions d\'utilisation</h1>'
+        +   '<p style="color:#b9bbbe;font-size:14px;line-height:1.55;margin:0 0 20px">Pour continuer à utiliser Matefindr, confirme que tu as 18 ans ou plus et que tu acceptes nos <a href="rules.html" target="_blank" rel="noopener" style="color:#c7a5ff">Conditions d\'utilisation</a> (pas de nudité/violence dans les images, pas de musique protégée par le droit d\'auteur dans les vocaux).</p>'
+        +   '<button id="mfTermsAccept" type="button" style="display:block;width:100%;padding:13px;border-radius:13px;font-weight:800;font-size:15px;color:#fff;'
+        +     'background:linear-gradient(180deg,#9146FF,#6B2BFF);box-shadow:0 12px 30px rgba(107,43,255,.4);border:none;cursor:pointer;box-sizing:border-box;margin-bottom:10px">'
+        +     'J\'ai 18 ans et j\'accepte'
+        +   '</button>'
+        +   '<button id="mfTermsLogout" type="button" style="display:block;width:100%;padding:11px;border-radius:13px;font-weight:700;font-size:13px;color:#b9bbbe;'
+        +     'background:rgba(255,255,255,.06);border:none;cursor:pointer;box-sizing:border-box">Refuser et me déconnecter</button>'
+        + '</div>';
+      document.body.appendChild(ov);
+      document.getElementById('mfTermsAccept').addEventListener('click', () => {
+        state.profile = state.profile || {};
+        state.profile.termsAcceptedAt = new Date().toISOString();
+        save();
+        try { if (typeof syncMyProfileToCloud === 'function') syncMyProfileToCloud(); } catch(_){}
+        ov.remove();
+        document.documentElement.style.overflow = '';
+      });
+      document.getElementById('mfTermsLogout').addEventListener('click', async () => {
+        try { if (window.__supa) await window.__supa.auth.signOut(); } catch(_){}
+        location.href = '/';
+      });
+    }
+
     // "Dernier vu sur le site" (admin.html) -- posé au login puis rafraîchi au retour sur
     // l'onglet (throttlé), pas juste au login initial (une session peut durer des heures).
     async function pingLastSeen(){
@@ -625,6 +664,7 @@
                   connections: (d.connections && typeof d.connections === 'object') ? d.connections : {},
                   userOrbs: Array.isArray(d.orbs) ? d.orbs : [],
                   pseudo: d.name || '',
+                  termsAcceptedAt: d.termsAcceptedAt || null,
                 };
                 // Identité visuelle : bannière/custom depuis le cloud ; PDP Discord =
                 // login frais si dispo (sinon cloud), pour ne pas figer un vieux hash CDN.
@@ -757,6 +797,9 @@
           }
         } catch(_){}
         save(); setAuth(true);
+        // Compte existant créé AVANT la case CGU obligatoire (les nouveaux comptes l'ont
+        // déjà cochée pendant l'onboarding, cf. finishOnboarding) -- gate une seule fois.
+        if (state.profile && !state.profile.termsAcceptedAt && typeof showTermsGate === 'function') showTermsGate();
         if (window.MatefindrDiscordPresence?.start) window.MatefindrDiscordPresence.start();
         // Sync quêtes (note / votes) dès la connexion — init() a souvent tourné avant l'auth.
         try { await refreshQuestsAfterLogin(); } catch(_){}
@@ -859,7 +902,7 @@
     };
 
     // ---------- Onboarding (welcome → age → genre → pays → perso) ----------
-    const draft = { age:null, gender:null, country:null, countryFlag:'', pseudo:'', bio:'', color1:null, color2:null, avatar:null };
+    const draft = { age:null, gender:null, country:null, countryFlag:'', pseudo:'', bio:'', color1:null, color2:null, avatar:null, termsAccepted:false };
     function selectOpt(container, value){
       container.querySelectorAll('.onb-opt').forEach(b => b.classList.toggle('selected', b.dataset.val === value));
     }
@@ -903,8 +946,12 @@
     function refreshStep1Validation(){
       const next = $onb('onbNext1');
       if (!next) return;
-      next.disabled = !(draft.age != null && draft.gender && draft.country);
+      next.disabled = !(draft.age != null && draft.gender && draft.country && draft.termsAccepted);
     }
+    $onb('onbTerms')?.addEventListener('change', e => {
+      draft.termsAccepted = !!e.target.checked;
+      refreshStep1Validation();
+    });
     $onb('onbGender').addEventListener('click', e => {
       const b = e.target.closest('.onb-opt'); if (!b) return;
       draft.gender = b.dataset.val;
@@ -1006,6 +1053,7 @@
         color1: draft.color1, color2: draft.color2,
         avatar: draft.avatar || null,
         connections: {},
+        termsAcceptedAt: new Date().toISOString(),
       };
       // Compte Discord → statut Discord auto (non retirable, prefs affichage modifiables).
       try {
@@ -1697,6 +1745,7 @@
         gender: p.gender || '',
         country: p.country || '',
         countryFlag: p.countryFlag || '',
+        termsAcceptedAt: p.termsAcceptedAt || null,
         looking: p.looking || 'game',
         status: 'online',
         nitro: !!(u.boost && u.fakeNitro),
