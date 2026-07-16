@@ -427,9 +427,10 @@
       const voteIds = [uid];
       if (anonReactor && anonReactor !== uid) voteIds.push(anonReactor);
       const [mRes, lRes, lrRes, vrRes, viewsRes, msgRes, ...voteResList] = await Promise.all([
-        safe(() => sb.from('matches').select('id', { count: 'exact' }).or(`user_a.eq.${uid},user_b.eq.${uid}`)),
-        safe(() => sb.from('likes').select('id', { count: 'exact' }).eq('liker_id', uid)),
-        safe(() => sb.from('likes').select('id', { count: 'exact' }).eq('liked_id', uid)),
+        safe(() => sb.from('matches').select('id', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`)),
+        // likes : PK composite (liker_id, liked_id) — ne pas select('id')
+        safe(() => sb.from('likes').select('liker_id', { count: 'exact', head: true }).eq('liker_id', uid)),
+        safe(() => sb.from('likes').select('liked_id', { count: 'exact', head: true }).eq('liked_id', uid)),
         // PK = (profile_id, reactor_id) — pas de colonne id
         safe(() => sb.from('profile_reactions').select('profile_id', { count: 'exact', head: true }).eq('profile_id', uid)),
         safe(() => sb.from('profiles').select('views').eq('id', uid).maybeSingle()),
@@ -477,8 +478,7 @@
     try {
       if (Array.isArray(global.CONVOS) && global.CONVOS.length > matches) matches = global.CONVOS.length;
     } catch (_) {}
-    // Un match implique au moins un like envoyé
-    if (matches > likesGiven) likesGiven = matches;
+    // Ne plus forcer likesGiven = matches : ça faussait la quête « Liker » (matchs ≠ likes).
     let ratingRec = opts.ratingRec || null;
     if (typeof ratingRec === 'function') {
       try { ratingRec = await ratingRec(); } catch (_) { ratingRec = null; }
@@ -496,18 +496,42 @@
     return stats;
   }
 
-  /** Incrémente les notes envoyées (appelé après un nouveau vote réussi). */
-  function bumpVotesGiven(n) {
+  /** Incrémente une stat de quête (likes / votes…) après une action réussie. */
+  function bumpQuestStat(key, n) {
     const s = readSite();
     s.user = s.user || {};
     const prev = (s.user.questStats && typeof s.user.questStats === 'object') ? s.user.questStats : {};
-    const next = Math.max(0, (typeof prev.votesGiven === 'number' ? prev.votesGiven : 0) + (n || 1));
-    s.user.questStats = Object.assign({}, prev, { votesGiven: next });
+    const cur = typeof prev[key] === 'number' ? prev[key] : 0;
+    const next = Math.max(0, cur + (n || 1));
+    s.user.questStats = Object.assign({}, prev, { [key]: next });
     writeSite(s);
     if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
     if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
+    try { refreshPending(s.user.questStats); } catch (_) {}
     try { updateQuestButtonBadge(s.user.questStats); } catch (_) {}
+    // Si la modale Quêtes est ouverte → rafraîchir la barre de progression
+    try {
+      const pop = $('questsPop');
+      if (pop && !pop.hidden && pop.dataset.open === 'true') {
+        openModal('quests', renderQuestsModal, s.user.questStats);
+      }
+    } catch (_) {}
     return next;
+  }
+
+  /** Incrémente les notes envoyées (appelé après un nouveau vote réussi). */
+  function bumpVotesGiven(n) {
+    return bumpQuestStat('votesGiven', n);
+  }
+
+  /** Incrémente les likes envoyés (appelé après un like réellement nouveau en DB). */
+  function bumpLikesGiven(n) {
+    return bumpQuestStat('likesGiven', n);
+  }
+
+  /** Incrémente les likes reçus (notif / refresh panneau). */
+  function bumpLikesReceived(n) {
+    return bumpQuestStat('likesReceived', n);
   }
 
   function missionProgress(m, stats) {
@@ -2199,6 +2223,9 @@
     fetchStats,
     syncStatsLocal,
     bumpVotesGiven,
+    bumpLikesGiven,
+    bumpLikesReceived,
+    bumpQuestStat,
     processQuestCoinRewards,
     questCoinReward,
     applyQuestProgress,

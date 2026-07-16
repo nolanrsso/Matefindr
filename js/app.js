@@ -2117,7 +2117,23 @@
         const { data:{ session } } = await window.__supa.auth.getSession();
         if (!session) return;
         const myId = session.user.id;
-        await window.__supa.from('likes').upsert({ liker_id: myId, liked_id: profile.uid }, { onConflict: 'liker_id,liked_id' });
+        // Déjà liké ? → pas de double comptage quête
+        let isNew = true;
+        try {
+          const { count } = await window.__supa.from('likes')
+            .select('liker_id', { count: 'exact', head: true })
+            .eq('liker_id', myId).eq('liked_id', profile.uid);
+          isNew = !(typeof count === 'number' && count > 0);
+        } catch (_) {}
+        const { error } = await window.__supa.from('likes')
+          .upsert({ liker_id: myId, liked_id: profile.uid }, { onConflict: 'liker_id,liked_id' });
+        if (error) { console.warn('[Matefindr] like error', error); return; }
+        if (isNew) {
+          try {
+            const TQ = window.MatefindrTitlesQuests;
+            if (TQ && typeof TQ.bumpLikesGiven === 'function') TQ.bumpLikesGiven(1);
+          } catch (_) {}
+        }
         // L'autre m'a-t-il déjà liké ? → MATCH
         const { data: back } = await window.__supa.from('likes')
           .select('liker_id').eq('liker_id', profile.uid).eq('liked_id', myId).limit(1);
