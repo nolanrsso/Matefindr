@@ -318,13 +318,15 @@
         if ((!user.guilds || !user.guilds.length) && sameAccount && Array.isArray(prev.guilds) && prev.guilds.length) {
           user.guilds = prev.guilds;
         }
-        // Profil Matefindr déjà créé → plus de sync Discord visuelle (avatar, bannière,
-        // déco, pseudo, nitro, accent). Seulement username, serveurs, email.
+        // Profil Matefindr déjà créé → plus de sync Discord visuelle pour la carte
+        // (avatar custom, bannière, déco, pseudo Matefindr). Mais on rafraîchit TOUJOURS
+        // discordAvatarUrl : le floor Discord doit afficher la vraie PDP Discord.
         const hadProfile = sameAccount && !!state.profile;
         if (hadProfile) {
           state.user = Object.assign({}, prev, {
             discordId: user.discordId || prev.discordId,
             discordTag: user.discordTag || prev.discordTag,
+            discordAvatarUrl: user.discordAvatarUrl || prev.discordAvatarUrl,
             email: user.email || prev.email,
             guilds: (user.guilds && user.guilds.length) ? user.guilds : prev.guilds,
             mode: user.mode || prev.mode || 'discord',
@@ -335,6 +337,11 @@
           const keepAvatar = prev.avatarCustom && prev.avatarUrl;
           const keepName = prev.nameCustom && prev.displayName;
           state.user = Object.assign({}, prev, user);
+          // Garde la photo Matefindr custom, mais conserve la PDP Discord à part.
+          if (user.discordAvatarUrl) state.user.discordAvatarUrl = user.discordAvatarUrl;
+          else if (user.avatarUrl && /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(user.avatarUrl)) {
+            state.user.discordAvatarUrl = user.avatarUrl;
+          }
           if (keepBanner) { state.user.bannerUrl = prev.bannerUrl; state.user.bannerCustom = true; }
           if (keepDeco)   { state.user.decorationUrl = prev.decorationUrl; state.user.decoCustom = true; state.user.decorationHash = prev.decorationHash || null; }
           if (keepAvatar) { state.user.avatarUrl = prev.avatarUrl; state.user.avatarCustom = true; state.user.avatarPos = prev.avatarPos || null; }
@@ -1211,7 +1218,15 @@
         c1:'#242429', c2:'#1c1d22',
         initial: (u.displayName || u.email || 'M').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
-        discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl || null,
+        discordAvatarUrl: (function(){
+          const d = u.discordAvatarUrl;
+          if (d && typeof d === 'string' && /^https?:\/\//i.test(d)) return d;
+          if (d && typeof d === 'object' && d.url) return d.url;
+          const a = u.avatarUrl;
+          if (!u.avatarCustom && a && typeof a === 'string' && /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(a)) return a;
+          return null;
+        })(),
+        discordId: u.discordId || null,
         avatarPos: normalizeAvatarPos(u.avatarPos),
         bannerUrl: u.bannerUrl || null,
         profileColor: u.profileColor || '#393a41',
@@ -1290,7 +1305,16 @@
         c1:'#393a41', c2:'#393a41',
         initial: (u.displayName || u.email || 'T').charAt(0).toUpperCase(),
         avatarUrl: u.avatarUrl || null,
-        discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl || null,
+        // Ne JAMAIS coller la photo custom Matefindr dans discordAvatarUrl.
+        discordAvatarUrl: (function(){
+          const d = u.discordAvatarUrl;
+          if (d && typeof d === 'string' && /^https?:\/\//i.test(d)) return d;
+          if (d && typeof d === 'object' && d.url) return d.url;
+          const a = u.avatarUrl;
+          if (!u.avatarCustom && a && typeof a === 'string' && /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(a)) return a;
+          return null;
+        })(),
+        discordId: u.discordId || null,
         avatarPos: normalizeAvatarPos(u.avatarPos),
         bannerUrl: u.bannerUrl || null,
         decorationUrl: u.decorationUrl || null,
@@ -1793,6 +1817,8 @@
         profileColor:'#393a41', profileColor2:'#393a41',
         initial: (r.display_name || 'T').charAt(0).toUpperCase(),
         avatarUrl: r.avatar_url || null, bannerUrl: r.banner_url || null, decorationUrl: r.decoration_url || null,
+        discordId: r.discord_id || null,
+        discordAvatarUrl: (r.data && r.data.discordAvatarUrl) || (r.avatar_url && /cdn\.discordapp\.com\/avatars\//i.test(r.avatar_url) ? r.avatar_url : null),
         accentColor: (typeof r.accent_color === 'number') ? r.accent_color : null,
         orbs, socials:{}, isMe:false, uid: r.id, views: r.views || 0, slug: r.slug || null, _showViews: true,
         disabled: !!(r.data && r.data.disabled),

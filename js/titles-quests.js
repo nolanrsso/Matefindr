@@ -1195,7 +1195,31 @@
   };
 
   function discordFloorAvatar(p) {
-    return p.discordAvatarUrl || p.avatarUrl || '';
+    const asUrl = (v) => {
+      if (!v) return '';
+      if (typeof v === 'string') return v;
+      if (typeof v === 'object' && v.url) return String(v.url);
+      return '';
+    };
+    // Uniquement CDN Discord — refuse photo custom Matefindr / storage pollué.
+    const isDiscordCdn = (u) => !!u && /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(u);
+    const disc = asUrl(p.discordAvatarUrl);
+    if (isDiscordCdn(disc)) return disc;
+    const avi = asUrl(p.avatarUrl);
+    if (isDiscordCdn(avi)) return avi;
+    let id = p.discordId || null;
+    if (!id && p.connections && p.connections.discord) {
+      const raw = p.connections.discord;
+      const v = (raw && typeof raw === 'object') ? raw.v : raw;
+      if (v && /^\d{15,22}$/.test(String(v).trim())) id = String(v).trim();
+    }
+    if (id && /^\d+$/.test(String(id))) {
+      try {
+        const idx = Number((BigInt(String(id)) >> 22n) % 6n);
+        return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+      } catch (_) {}
+    }
+    return '';
   }
 
   function listPlayableActivities(activities) {
@@ -1375,7 +1399,7 @@
     const tag = discordTagLabel(p);
     const avi = discordFloorAvatar(p);
     const aviInner = avi
-      ? `<img src="${escH(avi)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block">`
+      ? `<img src="${escH(avi)}" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block">`
       : `<span>${escH((p.initial || tag || '?').charAt(0).toUpperCase())}</span>`;
 
     const acts = showActivity ? rankActivities(live?.activities) : [];
@@ -1543,6 +1567,7 @@
       connections: { discord: { v: u.discordId, showActivity: true, showStatus: true, label: u.discordTag } },
       discordLive: u.discordLive,
       discordTag: u.discordTag,
+      discordId: u.discordId,
       tag: u.discordTag,
       avatarUrl: u.avatarUrl,
       discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl,
@@ -2066,6 +2091,7 @@
       },
       discordLive: u.discordLive,
       discordTag: u.discordTag,
+      discordId: u.discordId,
       tag: u.discordTag,
       avatarUrl: u.avatarUrl,
       discordAvatarUrl: u.discordAvatarUrl || u.avatarUrl,
