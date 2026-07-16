@@ -445,11 +445,25 @@
                 if (d.profileVoice) su.profileVoice = d.profileVoice;
                 if (Array.isArray(d.presets)) su.presets = d.presets;
                 if (typeof d.sharePresetIdx === 'number') su.sharePresetIdx = d.sharePresetIdx;
+                if (d.titlesData) su.titlesData = d.titlesData;
+                if (typeof d.coins === 'number') su.coins = d.coins;
+                if (Array.isArray(d.questCoinClaims)) su.questCoinClaims = d.questCoinClaims;
                 console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
               } else if (dRaw) {
-                // Même si le profil local existe déjà, ne pas perdre presets / sharePresetIdx
+                // Même si le profil local existe déjà, ne pas perdre presets / sharePresetIdx / quêtes
                 if (Array.isArray(dRaw.presets) && !Array.isArray(state.user.presets)) state.user.presets = dRaw.presets;
                 if (typeof dRaw.sharePresetIdx === 'number' && typeof state.user.sharePresetIdx !== 'number') state.user.sharePresetIdx = dRaw.sharePresetIdx;
+                if (typeof dRaw.coins === 'number') {
+                  state.user.coins = typeof state.user.coins === 'number' ? Math.max(state.user.coins, dRaw.coins) : dRaw.coins;
+                }
+                if (Array.isArray(dRaw.questCoinClaims)) {
+                  state.user.questCoinClaims = [...new Set([...(state.user.questCoinClaims || []), ...dRaw.questCoinClaims])];
+                }
+                if (dRaw.titlesData && dRaw.titlesData.collected) {
+                  const loc = (state.user.titlesData && state.user.titlesData.collected) || [];
+                  const merged = [...new Set([...loc, ...dRaw.titlesData.collected])];
+                  state.user.titlesData = Object.assign({}, state.user.titlesData || {}, dRaw.titlesData, { collected: merged });
+                }
               }
             }
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
@@ -1091,6 +1105,8 @@
         swipeMusic: u.swipeMusic || null,
         connections: (p.connections && typeof p.connections === 'object') ? p.connections : {},
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
+        coins: typeof u.coins === 'number' ? u.coins : 0,
+        questCoinClaims: Array.isArray(u.questCoinClaims) ? u.questCoinClaims : [],
         isMe: true,
         views: _myViewsCache,
         // Presets + preset du lien perso (indépendant du profil équipé / deck swipe)
@@ -7243,7 +7259,13 @@
       if (window.MatefindrTitlesQuests) {
         window.MatefindrTitlesQuests.init({
           questButtons: ['navQuests'],
-          getRatingRec: () => (_myUidCache && _reactionsCache[_myUidCache]) ? _reactionsCache[_myUidCache] : null,
+          getRatingRec: async () => {
+            if (!_myUidCache) return null;
+            if (!_reactionsCache[_myUidCache] && typeof loadReactions === 'function') {
+              await loadReactions(_myUidCache);
+            }
+            return _reactionsCache[_myUidCache] || null;
+          },
         });
       }
 

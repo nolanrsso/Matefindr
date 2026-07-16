@@ -168,6 +168,7 @@
     <label class="chk"><input type="checkbox" id="onlyBanned" /> Bannis seulement</label>
     <label class="chk"><input type="checkbox" id="onlyDisabled" /> Désactivés seulement</label>
     <button class="tbtn" id="migrateBtn" style="display:none">🧹 Migrer images → Storage</button>
+    <button class="tbtn" id="questsBackfillBtn" style="display:none" title="Recalcule quêtes, pièces et titres Esthétisme pour tous les profils">🎯 Sync quêtes</button>
     <button class="tbtn" id="clearSeenBtn">✓ Tout marquer comme vu</button>
     <button class="tbtn" id="maintenanceBtn" title="Coupe l'accès au site à tout le monde sauf à alonemaxing">🚧 Mode maintenance</button>
     <button class="tbtn" id="refreshBtn">↻ Actualiser</button>
@@ -183,6 +184,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="js/titles-quests.js"></script>
 <script>
 (function(){
   const $=id=>document.getElementById(id);
@@ -365,6 +367,7 @@
       }
     }catch(_){}
     $('migrateBtn').style.display = FULL ? '' : 'none';
+    $('questsBackfillBtn').style.display = FULL ? '' : 'none';
     renderTable();
   }
 
@@ -667,6 +670,75 @@
     renderTable();
   }
   $('migrateBtn').addEventListener('click', migrateImages);
+
+  /* ---- Sync quêtes / pièces / titres Esthétisme pour TOUS les profils ---- */
+  async function backfillAllQuests(){
+    if(!FULL){ toast('Nécessite la clé service_role'); return; }
+    const TQ=window.MatefindrTitlesQuests;
+    if(!TQ||typeof TQ.applyQuestProgress!=='function'){ toast('titles-quests.js non chargé'); return; }
+    if(!ACCOUNTS.length){ toast('Aucun compte chargé'); return; }
+    if(!confirm('Recalculer les quêtes de '+ACCOUNTS.length+' profil(s) ?\n→ pièces selon les paliers atteints\n→ titres Esthétisme selon les notes (≥5 votes)')) return;
+    const btn=$('questsBackfillBtn'); btn.disabled=true;
+    let updated=0, coinsTotal=0, beautyTotal=0, fail=0;
+    for(const a of ACCOUNTS){
+      try{
+        const uid=a.id;
+        const [{ count:mC },{ count:lC },{ count:lrC },{ count:vC },{ count:vrC }, reactRes]=await Promise.all([
+          sb.from('matches').select('*',{ count:'exact', head:true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
+          sb.from('likes').select('*',{ count:'exact', head:true }).eq('liker_id', uid),
+          sb.from('likes').select('*',{ count:'exact', head:true }).eq('liked_id', uid),
+          sb.from('profile_reactions').select('*',{ count:'exact', head:true }).eq('reactor_id', uid),
+          sb.from('profile_reactions').select('*',{ count:'exact', head:true }).eq('profile_id', uid),
+          sb.from('profile_reactions').select('rating').eq('profile_id', uid).limit(5000),
+        ]);
+        const ratings=[];
+        (reactRes.data||[]).forEach(r=>{ const v=parseFloat(r.rating); if(!Number.isNaN(v)) ratings.push(v); });
+        const rating=ratings.length? ratings.reduce((s,x)=>s+x,0)/ratings.length : 0;
+        const stats={
+          views:(a.prof&&a.prof.views)||0,
+          matches:mC||0,
+          likesGiven:lC||0,
+          likesReceived:lrC||0,
+          votesGiven:vC||0,
+          votesReceived:vrC||0,
+          newChats:mC||0,
+          rating,
+          ratingVotes:ratings.length,
+        };
+        const dd=d(a);
+        const beforeCoins=typeof dd.coins==='number'?dd.coins:0;
+        const beforeBeauty=(dd.titlesData&&Array.isArray(dd.titlesData.collected))?dd.titlesData.collected.filter(id=>String(id).startsWith('rt_')).length:0;
+        const result=TQ.applyQuestProgress(stats,{
+          coins:dd.coins,
+          questCoinClaims:dd.questCoinClaims,
+          titlesData:dd.titlesData,
+        });
+        const afterBeauty=(result.titlesData.collected||[]).filter(id=>String(id).startsWith('rt_')).length;
+        const changed=result.gainedCoins>0
+          || result.newBeautyTitles.length>0
+          || afterBeauty!==beforeBeauty
+          || result.coins!==beforeCoins
+          || JSON.stringify(result.questCoinClaims)!==JSON.stringify(dd.questCoinClaims||[])
+          || JSON.stringify(result.titlesData.collected)!==JSON.stringify((dd.titlesData&&dd.titlesData.collected)||[]);
+        if(!changed) continue;
+        const ok=await patchProfileData(a,{
+          coins:result.coins,
+          questCoinClaims:result.questCoinClaims,
+          titlesData:result.titlesData,
+          questStats:stats,
+        }, null);
+        if(ok){
+          updated++;
+          coinsTotal+=result.gainedCoins;
+          beautyTotal+=result.newBeautyTitles.length;
+        }else fail++;
+      }catch(e){ console.warn('quests backfill', a.id, e); fail++; }
+    }
+    btn.disabled=false;
+    toast('🎯 '+updated+' profil(s) · +'+coinsTotal+' pièces · '+beautyTotal+' titre(s) esthétisme'+(fail?(' · ⚠️ '+fail+' échec(s)'):''));
+    renderTable();
+  }
+  $('questsBackfillBtn').addEventListener('click', backfillAllQuests);
 
   /* ---- Modal : profil complet ---- */
   function openProfile(a){

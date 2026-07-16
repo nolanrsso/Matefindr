@@ -273,29 +273,35 @@
     opts = opts || {};
     const s = readSite();
     const u = s.user || {};
-    const views = typeof opts.views === 'number' ? opts.views : (u.profileViews || s.profile?.views || 0);
+    let views = typeof opts.views === 'number' ? opts.views : (u.profileViews || s.profile?.views || 0);
     let matches = 0, likesGiven = 0, likesReceived = 0, votesGiven = 0, votesReceived = 0, newChats = 0;
     const sb = opts.supa || global.__supa;
     const uid = opts.uid || u.uid;
     if (sb && uid) {
       try {
-        const [{ count: mC }, { count: lC }, { count: lrC }, { count: vC }, { count: vrC }, { count: cC }] = await Promise.all([
+        const [{ count: mC }, { count: lC }, { count: lrC }, { count: vC }, { count: vrC }, viewsRes] = await Promise.all([
           sb.from('matches').select('*', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
           sb.from('likes').select('*', { count: 'exact', head: true }).eq('liker_id', uid),
           sb.from('likes').select('*', { count: 'exact', head: true }).eq('liked_id', uid),
           sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('reactor_id', uid),
           sb.from('profile_reactions').select('*', { count: 'exact', head: true }).eq('profile_id', uid),
-          sb.from('matches').select('*', { count: 'exact', head: true }).or(`user_a.eq.${uid},user_b.eq.${uid}`),
+          sb.from('profiles').select('views').eq('id', uid).maybeSingle(),
         ]);
         matches = mC || 0;
         likesGiven = lC || 0;
         likesReceived = lrC || 0;
         votesGiven = vC || 0;
         votesReceived = vrC || 0;
-        newChats = cC || matches;
+        newChats = matches;
+        if (typeof opts.views !== 'number' && viewsRes && viewsRes.data && typeof viewsRes.data.views === 'number') {
+          views = viewsRes.data.views;
+        }
       } catch (_) {}
     }
-    const ratingRec = opts.ratingRec || null;
+    let ratingRec = opts.ratingRec || null;
+    if (typeof ratingRec === 'function') {
+      try { ratingRec = await ratingRec(); } catch (_) { ratingRec = null; }
+    }
     const rating = avgRating(ratingRec);
     const ratingVotes = ratingRec?.ratings?.length || 0;
     return { views, matches, likesGiven, likesReceived, votesGiven, votesReceived, newChats, rating, ratingVotes };
@@ -325,7 +331,7 @@
     return { current: cur, target: tgt, pct: Math.min(100, tgt ? (cur / tgt) * 100 : 0), complete: cur >= tgt, locked: false };
   }
 
-  function computeEligible(stats) {
+  function listEligibleMissionIds(stats) {
     const eligible = [];
     if ((stats.votesReceived || 0) >= VOTES_UNLOCK.threshold) eligible.push(VOTES_UNLOCK.id);
 
@@ -341,22 +347,85 @@
       }
     });
 
-    const ratingIds = RATING_TITLES.map(r => r.id);
     if ((stats.ratingVotes || 0) >= RATING_MIN_VOTERS) {
       RATING_TITLES.forEach(r => {
         if (stats.rating >= r.min && stats.rating < r.max) eligible.push(r.id);
       });
     }
+    return [...new Set(eligible)];
+  }
 
-    const uniq = [...new Set(eligible)];
-    const td = getTitlesData();
-    const kept = td.collected.filter(id => !ratingIds.includes(id) || uniq.includes(id));
-    let equipped = td.equipped;
-    if (equipped && ratingIds.includes(equipped) && !uniq.includes(equipped)) equipped = kept[0] || null;
-    if (kept.length !== td.collected.length || equipped !== td.equipped) {
-      saveTitlesData({ collected: kept, equipped });
+  /**
+   * Applique quêtes → pièces + titres beauté (et pending) à partir des stats réelles.
+   * Pure : ne lit/écrit pas localStorage. Utilisé client + admin backfill.
+   */
+  function applyQuestProgress(stats, snapshot) {
+    snapshot = snapshot || {};
+    const ratingIds = RATING_TITLES.map(r => r.id);
+    const eligible = listEligibleMissionIds(stats || {});
+    const srcTd = snapshot.titlesData && typeof snapshot.titlesData === 'object' ? snapshot.titlesData : {};
+    let collected = Array.isArray(srcTd.collected) ? srcTd.collected.slice() : [];
+    if (!collected.includes(BETA_TESTER_ID)) collected.push(BETA_TESTER_ID);
+    let equipped = srcTd.equipped || BETA_TESTER_ID;
+    const color = srcTd.color || '#C7A5FF';
+
+    // Retire les titres de note qui ne matchent plus la note actuelle
+    collected = collected.filter(id => !ratingIds.includes(id) || eligible.includes(id));
+    if (equipped && ratingIds.includes(equipped) && !eligible.includes(equipped)) {
+      equipped = collected[0] || BETA_TESTER_ID;
     }
-    return uniq;
+
+    const newBeautyTitles = [];
+    eligible.forEach(id => {
+      if (!ratingIds.includes(id)) return;
+      if (!collected.includes(id)) {
+        collected.push(id);
+        newBeautyTitles.push(id);
+      }
+    });
+
+    let claims = Array.isArray(snapshot.questCoinClaims) ? snapshot.questCoinClaims.slice() : [];
+    let coins = typeof snapshot.coins === 'number' ? snapshot.coins : 0;
+    let gainedCoins = 0;
+    eligible.forEach(id => {
+      if (claims.includes(id)) return;
+      const m = getMission(id);
+      const lvl = missionCoinLevel(m);
+      if (lvl < 0) return;
+      const reward = questCoinReward(lvl);
+      coins += reward;
+      gainedCoins += reward;
+      claims.push(id);
+    });
+
+    const pending = eligible.filter(id => !collected.includes(id) && !ratingIds.includes(id));
+    return {
+      coins,
+      questCoinClaims: claims,
+      titlesData: { collected, pending, equipped, color },
+      gainedCoins,
+      newBeautyTitles,
+      eligible,
+    };
+  }
+
+  function computeEligible(stats) {
+    const result = applyQuestProgress(stats, {
+      coins: getCoins(),
+      questCoinClaims: getQuestCoinClaims(),
+      titlesData: getTitlesData(),
+    });
+    const td = getTitlesData();
+    const sameCollected = result.titlesData.collected.length === td.collected.length
+      && result.titlesData.collected.every((id, i) => id === td.collected[i]);
+    if (!sameCollected || result.titlesData.equipped !== td.equipped) {
+      saveTitlesData({
+        collected: result.titlesData.collected,
+        equipped: result.titlesData.equipped,
+        pending: result.titlesData.pending,
+      });
+    }
+    return result.eligible;
   }
 
   function missionCoinLevel(m) {
@@ -387,53 +456,52 @@
     s.user.questCoinClaims = list;
     writeSite(s);
     if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
+    if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
   }
 
   function processQuestCoinRewards(stats) {
-    const eligible = computeEligible(stats);
-    const claims = getQuestCoinClaims();
-    let coins = getCoins();
-    let gained = 0;
-    let lastReward = 0;
-    eligible.forEach(id => {
-      if (claims.includes(id)) return;
-      const m = getMission(id);
-      const lvl = missionCoinLevel(m);
-      if (lvl < 0) return;
-      const reward = questCoinReward(lvl);
-      coins += reward;
-      gained += reward;
-      lastReward = reward;
-      claims.push(id);
+    const result = applyQuestProgress(stats, {
+      coins: getCoins(),
+      questCoinClaims: getQuestCoinClaims(),
+      titlesData: getTitlesData(),
     });
-    if (gained > 0) {
-      saveQuestCoinClaims(claims);
-      setCoins(coins);
-      tqToast(gained === lastReward ? `+${gained} pièces — palier terminé !` : `+${gained} pièces — paliers terminés !`);
+    if (result.gainedCoins > 0) {
+      saveQuestCoinClaims(result.questCoinClaims);
+      setCoins(result.coins);
+      const last = result.gainedCoins;
+      tqToast(last === result.gainedCoins ? `+${result.gainedCoins} pièces — paliers terminés !` : `+${result.gainedCoins} pièces — paliers terminés !`);
     }
-    return gained;
+    return result.gainedCoins;
   }
 
   function refreshPending(stats) {
-    processQuestCoinRewards(stats);
-    const eligible = computeEligible(stats);
-    const td = getTitlesData();
-    // Titres de note : débloqués automatiquement (non achetables).
-    const ratingAuto = eligible.filter(id => isRatingTitle(getMission(id)));
-    if (ratingAuto.length) {
-      const collected = td.collected.slice();
-      let changed = false;
-      ratingAuto.forEach(id => {
-        if (!collected.includes(id)) { collected.push(id); bumpGlobalStat(id); changed = true; }
-      });
-      if (changed) saveTitlesData({ collected });
+    const beforeCoins = getCoins();
+    const beforeClaims = getQuestCoinClaims().length;
+    const beforeBeauty = (getTitlesData().collected || []).filter(id => String(id).startsWith('rt_')).length;
+    const result = applyQuestProgress(stats, {
+      coins: getCoins(),
+      questCoinClaims: getQuestCoinClaims(),
+      titlesData: getTitlesData(),
+    });
+    if (result.gainedCoins > 0) {
+      saveQuestCoinClaims(result.questCoinClaims);
+      setCoins(result.coins);
+      tqToast(`+${result.gainedCoins} pièces — paliers terminés !`);
     }
-    const td2 = getTitlesData();
-    const pending = eligible.filter(id => !td2.collected.includes(id) && !isRatingTitle(getMission(id)));
-    if (pending.length !== td2.pending.length || pending.some((x, i) => x !== td2.pending[i])) {
-      saveTitlesData({ pending });
+    saveTitlesData({
+      collected: result.titlesData.collected,
+      pending: result.titlesData.pending,
+      equipped: result.titlesData.equipped,
+      color: result.titlesData.color,
+    });
+    if (result.newBeautyTitles.length && result.gainedCoins === 0) {
+      tqToast(result.newBeautyTitles.length === 1 ? 'Titre Esthétisme débloqué !' : 'Titres Esthétisme débloqués !');
     }
-    return pending;
+    if (typeof global.__scheduleCloudSync === 'function'
+      && (result.gainedCoins > 0 || result.newBeautyTitles.length || result.questCoinClaims.length !== beforeClaims || getCoins() !== beforeCoins || result.titlesData.collected.filter(id => String(id).startsWith('rt_')).length !== beforeBeauty)) {
+      global.__scheduleCloudSync();
+    }
+    return result.titlesData.pending;
   }
 
   function collectMission(id) {
@@ -492,6 +560,7 @@
     s.user.coins = Math.max(0, Math.floor(n));
     writeSite(s);
     if (typeof global.__matefindrSave === 'function') global.__matefindrSave();
+    if (typeof global.__scheduleCloudSync === 'function') global.__scheduleCloudSync();
   }
 
   function tqToast(m) {
@@ -1065,8 +1134,13 @@
     opts = opts || {};
     ensureModals();
     bindButtons(opts.questButtons || ['navQuests', 'btnQuests'], async () => {
-      const stats = await fetchStats({ supa: global.__supa, uid: readSite().user?.uid, ratingRec: opts.getRatingRec?.() });
+      const stats = await fetchStats({
+        supa: global.__supa,
+        uid: readSite().user?.uid,
+        ratingRec: opts.getRatingRec,
+      });
       syncStatsLocal(stats);
+      refreshPending(stats);
       openModal('quests', renderQuestsModal, stats);
     });
     bindButtons(opts.titleTriggers || [], () => {});
@@ -1074,7 +1148,7 @@
       const t = e.target.closest('.card-title-slot--clickable, .card-profile-title--clickable, .ed-title-edit-btn');
       if (t) {
         e.preventDefault();
-        openTitles();
+        openTitles({ getRatingRec: opts.getRatingRec });
       }
     });
     const u = readSite().user || {};
@@ -1086,7 +1160,11 @@
     }
     (async () => {
       try {
-        const stats = await fetchStats({ supa: global.__supa, uid: u.uid, ratingRec: opts.getRatingRec?.() });
+        const stats = await fetchStats({
+          supa: global.__supa,
+          uid: u.uid,
+          ratingRec: opts.getRatingRec,
+        });
         syncStatsLocal(stats);
         refreshPending(stats);
       } catch (_) {}
@@ -1095,14 +1173,24 @@
 
   async function openQuests(o) {
     o = o || {};
-    const stats = o.stats || await fetchStats({ supa: global.__supa, uid: readSite().user?.uid, ratingRec: o.ratingRec });
+    const stats = o.stats || await fetchStats({
+      supa: global.__supa,
+      uid: readSite().user?.uid,
+      ratingRec: o.ratingRec || o.getRatingRec,
+    });
     syncStatsLocal(stats);
+    refreshPending(stats);
     openModal('quests', renderQuestsModal, stats);
   }
 
   async function openTitles(o) {
     o = o || {};
-    const stats = o.stats || await fetchStats({ supa: global.__supa, uid: readSite().user?.uid, ratingRec: o.ratingRec });
+    const stats = o.stats || await fetchStats({
+      supa: global.__supa,
+      uid: readSite().user?.uid,
+      ratingRec: o.ratingRec || o.getRatingRec,
+    });
+    refreshPending(stats);
     openModal('titles', renderTitlesModal, stats);
   }
 
@@ -1144,6 +1232,8 @@
     syncStatsLocal,
     processQuestCoinRewards,
     questCoinReward,
+    applyQuestProgress,
+    listEligibleMissionIds,
     refreshPending,
     collectMission,
     cardTitleHtml,

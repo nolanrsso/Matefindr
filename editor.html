@@ -4630,7 +4630,20 @@ function openSettingsSheet(){
     render:(body)=>renderSettingsSheet(body)
   });
   if(window.MatefindrTitlesQuests){
-    MatefindrTitlesQuests.init({ questButtons:['btnQuests'] });
+    MatefindrTitlesQuests.init({
+      questButtons:['btnQuests'],
+      getRatingRec: async ()=>{
+        const sb=edSupa(); if(!sb) return null;
+        try{
+          const { data:{ session } }=await sb.auth.getSession();
+          if(!session) return null;
+          const { data }=await sb.from('profile_reactions').select('rating').eq('profile_id', session.user.id).limit(5000);
+          const ratings=[];
+          (data||[]).forEach(r=>{ const v=parseFloat(r.rating); if(!Number.isNaN(v)) ratings.push(v); });
+          return { ratings, total:ratings.length, mine:null };
+        }catch(_){ return null; }
+      },
+    });
   }
 })();
 
