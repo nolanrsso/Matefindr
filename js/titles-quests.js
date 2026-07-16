@@ -24,7 +24,7 @@
     { id: 'rt_masterpeace', min: 4.4, max: 4.5, label: 'masterpeace', rarity: 9 },
     { id: 'rt_divine', min: 4.5, max: 4.6, label: 'divine', rarity: 10 },
     { id: 'rt_goated', min: 4.6, max: 4.7, label: 'goated', rarity: 11 },
-    { id: 'rt_beauty', min: 4.7, max: 4.8, label: 'pure beauty', rarity: 12 },
+    { id: 'rt_beauty', min: 4.7, max: 4.8, label: 'true adam', rarity: 12 },
     { id: 'rt_perfection', min: 4.8, max: 4.9, label: 'Perfection', rarity: 13 },
     { id: 'rt_1010', min: 4.9, max: 5.01, label: '10/10', rarity: 14 },
   ];
