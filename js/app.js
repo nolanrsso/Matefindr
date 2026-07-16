@@ -1173,26 +1173,34 @@
         const TQ = window.MatefindrTitlesQuests;
         if (!TQ || typeof TQ.discordFloorHtml !== 'function') return;
         const floorHtml = TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr });
-        let stack = card.querySelector('.card-discord-conn-stack');
-        if (!floorHtml) {
-          stack?.querySelectorAll('.discord-floor').forEach(el => el.remove());
-          return;
-        }
-        if (!stack) {
-          stack = document.createElement('div');
-          stack.className = 'card-discord-conn-stack';
-          const bio = card.querySelector('.bio');
-          const body = card.querySelector('.body');
-          if (bio) bio.insertAdjacentElement('afterend', stack);
-          else if (body) body.appendChild(stack);
-        }
-        stack.querySelectorAll('.discord-floor').forEach(el => el.remove());
-        stack.insertAdjacentHTML('afterbegin', floorHtml);
-        card.classList.add('has-discord-floor');
-        if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(stack);
-        if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(stack);
-        if (typeof TQ.hydrateDiscordActivityCovers === 'function') TQ.hydrateDiscordActivityCovers(stack);
+        applyDiscordFloorToCard(card, floorHtml, TQ);
       } catch (_) {}
+    }
+    /** Discord floor = 1er bloc sous le hr (haut du profil). */
+    function applyDiscordFloorToCard(card, floorHtml, TQ){
+      if (!card) return;
+      const body = card.querySelector('.body');
+      const oldFloors = card.querySelectorAll('.body > .discord-floor, .card-discord-conn-stack > .discord-floor');
+      if (!floorHtml) {
+        oldFloors.forEach(el => el.remove());
+        card.classList.remove('has-discord-floor');
+        return;
+      }
+      const existing = card.querySelector('.body > .discord-floor');
+      if (existing) existing.outerHTML = floorHtml;
+      else {
+        oldFloors.forEach(el => el.remove());
+        const hr = body && body.querySelector(':scope > hr.div');
+        if (hr) hr.insertAdjacentHTML('afterend', floorHtml);
+        else if (body) body.insertAdjacentHTML('afterbegin', floorHtml);
+        else return;
+      }
+      const floor = card.querySelector('.body > .discord-floor');
+      card.classList.add('has-discord-floor');
+      if (!floor || !TQ) return;
+      if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(floor);
+      if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(floor);
+      if (typeof TQ.hydrateDiscordActivityCovers === 'function') TQ.hydrateDiscordActivityCovers(floor);
     }
     function rerenderVisibleDiscordFloor(){
       try {
@@ -1204,25 +1212,7 @@
         const TQ = window.MatefindrTitlesQuests;
         if (!TQ || typeof TQ.discordFloorHtml !== 'function') return;
         const floorHtml = TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr });
-        let stack = card.querySelector('.card-discord-conn-stack');
-        if (!floorHtml) {
-          stack?.querySelectorAll('.discord-floor').forEach(el => el.remove());
-          return;
-        }
-        if (!stack) {
-          stack = document.createElement('div');
-          stack.className = 'card-discord-conn-stack';
-          const bio = card.querySelector('.bio');
-          const body = card.querySelector('.body');
-          if (bio) bio.insertAdjacentElement('afterend', stack);
-          else if (body) body.appendChild(stack);
-        }
-        stack.querySelectorAll('.discord-floor').forEach(el => el.remove());
-        stack.insertAdjacentHTML('afterbegin', floorHtml);
-        card.classList.add('has-discord-floor');
-        if (typeof TQ.bindDiscordActPopovers === 'function') TQ.bindDiscordActPopovers(stack);
-        if (typeof TQ.tickDiscordActivityProgress === 'function') TQ.tickDiscordActivityProgress(stack);
-        if (typeof TQ.hydrateDiscordActivityCovers === 'function') TQ.hydrateDiscordActivityCovers(stack);
+        applyDiscordFloorToCard(card, floorHtml, TQ);
       } catch (_) {}
     }
     setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 10000);
@@ -2865,6 +2855,8 @@
             ${titleGuildsRow}
           </div>
           <hr class="div"/>
+          ${discordFloorHtml}
+          ${bioHtml}
           ${p.profileVoice ? `
             <div class="card-voice" data-voice="${escapeHtmlMini(p.profileVoice)}">
               <button type="button" class="card-voice-play" aria-label="Lecture vocal">
@@ -2878,8 +2870,7 @@
               <span class="card-voice-time">0:00</span>
             </div>
           ` : (hasDiscordFloor ? '' : cardPresenceHtml(p))}
-          ${bioHtml}
-          ${(discordFloorHtml || connectionsBlock) ? `<div class="card-discord-conn-stack">${discordFloorHtml}${connectionsBlock}</div>` : ''}
+          ${connectionsBlock ? `<div class="card-discord-conn-stack">${connectionsBlock}</div>` : ''}
           ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
         </div>
