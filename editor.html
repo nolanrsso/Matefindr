@@ -731,6 +731,10 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 .conn:active{cursor:grabbing}
 .conn.dragging{opacity:.45;transform:scale(.94)}
 .conn.drag-over{border-color:rgba(145,70,255,.75);box-shadow:0 0 0 2px rgba(145,70,255,.28)}
+/* Discord lié au compte : fixe (floor toujours devant) — pas de drag */
+.conn--locked{cursor:pointer;touch-action:manipulation}
+.conn--locked:hover{transform:none;border-color:rgba(88,101,242,.45)}
+.conn--locked:active{cursor:pointer}
 .conn img,.conn .conn-ico-svg{width:22px;height:22px;object-fit:contain;opacity:1}
 .conn .conn-ico-uniform svg path,.conn .conn-ico-uniform svg circle,.conn .conn-ico-uniform svg rect{fill:currentColor !important}
 .conn .conn-ico-uniform svg path[stroke],.conn .conn-ico-uniform svg rect[stroke]{fill:none !important;stroke:currentColor}
@@ -3423,6 +3427,8 @@ let _connDragId=null, _connDragDidMove=false;
 
 function reorderConnections(fromId,toId){
   if(!fromId||!toId||fromId===toId||!MC()) return;
+  // Discord = fixe (floor toujours devant) — pas de réordonnancement
+  if(fromId==='discord'||toId==='discord') return;
   const ids=MC().connOrderedIds(S.connections);
   const fromIdx=ids.indexOf(fromId), toIdx=ids.indexOf(toId);
   if(fromIdx<0||toIdx<0) return;
@@ -3454,40 +3460,45 @@ function renderConnections(){
     const entry=MC().connGet(S.connections,id);
     const locked=id==='discord' && MC().connDiscordLocked(connReadUser());
     const b=document.createElement('button'); b.type='button'; b.className='conn set'+(locked?' conn--locked':'');
-    b.draggable=true;
+    b.draggable=!locked;
     b.dataset.connId=id;
-    b.title=`${app.name}${MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'')?' : '+MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):''):''} · glisser pour réordonner${locked?' · lié au compte':''}`;
+    const lbl=MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'');
+    b.title=locked
+      ? `${app.name}${lbl?' : '+lbl:''} · lié au compte`
+      : `${app.name}${lbl?' : '+lbl:''} · glisser pour réordonner`;
     b.innerHTML=MC().connIconHtml(app,22,entry,S.connUniformColor)+(locked?'':CONN_DEL);
-    b.addEventListener('dragstart',e=>{
-      if(e.target.closest('.conn-del')){ e.preventDefault(); return; }
-      _connDragId=id;
-      _connDragDidMove=false;
-      e.dataTransfer.effectAllowed='move';
-      try{ e.dataTransfer.setData('text/plain',id); }catch(_){}
-      b.classList.add('dragging');
-    });
-    b.addEventListener('dragend',()=>{
-      b.classList.remove('dragging');
-      box.querySelectorAll('.conn.drag-over').forEach(el=>el.classList.remove('drag-over'));
-      _connDragId=null;
-      setTimeout(()=>{ _connDragDidMove=false; },0);
-    });
-    b.addEventListener('dragover',e=>{
-      if(!_connDragId||id===_connDragId) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect='move';
-      box.querySelectorAll('.conn.drag-over').forEach(el=>el.classList.remove('drag-over'));
-      b.classList.add('drag-over');
-    });
-    b.addEventListener('dragleave',e=>{
-      if(!e.currentTarget.contains(e.relatedTarget)) b.classList.remove('drag-over');
-    });
-    b.addEventListener('drop',e=>{
-      e.preventDefault();
-      b.classList.remove('drag-over');
-      const from=e.dataTransfer.getData('text/plain')||_connDragId;
-      if(from&&from!==id){ _connDragDidMove=true; reorderConnections(from,id); }
-    });
+    if(!locked){
+      b.addEventListener('dragstart',e=>{
+        if(e.target.closest('.conn-del')){ e.preventDefault(); return; }
+        _connDragId=id;
+        _connDragDidMove=false;
+        e.dataTransfer.effectAllowed='move';
+        try{ e.dataTransfer.setData('text/plain',id); }catch(_){}
+        b.classList.add('dragging');
+      });
+      b.addEventListener('dragend',()=>{
+        b.classList.remove('dragging');
+        box.querySelectorAll('.conn.drag-over').forEach(el=>el.classList.remove('drag-over'));
+        _connDragId=null;
+        setTimeout(()=>{ _connDragDidMove=false; },0);
+      });
+      b.addEventListener('dragover',e=>{
+        if(!_connDragId||id===_connDragId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect='move';
+        box.querySelectorAll('.conn.drag-over').forEach(el=>el.classList.remove('drag-over'));
+        b.classList.add('drag-over');
+      });
+      b.addEventListener('dragleave',e=>{
+        if(!e.currentTarget.contains(e.relatedTarget)) b.classList.remove('drag-over');
+      });
+      b.addEventListener('drop',e=>{
+        e.preventDefault();
+        b.classList.remove('drag-over');
+        const from=e.dataTransfer.getData('text/plain')||_connDragId;
+        if(from&&from!==id){ _connDragDidMove=true; reorderConnections(from,id); }
+      });
+    }
     b.addEventListener('click',e=>{
       if(_connDragDidMove){ e.preventDefault(); e.stopPropagation(); return; }
       if(e.target.closest('.conn-del')){

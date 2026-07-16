@@ -127,6 +127,11 @@
     if(!connObj || typeof connObj !== 'object') return [];
     const seen = new Set();
     const ordered = [];
+    // Discord toujours en premier (floor fixe — non déplaçable dans l'éditeur).
+    if(connIsSet(connObj, 'discord')){
+      seen.add('discord');
+      ordered.push('discord');
+    }
     if(Array.isArray(connObj[CONN_META_ORDER])){
       connObj[CONN_META_ORDER].forEach(id => {
         if(seen.has(id) || !connIsSet(connObj, id)) return;
@@ -144,7 +149,9 @@
 
   function connSetOrder(connObj, ids){
     if(!connObj || typeof connObj !== 'object') return;
-    connObj[CONN_META_ORDER] = (ids || []).filter(id => connIsSet(connObj, id));
+    // Discord reste piné en tête même si le drag essaie de le déplacer.
+    const rest = (ids || []).filter(id => id !== 'discord' && connIsSet(connObj, id));
+    connObj[CONN_META_ORDER] = connIsSet(connObj, 'discord') ? ['discord', ...rest] : rest;
   }
 
   function connEnsureOrder(connObj){
