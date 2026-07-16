@@ -15,6 +15,19 @@
     const KEY = 'matefindr_state';
     let state = { user:null, profile:null };
     try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
+    // Fantôme éditeur : placeholder HTML "Matefindr_user" écrit dans matefindr_state
+    // sans session Discord → index te montrait connecté à personne de réel.
+    function isGhostLocalUser(u){
+      if (!u || typeof u !== 'object') return true;
+      if (u.discordId || u.uid || u.email) return false;
+      const dn = String(u.displayName || '').trim();
+      if (!dn || dn === 'Matefindr_user') return true;
+      return false;
+    }
+    if (isGhostLocalUser(state.user)) {
+      state = { user: null, profile: null };
+      try { localStorage.removeItem(KEY); } catch(_){}
+    }
     /* Recadrage avatar : certaines sauvegardes ont scale=100 (valeur du slider %) au lieu
        d'un multiplicateur ~1–3 → transform:scale(100) déborde visuellement de l'avatar. */
     function normalizeAvatarPos(ap){
@@ -7280,10 +7293,12 @@
           clearDiscordTokenKeys();
           state = { user: null, profile: null };
           try { localStorage.removeItem('matefindr_state'); } catch (_) {}
-          save();
+          // Ne PAS save() ici : ça réécrirait {user:null} puis un autre onglet/éditeur
+          // pourrait ressusciter Matefindr_user. L'état mémoire suffit + removeItem.
           setAuth(false);
           AM.closeSettingsPop();
           setScreen('landing');
+          if (typeof refreshLandingCta === 'function') refreshLandingCta();
         });
         body.querySelector('#ssDelete')?.addEventListener('click', () => {
           if (!confirm('Supprimer définitivement ton compte Matefindr ? Toutes tes données locales seront effacées.')) return;
@@ -7782,9 +7797,10 @@
       try { if (window.__supa) window.__supa.auth.signOut().catch(() => {}); } catch {}
       clearDiscordTokenKeys();
       state = { user:null, profile:null };
-      save();
+      try { localStorage.removeItem(KEY); } catch(_){}
       setAuth(false);
       setScreen('landing');
+      if (typeof refreshLandingCta === 'function') refreshLandingCta();
     });
 
     /* Backfill covers for orbs created before the cover feature existed.
@@ -7873,9 +7889,25 @@
           const u = await userFromSupabaseSession(session);
           if (u) window.__matefindr.onLogin(u);
           if (window.__rtStart) window.__rtStart(); // temps réel : matches + messages
+        } else if (state.user) {
+          // Pas de session Supabase mais état local → fantôme / déco incomplète
+          clearDiscordTokenKeys();
+          state = { user: null, profile: null };
+          try { localStorage.removeItem(KEY); } catch(_){}
+          setAuth(false);
+          if (typeof refreshLandingCta === 'function') refreshLandingCta();
         }
         window.__supa.auth.onAuthStateChange(async (event, s) => {
           console.log('[Matefindr] auth event:', event, 'provider_token:', !!s?.provider_token);
+          if (event === 'SIGNED_OUT') {
+            // Déconnexion réelle → personne connecté (pas de fantôme Matefindr_user)
+            clearDiscordTokenKeys();
+            state = { user: null, profile: null };
+            try { localStorage.removeItem(KEY); } catch(_){}
+            setAuth(false);
+            if (typeof refreshLandingCta === 'function') refreshLandingCta();
+            return;
+          }
           if (s) {
             // Save token from session if present (Supabase may include it in SIGNED_IN)
             if (s.provider_token) {
