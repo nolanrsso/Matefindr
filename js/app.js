@@ -114,11 +114,14 @@
       document.documentElement.classList.remove('mf-boot-hidden');
     }
 
-    /* ---- Petit loader de transition entre écrans ---- */
+    /* ---- Écran vide pendant le chargement ----
+       Min court (connexion rapide), mais on attend que le contenu soit vraiment
+       prêt avant de révéler (connexion lente : reste sur le fond sombre). */
     let _pageLoaderGen = 0;
     let _pageLoaderShownAt = 0;
     let _pageLoaderHideT = null;
     const PAGE_LOADER_MIN_MS = 500;
+    const PAGE_LOADER_MAX_MS = 12000;
 
     function showPageLoader(){
       _pageLoaderGen++;
@@ -161,14 +164,50 @@
       _pageLoaderHideT = setTimeout(finish, wait);
     }
 
+    /** True quand l'écran cible a assez de contenu pour être montré. */
+    function pageContentReady(screenName){
+      try {
+        if (document.fonts && document.fonts.status === 'loading') return false;
+      } catch (_) {}
+      if (screenName === 'swipe') {
+        const wrap = document.getElementById('swipeWrap');
+        if (!wrap) return false;
+        const card = wrap.querySelector('.swipe-card');
+        if (card) {
+          const avi = card.querySelector('.avi img');
+          if (avi) {
+            const src = avi.getAttribute('src') || '';
+            if (src && !avi.complete) return false;
+          }
+          return true;
+        }
+        const empty = !!wrap.querySelector('.swipe-empty')
+          || document.body.getAttribute('data-swipe-empty') === 'true';
+        if (!empty) return false;
+        // Deck vide : attendre la fin du 1er fetch (sinon flash « plus personne » puis carte).
+        if (_previewMode) return true;
+        return !window.__supa || _remoteFetchedAt > 0;
+      }
+      const screen = document.getElementById('screen-' + screenName);
+      if (!screen) return true;
+      const imgs = screen.querySelectorAll('img[src]');
+      for (let i = 0; i < Math.min(imgs.length, 12); i++) {
+        const img = imgs[i];
+        const src = img.getAttribute('src') || '';
+        if (!src || src.startsWith('data:')) continue;
+        if (!img.complete) return false;
+      }
+      return true;
+    }
+
     function hidePageLoaderWhenReady(gen, checkFn){
       const start = Date.now();
       const tick = () => {
         if (gen != null && gen !== _pageLoaderGen) return;
         let ready = false;
         try { ready = typeof checkFn === 'function' ? !!checkFn() : true; } catch (_) { ready = true; }
-        // Cap large : le min 1,5s est déjà garanti dans hidePageLoader.
-        if (ready || Date.now() - start > 5000) {
+        // Connexion lente : on reste sur l'écran vide jusqu'à ready (max 12 s).
+        if (ready || Date.now() - start > PAGE_LOADER_MAX_MS) {
           hidePageLoader(gen);
           return;
         }
@@ -212,18 +251,11 @@
         }
         deckIdx = 0; ensureDeck(true); refreshMyStatusUI(); refreshSwipeTools();
         if (loadGen != null) {
-          hidePageLoaderWhenReady(loadGen, () => {
-            const wrap = document.getElementById('swipeWrap');
-            if (!wrap) return false;
-            return !!(wrap.querySelector('.swipe-card') || wrap.querySelector('.swipe-empty')
-              || document.body.getAttribute('data-swipe-empty') === 'true');
-          });
+          hidePageLoaderWhenReady(loadGen, () => pageContentReady('swipe'));
         }
       } else if (loadGen != null) {
-        // Contenu peintes en coulisse ; révélation après le min loader (1,5 s).
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => hidePageLoader(loadGen));
-        });
+        // Landing / onboarding / account : attendre fonts + images clés (max 12 s).
+        hidePageLoaderWhenReady(loadGen, () => pageContentReady(name));
       }
       if (name !== 'swipe')   {
         stopSwipeMusic();
@@ -8668,11 +8700,10 @@
       else setScreen(state.profile ? 'landing' : 'onboarding');
       backfillCovers();
     } else if (!getSharedSlug()) {
-      // Visiteur déconnecté sur / : loader puis révélation (contenu chargé mais caché).
-      // Lien perso (/<slug>) : handleSharedLink révèle après résolution.
+      // Visiteur déconnecté sur / : écran vide jusqu'à contenu prêt (min 0,5 s).
       const gen = showPageLoader();
       revealApp();
-      hidePageLoader(gen);
+      hidePageLoaderWhenReady(gen, () => pageContentReady('landing'));
     }
     if (typeof refreshLandingCta === 'function') refreshLandingCta();
 
