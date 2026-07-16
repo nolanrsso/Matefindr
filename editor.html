@@ -638,15 +638,6 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
   .pset-head{display:none}
 }
 /* Presets aussi dans Paramètres (optionnel) */
-/* Bouton upsell "Passez à Matefindr Boost" — au-dessus de Mon lien (non-Boost uniquement) */
-.boost-fab{position:fixed;right:22px;bottom:92px;z-index:41;display:none;align-items:center;gap:9px;padding:13px 20px;border-radius:16px;border:none;cursor:pointer;
-  background:linear-gradient(180deg,#FFD15C,#F5A623);color:#3d1e00;font-family:inherit;font-weight:800;font-size:14px;
-  box-shadow:0 14px 38px rgba(245,166,35,.45),0 0 0 1px rgba(255,255,255,.18) inset;transition:transform .13s ease,filter .16s ease}
-body.not-boost .boost-fab{display:inline-flex}
-.boost-fab:hover{transform:translateY(-2px);filter:brightness(1.06)}
-.boost-fab:active{transform:translateY(0) scale(.97)}
-.boost-fab svg{width:18px;height:18px}
-@media(max-width:600px){.boost-fab{display:none !important}}
 /* Non-boost : les presets restent VISIBLES (upsell). Le "+" passe en or et
    ouvre le pop-up Boost au clic (géré en JS). */
 body.not-boost .pset-slot--empty{border-color:rgba(245,166,35,.75);color:#FFD15C;background:rgba(245,166,35,.08)}
@@ -1489,8 +1480,6 @@ html.perf-lite *{
     <span>Mon lien</span>
   </button>
 </aside>
-
-<button class="boost-fab" id="btnBoostUpsell" title="Passer à Matefindr Boost"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 2 4 13h5l-1 9 9-12h-5l2-8z"/></svg><span>Passez à Matefindr Boost</span></button>
 
 
 <!-- Connexions : grille de choix + modale d'ajout -->
@@ -4604,7 +4593,6 @@ let _pendingLeave=null;
 let _gateUpsell=false;
 function openBoostGate(proceed, upsellOnly){ _pendingLeave=proceed; _gateUpsell=!!upsellOnly; $('boostGate').classList.add('open'); }
 $('bgateBuy').addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
-$('btnBoostUpsell')?.addEventListener('click',()=>{ saveNow(); location.href='checkout.html?plan=monthly'; });
 $('bgateClose').addEventListener('click',()=>{
   // Upsell (presets non-boost) : on ferme sans rien retirer.
   if(_gateUpsell){ _gateUpsell=false; $('boostGate').classList.remove('open'); _pendingLeave=null; return; }
