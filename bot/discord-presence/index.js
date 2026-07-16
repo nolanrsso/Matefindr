@@ -241,6 +241,11 @@ const client = new Client({
 
 client.once('ready', () => {
   console.log(`[presence] logged in as ${client.user.tag} · guild ${GUILD_ID}`);
+  // Point rouge Discord (ne pas déranger) — sinon le bot reste « En ligne » (vert).
+  client.user.setPresence({
+    status: 'dnd',
+    activities: [{ name: 'Matefindr', type: ActivityType.Watching }],
+  });
 });
 
 client.on('presenceUpdate', (oldP, newP) => {
