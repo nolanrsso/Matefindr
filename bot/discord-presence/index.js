@@ -50,6 +50,17 @@ function normalizeActivity(a) {
     if (a.assets.smallImage) assets.small_image = a.assets.smallImage;
     if (a.assets.largeText) assets.large_text = a.assets.largeText;
     if (a.assets.smallText) assets.small_text = a.assets.smallText;
+    /* URLs résolues par discord.js (Spotify, mp:external, app-assets jeux type Palworld) */
+    try {
+      if (typeof a.assets.largeImageURL === 'function') {
+        const u = a.assets.largeImageURL({ size: 128 });
+        if (u) assets.large_image_url = u;
+      }
+      if (typeof a.assets.smallImageURL === 'function') {
+        const u = a.assets.smallImageURL({ size: 128 });
+        if (u) assets.small_image_url = u;
+      }
+    } catch (_) {}
   }
   let timestamps = null;
   if (a.timestamps && (a.timestamps.start || a.timestamps.end)) {

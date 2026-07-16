@@ -1144,6 +1144,7 @@
       } catch (_) {}
     }
     setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 10000);
+    window.__mfRefreshDiscordLive = () => { try { refreshVisibleDiscordLive(); } catch(_){} };
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
@@ -2353,6 +2354,8 @@
     window.__mfFmtRelativeFr = fmtRelativeFr;
 
     function discordActivityArt(act){
+      if(act.assets?.large_image_url) return String(act.assets.large_image_url);
+      if(act.assets?.small_image_url) return String(act.assets.small_image_url);
       const img = act.assets?.large_image || act.assets?.small_image;
       if(!img) return null;
       const s = String(img);
@@ -2364,10 +2367,11 @@
           return decodeURIComponent(encoded);
         }catch(_){ return null; }
       }
+      if(s.startsWith('mp:')) return 'https://media.discordapp.net/' + s.slice(3);
       const appId = act.application_id || act.applicationId;
       if(appId){
         const id = s.replace(/^mp:/, '');
-        if(/^[a-zA-Z0-9_]+$/.test(id)) return `https://cdn.discordapp.com/app-assets/${appId}/${id}.png?size=128`;
+        if(/^[a-zA-Z0-9_-]+$/.test(id)) return `https://cdn.discordapp.com/app-assets/${appId}/${id}.png?size=128`;
       }
       return null;
     }
@@ -2389,12 +2393,13 @@
       const start = Number(ts.start), end = Number(ts.end);
       if(!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
       const now = Date.now();
-      const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+      const capped = Math.min(Math.max(now, start), end);
+      const pct = Math.min(100, Math.max(0, ((capped - start) / (end - start)) * 100));
       const fmt = (ms) => {
         const sec = Math.max(0, Math.floor(ms / 1000));
         return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
       };
-      return { pct, current: fmt(now - start), total: fmt(end - start), start, end };
+      return { pct, current: fmt(capped - start), total: fmt(end - start), start, end, ended: now >= end };
     }
 
     function cardDiscordActivityHtml(p){

@@ -1226,11 +1226,13 @@
   }
 
   function discordActivityArt(act) {
+    /* URL déjà résolue côté bot (discord.js largeImageURL) — jeux type Palworld */
+    if (act.assets?.large_image_url) return String(act.assets.large_image_url);
+    if (act.assets?.small_image_url) return String(act.assets.small_image_url);
     const img = act.assets?.large_image || act.assets?.small_image;
     if (!img) return null;
     const s = String(img);
     if (/^https?:\/\//i.test(s)) return s;
-    /* Spotify Rich Presence : spotify:<id> → CDN Spotify */
     if (s.startsWith('spotify:')) {
       return 'https://i.scdn.co/image/' + s.slice(8);
     }
@@ -1240,10 +1242,14 @@
         return decodeURIComponent(encoded);
       } catch (_) { return null; }
     }
+    /* Proxy média Discord (autres formats) */
+    if (s.startsWith('mp:')) {
+      return 'https://media.discordapp.net/' + s.slice(3);
+    }
     const appId = act.application_id || act.applicationId;
     if (appId) {
       const id = s.replace(/^mp:/, '');
-      if (/^[a-zA-Z0-9_]+$/.test(id)) {
+      if (/^[a-zA-Z0-9_-]+$/.test(id)) {
         return `https://cdn.discordapp.com/app-assets/${appId}/${id}.png?size=128`;
       }
     }
@@ -1272,8 +1278,16 @@
     const start = Number(ts.start), end = Number(ts.end);
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
     const now = typeof nowMs === 'number' ? nowMs : Date.now();
-    const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-    return { pct, current: fmtActivityClock(now - start), total: fmtActivityClock(end - start), start, end };
+    const capped = Math.min(Math.max(now, start), end);
+    const pct = Math.min(100, Math.max(0, ((capped - start) / (end - start)) * 100));
+    return {
+      pct,
+      current: fmtActivityClock(capped - start),
+      total: fmtActivityClock(end - start),
+      start,
+      end,
+      ended: now >= end,
+    };
   }
 
   function discordActivityCoverFallback(act) {
@@ -1479,25 +1493,40 @@
     });
   }
 
-  /** Fait avancer le chrono Spotify localement (1×/s) sans refetch. */
+  /** Fait avancer le chrono Spotify localement (1×/s) sans refetch. Bloqué à la fin. */
   function tickDiscordActivityProgress(root) {
     const scope = root && root.querySelectorAll ? root : document;
     const now = Date.now();
+    let hitEnd = false;
     scope.querySelectorAll('.discord-activity-progress[data-start][data-end]').forEach(el => {
       const start = Number(el.dataset.start);
       const end = Number(el.dataset.end);
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
-      const pct = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+      const capped = Math.min(Math.max(now, start), end);
+      const pct = Math.min(100, Math.max(0, ((capped - start) / (end - start)) * 100));
       const bar = el.querySelector('span');
       if (bar) bar.style.width = pct.toFixed(1) + '%';
       const times = el.nextElementSibling;
       if (times && times.classList.contains('discord-activity-times')) {
         const cur = times.querySelector('.da-cur');
         const tot = times.querySelector('.da-tot');
-        if (cur) cur.textContent = fmtActivityClock(now - start);
+        if (cur) cur.textContent = fmtActivityClock(capped - start);
         if (tot) tot.textContent = fmtActivityClock(end - start);
       }
+      if (now >= end) {
+        hitEnd = true;
+        el.dataset.ended = '1';
+      }
     });
+    /* Fin de piste → refresh activité (nouveau titre / fin) après un court délai */
+    if (hitEnd && typeof global.__mfRefreshDiscordLive === 'function') {
+      if (!global.__mfDaEndRefreshTimer) {
+        global.__mfDaEndRefreshTimer = setTimeout(() => {
+          global.__mfDaEndRefreshTimer = null;
+          try { global.__mfRefreshDiscordLive(); } catch (_) {}
+        }, 1200);
+      }
+    }
   }
 
   if (!global.__mfDaProgressTimer) {
