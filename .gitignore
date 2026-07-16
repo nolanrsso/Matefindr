@@ -1,6 +1,9 @@
 # Sortie de l'outil Graphify (graphe d'archi) — local uniquement, pas déployé
 graphify-out/
 
+# Bot Discord presence (deps locales)
+bot/discord-presence/node_modules/
+
 # Fichiers OS / éditeur
 .DS_Store
 Thumbs.db

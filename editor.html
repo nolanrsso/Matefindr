@@ -3956,6 +3956,16 @@ async function syncToDb(){
     const { data:{ session } } = await sb.auth.getSession();
     if(!session){ return; }
     const st=readSite(); const my=buildDbProfile(st); if(!my) return;
+    // Préserver discordLive du bot si plus récent que le local
+    try{
+      const { data:liveRow }=await sb.from('profiles').select('data').eq('id',session.user.id).maybeSingle();
+      const cloudLive=liveRow?.data?.discordLive;
+      if(cloudLive&&typeof cloudLive==='object'){
+        const locTs=my.discordLive?.updatedAt?new Date(my.discordLive.updatedAt).getTime():0;
+        const cloudTs=cloudLive.updatedAt?new Date(cloudLive.updatedAt).getTime():0;
+        if(!locTs||cloudTs>=locTs) my.discordLive=cloudLive;
+      }
+    }catch(_){}
     const base={ id:session.user.id, display_name:my.name||null, avatar_url:my.avatarUrl||null, banner_url:my.bannerUrl||null, decoration_url:my.decorationUrl||null, bio:my.bio||null, look_for:my.looking||null, updated_at:new Date().toISOString() };
     if(st.user&&st.user.discordId) base.discord_id=st.user.discordId;
     let { error }=await sb.from('profiles').upsert({...base, data:my},{onConflict:'id'});

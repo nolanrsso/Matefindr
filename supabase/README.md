@@ -29,6 +29,23 @@ Le message de bienvenue original reste inchangé (son bouton reste cliquable ind
 
 ---
 
+# Matefindr — Activité Discord (status / Spotify / jeux) via le BOT
+
+Le site affiche `profiles.data.discordLive` sur la carte. **Source de vérité = le bot Gateway** (`bot/discord-presence/`), pas l’ancien WebSocket OAuth client (trop fragile).
+
+Les Edge Functions ne peuvent pas garder une Gateway ouverte → worker Node séparé (Railway / Fly / VPS).
+
+### Setup (une fois)
+
+1. Discord Developer Portal → Bot → Privileged Gateway Intents → **Presence Intent** ON (+ Server Members Intent recommandé).
+2. Même `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` que `discord-join-dm`.
+3. Lancer le worker (détail dans `bot/discord-presence/README.md`) avec aussi `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+4. Les users doivent être sur le serveur Matefindr (auto-join déjà en place).
+
+Le sync profil côté site **préserve** un `discordLive` bot plus récent pour ne pas l’écraser.
+
+---
+
 # Matefindr — Stockage des avatars/bannières (Supabase Storage)
 
 Avant : avatar/bannière uploadés étaient encodés en **base64 et stockés directement dans la table `profiles`** (colonnes `avatar_url`/`banner_url` + dupliqués dans la colonne `data`). Avec très peu d'utilisateurs, ça a fait exploser la taille de la base (193% du quota gratuit à ~20 comptes).

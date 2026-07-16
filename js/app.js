@@ -477,11 +477,17 @@
                 if (typeof d.editorActiveMs === 'number') su.editorActiveMs = Math.max(Number(su.editorActiveMs) || 0, d.editorActiveMs);
                 if (d.beautyQuestUnlocked) su.beautyQuestUnlocked = true;
                 if (d.lastEditedAt) su.lastEditedAt = d.lastEditedAt;
+                if (d.discordLive) su.discordLive = d.discordLive;
                 console.log('[Matefindr] Profil restauré depuis le cloud (reconnexion).');
               } else if (dRaw) {
                 // Même si le profil local existe déjà, ne pas perdre presets / sharePresetIdx / quêtes
                 if (Array.isArray(dRaw.presets) && !Array.isArray(state.user.presets)) state.user.presets = dRaw.presets;
                 if (typeof dRaw.sharePresetIdx === 'number' && typeof state.user.sharePresetIdx !== 'number') state.user.sharePresetIdx = dRaw.sharePresetIdx;
+                if (dRaw.discordLive) {
+                  const locTs = state.user.discordLive?.updatedAt ? new Date(state.user.discordLive.updatedAt).getTime() : 0;
+                  const cloudTs = dRaw.discordLive.updatedAt ? new Date(dRaw.discordLive.updatedAt).getTime() : 0;
+                  if (!locTs || cloudTs >= locTs) state.user.discordLive = dRaw.discordLive;
+                }
                 if (typeof dRaw.coins === 'number') {
                   state.user.coins = typeof state.user.coins === 'number' ? Math.max(state.user.coins, dRaw.coins) : dRaw.coins;
                 }
@@ -1036,6 +1042,51 @@
       if (viewsB && typeof p.views === 'number') viewsB.textContent = (p.views || 0).toLocaleString('fr-FR');
       syncSwipeWrapGradient(p);
     }
+
+    /** Rafraîchit discordLive (bot Gateway) sur la carte visible sans rebuild complet. */
+    async function refreshVisibleDiscordLive(){
+      if (!window.__supa) return;
+      if (document.body.getAttribute('data-screen') !== 'swipe') return;
+      const p = currentSwipeProfile();
+      if (!p || !p.uid) return;
+      try {
+        const { data: row } = await window.__supa.from('profiles').select('data').eq('id', p.uid).maybeSingle();
+        const live = row?.data?.discordLive;
+        if (!live || typeof live !== 'object') return;
+        const prev = p.discordLive ? JSON.stringify(p.discordLive) : '';
+        if (prev === JSON.stringify(live)) return;
+        p.discordLive = live;
+        const cached = (_remoteProfiles || []).find(x => x.uid === p.uid);
+        if (cached) cached.discordLive = live;
+        if (p.isMe && state.user) {
+          state.user.discordLive = live;
+          try { save(); } catch(_){}
+        }
+        const wrap = document.getElementById('swipeWrap');
+        const card = wrap && wrap.querySelector('.swipe-card');
+        if (!card) return;
+        const TQ = window.MatefindrTitlesQuests;
+        if (!TQ || typeof TQ.discordFloorHtml !== 'function') return;
+        const floorHtml = TQ.discordFloorHtml(p, { esc: escapeHtmlMini, fmtRelative: fmtRelativeFr });
+        let stack = card.querySelector('.card-discord-conn-stack');
+        if (!floorHtml) {
+          stack?.querySelectorAll('.discord-floor').forEach(el => el.remove());
+          return;
+        }
+        if (!stack) {
+          stack = document.createElement('div');
+          stack.className = 'card-discord-conn-stack';
+          const bio = card.querySelector('.bio');
+          const body = card.querySelector('.body');
+          if (bio) bio.insertAdjacentElement('afterend', stack);
+          else if (body) body.appendChild(stack);
+        }
+        stack.querySelectorAll('.discord-floor').forEach(el => el.remove());
+        stack.insertAdjacentHTML('afterbegin', floorHtml);
+        card.classList.add('has-discord-floor');
+      } catch (_) {}
+    }
+    setInterval(() => { try { refreshVisibleDiscordLive(); } catch(_){} }, 20000);
     let _previewMode = false; // true = aperçu complet d'UNE carte figée (pas de swipe, bouton "Quitter")
     let _previewProfile = null; // profil affiché en aperçu -- null = MA propre carte (comportement historique), sinon un profil tiers (ex: ouvert depuis un chat/qui-t'a-liké)
     let _previewReturn = null; // { screen, deckIdx } capturé à l'entrée en aperçu D'UN PROFIL TIERS -- "Quitter" y revient au lieu de toujours renvoyer au hub (comportement historique gardé pour SA PROPRE carte, voir enterPreviewMode)
@@ -1491,6 +1542,17 @@
           updated_at: new Date().toISOString(),
         };
         if (state.user && state.user.discordId) base.discord_id = state.user.discordId;
+        // discordLive est surtout écrit par le bot Gateway (bot/discord-presence).
+        // Ne jamais l'écraser avec une valeur locale plus vieille / vide.
+        try {
+          const { data: liveRow } = await window.__supa.from('profiles').select('data').eq('id', session.user.id).maybeSingle();
+          const cloudLive = liveRow?.data?.discordLive;
+          if (cloudLive && typeof cloudLive === 'object') {
+            const locTs = my.discordLive?.updatedAt ? new Date(my.discordLive.updatedAt).getTime() : 0;
+            const cloudTs = cloudLive.updatedAt ? new Date(cloudLive.updatedAt).getTime() : 0;
+            if (!locTs || cloudTs >= locTs) my.discordLive = cloudLive;
+          }
+        } catch (_) {}
         // ANTI-ÉCRASEMENT : un profil "vide" (identité Discord seule, onboarding pas
         // rempli) ne doit JAMAIS écraser un profil riche déjà en base. On n'écrit alors
         // que les colonnes legacy et on LAISSE la colonne data intacte (récupérable).

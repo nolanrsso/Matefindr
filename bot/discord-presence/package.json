@@ -1,0 +1,18 @@
+{
+  "name": "matefindr-discord-presence",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bot Discord Gateway — synchronise status/activités vers profiles.data.discordLive",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "discord.js": "^14.16.3"
+  }
+}

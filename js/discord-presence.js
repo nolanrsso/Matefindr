@@ -1,4 +1,6 @@
-/* Sync Discord status + activity (Spotify, jeux…) while the user is on Matefindr. */
+/* Sync Discord status + activity.
+   Source principale = bot Gateway (bot/discord-presence) → profiles.data.discordLive.
+   Ce client WS reste un fallback léger pour SA propre présence pendant qu'il est sur le site. */
 (function(global){
   let ws = null, heartbeat = null, seq = null, userId = null, reconnectT = null;
 
