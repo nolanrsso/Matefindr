@@ -115,32 +115,43 @@
     }
 
     /* ---- Écran vide pendant le chargement ----
-       Min court (connexion rapide), mais on attend que le contenu soit vraiment
-       prêt avant de révéler (connexion lente : reste sur le fond sombre). */
+       Min court (connexion rapide). Si ça traîne → logo + spinner (sans carte noire).
+       On attend le contenu prêt avant de révéler (max 12 s). */
     let _pageLoaderGen = 0;
     let _pageLoaderShownAt = 0;
     let _pageLoaderHideT = null;
+    let _pageLoaderSlowT = null;
     const PAGE_LOADER_MIN_MS = 500;
+    const PAGE_LOADER_SLOW_MS = 800;
     const PAGE_LOADER_MAX_MS = 12000;
 
     function showPageLoader(){
       _pageLoaderGen++;
       const gen = _pageLoaderGen;
       if (_pageLoaderHideT) { clearTimeout(_pageLoaderHideT); _pageLoaderHideT = null; }
+      if (_pageLoaderSlowT) { clearTimeout(_pageLoaderSlowT); _pageLoaderSlowT = null; }
       const el = document.getElementById('mfPageLoader');
       if (el) {
-        el.classList.remove('is-leaving');
+        el.classList.remove('is-leaving', 'is-slow');
         el.hidden = false;
         el.setAttribute('aria-hidden', 'false');
         el.setAttribute('aria-busy', 'true');
       }
       document.body.classList.add('mf-page-loading');
       _pageLoaderShownAt = Date.now();
+      // Connexion lente : faire apparaître logo + spinner après un court délai.
+      _pageLoaderSlowT = setTimeout(() => {
+        _pageLoaderSlowT = null;
+        if (gen !== _pageLoaderGen) return;
+        const loader = document.getElementById('mfPageLoader');
+        if (loader && !loader.hidden) loader.classList.add('is-slow');
+      }, PAGE_LOADER_SLOW_MS);
       return gen;
     }
 
     function hidePageLoader(gen){
       if (gen != null && gen !== _pageLoaderGen) return;
+      if (_pageLoaderSlowT) { clearTimeout(_pageLoaderSlowT); _pageLoaderSlowT = null; }
       const elapsed = Date.now() - _pageLoaderShownAt;
       const wait = Math.max(0, PAGE_LOADER_MIN_MS - elapsed);
       const finish = () => {
@@ -155,7 +166,7 @@
         setTimeout(() => {
           if (gen != null && gen !== _pageLoaderGen) return;
           el.hidden = true;
-          el.classList.remove('is-leaving');
+          el.classList.remove('is-leaving', 'is-slow');
           el.setAttribute('aria-hidden', 'true');
           document.body.classList.remove('mf-page-loading');
         }, 120);

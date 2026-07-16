@@ -123,8 +123,13 @@
 })();
 </script>
 
-<!-- Transition : écran vide (fond sombre) pendant le chargement — pas de logo/spinner -->
-<div id="mfPageLoader" class="mf-page-loader" hidden aria-hidden="true" aria-busy="false" role="status"></div>
+<!-- Transition : fond sombre ; logo+spinner seulement si le load est long (sans carte noire). -->
+<div id="mfPageLoader" class="mf-page-loader" hidden aria-hidden="true" aria-busy="false" role="status">
+  <div class="mf-page-loader-brand" aria-hidden="true">
+    <img src="assets/logo.svg" alt="" class="mf-page-loader-logo" width="48" height="48" draggable="false" />
+    <div class="mf-page-loader-spin"></div>
+  </div>
+</div>
 
 <!-- ===== Accès privé : page mot de passe (barrière côté client, mémorisée par appareil) ===== -->
 <div id="gate" hidden>

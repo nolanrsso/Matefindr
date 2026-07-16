@@ -505,9 +505,11 @@
   body[data-screen="swipe"]      #screen-swipe,
   body[data-screen="account"]    #screen-account { display:flex }
 
-  /* Écran vide pendant le load (fond opaque, sans logo / spinner). */
+  /* Écran de load : fond sombre vide. Logo+spinner uniquement si connexion lente
+     (classe .is-slow) — sans carte / fond noir autour. */
   .mf-page-loader{
     position:fixed;inset:0;z-index:9990;
+    display:grid;place-items:center;
     background:#0D0B1E;
     transition:opacity .12s ease;
     pointer-events:all;
@@ -521,8 +523,28 @@
   body.mf-page-loading #mfPageLoader{
     visibility:visible !important;
   }
+  .mf-page-loader-brand{
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .mf-page-loader.is-slow .mf-page-loader-brand{opacity:1}
+  .mf-page-loader-logo{
+    width:48px;height:48px;object-fit:contain;
+    filter:drop-shadow(0 4px 14px rgba(145,70,255,.45));
+  }
+  .mf-page-loader-spin{
+    width:28px;height:28px;border-radius:50%;
+    border:2.5px solid rgba(255,255,255,.12);
+    border-top-color:#FF7EB6;
+    border-right-color:#9146FF;
+    animation:mfPageSpin .7s linear infinite;
+  }
+  @keyframes mfPageSpin{to{transform:rotate(360deg)}}
   @media (prefers-reduced-motion:reduce){
     .mf-page-loader{transition:none}
+    .mf-page-loader-brand{transition:none}
+    .mf-page-loader-spin{animation:none;border-color:rgba(255,255,255,.25);border-top-color:#FF7EB6}
   }
 
   /* Hide bubble-only landing extras on non-landing screens (decluttering) */
