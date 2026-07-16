@@ -6607,8 +6607,8 @@
       const bar = document.getElementById('accVoiceBar');
       const timeLbl = document.getElementById('accVoiceTime');
       if (!fab) return;
-      let mediaRec = null, chunks = [], tickIv = null, secs = 0;
-      const MAX = 5;
+      let mediaRec = null, chunks = [], tickIv = null, secs = 0, recT0 = 0;
+      const MIN = 1, MAX = 5;
 
       function fmtTime(t){
         const s = Math.floor(t); return '0:' + (s < 10 ? '0' + s : s);
@@ -6629,7 +6629,7 @@
           audioEl.src = '';
           preview.hidden = true;
           fab.hidden = false;
-          lbl.textContent = 'Enregistrer un vocal';
+          lbl.textContent = 'Enregistrer un vocal (1 s min)';
         }
       }
       renderExisting();
@@ -6644,6 +6644,15 @@
           mediaRec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
           mediaRec.onstop = () => {
             stream.getTracks().forEach(t => t.stop());
+            clearInterval(tickIv); tickIv = null; secs = 0;
+            const dur = (performance.now() - recT0) / 1000;
+            if (dur < MIN) {
+              fab.setAttribute('data-state', 'idle');
+              timer.textContent = '';
+              lbl.textContent = state.user?.profileVoice ? 'Ré-enregistrer le vocal' : 'Enregistrer un vocal (1 s min)';
+              alert('Vocal trop court — 1 s minimum');
+              return;
+            }
             const blob = new Blob(chunks, { type: mediaRec.mimeType || 'audio/webm' });
             const reader = new FileReader();
             reader.onload = () => {
@@ -6653,11 +6662,11 @@
               renderExisting();
             };
             reader.readAsDataURL(blob);
-            clearInterval(tickIv); tickIv = null; secs = 0;
           };
           mediaRec.start();
+          recT0 = performance.now();
           fab.setAttribute('data-state', 'recording');
-          lbl.textContent = 'Enregistrement…';
+          lbl.textContent = 'Enregistrement… (min. 1 s)';
           secs = 0;
           timer.textContent = (MAX - secs) + 's';
           tickIv = setInterval(() => {
