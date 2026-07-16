@@ -1118,7 +1118,12 @@
     /** Profil actuellement affiché dans #swipeWrap (après ensureDeckSync). */
     function currentSwipeProfile(){
       if (_sharedProfile && !_previewMode) return _sharedProfile;
-      if (_previewMode) return _previewProfile || buildUserProfile() || buildMinimalProfile();
+      if (_previewMode) {
+        if (_previewProfile) return _previewProfile;
+        const mine = buildUserProfile() || buildMinimalProfile();
+        if (mine && !mine.uid && _myUidCache) mine.uid = _myUidCache;
+        return mine;
+      }
       const pool = genderFilteredProfiles();
       return pool[0] || null;
     }
@@ -1345,9 +1350,12 @@
       const discPrefs = typeof discordConnPrefs === 'function' ? discordConnPrefs(p) : null;
       const discLive = p.discordLive;
       let cardStatus = p.status || 'offline';
-      if (discPrefs?.showStatus && discLive?.status) {
+      // Discord status prioritaire dès qu'il est connu ; sinon statut Matefindr.
+      if (discPrefs && discPrefs.showStatus === false) {
+        /* statut Discord masqué volontairement → garder p.status (Matefindr) */
+      } else if (discLive && discLive.status) {
         cardStatus = discLive.status === 'invisible' ? 'offline' : discLive.status;
-      } else if (!discPrefs?.showStatus) return;
+      }
       const dot = card.querySelector('.avatar-wrap .status-dot');
       if (!dot) return;
       const moon = (typeof STATUS_MOON_SVG !== 'undefined') ? STATUS_MOON_SVG : '';
@@ -1399,14 +1407,20 @@
       if (document.body.getAttribute('data-screen') !== 'swipe') return;
       if (typeof document !== 'undefined' && document.hidden) return;
       const p = currentSwipeProfile();
-      if (!p || !p.uid) return;
-      subscribeDiscordLiveFor(p.uid);
+      if (!p) return;
+      // Aperçu de soi : buildUserProfile n'avait pas toujours d'uid → statut Discord jamais refetch.
+      const uid = p.uid || (p.isMe ? _myUidCache : null);
+      if (!uid) return;
+      if (p.isMe && !p.uid) p.uid = uid;
+      subscribeDiscordLiveFor(uid);
       const gen = ++_discordLiveFetchGen;
       try {
-        const { data: row } = await window.__supa.from('profiles').select('data').eq('id', p.uid).maybeSingle();
+        const { data: row } = await window.__supa.from('profiles').select('data').eq('id', uid).maybeSingle();
         if (gen !== _discordLiveFetchGen) return; // réponse périmée
         const still = currentSwipeProfile();
-        if (!still || still.uid !== p.uid) return;
+        if (!still) return;
+        const stillUid = still.uid || (still.isMe ? _myUidCache : null);
+        if (String(stillUid) !== String(uid)) return;
         const live = row?.data?.discordLive;
         applyLiveToVisibleCard(still, live && typeof live === 'object' ? live : null);
       } catch (_) {}
@@ -1569,6 +1583,7 @@
         titlesData: window.MatefindrTitlesQuests ? window.MatefindrTitlesQuests.getTitlesData(u) : (u.titlesData || null),
         discordLive: u.discordLive || null,
         isMe: true,
+        uid: _myUidCache || null,
         views: _myViewsCache,
       };
     }
@@ -1691,6 +1706,7 @@
         editorActiveMs: typeof u.editorActiveMs === 'number' ? u.editorActiveMs : 0,
         beautyQuestUnlocked: !!u.beautyQuestUnlocked,
         isMe: true,
+        uid: _myUidCache || null,
         views: _myViewsCache,
         // Presets + preset du lien perso (indépendant du profil équipé / deck swipe)
         presets: Array.isArray(u.presets) ? u.presets : null,
@@ -3106,12 +3122,14 @@
       const discPrefs = discordConnPrefs(p);
       const discLive = p.discordLive;
       let cardStatus = p.status || 'offline';
-      if(discPrefs?.showStatus && discLive?.status){
+      if (discPrefs && discPrefs.showStatus === false) {
+        /* statut Discord masqué → garder Matefindr */
+      } else if (discLive && discLive.status) {
         cardStatus = discLive.status === 'invisible' ? 'offline' : discLive.status;
       }
-      const statusLabel = (discPrefs?.showStatus && discLive?.status)
+      const statusLabel = (discPrefs && discPrefs.showStatus !== false && discLive?.status)
         ? (DISCORD_STATUS_LABEL[discLive.status] || DISCORD_STATUS_LABEL.offline)
-        : (STATUS_LABEL[p.status] || '');
+        : (STATUS_LABEL[p.status] || STATUS_LABEL.online);
       // Age + gender badge in the top-right corner of the banner.
       // 'hidden' (Je préfère ne pas dire) : no symbol — just the age.
       // 'autre' : outline star SVG (white) instead of ⚧.
@@ -5873,6 +5891,26 @@
       document.body.setAttribute('data-preview', 'true');
       deckIdx = 0;
       if (typeof setScreen === 'function') setScreen('swipe');
+      // Statut Discord : forcer un fetch cloud (+ WS local pour soi) — en aperçu
+      // le uid manquait souvent et le statut restait vide / figé.
+      (async () => {
+        try {
+          if (!_myUidCache && window.__supa) {
+            const { data: { session } } = await window.__supa.auth.getSession();
+            if (session?.user?.id) {
+              _myUidCache = session.user.id;
+              try { window.__mfMyUid = _myUidCache; } catch (_) {}
+            }
+          }
+        } catch (_) {}
+        try {
+          if (!_previewProfile && window.MatefindrDiscordPresence?.start) {
+            window.MatefindrDiscordPresence.start();
+          }
+        } catch (_) {}
+        try { refreshVisibleDiscordLive(); } catch (_) {}
+        setTimeout(() => { try { refreshVisibleDiscordLive(); } catch (_) {} }, 400);
+      })();
     }
     // Bouton legacy de l'ancien écran compte ; le vrai déclencheur est le retour de
     // l'éditeur avec #preview (géré dans handleEditorReturn plus bas).
