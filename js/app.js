@@ -118,7 +118,7 @@
     let _pageLoaderGen = 0;
     let _pageLoaderShownAt = 0;
     let _pageLoaderHideT = null;
-    const PAGE_LOADER_MIN_MS = 240;
+    const PAGE_LOADER_MIN_MS = 1500;
 
     function showPageLoader(){
       _pageLoaderGen++;
