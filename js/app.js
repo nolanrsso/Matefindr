@@ -230,6 +230,32 @@
     window.__mfShowPageLoader = showPageLoader;
     window.__mfHidePageLoader = hidePageLoader;
 
+    /** Précharge les 2 prochains profils pendant qu'on est sur l'accueil (évite le loader au swipe). */
+    function prefetchLandingSwipeDeck(){
+      if (!window.__supa || !state.user || !state.profile) return;
+      if (document.body.getAttribute('data-auth') !== 'in') return;
+      fetchOtherProfiles(false).then(list => {
+        const pool = Array.isArray(list) ? list : [];
+        pool.slice(0, 2).forEach(p => {
+          try {
+            const warm = (url) => {
+              if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) return;
+              const img = new Image();
+              img.decoding = 'async';
+              img.src = url;
+            };
+            warm(p.avatarUrl);
+            warm(p.bannerUrl);
+            const ph0 = Array.isArray(p.photos) && p.photos[0];
+            warm(typeof ph0 === 'string' ? ph0 : (ph0 && ph0.url));
+            const g0 = Array.isArray(p.gifs) && p.gifs[0];
+            warm(typeof g0 === 'string' ? g0 : (g0 && g0.url));
+          } catch (_) {}
+        });
+      }).catch(() => {});
+    }
+    window.__mfPrefetchSwipeDeck = prefetchLandingSwipeDeck;
+
     function setScreen(name){
       // Profil désactivé par un admin (admin.html) : garde-fou -- même si quelque chose
       // tente de rouvrir le swipe (onglet déjà ouvert, retour navigateur…), on renvoie
@@ -240,12 +266,17 @@
       // Premier reveal (boot) : loader même si l'écran HTML est déjà "landing".
       // Pendant le loader le DOM se charge, mais rien n'est affiché (CSS mf-page-loading).
       const firstReveal = document.documentElement.classList.contains('mf-boot-hidden');
-      const loadGen = (changing || firstReveal) ? showPageLoader() : null;
+      // Accueil → swipe : pas de loader (profils préchargés sur l'index).
+      const fromLandingToSwipe = changing && prev === 'landing' && name === 'swipe' && !_previewMode;
+      const loadGen = (!fromLandingToSwipe && (changing || firstReveal)) ? showPageLoader() : null;
 
       document.body.setAttribute('data-screen', name);
       revealApp();
       if (name === 'account') renderAccount();
       if (name === 'onboarding' && typeof window.__initOnboarding === 'function') window.__initOnboarding();
+      if (name === 'landing' && document.body.getAttribute('data-auth') === 'in') {
+        try { prefetchLandingSwipeDeck(); } catch (_) {}
+      }
       // force=true : (ré)entrer sur le swipe court-circuite le cache 30s de fetchOtherProfiles
       // -- sinon un profil réactivé (ou désactivé) par un admin entre-temps pouvait rester
       // invisible/visible à tort jusqu'à 30s de plus après être revenu sur cet écran.
@@ -289,7 +320,12 @@
     }
     function setAuth(on){
       document.body.setAttribute('data-auth', on ? 'in' : 'out');
-      if (on) updateChip();
+      if (on) {
+        updateChip();
+        if (document.body.getAttribute('data-screen') === 'landing') {
+          try { prefetchLandingSwipeDeck(); } catch (_) {}
+        }
+      }
       else {
         // Déconnecté → jamais laisser l'onboarding / compte / swipe "app" visibles
         // (sinon "Se connecter" + formulaire "Hey, toi !" en même temps).
@@ -729,7 +765,9 @@
         // (ex: juste après un achat Boost) avant que la fonction ne la lise.
         try { if (typeof syncMyProfileToCloud === 'function') await syncMyProfileToCloud(); } catch(_){}
         try { window.__discordJoinDM && await window.__discordJoinDM(); } catch(_){}
-        try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true); } catch(_){}
+        try { if (typeof fetchOtherProfiles === 'function') fetchOtherProfiles(true).then(() => {
+          try { if (typeof prefetchLandingSwipeDeck === 'function') prefetchLandingSwipeDeck(); } catch(_){}
+        }); } catch(_){}
         // Replay d'une action venue d'un lien de partage (❤️/✖️ fait AVANT la création
         // de compte) : on enregistre le like puis on nettoie et on renvoie à l'accueil.
         // (Les réactions, elles, ne nécessitent plus de compte -- cf. sendReaction/getReactorId --
