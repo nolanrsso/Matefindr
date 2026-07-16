@@ -58,7 +58,7 @@
 
   /* Pistes affichées dans la modale Quêtes — Esthétisme en tête. */
   const QUEST_TRACKS = [
-    { group: 'profil', isRating: true, label: 'Esthétisme' },
+    { group: 'profil', isRating: true, label: 'Esthétisme du profil' },
     { group: 'interaction', statId: 'matches', stat: 'matches', label: 'Matchs' },
     { group: 'interaction', statId: 'votes', stat: 'votesGiven', label: 'Votes sur les autres profils' },
     { group: 'interaction', statId: 'conversations', stat: 'newChats', label: 'Conversations avec de nouvelles personnes' },
@@ -1149,7 +1149,7 @@
               <span class="tq-mission-title">${esc(track.label)}</span>
               ${soonMeta ? `<span class="tq-lvl-badge">${esc(missionLevelLabel(soonMeta))}</span>` : ''}
             </span>
-            ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : '<span class="tq-auto-lbl">Auto</span>'}
+            ${arrow.maxed ? '<span class="tq-done-lbl">5/5</span>' : ''}
           </div>
           <p class="tq-mission-desc">${arrow.locked
             ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
