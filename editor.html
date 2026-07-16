@@ -3625,6 +3625,8 @@ function readSite(){ try{ return JSON.parse(localStorage.getItem(STATE_KEY)||'{}
 // Snapshot du profil à l'ouverture — sert au bouton « Annuler » (avant toute écriture).
 const _entrySnapshot = localStorage.getItem(STATE_KEY);
 let _persistT=null;
+let _suppressPersist=false; // true pendant sync multi-onglets (évite réécriture → ping-pong)
+let _lastAppliedStorageFp=null; // empreinte matefindr_state+presets après write/sync remote
 // Horodatage "vraie modif visuelle" pour l'admin (admin.html trie/notifie dessus) --
 // volontairement DIFFÉRENT de profiles.updated_at (qui bouge aussi pour les vues,
 // likes, matchs, messages...). Ne doit bouger QUE quand le contenu réellement visible
@@ -3635,6 +3637,7 @@ const VISUAL_KEYS=['username','bio','avatar','banner','voice','music','bg','c1',
 function visualFingerprint(){ try{ return JSON.stringify(VISUAL_KEYS.map(k=>S[k])); }catch(_){ return ''; } }
 let _lastVisualFingerprint=null; // posé juste après l'hydratation initiale (cf. boot plus bas)
 function writeState(){
+  if(_suppressPersist) return;
   if(typeof trackEditorUndo==='function') trackEditorUndo();
   const st=readSite(); st.user=st.user||{}; st.profile=st.profile||{};
   st.user.displayName=S.username;
@@ -3722,9 +3725,10 @@ function writeState(){
   try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}
   scheduleDbSync(); // ← pousse aussi vers Supabase à chaque modif
   if(typeof syncActivePreset==='function') syncActivePreset(); // sauvegarde aussi dans le preset actif
+  if(typeof markStorageSynced==='function') markStorageSynced();
 }
-function persist(){ clearTimeout(_persistT); _persistT=setTimeout(writeState,400); }
-function saveNow(){ clearTimeout(_persistT); writeState(); syncToDb(); }
+function persist(){ if(_suppressPersist) return; clearTimeout(_persistT); _persistT=setTimeout(writeState,400); }
+function saveNow(){ if(_suppressPersist) return; clearTimeout(_persistT); writeState(); syncToDb(); }
 window.__persist = persist;
 
 /* ===== Undo / Redo (Ctrl+Z / Ctrl+Y) ===== */
@@ -4310,7 +4314,7 @@ if(window.__EditorStickers){
 const PSET_KEY='matefindr_presets', PSET_MAX=5, ACTIVE_PSET_KEY='matefindr_active_preset', SHARE_PSET_KEY='matefindr_share_preset';
 // Liste COMPACTE (sans trous) : 0 à 5 presets enregistrés, dans l'ordre.
 function loadPresets(){ try{ const a=JSON.parse(localStorage.getItem(PSET_KEY)||'[]'); return (Array.isArray(a)?a:[]).filter(Boolean).slice(0,PSET_MAX); }catch(_){ return []; } }
-function savePresetsLS(){ try{ localStorage.setItem(PSET_KEY, JSON.stringify(PRESETS.slice(0,PSET_MAX))); }catch(_){} }
+function savePresetsLS(){ if(_suppressPersist) return; try{ localStorage.setItem(PSET_KEY, JSON.stringify(PRESETS.slice(0,PSET_MAX))); }catch(_){} }
 let PRESETS=loadPresets();
 function loadSharePresetIdx(){ try{ const v=localStorage.getItem(SHARE_PSET_KEY); const n=v===null?NaN:parseInt(v,10); return Number.isInteger(n)&&n>=0?n:null; }catch(_){ return null; } }
 function saveSharePresetIdx(){ try{ if(_sharePresetIdx===null) localStorage.removeItem(SHARE_PSET_KEY); else localStorage.setItem(SHARE_PSET_KEY,String(_sharePresetIdx)); }catch(_){} }
@@ -4369,28 +4373,78 @@ async function edBootProfile(){
   if(typeof positionCanvasModes==='function') requestAnimationFrame(positionCanvasModes);
   _lastVisualFingerprint=visualFingerprint();
   if(typeof resetUndoBaseline==='function') resetUndoBaseline();
+  if(typeof markStorageSynced==='function') markStorageSynced();
 }
 edBootProfile();
-/* Garde multi-onglets : si un AUTRE onglet (ex: cet éditeur laissé ouvert ailleurs)
-   modifie les presets ou le preset actif pendant que celui-ci est ouvert, ce tab-ci
-   travaillerait sur des données périmées puis écraserait la modif la plus récente
-   à sa prochaine sauvegarde. On PRÉVIENT seulement (toast) plutôt que de recharger
-   automatiquement : renderOrbs()/persist() tournent aussi au chargement de CETTE
-   page, donc un reload auto déclenchait sa propre écriture → un 2e onglet ouvert
-   la détectait à son tour et rechargeait aussi → ping-pong de rechargements en
-   boucle entre onglets (bug réel constaté). Un throttle évite le spam de toasts
-   si l'autre onglet sauvegarde en continu. */
+/* Sync multi-onglets : un autre onglet éditeur a modifié le profil → on recharge
+   l'état local SANS réécrire (sinon ping-pong de saves entre onglets). */
 let _lastTabSyncToast=0;
+let _remoteSyncT=null;
+function storageSyncFingerprint(){
+  try{
+    return [
+      localStorage.getItem(STATE_KEY)||'',
+      localStorage.getItem(PSET_KEY)||'',
+      localStorage.getItem(ACTIVE_PSET_KEY)||'',
+      localStorage.getItem(SHARE_PSET_KEY)||''
+    ].join('\x1e');
+  }catch(_){ return ''; }
+}
+function markStorageSynced(){ _lastAppliedStorageFp=storageSyncFingerprint(); }
+function applyRemoteEditorState(){
+  if(_suppressPersist) return;
+  clearTimeout(_persistT); _persistT=null;
+  _suppressPersist=true;
+  _undoLock=true;
+  try{
+    PRESETS=loadPresets();
+    _activePresetIdx=loadActivePresetIdx();
+    if(typeof loadSharePresetIdx==='function') _sharePresetIdx=loadSharePresetIdx();
+    if(_activePresetIdx!==null && _activePresetIdx<PRESETS.length && PRESETS[_activePresetIdx]){
+      applyPreset(PRESETS[_activePresetIdx],{persist:false});
+    }else{
+      hydrateFromSite();
+      renderOrbs(); renderGifs(); renderPhotos();
+      if(typeof renderVoice==='function') renderVoice();
+      if(typeof renderMusicChip==='function') renderMusicChip();
+      if(typeof renderConnections==='function') renderConnections();
+    }
+    if(typeof renderPresets==='function') renderPresets();
+    if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
+    _lastVisualFingerprint=visualFingerprint();
+    if(typeof resetUndoBaseline==='function') resetUndoBaseline();
+    markStorageSynced();
+    const now=Date.now();
+    if(now-_lastTabSyncToast>3000){
+      _lastTabSyncToast=now;
+      toast('Profil mis à jour (autre onglet)');
+    }
+  }catch(e){ console.warn('[editor] remote sync', e); }
+  finally{ _suppressPersist=false; _undoLock=false; }
+}
 window.addEventListener('storage', e=>{
-  if(e.key!==PSET_KEY && e.key!==ACTIVE_PSET_KEY && e.key!==SHARE_PSET_KEY) return;
-  const now=Date.now(); if(now-_lastTabSyncToast<8000) return; _lastTabSyncToast=now;
-  toast('⚠️ Profil modifié dans un autre onglet — recharge la page pour voir la dernière version');
+  if(e.key!==STATE_KEY && e.key!==PSET_KEY && e.key!==ACTIVE_PSET_KEY && e.key!==SHARE_PSET_KEY) return;
+  if(e.newValue===e.oldValue) return;
+  clearTimeout(_remoteSyncT);
+  _remoteSyncT=setTimeout(applyRemoteEditorState, 350);
+});
+// Au retour sur l'onglet : sync seulement si le localStorage a changé ailleurs
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible') return;
+  clearTimeout(_remoteSyncT);
+  _remoteSyncT=setTimeout(()=>{
+    try{
+      if(_lastAppliedStorageFp===null){ markStorageSynced(); return; }
+      if(storageSyncFingerprint()!==_lastAppliedStorageFp) applyRemoteEditorState();
+    }catch(_){}
+  }, 200);
 });
 // Sauvegarde l'état courant DANS le preset actif — appelé à chaque persist() (debounced).
 // Reste à sa place (le preset 2 reste le preset 2) : ne le fait plus remonter en position 1
 // (ancien comportement jugé trop déroutant -- éditer le preset 2 le "transformait" en
 // preset 1 visuellement, sans qu'on ait rien demandé).
 function syncActivePreset(){
+  if(_suppressPersist) return;
   if(_activePresetIdx===null || _activePresetIdx>=PRESETS.length) return;
   PRESETS[_activePresetIdx]=snapshotProfile();
   savePresetsLS();
