@@ -1,6 +1,8 @@
 # Matefindr — Bot Discord Presence
 
-Synchronise le **status** + **activités** Discord (Spotify, jeux…) vers `profiles.data.discordLive`.
+Synchronise le **status** + **activités** Discord (Spotify, jeux…) vers `profiles.data.discordLive`,
+et resync les **PDP Discord** (`discordAvatarUrl` + `avatarUrl` si photo non custom) au boot
+pour tous les membres du serveur ayant un profil Matefindr.
 
 Les Edge Functions Supabase ne peuvent **pas** garder une WebSocket Gateway ouverte → ce worker tourne à part (Railway / Fly / VPS / PC).
 

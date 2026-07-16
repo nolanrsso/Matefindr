@@ -4403,11 +4403,14 @@ async function refreshDiscordFromOAuth(btn){
     if(!d){ toast('Token expiré — reconnecte Discord'); return; }
     const st=readSite();
     st.user=st.user||{};
-    // Profil déjà créé : on ne touche qu'au username Discord (+ avatar Discord pour la
-    // connexion, sans écraser la photo Matefindr).
+    // Profil déjà créé : username Discord + PDP Discord (sans écraser photo Matefindr custom).
     st.user.discordTag=(d.username||'').replace(/#0$/,'')||st.user.discordTag;
     if(d.avatar&&typeof discordAvatarUrl==='function'){
-      st.user.discordAvatarUrl=discordAvatarUrl(d.id,d.avatar);
+      const avi=discordAvatarUrl(d.id,d.avatar);
+      st.user.discordAvatarUrl=avi;
+      const custom=!!st.user.avatarCustom
+        ||(st.user.avatarUrl&&!/cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(st.user.avatarUrl));
+      if(!custom&&avi) st.user.avatarUrl=avi;
     }
     if(d.email) st.user.email=d.email;
     try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(_){}

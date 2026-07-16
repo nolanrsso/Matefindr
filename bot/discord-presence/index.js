@@ -3,6 +3,8 @@
  *
  * Écoute PRESENCE_UPDATE sur le serveur Matefindr et écrit
  * profiles.data.discordLive (status + activités Spotify/jeux…).
+ * Au boot (+ à chaque update), resync aussi les PDP Discord (discordAvatarUrl
+ * + avatarUrl si photo non custom Matefindr) pour tous les profils liés.
  *
  * Prérequis Discord Developer Portal (bot) :
  *   - Privileged Gateway Intent : PRESENCE INTENT (obligatoire)
@@ -29,6 +31,7 @@ const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 /* Court : fin de musique / changement de jeu doit arriver vite côté site */
 const DEBOUNCE_MS = 500;
 const OFFLINE_TYPES = new Set(['offline', 'invisible']);
+const DISCORD_CDN_AVATAR_RE = /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i;
 
 if (!BOT_TOKEN || !GUILD_ID || !SB_URL || !SB_KEY) {
   console.error('[presence] Missing env: DISCORD_BOT_TOKEN, DISCORD_GUILD_ID, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
@@ -42,6 +45,45 @@ const supabase = createClient(SB_URL, SB_KEY, {
 const pending = new Map(); // discordId → timer
 const lastFp = new Map(); // discordId → fingerprint
 const appIconCache = new Map(); // applicationId → url|null
+
+/** Photo Matefindr uploadée (storage / data-URL) — ne pas écraser par Discord. */
+function isCustomMatefindrAvatar(url) {
+  if (!url || typeof url !== 'string') return false;
+  return !DISCORD_CDN_AVATAR_RE.test(url);
+}
+
+/** URL CDN actuelle de la PDP Discord (gif animé si dispo). */
+function avatarUrlFromUser(user) {
+  if (!user || typeof user.displayAvatarURL !== 'function') return null;
+  try {
+    const hash = user.avatar || null;
+    const ext = (typeof hash === 'string' && hash.startsWith('a_')) ? 'gif' : 'png';
+    return user.displayAvatarURL({ size: 256, extension: ext });
+  } catch (_) {
+    try { return user.displayAvatarURL({ size: 256 }); } catch (_) { return null; }
+  }
+}
+
+/**
+ * Met à jour discordAvatarUrl (+ avatarUrl / avatar_url si non custom).
+ * @returns {{ changed: boolean, avatar_url: string|null }}
+ */
+function applyDiscordAvatarToData(data, user) {
+  const avi = avatarUrlFromUser(user);
+  if (!avi) return { changed: false, avatar_url: null };
+  let changed = false;
+  let colAvatar = null;
+  if (data.discordAvatarUrl !== avi) {
+    data.discordAvatarUrl = avi;
+    changed = true;
+  }
+  if (!isCustomMatefindrAvatar(data.avatarUrl) && data.avatarUrl !== avi) {
+    data.avatarUrl = avi;
+    colAvatar = avi;
+    changed = true;
+  }
+  return { changed, avatar_url: colAvatar };
+}
 
 /** Icône d'application Discord (jeux sans Rich Presence assets, ex. Palworld). */
 async function resolveAppIconUrl(applicationId) {
@@ -167,7 +209,13 @@ async function buildLive(presence, prevLive) {
   };
 }
 
-async function writeDiscordLive(discordId, live) {
+/**
+ * Écrit discordLive et/ou PDP Discord sur le profil lié.
+ * @param {string} discordId
+ * @param {{ live?: object|null, user?: object|null }} opts
+ */
+async function writeProfileDiscord(discordId, opts = {}) {
+  const { live = null, user = null } = opts;
   const { data: row, error } = await supabase
     .from('profiles')
     .select('id, data')
@@ -180,15 +228,29 @@ async function writeDiscordLive(discordId, live) {
   if (!row) return false; // pas de compte Matefindr lié
 
   const prev = (row.data && typeof row.data === 'object') ? row.data : {};
-  const prevLive = prev.discordLive || null;
-  const nextLive = {
-    ...live,
-    lastOnlineAt: live.lastOnlineAt || prevLive?.lastOnlineAt || null,
-  };
+  const next = { ...prev };
+  const patch = {};
+  let dirty = false;
 
+  if (live) {
+    const prevLive = prev.discordLive || null;
+    next.discordLive = {
+      ...live,
+      lastOnlineAt: live.lastOnlineAt || prevLive?.lastOnlineAt || null,
+    };
+    dirty = true;
+  }
+
+  const avi = applyDiscordAvatarToData(next, user);
+  if (avi.changed) dirty = true;
+  if (avi.avatar_url) patch.avatar_url = avi.avatar_url;
+
+  if (!dirty) return false;
+
+  patch.data = next;
   const { error: upErr } = await supabase
     .from('profiles')
-    .update({ data: { ...prev, discordLive: nextLive } })
+    .update(patch)
     .eq('id', row.id);
 
   if (upErr) {
@@ -209,12 +271,16 @@ function scheduleWrite(discordId, presence) {
         .select('data')
         .eq('discord_id', id)
         .maybeSingle();
+      if (!row) return;
       const prevLive = row?.data?.discordLive || null;
       const live = await buildLive(presence, prevLive);
       const fp = presenceFingerprint(live.status, live.activities);
-      if (lastFp.get(id) === fp) return;
-      const ok = await writeDiscordLive(id, live);
-      if (ok) {
+      const presenceChanged = lastFp.get(id) !== fp;
+      const ok = await writeProfileDiscord(id, {
+        live: presenceChanged ? live : null,
+        user: presence?.user || null,
+      });
+      if (ok && presenceChanged) {
         lastFp.set(id, fp);
         const act = live.activities[0];
         console.log(
@@ -230,6 +296,25 @@ function scheduleWrite(discordId, presence) {
   }, DEBOUNCE_MS));
 }
 
+/** Boot : resync PDP Discord pour tous les membres du guild ayant un profil Matefindr. */
+async function syncAllGuildAvatars() {
+  try {
+    const guild = await client.guilds.fetch(GUILD_ID);
+    await guild.members.fetch();
+    let updated = 0;
+    let seen = 0;
+    for (const [, member] of guild.members.cache) {
+      if (!member?.user || member.user.bot) continue;
+      seen++;
+      const ok = await writeProfileDiscord(member.user.id, { user: member.user });
+      if (ok) updated++;
+    }
+    console.log(`[presence] avatar sync: ${updated} updated / ${seen} members scanned`);
+  } catch (e) {
+    console.warn('[presence] avatar sync failed', e?.message || e);
+  }
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -239,13 +324,14 @@ const client = new Client({
   partials: [Partials.User, Partials.GuildMember],
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`[presence] logged in as ${client.user.tag} · guild ${GUILD_ID}`);
   // Point rouge Discord (ne pas déranger) — sinon le bot reste « En ligne » (vert).
   client.user.setPresence({
     status: 'dnd',
     activities: [{ name: 'Matefindr', type: ActivityType.Watching }],
   });
+  await syncAllGuildAvatars();
 });
 
 client.on('presenceUpdate', (oldP, newP) => {
@@ -257,6 +343,19 @@ client.on('presenceUpdate', (oldP, newP) => {
     scheduleWrite(user.id, newP);
   } catch (e) {
     console.warn('[presence] presenceUpdate error', e?.message || e);
+  }
+});
+
+/* Changement de PDP Discord sans présence → resync immédiat. */
+client.on('userUpdate', (oldU, newU) => {
+  try {
+    if (!newU || newU.bot) return;
+    if (oldU && oldU.avatar === newU.avatar) return;
+    writeProfileDiscord(newU.id, { user: newU }).then((ok) => {
+      if (ok) console.log('[presence] avatar updated', newU.id);
+    }).catch(() => {});
+  } catch (e) {
+    console.warn('[presence] userUpdate error', e?.message || e);
   }
 });
 

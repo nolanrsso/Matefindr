@@ -401,9 +401,8 @@
         if ((!user.guilds || !user.guilds.length) && sameAccount && Array.isArray(prev.guilds) && prev.guilds.length) {
           user.guilds = prev.guilds;
         }
-        // Profil Matefindr déjà créé → plus de sync Discord visuelle pour la carte
-        // (avatar custom, bannière, déco, pseudo Matefindr). Mais on rafraîchit TOUJOURS
-        // discordAvatarUrl : le floor Discord doit afficher la vraie PDP Discord.
+        // Profil Matefindr déjà créé → on ne touche pas bannière/déco/pseudo custom.
+        // PDP Discord : toujours rafraîchie ; avatarUrl carte aussi si photo non custom.
         const hadProfile = sameAccount && !!state.profile;
         if (hadProfile) {
           state.user = Object.assign({}, prev, {
@@ -414,6 +413,11 @@
             guilds: (user.guilds && user.guilds.length) ? user.guilds : prev.guilds,
             mode: user.mode || prev.mode || 'discord',
           });
+          const keepAvatar = !!(prev.avatarCustom && prev.avatarUrl);
+          if (!keepAvatar && user.discordAvatarUrl) state.user.avatarUrl = user.discordAvatarUrl;
+          else if (!keepAvatar && user.avatarUrl && /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(user.avatarUrl)) {
+            state.user.avatarUrl = user.avatarUrl;
+          }
         } else {
           const keepBanner = prev.bannerCustom && prev.bannerUrl;
           const keepDeco   = prev.decoCustom && prev.decorationUrl;
@@ -539,15 +543,26 @@
                   userOrbs: Array.isArray(d.orbs) ? d.orbs : [],
                   pseudo: d.name || '',
                 };
-                // Identité visuelle : on restaure ce qui était sauvé en base (pas le Discord
-                // frais du login). Avatar/bannière CDN Discord figés au dernier save.
+                // Identité visuelle : bannière/custom depuis le cloud ; PDP Discord =
+                // login frais si dispo (sinon cloud), pour ne pas figer un vieux hash CDN.
                 if (d.name) { su.displayName = d.name; }
+                const freshDiscAvi = user?.discordAvatarUrl
+                  || (user?.avatarUrl && /cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(user.avatarUrl) ? user.avatarUrl : null);
+                if (freshDiscAvi) su.discordAvatarUrl = freshDiscAvi;
+                else if (d.discordAvatarUrl) su.discordAvatarUrl = d.discordAvatarUrl;
                 if (d.avatarUrl) {
-                  su.avatarUrl = d.avatarUrl;
-                  if (!/cdn\.discordapp\.com/i.test(d.avatarUrl)) { su.avatarCustom = true; su.avatarPos = d.avatarPos || null; }
-                  else { su.avatarPos = d.avatarPos || su.avatarPos || null; }
+                  const cloudCustom = !/cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(d.avatarUrl);
+                  if (cloudCustom) {
+                    su.avatarUrl = d.avatarUrl;
+                    su.avatarCustom = true;
+                    su.avatarPos = d.avatarPos || null;
+                  } else {
+                    su.avatarUrl = freshDiscAvi || d.avatarUrl;
+                    su.avatarPos = d.avatarPos || su.avatarPos || null;
+                  }
+                } else if (freshDiscAvi) {
+                  su.avatarUrl = freshDiscAvi;
                 }
-                if (d.discordAvatarUrl) su.discordAvatarUrl = d.discordAvatarUrl;
                 if (d.bannerUrl) {
                   su.bannerUrl = d.bannerUrl;
                   if (!/cdn\.discordapp\.com/i.test(d.bannerUrl)) su.bannerCustom = true;
@@ -1055,7 +1070,7 @@
         ] },
     ];
     let deckIdx = 0;
-    /** Resync Discord limité : username (tag) + serveurs + email — rien d'autre. */
+    /** Resync Discord : username + serveurs + email + PDP Discord (pas bannière/pseudo Matefindr). */
     function applyLimitedDiscordResync(u, d, guilds){
       if (!u) return false;
       let dirty = false;
@@ -1064,6 +1079,14 @@
         const tag = (d.username || '').replace(/#0$/, '');
         if (tag && u.discordTag !== tag) { u.discordTag = tag; dirty = true; }
         if (d.email && u.email !== d.email) { u.email = d.email; dirty = true; }
+        // PDP Discord fraîche (hash CDN) — floor Discord + carte si photo non custom.
+        if (d.avatar && typeof discordAvatarUrl === 'function' && d.id) {
+          const avi = discordAvatarUrl(d.id, d.avatar);
+          if (avi && u.discordAvatarUrl !== avi) { u.discordAvatarUrl = avi; dirty = true; }
+          const custom = !!u.avatarCustom
+            || (u.avatarUrl && !/cdn\.discordapp\.com\/(avatars|embed\/avatars)\//i.test(u.avatarUrl));
+          if (!custom && avi && u.avatarUrl !== avi) { u.avatarUrl = avi; dirty = true; }
+        }
       }
       if (Array.isArray(guilds) && guilds.length) {
         u.guilds = guilds;
@@ -7032,7 +7055,7 @@
           return;
         }
 
-        // Merge limité : username Discord + serveurs + email — pas d'avatar/bannière/pseudo Matefindr.
+        // Merge : username + serveurs + email + PDP Discord (pas bannière/pseudo Matefindr).
         state.user = state.user || {};
         const u = state.user;
         let guilds = null;
@@ -8668,9 +8691,9 @@
           if (window.__rtStart) window.__rtStart();
         }
 
-        /* === Auto-resync Discord (limité) ===
-           Une fois le profil créé, on ne resynchronise PLUS avatar / bannière / déco /
-           pseudo Matefindr / nitro / accent. Seulement username, serveurs, email. */
+        /* === Auto-resync Discord ===
+           Bannière / déco / pseudo Matefindr figés. Username, serveurs, email + PDP
+           Discord (discordAvatarUrl ; avatarUrl si non custom) restent à jour. */
         async function autoResyncDiscord(){
           try {
             try { const raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch(_){}
@@ -8693,13 +8716,13 @@
             const dirty = applyLimitedDiscordResync(u, d, guilds);
             if (!dirty && !d && !(guilds && guilds.length)) return;
             save();
-            if (guilds && guilds.length && typeof scheduleCloudSync === 'function') scheduleCloudSync();
+            if (dirty && typeof scheduleCloudSync === 'function') scheduleCloudSync();
             if (typeof updateChip === 'function') updateChip();
             if (typeof refreshAccountPreview === 'function') refreshAccountPreview();
             if (document.body.getAttribute('data-screen') === 'swipe') {
               if (typeof softRefreshSwipeCard === 'function') softRefreshSwipeCard();
             }
-            console.log('[Matefindr] auto-resync Discord OK (tag/guilds/email only)');
+            console.log('[Matefindr] auto-resync Discord OK (tag/guilds/email/avatar)');
           } catch (e) { console.warn('[Matefindr] auto-resync failed', e); }
         }
         // Toutes les 5 minutes
