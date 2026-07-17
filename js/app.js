@@ -8340,7 +8340,15 @@
           { v:'autre', label:'Autre' },
           { v:'hidden', label:'Ne pas dire' },
         ];
-        const notifT = (state.user && state.user.notifTypes) || {};
+        // Notifications par MP du bot : actives par défaut tant que rien n'a été
+        // configuré explicitement -- pas besoin de cocher soi-même pour les recevoir.
+        if (!(state.user && state.user.notifTypes)) {
+          state.user = state.user || {};
+          state.user.notifTypes = { like: true, match: true, message: true };
+          save();
+          if (typeof syncNotifPrefsToSupabase === 'function') syncNotifPrefsToSupabase();
+        }
+        const notifT = state.user.notifTypes;
 
         body.innerHTML = `
           <div class="set-layout">
@@ -8619,7 +8627,16 @@
         const whEl = body.querySelector('#accDiscordWebhook');
         const notifTg = { like: body.querySelector('#notifLike'), match: body.querySelector('#notifMatch'), message: body.querySelector('#notifMessage') };
         whEl.addEventListener('input', markDirty);
-        Object.values(notifTg).forEach(el => el.addEventListener('change', markDirty));
+        // Ces cases s'enregistrent tout de suite (pas besoin du bouton Enregistrer) --
+        // ce sont de simples interrupteurs, pas un formulaire à valider d'un coup.
+        Object.entries(notifTg).forEach(([k, el]) => {
+          el.addEventListener('change', () => {
+            state.user = state.user || {};
+            state.user.notifTypes = Object.assign({ like:true, match:true, message:true }, state.user.notifTypes || {}, { [k]: el.checked });
+            save();
+            if (typeof syncNotifPrefsToSupabase === 'function') syncNotifPrefsToSupabase();
+          });
+        });
         body.querySelector('#notifTestBtn').addEventListener('click', async () => {
           const testStatus = body.querySelector('#notifTestStatus');
           testStatus.textContent = 'Envoi…';
@@ -8682,7 +8699,8 @@
             state.profile.countryFlag = (opt && opt.getAttribute('data-flag')) || '';
           }
           state.user.discordWebhook = whEl.value.trim();
-          state.user.notifTypes = { like: notifTg.like.checked, match: notifTg.match.checked, message: notifTg.message.checked };
+          // notifTypes n'est plus géré ici : ces cases s'enregistrent toutes seules
+          // à chaque changement (cf. plus haut), pas via ce bouton.
           const langBtn = body.querySelector('#ssLang button.on');
           if (langBtn && typeof window.__mfApplyLang === 'function') window.__mfApplyLang(langBtn.dataset.code);
           state.user.musicVolume = parseInt(vEl.value, 10) / 100;
@@ -8793,6 +8811,19 @@
             cameFromPath = ref.pathname + ref.search;
           }
         } catch(_){}
+        // Fermer /settings quand on y est arrivé depuis l'éditeur/checkout déclenche une
+        // VRAIE navigation (location.href). Si on laisse le popup se fermer normalement
+        // d'abord (hidden), l'appli en dessous (landing/swipe) apparaît brièvement le
+        // temps que la page de destination charge. Capturé AVANT le handler de fermeture
+        // normal (compte-tenu de l'ordre d'enregistrement) : on navigue directement sans
+        // jamais cacher le popup, donc rien d'autre ne s'affiche entre les deux.
+        document.getElementById('settingsClose')?.addEventListener('click', (e) => {
+          if (cameFromPath) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            location.href = cameFromPath;
+          }
+        }, true);
         document.getElementById('navSettings')?.addEventListener('click', () => {
           if (location.pathname !== '/settings') {
             try { history.pushState({ mfSettings: true }, '', '/settings'); pushedByUs = true; } catch(_){}

@@ -705,7 +705,9 @@
     const label = document.getElementById('joinLabel');
     const icoD  = document.getElementById('joinIcoDiscord');
     const icoP  = document.getElementById('joinIcoPlay');
+    const emailLink = document.getElementById('ctaEmailLink');
     const loggedIn = document.body.getAttribute('data-auth') === 'in';
+    if (emailLink) emailLink.style.display = loggedIn ? 'none' : '';
     if (!label) return;
     if (loggedIn) {
       label.textContent = 'Commencer à swiper';
