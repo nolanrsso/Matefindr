@@ -188,11 +188,7 @@
   .header-share-link{margin-left:210px;flex:0 0 auto}
   body[data-auth="in"] .nav{padding-left:0}
   .nav{display:flex;align-items:center;gap:6px;margin-left:auto;padding-left:210px}
-  /* Ordre desktop : Paramètres avant Quêtes (Quêtes à droite de Paramètres).
-     Mobile inverse cet ordre (voir @media max-width:600px) -- Quêtes à gauche. */
-  #navSettings{order:1}
-  #navQuests{order:2}
-  #loginBtn,#accountChip{order:3}
+  /* Quêtes collé à gauche de Paramètres, partout (ordre naturel du DOM). */
   .nav a{color:var(--ink-dim);text-decoration:none;font-size:14px;font-weight:500;padding:8px 12px;border-radius:10px;transition:.18s ease}
   .nav a:hover{color:#fff;background:rgba(255,255,255,.04)}
   /* Floating corner controls */
@@ -488,9 +484,6 @@
        Mon lien disparaît (Quêtes reste, juste à gauche de Paramètres). Sans ça les
        icônes débordaient carrément hors de l'écran. */
     #navShareLink{display:none !important}
-    /* Mobile : Quêtes repasse à gauche de Paramètres (inverse du desktop ci-dessus). */
-    #navQuests{order:1}
-    #navSettings{order:2}
     body[data-auth="in"] .nav{padding-left:0}
     /* Contenu de l'accueil centré verticalement (le titre « Matefindr » au milieu
        de l'écran) plutôt que collé en haut. */
