@@ -3528,27 +3528,6 @@
       return { rel, plus };
     }
 
-    /* Petit popup affiché au clic sur une bulle verrouillée (compte incomplet). */
-    function showLockPopup(ownCount){
-      const msg = (ownCount === 0)
-        ? "Pour voir tout le contenu du profil, finis de compléter ton propre profil."
-        : "Ajoute plus de bulles à ton profil pour débloquer celles des autres.";
-      let el = document.getElementById('orbLockPop');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'orbLockPop';
-        el.className = 'orb-lock-pop';
-        el.innerHTML = '<div class="olp-backdrop"></div><div class="olp-box">'
-          + '<span class="olp-ico">🔒</span><p class="olp-msg"></p>'
-          + '<button type="button" class="olp-btn">Compléter mon profil</button></div>';
-        document.body.appendChild(el);
-        el.querySelector('.olp-backdrop').addEventListener('click', () => el.classList.remove('open'));
-        el.querySelector('.olp-btn').addEventListener('click', () => { el.classList.remove('open'); location.href = 'editor.html'; });
-      }
-      el.querySelector('.olp-msg').textContent = msg;
-      el.classList.add('open');
-    }
-
     /* Render the orb constellation around the top card */
     /* Live physics state for the profile orbs (mouse repulsion + drift) */
     let _orbSim = { items: [], mouse: { x: -9999, y: -9999, has: false }, raf: null };
@@ -3702,19 +3681,12 @@
       const myOrbs = (state.profile && state.profile.userOrbs) || [];
       const mineSet = new Set(myOrbs.map(o => `${o.kind}::${norm(o.title)}`));
 
-      // === Verrouillage des bulles (comptes SANS Boost) ===
-      // L'utilisateur voit, sur le profil des autres, autant de bulles qu'il en a
-      // sur le SIEN : 0→aucune (toutes « ? »), 1→1, 2→2, 3→3, 4+→toutes. Boost = tout.
-      // EXCEPTION : un lien de partage perso (matefindr.com/<slug>) doit toujours
-      // montrer le profil complet, déverrouillé, à N'IMPORTE QUI qui clique dessus
-      // (c'est tout le but d'un lien à partager) — pas de comparaison "combien de
-      // bulles as-tu toi-même" comme dans le deck de swipe. p._showViews n'est posé
-      // QUE par openSharedProfile() → marqueur fiable "c'est un lien perso".
+      // Verrouillage des bulles selon le nombre de bulles du viewer : retiré.
+      // Toutes les bulles de tous les profils sont désormais toujours visibles.
+      // isSharedLink reste utile ailleurs : pas de halo "en commun" sur un lien
+      // de partage perso (comparer ses propres bulles n'a de sens que dans le deck).
       const isSharedLink = !!p._showViews;
-      const viewerBoost = !!(state.user && state.user.boost);
-      const ownCount = myOrbs.length;
-      const unlimited = p.isMe || isSharedLink || viewerBoost || ownCount >= 4;
-      const unlockCount = unlimited ? Infinity : ownCount;
+      const unlimited = true;
 
       // Sur les autres profils on affiche TOUTES leurs bulles (max 14) ; certaines
       // seront verrouillées. Sur sa propre carte, on garde son budget.
@@ -3723,15 +3695,7 @@
       const n = list.length;
       orbit.classList.toggle('orbit--dynamic', n > 0);
 
-      // Déverrouille en priorité les bulles EN COMMUN avec l'autre profil.
-      let unlockedSet = null;
-      if (!unlimited) {
-        const commonIdx = [], otherIdx = [];
-        list.forEach((o, i) => {
-          (mineSet.has(`${o.kind}::${norm(o.title)}`) ? commonIdx : otherIdx).push(i);
-        });
-        unlockedSet = new Set(commonIdx.concat(otherIdx).slice(0, unlockCount));
-      }
+      const unlockedSet = null;
 
       // Fullscreen viewport bounds
       const sw = window.innerWidth;
@@ -3782,7 +3746,7 @@
         if (!locked) applyOrbCustomColor(btn, orbDisplayColor(o, p), orbDisplayGlowOff(o, p), orbDisplayContourOff(o, p));
         if (locked) {
           btn.title = 'Bulle verrouillée';
-          btn.innerHTML = '<span class="orb-lock-glyph">' + (ownCount === 0 ? '?' : '!') + '</span>';
+          btn.innerHTML = '<span class="orb-lock-glyph">!</span>';
         } else {
           btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}${o.kind === 'music' ? ' · Clique pour écouter' : (o.kind === 'game' && o.clipUrl ? ' · Clique pour le clip' : '')}`;
           btn.innerHTML = orbInner(o);
@@ -3809,7 +3773,7 @@
         // Empêche le clic accidentel "+" en bord de bulle pendant le swipe.)
         btn.addEventListener('click', (ev) => {
           ev.stopPropagation();
-          if (locked) { showLockPopup(ownCount); return; }
+          if (locked) return;
           if (o.kind === 'music') {
             for (let r = 0; r < 3; r++) {
               const ripple = document.createElement('span');

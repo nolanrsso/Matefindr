@@ -1399,19 +1399,6 @@ body.orbcolor-open .card-zone{transform:translateX(198px)}
 #tourCard .tc-next:hover{background:rgba(255,255,255,.18);transform:translateY(-1px)}
 #tourCard .tc-quit{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:10px;border:1px solid var(--stroke-2);background:rgba(255,255,255,.05);color:var(--dim);font-size:15px;cursor:pointer;line-height:1;display:grid;place-items:center;font-family:inherit}
 #tourCard .tc-quit:hover{color:#fff;background:rgba(255,255,255,.10)}
-/* Ancré en BAS, au-dessus de la toolbar (comme .music-now) — PAS en haut :
-   le haut (topbar + sélecteur d'orientation + début de carte) est un espace
-   trop étroit pour ce texte long, et top:64px l'y faisait ENTIÈREMENT
-   superposer au sélecteur d'orientation (z-index 60 > 31), invisible pour
-   tout nouveau compte (0 bulle = bandeau toujours affiché). */
-#bubbleWarn{position:fixed;z-index:35;bottom:100px;left:50%;transform:translateX(-50%);max-width:min(94vw,540px);
-  display:none;align-items:center;gap:9px;padding:9px 14px;border-radius:12px;text-align:center;
-  background:linear-gradient(180deg,rgba(58,42,12,.96),rgba(40,28,8,.96));border:1px solid rgba(255,193,84,.45);
-  color:#ffd98a;font-size:12.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.4)}
-#bubbleWarn.show{display:flex}
-#bubbleWarn b{color:#fff}
-@media(max-width:600px){ #bubbleWarn{bottom:82px;padding:7px 11px;font-size:11.5px} }
-
 /* ===== Mode perf allégé (machines faibles / prefers-reduced-motion) =====
    Coupe les effets les plus coûteux pour les GPU faibles : blobs de fond animés
    + flou 80px, et backdrop-filter plein écran. Activé par .perf-lite sur <html>. */
@@ -2185,15 +2172,14 @@ const ORB_ICON={
   game:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18c-2.5 0-4-1.7-4-4 0-3 1.5-7 4-7h12c2.5 0 4 4 4 7 0 2.3-1.5 4-4 4-1.8 0-2.6-2-4-2h-4c-1.4 0-2.2 2-4 2Z"/><circle cx="15.5" cy="12" r="1" fill="currentColor"/><circle cx="17.5" cy="14" r="1" fill="currentColor"/><path d="M8 11h4M10 9v4"/></svg>',
   film:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M17 7h5M2 17h5M17 17h5"/></svg>',
 };
-const ORBCAP_FREE=4, ORBCAP_BOOST=16;
-const ORB_KIND_SOON={game:1,film:1};
+const ORBCAP_FREE=6, ORBCAP_BOOST=16;
+const ORB_KIND_SOON={};
 function isOrbKindSoon(k){return!!ORB_KIND_SOON[k];}
 function showOrbKindSoonToast(){toast('Bientôt redisponible');}
 function orbMax(){ return document.body.classList.contains('not-boost')?ORBCAP_FREE:ORBCAP_BOOST; }
 let orbKind='music';
 function updateOrbCount(){
   const c=document.getElementById('orbCount'); if(c)c.innerHTML=`<b>${S.orbs.length}</b> / ${orbMax()}`;
-  if(window.updateBubbleWarning)window.updateBubbleWarning();
   refreshOrbPlacedIfOpen();
 }
 function refreshOrbPlacedIfOpen(){
@@ -2290,7 +2276,7 @@ async function gameCoverOpaque(title){
   return firstAny;
 }
 const ORB_SUGGESTIONS={
-  game:["Minecraft","Valorant","Rocket League","Fortnite","League of Legends","Counter-Strike 2","Grand Theft Auto V","Roblox","Apex Legends","Call of Duty: Warzone","Overwatch 2","Tom Clancy's Rainbow Six Siege","Dota 2","PUBG: Battlegrounds","Genshin Impact","World of Warcraft","Final Fantasy XIV","Destiny 2","Honkai: Star Rail","Diablo IV","The Sims 4","Stardew Valley","Terraria","Among Us","Fall Guys","Marvel Rivals","Sea of Thieves","Dead by Daylight","Phasmophobia","Warframe","Path of Exile 2","Hearthstone","Magic: The Gathering Arena","Elden Ring","Cyberpunk 2077","Baldur's Gate 3","The Witcher 3: Wild Hunt","Red Dead Redemption 2","The Elder Scrolls V: Skyrim","EA Sports FC 24","NBA 2K24","Forza Horizon 5","Mortal Kombat 1","Tekken 8","Street Fighter 6","Lethal Company","Helldivers 2","Lost Ark","New World","Hogwarts Legacy"],
+  game:["Minecraft","Valorant","Rocket League","Fortnite","League of Legends","Counter-Strike 2","Grand Theft Auto V","Roblox","Apex Legends","Call of Duty: Warzone","Overwatch 2","Tom Clancy's Rainbow Six Siege","Dota 2","PUBG: Battlegrounds","Genshin Impact","World of Warcraft","Final Fantasy XIV","Destiny 2","Honkai: Star Rail","Diablo IV","The Sims 4","Stardew Valley","Terraria","Among Us","Fall Guys","Marvel Rivals","Sea of Thieves","Dead by Daylight","Phasmophobia","Warframe","Path of Exile 2","Hearthstone","Magic: The Gathering Arena","Elden Ring","Cyberpunk 2077","Baldur's Gate 3","The Witcher 3: Wild Hunt","Red Dead Redemption 2","The Elder Scrolls V: Skyrim","EA Sports FC 24","NBA 2K24","Forza Horizon 5","Mortal Kombat 1","Tekken 8","Street Fighter 6","Lethal Company","Helldivers 2","Lost Ark","New World","Hogwarts Legacy","Palworld"],
   film:["One Piece","Naruto","Dragon Ball Z","Bleach","Hunter x Hunter","Attack on Titan","Jujutsu Kaisen","Demon Slayer","Chainsaw Man","My Hero Academia","Fullmetal Alchemist: Brotherhood","Death Note","JoJo's Bizarre Adventure","Vinland Saga","Spy x Family","Cowboy Bebop","Neon Genesis Evangelion","Steins;Gate","Code Geass","Haikyuu!!","Blue Lock","Re:Zero","Mob Psycho 100","Made in Abyss","Tokyo Ghoul","Fire Force","Black Clover","Frieren","Solo Leveling","Bocchi the Rock!","Spirited Away","Princess Mononoke","Howl's Moving Castle","My Neighbor Totoro","Your Name","Akira","Ghost in the Shell","Breaking Bad","Better Call Saul","The Wire","The Sopranos","Peaky Blinders","Dexter","True Detective","Fargo","Sons of Anarchy","Narcos","Ozark","Mindhunter","Prison Break","The Shield","Boardwalk Empire","The Night Of","Game of Thrones","House of the Dragon","Stranger Things","The X-Files","Black Mirror","The Twilight Zone","Doctor Who","Battlestar Galactica","The Expanse","Westworld","Dark","The Boys","The Umbrella Academy","Lost","Fringe","Foundation","Silo","The Office","Friends","Seinfeld","The Simpsons","South Park","Rick and Morty","It's Always Sunny in Philadelphia","Parks and Recreation","Brooklyn Nine-Nine","How I Met Your Mother","Arrested Development","Community","Curb Your Enthusiasm","Ted Lasso","The Good Place","Silicon Valley","The Godfather","Pulp Fiction","Fight Club","Inception","Interstellar","The Dark Knight","The Matrix","Star Wars: A New Hope","The Empire Strikes Back","Return of the Jedi","The Lord of the Rings: The Fellowship of the Ring","The Two Towers","The Return of the King","Jurassic Park","Terminator","Terminator 2: Judgment Day","Blade Runner","Alien","The Shawshank Redemption","Forrest Gump","Saving Private Ryan","Gladiator","Se7en","Shutter Island","Parasite","The Silence of the Lambs","The Shining","Psycho","Casablanca","Citizen Kane","2001: A Space Odyssey","Apocalypse Now","Taxi Driver","Goodfellas","Reservoir Dogs","The Big Lebowski","No Country for Old Men","There Will Be Blood","Whiplash","Birdman","The Grand Budapest Hotel","The Truman Show","Eternal Sunshine of the Spotless Mind","Memento","Donnie Darko","A Clockwork Orange","Full Metal Jacket","Dr. Strangelove","Lord of War","American Psycho","Scarface","Heat","Casino","The Departed","Dunkirk","Oppenheimer","Tenet","The Prestige","Batman Begins","The Dark Knight Rises","Joker","Logan","Mad Max: Fury Road","Braveheart","Troy","Kingdom of Heaven","300","Sin City","Watchmen","V for Vendetta","Children of Men","District 9","Arrival","Gravity","The Martian","Ad Astra","Moon","Ex Machina","Her","Up","Wall-E","Ratatouille","Finding Nemo","The Incredibles","Toy Story","The Lion King","Aladdin","Beauty and the Beast","Grave of the Fireflies","Weathering With You","Suzume"],
 };
 const COVER_CACHE_KEY='matefindr_cover_cache_v3';
@@ -2301,7 +2287,7 @@ function persistCoverCache(){clearTimeout(_coverCachePersistTimer);_coverCachePe
 const GAME_COVER_OVERRIDES={
   'Minecraft':'assets/games/minecraft.png','Valorant':'assets/games/valorant.png','Rocket League':'assets/games/rocket-league.webp','Fortnite':'assets/games/fortnite.png','League of Legends':'assets/games/league-of-legends.png','Counter-Strike 2':'assets/games/counter-strike-2.png','Grand Theft Auto V':'assets/games/gta-v.png','Roblox':'assets/games/roblox.png','Apex Legends':'assets/games/apex-legends.png','Call of Duty: Warzone':'assets/games/warzone.png','Overwatch 2':'assets/games/overwatch-2.png',"Tom Clancy's Rainbow Six Siege":'assets/games/r6-siege.png','Dota 2':'assets/games/dota-2.png','PUBG: Battlegrounds':'assets/games/pubg.webp','Genshin Impact':'assets/games/genshin-impact.png',
   'Elden Ring':'assets/games/elden-ring.png','Cyberpunk 2077':'assets/games/cyberpunk-2077.png',"Baldur's Gate 3":'assets/games/baldurs-gate-3.png','Stardew Valley':'assets/games/stardew-valley.png','Among Us':'assets/games/among-us.png','Hogwarts Legacy':'assets/games/hogwarts-legacy.png','Destiny 2':'assets/games/destiny-2.png','Diablo IV':'assets/games/diablo-iv.png','Terraria':'assets/games/terraria.png','Fall Guys':'assets/games/fall-guys.png','The Elder Scrolls V: Skyrim':'assets/games/skyrim.png','Red Dead Redemption 2':'assets/games/red-dead-redemption-2.png','The Witcher 3: Wild Hunt':'assets/games/witcher-3.png','Helldivers 2':'assets/games/helldivers-2.png','Tekken 8':'assets/games/tekken-8.png','Street Fighter 6':'assets/games/street-fighter-6.png',
-  'World of Warcraft':'assets/games/world-of-warcraft.png','Final Fantasy XIV':'assets/games/ffxiv.png','Honkai: Star Rail':'assets/games/honkai-star-rail.png','The Sims 4':'assets/games/sims-4.png','Marvel Rivals':'assets/games/marvel-rivals.png','Sea of Thieves':'assets/games/sea-of-thieves.png','Dead by Daylight':'assets/games/dead-by-daylight.png','Phasmophobia':'assets/games/phasmophobia.png','Warframe':'assets/games/warframe.png','Path of Exile 2':'assets/games/path-of-exile-2.png','Hearthstone':'assets/games/hearthstone.png','Magic: The Gathering Arena':'assets/games/mtg-arena.png','EA Sports FC 24':'assets/games/ea-fc-24.png','NBA 2K24':'assets/games/nba-2k24.png','Forza Horizon 5':'assets/games/forza-horizon-5.png','Mortal Kombat 1':'assets/games/mortal-kombat-1.png','Lethal Company':'assets/games/lethal-company.png','Lost Ark':'assets/games/lost-ark.png','New World':'assets/games/new-world.png',
+  'World of Warcraft':'assets/games/world-of-warcraft.png','Final Fantasy XIV':'assets/games/ffxiv.png','Honkai: Star Rail':'assets/games/honkai-star-rail.png','The Sims 4':'assets/games/sims-4.png','Marvel Rivals':'assets/games/marvel-rivals.png','Sea of Thieves':'assets/games/sea-of-thieves.png','Dead by Daylight':'assets/games/dead-by-daylight.png','Phasmophobia':'assets/games/phasmophobia.png','Warframe':'assets/games/warframe.png','Path of Exile 2':'assets/games/path-of-exile-2.png','Hearthstone':'assets/games/hearthstone.png','Magic: The Gathering Arena':'assets/games/mtg-arena.png','EA Sports FC 24':'assets/games/ea-fc-24.png','NBA 2K24':'assets/games/nba-2k24.png','Forza Horizon 5':'assets/games/forza-horizon-5.png','Mortal Kombat 1':'assets/games/mortal-kombat-1.png','Lethal Company':'assets/games/lethal-company.png','Lost Ark':'assets/games/lost-ark.png','New World':'assets/games/new-world.png','Palworld':'assets/games/palworld.png',
 };
 // Cover art anime curatee a la main (personnages visibles, pas juste un logo) --
 // contourne l'API Jikan/MyAnimeList (searchAnime) qui est frequemment indisponible
@@ -2421,8 +2407,8 @@ function renderBubblesSheet(sh){
   sh.innerHTML=sheetHeader('Mes bulles',`<span class="sheet-count" id="orbCount"><b>${S.orbs.length}</b> / ${orbMax()}</span>`,headTools)+`
     <div class="cats" id="orbCats">
       <button data-k="music" class="${orbKind==='music'?'active':''}">Musique</button>
-      <button data-k="game" class="cat-soon${orbKind==='game'?' active':''}" type="button" aria-disabled="true"><span>Jeu</span><small>Bientôt redisponible</small></button>
-      <button data-k="film" class="cat-soon${orbKind==='film'?' active':''}" type="button" aria-disabled="true"><span>Série·Film</span><small>Bientôt redisponible</small></button>
+      <button data-k="game" class="${orbKind==='game'?'active':''}" type="button">Jeu</button>
+      <button data-k="film" class="${orbKind==='film'?'active':''}" type="button">Série·Film</button>
     </div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"${isOrbKindSoon(orbKind)?' disabled':''}></div>
     <div class="sugg-list" id="orbSugg">${isOrbKindSoon(orbKind)?'<div class="hint">Bientôt redisponible : les bulles jeu et série·film reviennent très bientôt.</div>':''}</div>`;
@@ -5064,24 +5050,13 @@ function renderSettingsSheet(sh){
 }
 
 /* ===================================================================
-   TUTORIEL GUIDÉ (1er passage dans l'éditeur) + warning « < 4 bulles ».
+   TUTORIEL GUIDÉ (1er passage dans l'éditeur).
    Accompagne l'utilisateur : vocal → couleur → bulles (1 de chaque) →
    GIF → fond. Chaque étape propose « Passer l'étape ». Un panneau ouvert
    met le tuto en pause et le fait avancer une fois refermé.
    =================================================================== */
 (function(){
   const TOUR_KEY='matefindr_editor_tour_v1';
-
-  /* --- Warning persistant : moins de 4 bulles ⇒ infos des autres verrouillées --- */
-  const warn=document.createElement('div'); warn.id='bubbleWarn'; document.body.appendChild(warn);
-  window.updateBubbleWarning=function(){
-    const n=(typeof S!=='undefined'&&S.orbs)?S.orbs.length:0;
-    const notBoost=document.body.classList.contains('not-boost');
-    if(notBoost&&n<4){
-      warn.innerHTML='⚠️ <span><b>'+n+'/4 bulles</b>, ajoute encore <b>'+(4-n)+'</b> bulle'+((4-n)>1?'s':'')+' pour débloquer toutes les infos des autres profils.</span>';
-      warn.classList.add('show');
-    } else warn.classList.remove('show');
-  };
 
   /* --- Coach-marks --- */
   const spot=document.createElement('div'); spot.id='tourSpot'; document.body.appendChild(spot);
@@ -5091,7 +5066,7 @@ function renderSettingsSheet(sh){
     {welcome:true,title:'Bienvenue dans l’éditeur 👋',body:'On personnalise ton profil en 1 minute. Tu peux passer chaque étape quand tu veux.'},
     {sel:'#voiceSlot',title:'🎙️ Enregistre ton vocal',body:'Clique ici pour t’enregistrer (1 s min · 10 s max). Un petit vocal rend ton profil bien plus vivant.'},
     {sel:'.tool[data-tool="color"]',title:'🎨 Choisis ta couleur',body:'Donne sa couleur à ta carte, clique pour ouvrir le sélecteur.'},
-    {sel:'.tool[data-tool="bubbles"]',title:'🫧 Ajoute tes bulles',body:'Ajoute une bulle <b>Musique</b>, une <b>Jeu</b> et une <b>Série / Film</b>.',warn:'⚠️ En dessous de 4 bulles, tu ne pourras pas voir certaines infos des autres profils.'},
+    {sel:'.tool[data-tool="bubbles"]',title:'🫧 Ajoute tes bulles',body:'Ajoute une bulle <b>Musique</b>, une <b>Jeu</b> et une <b>Série / Film</b>.'},
     {sel:'.tool[data-tool="gifs"]',title:'✨ Ajoute un GIF',body:'Mets un GIF qui te représente sur ta carte.'},
     {sel:'.tool[data-tool="bg"]',title:'🖼️ Choisis ton fond',body:'Personnalise le fond d’écran de ta carte.'},
     {last:true,title:'C’est tout bon ! 🚀',body:'Ton profil est prêt. Tu peux revenir le modifier quand tu veux.'},
@@ -5160,8 +5135,6 @@ function renderSettingsSheet(sh){
     if(!document.body.contains(spot))document.body.appendChild(spot);
     if(!document.body.contains(card))document.body.appendChild(card); place(); };
 
-  try{ window.updateBubbleWarning(); }catch(_){}
-  setTimeout(()=>{ try{ window.updateBubbleWarning(); }catch(_){} },800);
   let done=false; try{ done=localStorage.getItem(TOUR_KEY)==='1'; }catch(_){}
   if(done){ spot.remove(); card.remove(); }
   else setTimeout(()=>{ i=0; place(); },700);
