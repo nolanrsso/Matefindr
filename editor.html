@@ -2747,7 +2747,14 @@ function positionCanvasModes(){
   if(!cardRect.height) return;
   const cmRect=cm.getBoundingClientRect();
   const ext=cardRect.height*0.14;
-  cm.style.top=(cardRect.top-ext-cmRect.height)+'px';
+  // Ne jamais passer sous la topbar (position:fixed, z-index 30) : le sélecteur
+  // vivant dans .stage (z-index:2, propre contexte d'empilement), son z-index:31
+  // local ne le fait PAS gagner face à la topbar globalement -- si le calcul le
+  // place trop haut, les clics atterrissent sur la topbar au lieu du bouton
+  // (bouton visible mais totalement inerte). On borne au bas réel de la topbar.
+  const topbar=document.querySelector('header.topbar');
+  const minTop=(topbar?topbar.getBoundingClientRect().bottom:0)+8;
+  cm.style.top=Math.max(minTop,cardRect.top-ext-cmRect.height)+'px';
   cm.style.left=(cardRect.left+cardRect.width/2-cmRect.width/2)+'px';
 }
 requestAnimationFrame(positionCanvasModes);
