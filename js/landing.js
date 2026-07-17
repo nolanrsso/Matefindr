@@ -426,7 +426,7 @@
   const I18N = {
       FR: {
         login:        'Se connecter',
-        badge:        'Bêta ouverte',
+        badge:        'Bêta fermée',
         tagline:      'Trouve un <span class="accent">Mate</span>, pas un random',
         sub:          '<b>Swipe</b> des profils Discord, <b>Like</b> les pépites à ton goût<br><b>Match</b> et à toi de jouer',
         cta:          'Se connecter avec Discord',
@@ -530,7 +530,7 @@
       },
       EN: {
         login:        'Sign in',
-        badge:        'Open beta',
+        badge:        'Closed beta',
         tagline:      'Find a <span class="accent">Mate</span>, not just a random',
         sub:          '<b>Swipe</b> Discord profiles, <b>Like</b> the gems you fancy<br><b>Match</b> and game on',
         cta:          'Sign in with Discord',

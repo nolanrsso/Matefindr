@@ -8313,6 +8313,7 @@
                   <div class="si-txt">
                     <div class="si-name">${escapeHtmlMini(displayName)}</div>
                     <div class="si-tag">${escapeHtmlMini(tagLine)}</div>
+                    <div class="si-status"><span class="si-status-dot"></span>En ligne</div>
                   </div>
                 </div>
                 <a href="editor.html" class="acc-btn acc-btn--ghost" style="display:inline-flex;margin-bottom:18px">✎ Modifier l'apparence (bulles, photos, couleurs…)</a>
@@ -8343,6 +8344,7 @@
                     </div>
                   </div>
                 </div>
+                <button type="button" class="set-savebar" id="setSaveBtn">Enregistrer</button>
                 <div class="set-card ss-danger">
                   <h3>Déconnexion &amp; suppression</h3>
                   <button type="button" class="btn" id="ssLogout" data-i18n="logout">Se déconnecter</button>
@@ -8361,14 +8363,10 @@
 
               <section class="set-panel" data-sec="notifs">
                 <h2>Notifications Discord</h2>
-                <p class="set-panel-sub">Reçois un message privé sur Discord (via un webhook perso) à chaque like, match ou message.</p>
+                <p class="set-panel-sub">Le bot Matefindr t'envoie un message privé Discord à chaque like, match ou message : choisis ce que tu veux recevoir.</p>
                 <div class="set-card">
-                  <h3>Webhook Discord</h3>
-                  <p class="set-card-hint">Crée un webhook depuis les paramètres d'un salon Discord (Intégrations → Webhooks → Nouveau webhook), puis colle son URL ici.</p>
-                  <div class="acc-field">
-                    <label for="accDiscordWebhook">URL du webhook</label>
-                    <input class="acc-input" type="url" id="accDiscordWebhook" placeholder="https://discord.com/api/webhooks/…" value="${escapeHtmlMini(u.discordWebhook || '')}">
-                  </div>
+                  <h3>Message privé du bot</h3>
+                  <p class="set-card-hint">Actif automatiquement, aucune configuration requise.</p>
                   <div class="set-toggle-row">
                     <div><div class="str-label">❤️ Likes</div><div class="str-sub">Quelqu'un like ton profil</div></div>
                     <label class="toggle"><input type="checkbox" id="notifLike" ${notifT.like ? 'checked' : ''}><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
@@ -8380,6 +8378,14 @@
                   <div class="set-toggle-row">
                     <div><div class="str-label">💬 Messages</div><div class="str-sub">Nouveau message reçu</div></div>
                     <label class="toggle"><input type="checkbox" id="notifMessage" ${notifT.message ? 'checked' : ''}><span class="toggle-track"><span class="toggle-thumb"></span></span></label>
+                  </div>
+                </div>
+                <div class="set-card">
+                  <h3>Webhook Discord (optionnel)</h3>
+                  <p class="set-card-hint">En plus du message privé, reçois aussi ces notifs dans un salon Discord : crée un webhook depuis ses paramètres (Intégrations → Webhooks → Nouveau webhook), puis colle son URL ici.</p>
+                  <div class="acc-field">
+                    <label for="accDiscordWebhook">URL du webhook</label>
+                    <input class="acc-input" type="url" id="accDiscordWebhook" placeholder="https://discord.com/api/webhooks/…" value="${escapeHtmlMini(u.discordWebhook || '')}">
                   </div>
                   <button type="button" class="acc-btn acc-btn--ghost" id="notifTestBtn" style="width:100%;margin-top:14px">Envoyer une notif de test</button>
                   <div id="notifTestStatus" style="margin-top:8px;font-size:12.5px;color:var(--ink-dim);min-height:16px"></div>
@@ -8428,8 +8434,7 @@
               </section>
 
             </div>
-          </div>
-          <button type="button" class="set-savebar" id="setSaveBtn">Enregistrer</button>`;
+          </div>`;
         // Les data-i18n ci-dessus viennent d'être insérés dans le DOM -- applyLang() ne
         // les a jamais vus (il ne scanne qu'au chargement / à un clic de switch), donc
         // on le rejoue explicitement sur le document pour les traduire immédiatement
@@ -8699,6 +8704,16 @@
         const pop = document.getElementById('settingsPop');
         if (!pop) return;
         let pushedByUs = false;
+        // Si on est arrivé sur /settings via un lien direct depuis l'éditeur ou le
+        // checkout (bouton "Paramètres" de l'éditeur, etc.), fermer doit ramener sur
+        // cette page-là plutôt que sur l'accueil du site.
+        let cameFromPath = null;
+        try {
+          const ref = document.referrer && new URL(document.referrer);
+          if (ref && ref.origin === location.origin && /\/(editor|checkout)\.html$/.test(ref.pathname)) {
+            cameFromPath = ref.pathname + ref.search;
+          }
+        } catch(_){}
         document.getElementById('navSettings')?.addEventListener('click', () => {
           if (location.pathname !== '/settings') {
             try { history.pushState({ mfSettings: true }, '', '/settings'); pushedByUs = true; } catch(_){}
@@ -8707,6 +8722,7 @@
         const mo = new MutationObserver(() => {
           if (pop.hidden && location.pathname === '/settings') {
             if (pushedByUs) { pushedByUs = false; try { history.back(); } catch(_){} }
+            else if (cameFromPath) { location.href = cameFromPath; }
             else { try { history.replaceState(null, '', '/'); } catch(_){} }
           }
         });
