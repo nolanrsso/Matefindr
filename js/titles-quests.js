@@ -1833,7 +1833,7 @@
             ? 'Personnalise ton profil dans l’éditeur pour activer cette quête.'
             : (arrow.locked
               ? `Encore ${RATING_MIN_VOTERS} votes pour activer la note.`
-              : 'Ta note de profil — la barre atteint 100 % à 5/5.')}</p>
+              : 'Ta note de profil : la barre atteint 100 % à 5/5.')}</p>
           <div class="tq-beauty-arrow" aria-label="${esc(arrow.locked ? 'Votants' : 'Note')}">
             <span class="tq-beauty-from">${esc(arrow.labelFrom)}</span>
             <span class="tq-beauty-chevron" aria-hidden="true">→</span>
@@ -2003,9 +2003,9 @@
       ownedCustom.forEach(m => { html += renderTitlePickRow(m, td, soonIds); });
     }
     html += `<div class="tq-section-label">Boutique</div>
-      <p class="tq-titles-empty">L’achat de titres arrive bientôt — garde tes pièces 🪙</p>`;
+      <p class="tq-titles-empty">L’achat de titres arrive bientôt, garde tes pièces 🪙</p>`;
     if (!ownedBeauty.length && !ownedOther.length) {
-      html += '<p class="tq-titles-empty">Aucun titre pour l’instant — progresse en Esthétisme du profil pour en débloquer.</p>';
+      html += '<p class="tq-titles-empty">Aucun titre pour l’instant, progresse en Esthétisme du profil pour en débloquer.</p>';
     }
     html += '</div>';
     body.innerHTML = html;

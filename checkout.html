@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Matefindr Boost — Paiement</title>
+<title>Matefindr Boost · Paiement</title>
 <meta name="description" content="Passe en Matefindr Boost : 16 bulles, Fake Nitro, musique d'ambiance, filtre H/F, likes secrets et GIFs personnalisables." />
 <meta name="theme-color" content="#0D0B1E" />
 <!-- Perf : mode allégé auto pour machines faibles. Exécuté AVANT tout rendu. -->
@@ -246,11 +246,11 @@
         <li><span class="mk">✓</span><span><b class="au">16</b> <s class="was">4</s> bulles d'intérêts sur ton profil</span></li>
         <li><span class="mk">✓</span><span>Profil <b class="au">5×</b> plus mis en avant dans le swipe</span></li>
         <li><span class="mk">✓</span><span>Customisation avancée : fonds, GIFs, couleurs, et bien plus</span></li>
-        <li><span class="mk">✓</span><span>Skip instantané — <b class="au">pas d'attente</b> avant de passer un profil</span></li>
+        <li><span class="mk">✓</span><span>Skip instantané, <b class="au">pas d'attente</b> avant de passer un profil</span></li>
         <li><span class="mk">✓</span><span>Vois qui t'a liké et matche direct</span></li>
         <li class="soon"><span class="mk">🔜</span><span>Bientôt : recherche par genre, âge, jeux…</span></li>
       </ul>
-      <div class="vfree"><span>🆓</span><span><b>Basic reste gratuit</b> — 4 bulles, sans customisation ni mise en avant.</span></div>
+      <div class="vfree"><span>🆓</span><span><b>Basic reste gratuit</b> : 4 bulles, sans customisation ni mise en avant.</span></div>
     </section>
 
     <!-- ===== Colonne PAIEMENT ===== -->
@@ -322,11 +322,11 @@
         </button>
         <div class="secure">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-          Paiement chiffré — résiliable à tout moment
+          Paiement chiffré, résiliable à tout moment
         </div>
       </form>
 
-      <p class="demo-note">Démonstration — aucune carte n'est réellement débitée.</p>
+      <p class="demo-note">Démonstration : aucune carte n'est réellement débitée.</p>
     </section>
   </div>
 </main>
@@ -336,7 +336,7 @@
   <div class="sbox">
     <div class="scheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
     <h2>Boost activé ✨</h2>
-    <p>Bienvenue dans <b>Matefindr Boost</b> — <span id="successPlan"></span>. Tes bonus sont débloqués.</p>
+    <p>Bienvenue dans <b>Matefindr Boost</b> (<span id="successPlan"></span>). Tes bonus sont débloqués.</p>
     <a class="sbtn" id="goApp">Revenir sur Matefindr</a>
   </div>
 </div>
@@ -390,7 +390,7 @@
     if(normCode($('promo').value)===FREE_CODE){
       freePromo=true;
       applyFreeUI();
-      msg.hidden=false; msg.className='promo-msg ok'; msg.textContent='🎉 Code valide — Matefindr Boost offert !';
+      msg.hidden=false; msg.className='promo-msg ok'; msg.textContent='🎉 Code valide : Matefindr Boost offert !';
       $('promo').disabled=true; $('promoApply').disabled=true;
     }else{
       clearFreeUI();

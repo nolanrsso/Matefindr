@@ -769,14 +769,14 @@
     const t = primaryTarget();
     if (!t) return;
     enterTransformMode(t.el, t.item, t.kind, 'crop');
-    api.toast('Rogner — tire les poignées blanches');
+    api.toast('Rogner : tire les poignées blanches');
   }
 
   function stretchSelection() {
     const t = primaryTarget();
     if (!t) return;
     enterTransformMode(t.el, t.item, t.kind, 'stretch');
-    api.toast('Étirer — tire les poignées blanches');
+    api.toast('Étirer : tire les poignées blanches');
   }
 
   function resetSelection() {

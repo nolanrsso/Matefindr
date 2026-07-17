@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Matefindr — Éditeur de profil</title>
+<title>Matefindr · Éditeur de profil</title>
 <!-- Anti-flash : cache le skeleton Matefindr_user jusqu'à edBootProfile. -->
 <script>
 (function(){
@@ -1669,7 +1669,7 @@ html.perf-lite *{
     <div class="bg-perk"><span class="bg-perk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>Musique d'entrée</div>
   </div>
   <button class="bg-cta" id="bgateBuy"><span>Passer en Matefindr Boost</span><small>dès 3,79€/mois · résiliable</small></button>
-  <button class="bg-later" id="bgateClose">Plus tard — retirer ces éléments</button>
+  <button class="bg-later" id="bgateClose">Plus tard, retirer ces éléments</button>
 </div></div>
 
 <div class="modal" id="cropModal"><div class="box">
@@ -1682,7 +1682,7 @@ html.perf-lite *{
 
 <div class="modal" id="voiceModal"><div class="box">
   <h3>Vocal du profil</h3>
-  <p class="rec-hint" id="recHint">Appuie sur le micro pour enregistrer — 1 s min · 10 s max</p>
+  <p class="rec-hint" id="recHint">Appuie sur le micro pour enregistrer, 1 s min · 10 s max</p>
   <div class="rec-zone">
     <canvas id="recCanvas" width="640" height="160"></canvas>
     <div class="rec-timer"><span id="recTimer">0:00</span><span class="rec-max"> / 0:10</span></div>
@@ -1729,7 +1729,7 @@ html.perf-lite *{
 
   <div class="link-edit-block">
     <div class="link-edit-label" id="linkEditLabel">Adresse personnalisée</div>
-    <p class="link-edit-hint">Tape seulement le nom — pas besoin de coller toute l’URL.</p>
+    <p class="link-edit-hint">Tape seulement le nom, pas besoin de coller toute l’URL.</p>
     <div class="link-input-row" id="linkInputRow">
       <span class="link-prefix">matefindr.com/</span>
       <input id="linkSlug" maxlength="40" placeholder="choisis-ton-nom" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -1785,7 +1785,7 @@ function showDisabledBanner(reason){
   if(!el){
     el=document.createElement('div'); el.id='disabledBanner';
     el.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#3a1a12;border-bottom:1px solid rgba(255,193,84,.4);color:#ffcf6b;font:600 13px/1.5 inherit;padding:10px 16px;text-align:center';
-    el.innerHTML='🚫 Ton profil a été désactivé par un modérateur — le swipe et la messagerie sont bloqués tant qu\'il n\'est pas réactivé.'
+    el.innerHTML='🚫 Ton profil a été désactivé par un modérateur, le swipe et la messagerie sont bloqués tant qu\'il n\'est pas réactivé.'
       +'<div id="disabledBannerReason" style="color:#fff;font-weight:400;margin-top:3px"></div>'
       +'<div style="color:#fff;font-weight:800;margin-top:3px">À toi de changer ton profil pour qu\'il rentre dans les règles, ensuite fais un ticket sur Discord.</div>'
       +'<a href="https://discord.gg/hxCBJGPDsP" target="_blank" rel="noopener" style="color:#fff;font-weight:800;text-decoration:underline">Ouvrir un ticket sur le Discord pour demander une réactivation</a>';
@@ -1941,7 +1941,7 @@ function checkCropResolution(shape){
   const warn=$('cropWarn'); if(!warn) return;
   if(shape==='bg' && (crop.nw<1920 || crop.nh<1080)){
     warn.hidden=false;
-    warn.textContent='⚠️ Image en dessous de la HD (1920×1080) — risque de flou une fois affichée en plein écran.';
+    warn.textContent='⚠️ Image en dessous de la HD (1920×1080), risque de flou une fois affichée en plein écran.';
   } else {
     warn.hidden=true;
   }
@@ -2044,9 +2044,9 @@ function renderBanner(){
   const del=$('bannerDelBtn'); if(del) del.hidden=!S.banner;
 }
 $('avatarSlot').addEventListener('click',()=>$('fileAvatar').click());
-$('fileAvatar').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'circle','Recadrer la photo de profil',async d=>{S.avatar=d;S.avatarCustom=true;setCroppedMedia($('avatarSlot'),d,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Envoi de la photo…');const url=await edUpload(f,'avatar');if(url){S.avatar={url,posX:d.posX,posY:d.posY,scale:d.scale};setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Photo de profil mise à jour');}else{toast('⚠️ Envoi échoué — photo locale seulement');}});e.target.value='';});
+$('fileAvatar').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'circle','Recadrer la photo de profil',async d=>{S.avatar=d;S.avatarCustom=true;setCroppedMedia($('avatarSlot'),d,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Envoi de la photo…');const url=await edUpload(f,'avatar');if(url){S.avatar={url,posX:d.posX,posY:d.posY,scale:d.scale};setCroppedMedia($('avatarSlot'),S.avatar,'<div class="ph">T</div>');if(typeof applyAvatarDeco==='function')applyAvatarDeco();persist();toast('Photo de profil mise à jour');}else{toast('⚠️ Envoi échoué, photo locale seulement');}});e.target.value='';});
 $('bannerSlot').addEventListener('click',()=>$('fileBanner').click());
-$('fileBanner').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'banner','Recadrer la bannière',async d=>{S.banner=d;S.bannerRemoved=false;renderBanner();persist();toast('Envoi de la bannière…');const url=await edUpload(f,'banner');if(url){S.banner={url,posX:d.posX,posY:d.posY,scale:d.scale};renderBanner();persist();toast('Bannière mise à jour');}else{toast('⚠️ Envoi échoué — bannière locale seulement');}});e.target.value='';});
+$('fileBanner').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;openCrop(URL.createObjectURL(f),'banner','Recadrer la bannière',async d=>{S.banner=d;S.bannerRemoved=false;renderBanner();persist();toast('Envoi de la bannière…');const url=await edUpload(f,'banner');if(url){S.banner={url,posX:d.posX,posY:d.posY,scale:d.scale};renderBanner();persist();toast('Bannière mise à jour');}else{toast('⚠️ Envoi échoué, bannière locale seulement');}});e.target.value='';});
 $('bannerDelBtn').addEventListener('click',e=>{
   e.stopPropagation();
   S.banner=null; S.bannerRemoved=true;
@@ -2081,14 +2081,14 @@ async function startInlineRec(){
     const slot=$('voiceSlot'); slot.classList.remove('recording');
     if(inlineRec.dur < VOICE_MIN_S){
       renderVoice();
-      toast('Vocal trop court — 1 s minimum');
+      toast('Vocal trop court, 1 s minimum');
       return;
     }
     const blob=new Blob(inlineRec.chunks,{type:r.mimeType||'audio/webm'});
     slot.innerHTML=VMIC_SVG+'<span class="empty">Envoi du vocal…</span>';
     let url=null;
     try{ const file=new File([blob],'voice-'+Date.now()+'.webm',{type:blob.type||'audio/webm'}); url=await edUpload(file,'voice'); }catch(_){}
-    if(!url){ url=URL.createObjectURL(blob); toast('⚠️ Envoi échoué — vocal local seulement'); }
+    if(!url){ url=URL.createObjectURL(blob); toast('⚠️ Envoi échoué, vocal local seulement'); }
     S.voice={url,dur:inlineRec.dur}; renderVoice(); persist(); toast('Vocal enregistré sur ton profil');
   };
   r.start(); inlineRec.t0=performance.now();
@@ -2103,7 +2103,7 @@ $('voiceSlot').addEventListener('click',()=>{
   else startInlineRec();
 });
 function drawIdleWave(){const c=$('recCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='rgba(255,255,255,.14)';for(let i=0;i<60;i++){const h=6+Math.abs(Math.sin(i*.55))*14;ctx.fillRect(i*(c.width/60)+2,c.height/2-h/2,4,h);}}
-async function startRec(){try{rec.media=await navigator.mediaDevices.getUserMedia({audio:true});}catch(_){toast('Accès micro refusé');return;}rec.chunks=[];rec.recorder=new MediaRecorder(rec.media);rec.recorder.ondataavailable=e=>{if(e.data.size)rec.chunks.push(e.data);};rec.recorder.onstop=()=>{if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.blob=new Blob(rec.chunks,{type:rec.recorder.mimeType||'audio/webm'});rec.url=URL.createObjectURL(rec.blob);rec.dur=Math.min(VOICE_MAX_S,(performance.now()-rec.t0)/1000);rec.media.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rec.raf);clearInterval(rec.timerI);if(rec.actx){rec.actx.close().catch(()=>{});rec.actx=null;}$('recBtn').classList.remove('recording');if(rec.dur<VOICE_MIN_S){if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.url=null;rec.blob=null;showRecMic();$('recTimer').textContent='0:00';setHint('Appuie sur le micro pour enregistrer — 1 s min · 10 s max');drawIdleWave();toast('Vocal trop court — 1 s minimum');return;}showRecPreview();setHint('Écoute ton vocal ou réenregistre');drawIdleWave();};rec.recorder.start();rec.t0=performance.now();$('recBtn').classList.add('recording');$('recBtn').style.display='';$('recPrev').hidden=true;$('recOk').disabled=true;setHint('Enregistrement… appuie pour arrêter');rec.actx=new (window.AudioContext||window.webkitAudioContext)();const src=rec.actx.createMediaStreamSource(rec.media);const an=rec.actx.createAnalyser();an.fftSize=256;src.connect(an);const buf=new Uint8Array(an.frequencyBinCount);const c=$('recCanvas'),ctx=c.getContext('2d');const loop=()=>{an.getByteFrequencyData(buf);ctx.clearRect(0,0,c.width,c.height);const n=60,step=Math.floor(buf.length/n);const g=ctx.createLinearGradient(0,0,c.width,0);g.addColorStop(0,'#9146FF');g.addColorStop(1,'#FF7EB6');ctx.fillStyle=g;for(let i=0;i<n;i++){const v=buf[i*step]/255;const h=5+v*(c.height-14);ctx.fillRect(i*(c.width/n)+2,c.height/2-h/2,4,h);}rec.raf=requestAnimationFrame(loop);};loop();rec.timerI=setInterval(()=>{const s=(performance.now()-rec.t0)/1000;$('recTimer').textContent=fmt(s);if(s>=VOICE_MAX_S)stopRec();},200);}
+async function startRec(){try{rec.media=await navigator.mediaDevices.getUserMedia({audio:true});}catch(_){toast('Accès micro refusé');return;}rec.chunks=[];rec.recorder=new MediaRecorder(rec.media);rec.recorder.ondataavailable=e=>{if(e.data.size)rec.chunks.push(e.data);};rec.recorder.onstop=()=>{if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.blob=new Blob(rec.chunks,{type:rec.recorder.mimeType||'audio/webm'});rec.url=URL.createObjectURL(rec.blob);rec.dur=Math.min(VOICE_MAX_S,(performance.now()-rec.t0)/1000);rec.media.getTracks().forEach(t=>t.stop());cancelAnimationFrame(rec.raf);clearInterval(rec.timerI);if(rec.actx){rec.actx.close().catch(()=>{});rec.actx=null;}$('recBtn').classList.remove('recording');if(rec.dur<VOICE_MIN_S){if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.url=null;rec.blob=null;showRecMic();$('recTimer').textContent='0:00';setHint('Appuie sur le micro pour enregistrer, 1 s min · 10 s max');drawIdleWave();toast('Vocal trop court, 1 s minimum');return;}showRecPreview();setHint('Écoute ton vocal ou réenregistre');drawIdleWave();};rec.recorder.start();rec.t0=performance.now();$('recBtn').classList.add('recording');$('recBtn').style.display='';$('recPrev').hidden=true;$('recOk').disabled=true;setHint('Enregistrement… appuie pour arrêter');rec.actx=new (window.AudioContext||window.webkitAudioContext)();const src=rec.actx.createMediaStreamSource(rec.media);const an=rec.actx.createAnalyser();an.fftSize=256;src.connect(an);const buf=new Uint8Array(an.frequencyBinCount);const c=$('recCanvas'),ctx=c.getContext('2d');const loop=()=>{an.getByteFrequencyData(buf);ctx.clearRect(0,0,c.width,c.height);const n=60,step=Math.floor(buf.length/n);const g=ctx.createLinearGradient(0,0,c.width,0);g.addColorStop(0,'#9146FF');g.addColorStop(1,'#FF7EB6');ctx.fillStyle=g;for(let i=0;i<n;i++){const v=buf[i*step]/255;const h=5+v*(c.height-14);ctx.fillRect(i*(c.width/n)+2,c.height/2-h/2,4,h);}rec.raf=requestAnimationFrame(loop);};loop();rec.timerI=setInterval(()=>{const s=(performance.now()-rec.t0)/1000;$('recTimer').textContent=fmt(s);if(s>=VOICE_MAX_S)stopRec();},200);}
 function stopRec(){try{rec.recorder&&rec.recorder.state==='recording'&&rec.recorder.stop();}catch(_){}}
 $('recBtn').addEventListener('click',()=>{if(rec.recorder&&rec.recorder.state==='recording')stopRec();else startRec();});
 $('recPlay').addEventListener('click',()=>{
@@ -2133,10 +2133,10 @@ $('recRedo').addEventListener('click',()=>{
 });
 function closeVoiceModal(){stopRec();if(rec.audio){rec.audio.pause();rec.audio=null;}$('voiceModal').classList.remove('open');$('recTimer').textContent='0:00';}
 $('recClose').addEventListener('click',closeVoiceModal);
-$('recDiscard').addEventListener('click',()=>{if(rec.audio){rec.audio.pause();rec.audio=null;}if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.url=null;rec.blob=null;showRecMic();$('recTimer').textContent='0:00';setHint('Appuie sur le micro pour enregistrer — 1 s min · 10 s max');drawIdleWave();});
+$('recDiscard').addEventListener('click',()=>{if(rec.audio){rec.audio.pause();rec.audio=null;}if(rec.url&&rec.url.startsWith('blob:'))URL.revokeObjectURL(rec.url);rec.url=null;rec.blob=null;showRecMic();$('recTimer').textContent='0:00';setHint('Appuie sur le micro pour enregistrer, 1 s min · 10 s max');drawIdleWave();});
 $('recOk').addEventListener('click',async()=>{
   if(!rec.url&&!rec.blob)return;
-  if(rec.dur<VOICE_MIN_S){toast('Vocal trop court — 1 s minimum');return;}
+  if(rec.dur<VOICE_MIN_S){toast('Vocal trop court, 1 s minimum');return;}
   const ok=$('recOk');ok.disabled=true;
   let finalUrl=rec.url;
   // Le vocal doit être HÉBERGÉ (Supabase) sinon le blob: meurt au rechargement / sur la carte
@@ -2146,8 +2146,8 @@ $('recOk').addEventListener('click',async()=>{
     try{
       const file=new File([rec.blob],'voice-'+Date.now()+'.webm',{type:rec.blob.type||'audio/webm'});
       const up=await edUpload(file,'voice');
-      if(up){finalUrl=up;}else{toast('⚠️ Envoi échoué — vocal local seulement');}
-    }catch(_){toast('⚠️ Envoi échoué — vocal local seulement');}
+      if(up){finalUrl=up;}else{toast('⚠️ Envoi échoué, vocal local seulement');}
+    }catch(_){toast('⚠️ Envoi échoué, vocal local seulement');}
   }
   S.voice={url:finalUrl,dur:rec.dur};rec.blob=null;
   renderVoice();persist();closeVoiceModal();toast('Vocal enregistré sur ton profil');
@@ -2406,7 +2406,7 @@ function renderBubblesSheet(sh){
       <button data-k="film" class="cat-soon${orbKind==='film'?' active':''}" type="button" aria-disabled="true"><span>Série·Film</span><small>Bientôt redisponible</small></button>
     </div>
     <div class="search-row"><input id="orbSearch" placeholder="Rechercher…" autocomplete="off"${isOrbKindSoon(orbKind)?' disabled':''}></div>
-    <div class="sugg-list" id="orbSugg">${isOrbKindSoon(orbKind)?'<div class="hint">Bientôt redisponible — les bulles jeu et série·film reviennent très bientôt.</div>':''}</div>`;
+    <div class="sugg-list" id="orbSugg">${isOrbKindSoon(orbKind)?'<div class="hint">Bientôt redisponible : les bulles jeu et série·film reviennent très bientôt.</div>':''}</div>`;
   const ph={music:'Recherche un son…',game:'ex: Valorant, Minecraft…',film:'ex: One Piece, Breaking Bad…'};
   const input=sh.querySelector('#orbSearch');input.placeholder=ph[orbKind];
   refreshOrbHeaderPreview(sh);
@@ -2434,7 +2434,7 @@ async function ensureCoverThenAdd(r,kind){
   if(isOrbKindSoon(kind)){showOrbKindSoonToast();return;}
   let cover=r.cover;
   if(!cover&&(kind==='game'||kind==='film')){toast('Recherche de l\'image…');cover=await fetchSuggCover(kind,r.orb.title);}
-  if(!cover){toast('Pas d\'image trouvée — choisis un autre titre');return;}
+  if(!cover){toast('Pas d\'image trouvée, choisis un autre titre');return;}
   r.cover=cover;r.orb.cover=cover;addOrb(Object.assign({},r.orb));
 }
 async function hydrateCovers(sugg,results,kind,reqId){
@@ -2451,7 +2451,7 @@ let _orbReqId=0;
 async function runOrbSearch(q){
   const reqId=++_orbReqId;
   const sugg=document.getElementById('orbSugg');if(!sugg)return;
-  if(isOrbKindSoon(orbKind)){sugg.innerHTML='<div class="hint">Bientôt redisponible — les bulles jeu et série·film reviennent très bientôt.</div>';return;}
+  if(isOrbKindSoon(orbKind)){sugg.innerHTML='<div class="hint">Bientôt redisponible : les bulles jeu et série·film reviennent très bientôt.</div>';return;}
   if(orbKind==='music'){
     if(q.length<2){sugg.innerHTML='';return;}
     sugg.innerHTML='<div class="hint">Recherche…</div>';
@@ -2840,7 +2840,7 @@ function setCanvasMode(mode){
   if(typeof positionEditorBg==='function') positionEditorBg();
   persist();
   const lbl={desktop:'Paysage',portrait:'Portrait'}[mode];
-  toast('Mode '+lbl+' — dispose ton profil pour cette taille');
+  toast('Mode '+lbl+' : dispose ton profil pour cette taille');
 }
 // Applique la classe de reframe + l'état actif du sélecteur (sans re-render).
 // NB : ne repositionne PAS le sélecteur Paysage/Portrait (positionCanvasModes) —
@@ -2915,7 +2915,7 @@ function renderPhotosSheet(sh){
 }
 let _lastPhotoPlace=null;
 function addPhotoFile(f){
-  if(f.size>PHOTO_MAX_BYTES){ toast('⚠️ '+f.name+' trop lourde — 5 Mo max'); return; }
+  if(f.size>PHOTO_MAX_BYTES){ toast('⚠️ '+f.name+' trop lourde, 5 Mo max'); return; }
   const spawn=window.__EditorStickers?__EditorStickers.defaultSpawnPos():{x:-50,y:50,w:48};
   const p={url:URL.createObjectURL(f),x:spawn.x,y:spawn.y,w:spawn.w,rot:0,scaleX:1,scaleY:1};
   S.photos.push(p);
@@ -2955,14 +2955,14 @@ function renderBgSheet(sh){
   sh.innerHTML=sheetHeader('Fond personnel')+'<div class="bgp-grid">'+
     BG_PRESETS.map(p=>`<button class="bgp-tile ${S.bg.type==='preset'&&S.bg.value===p.id?'sel':''}" data-bg="${p.id}"><span class="pv pv-${p.id}"></span><span>${p.nm}</span></button>`).join('')+
     `<button class="bgp-tile bgp-up ${S.bg.type==='custom'?'sel':''}" data-bg-upload>＋<span>Importer</span></button></div>
-    <div class="hint">${kindLabel} — affiché derrière ta carte · ${bgMaxLabel()} max · idéal HD (1920×1080)</div>`;
+    <div class="hint">${kindLabel}, affiché derrière ta carte · ${bgMaxLabel()} max · idéal HD (1920×1080)</div>`;
   sh.querySelectorAll('[data-bg]').forEach(b=>b.addEventListener('click',()=>{applyBg({type:'preset',value:b.dataset.bg});sh.querySelectorAll('.bgp-tile').forEach(x=>x.classList.toggle('sel',x===b));}));
   sh.querySelector('[data-bg-upload]').addEventListener('click',()=>{ $('fileBg').setAttribute('accept', isBoost?'image/*,video/*':'image/*'); $('fileBg').click(); });
 }
 $('fileBg').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0]; if(!f){return;}
   const maxBytes=bgMaxBytes(), maxLbl=bgMaxLabel();
-  if(f.size>maxBytes){ toast('⚠️ Fichier trop lourd — '+maxLbl+' max'); e.target.value=''; return; }
+  if(f.size>maxBytes){ toast('⚠️ Fichier trop lourd, '+maxLbl+' max'); e.target.value=''; return; }
   const isVid=f.type.startsWith('video/');
   const isGif=f.type==='image/gif';
   const isBoost=!document.body.classList.contains('not-boost');
@@ -2976,7 +2976,7 @@ $('fileBg').addEventListener('change',e=>{
     // Pas de recadrage pour une vidéo (comme avant) — appliquée telle quelle.
     applyBg({type:'custom',value:URL.createObjectURL(f),video:true});
     toast('Envoi du fond…');
-    edUpload(f,'bg').then(url=>{ if(url){ applyBg({type:'custom',value:url,video:true}); persist(); toast('Fond personnalisé appliqué'); } else { toast('⚠️ Envoi échoué — fond local seulement'); } });
+    edUpload(f,'bg').then(url=>{ if(url){ applyBg({type:'custom',value:url,video:true}); persist(); toast('Fond personnalisé appliqué'); } else { toast('⚠️ Envoi échoué, fond local seulement'); } });
   } else {
     // Image (ou GIF) → recadrage, comme l'avatar/la bannière, avant l'envoi.
     openCrop(URL.createObjectURL(f),'bg','Recadrer le fond',async d=>{
@@ -2985,7 +2985,7 @@ $('fileBg').addEventListener('change',e=>{
       toast('Envoi du fond…');
       const url=await edUpload(f,'bg');
       if(url){ applyBg({type:'custom',value:url,video:false,posX:d.posX,posY:d.posY,scale:d.scale}); persist(); toast('Fond personnalisé appliqué'); }
-      else{ toast('⚠️ Envoi échoué — fond local seulement'); }
+      else{ toast('⚠️ Envoi échoué, fond local seulement'); }
     });
   }
   e.target.value='';
@@ -3381,9 +3381,9 @@ function renderMusicSheet(sh){
     <div class="search-row"><input id="musicSearch" placeholder="Rechercher un titre, un artiste…" autocomplete="off"></div>
     <div class="sugg-list" id="trackList"></div>
     <div class="scrub-zone" id="selZone" hidden>
-      <div class="scrub-label" id="winLbl">🎵 Extrait de 30 s — joué à l'entrée de ton profil</div>
+      <div class="scrub-label" id="winLbl">🎵 Extrait de 30 s, joué à l'entrée de ton profil</div>
       <div class="row-end"><button class="btn" id="audBtn">▶ Écouter l'extrait</button><button class="btn primary" id="musicOk">Confirmer</button></div>
-      <div class="hint">Le timing est fixé sur les 30 s d'aperçu — pas de réglage de départ.</div>
+      <div class="hint">Le timing est fixé sur les 30 s d'aperçu, pas de réglage de départ.</div>
     </div>`;
   let deb=null;
   sh.querySelector('#musicSearch').addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();if(q.length<2)return;deb=setTimeout(async()=>{const list=sh.querySelector('#trackList');list.innerHTML='<div class="hint">Recherche…</div>';let tracks=[];try{tracks=await searchSpotifyTracks(q);}catch(_){}const ts=tracks.filter(t=>t.previewUrl&&t.cover);list.innerHTML='';if(!ts.length){list.innerHTML='<div class="hint">Aucun résultat</div>';return;}ts.forEach(t=>{const b=document.createElement('button');b.className='sugg';b.innerHTML=`<img src="${t.cover}" alt=""><span class="ti"><b>${esc(t.name)}</b><small>${esc(t.artist)}</small></span>`;b.addEventListener('click',()=>selectTrack({title:t.name,artist:t.artist,cover:t.cover,previewUrl:t.previewUrl,durSec:30}));list.appendChild(b);});},320);});
@@ -3391,7 +3391,7 @@ function renderMusicSheet(sh){
 }
 function selectTrack(t){stopAudition();music.sel=t;music.startSec=0;const sh=$('sheet');sh.querySelector('#trackList').innerHTML=`<div class="sugg" style="border-color:rgba(145,70,255,.6)"><img src="${t.cover}"><span class="ti"><b>${esc(t.title)}</b><small>${esc(t.artist)}</small></span></div>`;sh.querySelector('#selZone').hidden=false;const audBtn=sh.querySelector('#audBtn');audBtn.onclick=()=>playPreview(t.previewUrl);sh.querySelector('#musicOk').onclick=()=>{S.music=Object.assign({},t,{startSec:0});renderMusicChip();persist();closeSheet();toast('Musique d\'entrée enregistrée');};if(t.previewUrl)playPreview(t.previewUrl);}
 let chipAudio=null;
-function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique — bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}stopBubblePreview();chipAudio=new Audio(m.previewUrl);chipAudio.volume=editorEffectiveVol();chipAudio.play().catch(()=>{});};}
+function renderMusicChip(){renderMusicNow();const chip=$('musicChip');if(!chip)return;if(!S.music){chip.innerHTML='<span class="empty">Aucune musique, bouton « Musique » en bas</span>';return;}const m=S.music;chip.innerHTML=`<span class="cov" style="background-image:url('${m.cover}')"></span><span class="mi"><b>${esc(m.title)}</b><small>${esc(m.artist)}</small></span><span class="win">${fmt(m.startSec)} → ${fmt(Math.min(m.startSec+30,m.durSec))}</span>`;chip.onclick=()=>{if(chipAudio&&!chipAudio.paused){chipAudio.pause();chipAudio=null;return;}stopBubblePreview();chipAudio=new Audio(m.previewUrl);chipAudio.volume=editorEffectiveVol();chipAudio.play().catch(()=>{});};}
 /* étiquette « musique d'entrée » au-dessus du bouton Annuler */
 let nowAudio=null;
 /* ===== Volume audio unifié (matefindr_state.user.musicVolume + gain global) ===== */
@@ -3549,8 +3549,8 @@ function openConnPick(){
     b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'')+(taken?' conn-pick-tile--done':'');
     // Discord lié au compte : toujours « pris », on ouvre le panneau de prefs au clic
     b.disabled=taken && app.id!=='custom' && !locked;
-    b.title=locked?'Discord — lié au compte (modifier l\'affichage)'
-      :(taken?`${app.name} — déjà ajouté`:app.name);
+    b.title=locked?'Discord, lié au compte (modifier l\'affichage)'
+      :(taken?`${app.name}, déjà ajouté`:app.name);
     const doneBadge=taken?'<span class="conn-pick-done">Validé</span>':'';
     if(app.wide){
       const entry=app.id==='custom'?MC().connGet(S.connections,'custom'):null;
@@ -3790,7 +3790,7 @@ function isSupportedClipUrl(u){
 $('gamePopSave').addEventListener('click',()=>{
   if(!_gameOrb)return;
   const rk=$('gamePopRank').value.trim(), cl=$('gamePopClip').value.trim();
-  if(cl&&!isSupportedClipUrl(cl)){toast('Lien non supporté — YouTube, Twitch, Streamable ou Medal');return;}
+  if(cl&&!isSupportedClipUrl(cl)){toast('Lien non supporté, essaie YouTube, Twitch, Streamable ou Medal');return;}
   if(rk)_gameOrb.rank=rk;else delete _gameOrb.rank;
   if(cl)_gameOrb.clipUrl=cl;else delete _gameOrb.clipUrl;
   renderOrbs(); persist(); refreshOrbPlacedIfOpen(); closeGamePop(); toast('Bulle de jeu mise à jour');
@@ -4385,10 +4385,10 @@ function hydrateFromSite(){
   const st=readSite(); const u=st.user||{}, p=st.profile||{};
   const note=document.querySelector('.note'); // peut ne plus exister (topbar simplifiée)
   if(!u.displayName && !u.avatarUrl && !(p&&p.bio)){
-    if(note) note.textContent='Connecte-toi sur matefindr.com puis reviens — ton profil se chargera ici';
+    if(note) note.textContent='Connecte-toi sur matefindr.com puis reviens, ton profil se chargera ici';
     return;
   }
-  if(note) note.textContent='Relié à ton profil Matefindr — tes modifs sont sauvegardées';
+  if(note) note.textContent='Relié à ton profil Matefindr, tes modifs sont sauvegardées';
   showDisabledBanner(u.disabled?u.disabledReason:null);
   if(u.displayName){ S.username=u.displayName; setEditableText($('usernameSlot'),u.displayName); }
   S.nameCustom=!!u.nameCustom;
@@ -4755,7 +4755,7 @@ function renderPresets(){
   PRESETS.forEach((p,i)=>{
     const slot=document.createElement('div');
     slot.className='pset-slot pset-slot--filled'+(i===_activePresetIdx?' pset-slot--active':'');
-    slot.title=(i===_activePresetIdx?'Preset actif — ':'Charger ')+'le preset '+(i+1);
+    slot.title=(i===_activePresetIdx?'Preset actif, ':'Charger ')+'le preset '+(i+1);
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
     slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>'
       +'<button class="pset-dup" type="button" title="Dupliquer ce preset" aria-label="Dupliquer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg></button>'
@@ -4770,7 +4770,7 @@ function renderPresets(){
       savePresetsLS(); saveActivePresetIdx();
       applyPreset(dup);
       renderPresets();
-      toast('Preset '+PRESETS.length+' créé — copie du preset '+(i+1));
+      toast('Preset '+PRESETS.length+' créé, copie du preset '+(i+1));
     });
     slot.querySelector('.pset-del').addEventListener('click',e=>{
       e.stopPropagation();
@@ -4796,7 +4796,7 @@ function renderPresets(){
       _activePresetIdx=i; saveActivePresetIdx();
       applyPreset(PRESETS[i]);
       renderPresets();
-      toast('Preset '+(i+1)+' chargé — actif');
+      toast('Preset '+(i+1)+' chargé, actif');
     });
     box.appendChild(slot);
   });
@@ -4815,7 +4815,7 @@ function renderPresets(){
       savePresetsLS(); saveActivePresetIdx();
       applyPreset(blank);
       renderPresets();
-      toast('Preset '+PRESETS.length+' créé — vierge et actif');
+      toast('Preset '+PRESETS.length+' créé, vierge et actif');
     });
     box.appendChild(add);
   }
@@ -4842,7 +4842,7 @@ function renderEditorLinkPresets(){
     const isShare=i===_sharePresetIdx;
     slot.className='link-pset-slot'+(isShare?' link-pset-slot--active':'');
     slot.title=isShare
-      ?('Preset '+(i+1)+' — affiché sur ton lien'+(i===_activePresetIdx?' (aussi équipé)':''))
+      ?('Preset '+(i+1)+', affiché sur ton lien'+(i===_activePresetIdx?' (aussi équipé)':''))
       :('Afficher le preset '+(i+1)+' sur ton lien'+(i===_activePresetIdx?' (équipé dans l\'éditeur)':''));
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
     slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>';
@@ -4928,16 +4928,11 @@ function openSettingsSheet(){
   showEditorPop('settingsPop','settingsBackdrop');
 }
 (function initEditorSettings(){
-  const AM=window.MFAccountModals;
-  if(!AM) return;
-  AM.initSettings({
-    buttons:['btnSettings'],
-    beforeOpen:()=>{
-      if(typeof closeSheet==='function') closeSheet();
-      activeTool=null;
-      document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));
-    },
-    render:(body)=>renderSettingsSheet(body)
+  // Le bouton Paramètres de l'éditeur mène désormais à la vraie page
+  // matefindr.com/settings (plus de mini-sheet locale dupliquée ici).
+  document.getElementById('btnSettings')?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    location.href='/settings';
   });
   if(window.MatefindrTitlesQuests){
     MatefindrTitlesQuests.init({
@@ -4971,7 +4966,7 @@ function renderSettingsSheet(sh){
     const lifetime = u.boostPlan==='lifetime';
     const promo = u.boostPromo;
     bill = `<b>Matefindr Boost</b> ${promo?'· <span style="color:#5ee6a0">offert (code)</span>':''}<br>`
-      + `<small>${lifetime?'Accès à vie — aucun prélèvement':('Mensuel · prochain paiement '+(u.boostNextPayment?fmtDate(u.boostNextPayment):'—'))}</small>`;
+      + `<small>${lifetime?'Accès à vie, aucun prélèvement':('Mensuel · prochain paiement '+(u.boostNextPayment?fmtDate(u.boostNextPayment):'—'))}</small>`;
   } else {
     bill = `<b>Gratuit</b><br><small>Aucun abonnement actif</small>`;
   }
@@ -5059,7 +5054,7 @@ function renderSettingsSheet(sh){
     const n=(typeof S!=='undefined'&&S.orbs)?S.orbs.length:0;
     const notBoost=document.body.classList.contains('not-boost');
     if(notBoost&&n<4){
-      warn.innerHTML='⚠️ <span><b>'+n+'/4 bulles</b> — ajoute encore <b>'+(4-n)+'</b> bulle'+((4-n)>1?'s':'')+' pour débloquer toutes les infos des autres profils.</span>';
+      warn.innerHTML='⚠️ <span><b>'+n+'/4 bulles</b>, ajoute encore <b>'+(4-n)+'</b> bulle'+((4-n)>1?'s':'')+' pour débloquer toutes les infos des autres profils.</span>';
       warn.classList.add('show');
     } else warn.classList.remove('show');
   };
@@ -5071,7 +5066,7 @@ function renderSettingsSheet(sh){
   const STEPS=[
     {welcome:true,title:'Bienvenue dans l’éditeur 👋',body:'On personnalise ton profil en 1 minute. Tu peux passer chaque étape quand tu veux.'},
     {sel:'#voiceSlot',title:'🎙️ Enregistre ton vocal',body:'Clique ici pour t’enregistrer (1 s min · 10 s max). Un petit vocal rend ton profil bien plus vivant.'},
-    {sel:'.tool[data-tool="color"]',title:'🎨 Choisis ta couleur',body:'Donne sa couleur à ta carte — clique pour ouvrir le sélecteur.'},
+    {sel:'.tool[data-tool="color"]',title:'🎨 Choisis ta couleur',body:'Donne sa couleur à ta carte, clique pour ouvrir le sélecteur.'},
     {sel:'.tool[data-tool="bubbles"]',title:'🫧 Ajoute tes bulles',body:'Ajoute une bulle <b>Musique</b>, une <b>Jeu</b> et une <b>Série / Film</b>.',warn:'⚠️ En dessous de 4 bulles, tu ne pourras pas voir certaines infos des autres profils.'},
     {sel:'.tool[data-tool="gifs"]',title:'✨ Ajoute un GIF',body:'Mets un GIF qui te représente sur ta carte.'},
     {sel:'.tool[data-tool="bg"]',title:'🖼️ Choisis ton fond',body:'Personnalise le fond d’écran de ta carte.'},

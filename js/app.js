@@ -84,7 +84,7 @@
         +   'font-family:Inter,system-ui,-apple-system,sans-serif;color:#fff">'
         +   '<div style="font-size:44px;margin-bottom:10px">🚧</div>'
         +   '<h1 style="margin:0 0 10px;font-size:22px">Matefindr est en maintenance</h1>'
-        +   '<p style="color:#b9bbbe;font-size:14.5px;line-height:1.55;margin:0">On revient très vite — reste à l\'écoute sur notre Discord pour les mises à jour.</p>'
+        +   '<p style="color:#b9bbbe;font-size:14.5px;line-height:1.55;margin:0">On revient très vite, reste à l\'écoute sur notre Discord pour les mises à jour.</p>'
         + '</div>';
       document.body.appendChild(ov);
     }
@@ -910,7 +910,7 @@
       try {
         if (!window.__supa) return { ok:false, error:'Connexion au serveur indisponible.' };
         const { data:{ session } } = await window.__supa.auth.getSession();
-        if (!session) return { ok:false, error:'Session expirée — reconnecte-toi puis réessaie.' };
+        if (!session) return { ok:false, error:'Session expirée, reconnecte-toi puis réessaie.' };
         const res = await fetch(SUPABASE_URL + '/functions/v1/delete-account', {
           method: 'POST',
           headers: {
@@ -5296,7 +5296,7 @@
       if (!val) return;
       state.profile = state.profile || {};
       state.profile.userOrbs = state.profile.userOrbs || [];
-      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
+      if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max, Boost pour +12'); return; }
       const orb = orbOverride || _pendingSpotifyOrb || {kind: selectedOrbKind, title: val};
       if (isOrbKindSoon(orb.kind)) { showOrbKindSoonToast(); return; }
       // Empêche les doublons (même kind + même titre normalisé)
@@ -6131,7 +6131,7 @@
           btn.textContent = tx('connect');
           btn.classList.remove('connected');
         } else if (v) {
-          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max — Boost pour +12'); return; }
+          if (orbsUsed() >= orbBudget()) { showToast('🫧', 'Limite atteinte', orbBudget() + ' bulles max, Boost pour +12'); return; }
           state.user.socials[key] = v;
           btn.textContent = tx('connected');
           btn.classList.add('connected');
@@ -6953,7 +6953,7 @@
         `<div class="bill-row"><span class="bill-k">Prix</span><span class="bill-v">${launch ? 'Offert' : lifetime ? '14,99€ · paiement unique' : '3,79€ / mois'}</span></div>` +
         `<div class="bill-row"><span class="bill-k">Abonné depuis</span><span class="bill-v">${u.boostSince ? fmt(u.boostSince) : '—'}</span></div>` +
         (permanent
-          ? `<div class="bill-row"><span class="bill-k">Renouvellement</span><span class="bill-v">Aucun — accès à vie</span></div>`
+          ? `<div class="bill-row"><span class="bill-k">Renouvellement</span><span class="bill-v">Aucun, accès à vie</span></div>`
           : cancelled
             ? `<div class="bill-row"><span class="bill-k">Statut</span><span class="bill-v" style="color:#FFB66E">Résilié</span></div>
                <div class="bill-row"><span class="bill-k">Actif jusqu'au</span><span class="bill-v" style="color:#9CF0BD">${u.boostNextPayment ? fmt(u.boostNextPayment) : '—'}</span></div>`
@@ -7176,7 +7176,7 @@
               fab.setAttribute('data-state', 'idle');
               timer.textContent = '';
               lbl.textContent = state.user?.profileVoice ? 'Ré-enregistrer le vocal' : 'Enregistrer un vocal (1 s min)';
-              alert('Vocal trop court — 1 s minimum');
+              alert('Vocal trop court, 1 s minimum');
               return;
             }
             const blob = new Blob(chunks, { type: mediaRec.mimeType || 'audio/webm' });
@@ -7276,7 +7276,7 @@
         if (ico) ico.style.animation = '';
 
         if (!d) {
-          label.textContent = 'Échec — token expiré ?';
+          label.textContent = 'Échec : token expiré ?';
           if (hint) hint.textContent = 'Reconnecte-toi avec Discord pour rafraîchir tes infos.';
           setTimeout(() => { btn.disabled = false; label.textContent = oldLabel; }, 2600);
           return;
@@ -7708,7 +7708,7 @@
           c1: '#9146FF', c2: '#FF7EB6',
         };
         const ok = await sendDiscordNotif('test', fakeMe);
-        testStatus.textContent = ok ? '✅ Envoyé ! Vérifie ton serveur Discord.' : '❌ Échec — URL invalide ?';
+        testStatus.textContent = ok ? '✅ Envoyé ! Vérifie ton serveur Discord.' : '❌ Échec : URL invalide ?';
         testStatus.style.color = ok ? '#3BD17C' : '#FF4FA0';
         setTimeout(() => { testStatus.textContent = ''; }, 5000);
       });
@@ -7728,7 +7728,7 @@
         wrap.appendChild(card);
         if (typeof renderContextGifs === 'function') renderContextGifs(wrap); // montre aussi les GIFs (contexte)
       } else {
-        wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#b9bbbe">Pas encore de profil — connecte-toi d\'abord.</div>';
+        wrap.innerHTML = '<div style="padding:40px;text-align:center;color:#b9bbbe">Pas encore de profil, connecte-toi d\'abord.</div>';
       }
       overlay.setAttribute('data-show', 'true');
       // Reset add panel
@@ -7865,7 +7865,7 @@
       el.dataset.kind = o.kind;
       el.style.left = leftPx + 'px';
       el.style.top  = topPx  + 'px';
-      el.title = `${o.title}${o.rank ? ' · ' + o.rank : ''} — glisse pour repositionner`;
+      el.title = `${o.title}${o.rank ? ' · ' + o.rank : ''} · glisse pour repositionner`;
       const fallback = {music:'🎵', game:'🎮', film:'🎬'}[o.kind] || '✨';
       if (o.cover) {
         el.innerHTML = `<img src="${o.cover}" alt="${escapeHtmlMini(o.title)}" draggable="false">`;
@@ -8107,7 +8107,7 @@
         _oeoDebounce = setTimeout(async () => {
           const sugg = document.getElementById('oeoSugg');
           if (isOrbKindSoon(oeoKind)) {
-            sugg.innerHTML = '<div style="color:#FFD15C;font-size:12.5px;padding:8px;line-height:1.45">Bientôt redisponible — les bulles jeu et série·film reviennent très bientôt.</div>';
+            sugg.innerHTML = '<div style="color:#FFD15C;font-size:12.5px;padding:8px;line-height:1.45">Bientôt redisponible : les bulles jeu et série·film reviennent très bientôt.</div>';
             return;
           }
           sugg.innerHTML = '<div style="color:#72767d;font-size:12.5px;padding:8px">Chargement…</div>';
@@ -8248,7 +8248,7 @@
 
               <section class="set-panel" data-sec="compte">
                 <h2>Compte</h2>
-                <p class="set-panel-sub">Tes informations personnelles — affichées sur le badge en haut de ta carte.</p>
+                <p class="set-panel-sub">Tes informations personnelles, affichées sur le badge en haut de ta carte.</p>
                 <div class="set-identity">
                   <div class="si-avatar">${avatarInner}</div>
                   <div class="si-txt">
@@ -8329,14 +8329,13 @@
 
               <section class="set-panel" data-sec="abo">
                 <h2>Abonnement &amp; facturation</h2>
-                <p class="set-panel-sub">Gère ton abonnement Matefindr Boost — formule, échéance et résiliation.</p>
+                <p class="set-panel-sub">Gère ton abonnement Matefindr Boost : formule, échéance et résiliation.</p>
                 <div class="set-card"><div class="acc-billing" id="accBilling"></div></div>
               </section>
 
               <section class="set-panel" data-sec="legal">
                 <h2>Confidentialité &amp; légal</h2>
                 <p class="set-panel-sub">Tes droits sur tes données, et les règles du site.</p>
-                <div class="set-legal-warn">⚠️ <span><b>Les Conditions d'utilisation sont un brouillon</b> — rédigées pour encadrer l'usage du site, pas encore relues par un juriste. On te préviendra ici en cas de changement important.</span></div>
                 <div class="set-card">
                   <h3>Documents</h3>
                   <a class="acc-btn acc-btn--ghost" href="rules.html" target="_blank" rel="noopener" style="width:100%;justify-content:center" data-i18n="set_terms_link">📋 Conditions d'utilisation</a>
@@ -8370,7 +8369,8 @@
               </section>
 
             </div>
-          </div>`;
+          </div>
+          <button type="button" class="set-savebar" id="setSaveBtn">Enregistrer</button>`;
         // Les data-i18n ci-dessus viennent d'être insérés dans le DOM -- applyLang() ne
         // les a jamais vus (il ne scanne qu'au chargement / à un clic de switch), donc
         // on le rejoue explicitement sur le document pour les traduire immédiatement
@@ -8416,28 +8416,20 @@
           updateActiveSec();
         }
 
+        // ----- Bouton "Enregistrer" flottant : tout ce qui suit (Compte, Notifications,
+        // Préférences) modifie juste l'écran + affiche ce bouton, au lieu de sauvegarder
+        // champ par champ. Seul l'Abonnement garde ses actions confirmées directement. -----
+        const saveBar = body.querySelector('#setSaveBtn');
+        function markDirty(){ saveBar.classList.add('show'); }
+
         // ----- Compte : âge / genre / pays -----
         const ageEl = body.querySelector('#ssAge');
-        ageEl.addEventListener('change', () => {
-          const v = parseInt(ageEl.value, 10);
-          if (!(v >= 18 && v <= 99)) {
-            ageEl.value = p.age || '';
-            if (typeof showToast === 'function') showToast('⚠️', 'Âge invalide', '18 ans minimum, 99 ans maximum');
-            return;
-          }
-          state.profile = state.profile || {};
-          state.profile.age = v;
-          save();
-          if (typeof showToast === 'function') showToast('✓', 'Âge mis à jour', v + ' ans');
-        });
+        ageEl.addEventListener('input', markDirty);
         const genderWrap = body.querySelector('#ssGender');
         genderWrap.addEventListener('click', (e) => {
           const b = e.target.closest('button[data-val]'); if (!b) return;
           genderWrap.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-          state.profile = state.profile || {};
-          state.profile.gender = b.dataset.val;
-          save();
-          if (typeof showToast === 'function') showToast('✓', 'Genre mis à jour', '');
+          markDirty();
         });
         (function initSettingsCountryPicker(){
           const picker  = body.querySelector('#ssCountryPicker');
@@ -8471,11 +8463,7 @@
             select.value = code;
             setTriggerLabel(code, c.name);
             close();
-            state.profile = state.profile || {};
-            state.profile.country = code;
-            state.profile.countryFlag = (select.selectedOptions[0] && select.selectedOptions[0].getAttribute('data-flag')) || '';
-            save();
-            if (typeof showToast === 'function') showToast('✓', 'Pays mis à jour', c.name);
+            markDirty();
           }
           trigger.addEventListener('click', e => { e.stopPropagation(); picker.getAttribute('data-open') === 'true' ? close() : open(); });
           search.addEventListener('input', e => renderList(e.target.value));
@@ -8487,22 +8475,8 @@
         // ----- Notifications Discord (webhook perso) -----
         const whEl = body.querySelector('#accDiscordWebhook');
         const notifTg = { like: body.querySelector('#notifLike'), match: body.querySelector('#notifMatch'), message: body.querySelector('#notifMessage') };
-        let _notifSyncT = null;
-        function scheduleNotifSync(){ clearTimeout(_notifSyncT); _notifSyncT = setTimeout(() => { if (typeof syncNotifPrefsToSupabase === 'function') syncNotifPrefsToSupabase(); }, 600); }
-        whEl.addEventListener('input', () => {
-          state.user = state.user || {};
-          state.user.discordWebhook = whEl.value.trim();
-          save();
-          scheduleNotifSync();
-        });
-        Object.entries(notifTg).forEach(([k, el]) => {
-          el.addEventListener('change', () => {
-            state.user = state.user || {};
-            state.user.notifTypes = Object.assign({}, state.user.notifTypes || {}, { [k]: el.checked });
-            save();
-            scheduleNotifSync();
-          });
-        });
+        whEl.addEventListener('input', markDirty);
+        Object.values(notifTg).forEach(el => el.addEventListener('change', markDirty));
         body.querySelector('#notifTestBtn').addEventListener('click', async () => {
           const testStatus = body.querySelector('#notifTestStatus');
           testStatus.textContent = 'Envoi…';
@@ -8510,7 +8484,7 @@
           const me = state.user || {};
           const fakeMe = { name: me.displayName || 'Toi', initial: (me.displayName || 'T').charAt(0).toUpperCase(), avatarUrl: me.avatarUrl, c1:'#9146FF', c2:'#FF7EB6' };
           const ok = (typeof sendDiscordNotif === 'function') ? await sendDiscordNotif('test', fakeMe) : false;
-          testStatus.textContent = ok ? '✅ Envoyé ! Vérifie ton serveur Discord.' : '❌ Échec — URL invalide ?';
+          testStatus.textContent = ok ? '✅ Envoyé ! Vérifie ton serveur Discord.' : '❌ Échec : URL invalide ?';
           testStatus.style.color = ok ? '#3BD17C' : '#FF4FA0';
           setTimeout(() => { testStatus.textContent = ''; }, 5000);
         });
@@ -8530,21 +8504,49 @@
         });
 
         // ----- Préférences : langue + volume -----
+        // Langue et volume s'appliquent tout de suite à l'écran (retour visuel/sonore
+        // immédiat), mais ne sont VRAIMENT enregistrés (persistés + syncés) qu'au clic
+        // sur "Enregistrer", comme le reste de cette page.
         body.querySelector('#ssLang').addEventListener('click', (e) => {
           const b = e.target.closest('button[data-code]'); if (!b) return;
-          if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(b.dataset.code);
+          if (typeof window.__mfApplyLang === 'function') window.__mfApplyLang(b.dataset.code, { persist:false });
           body.querySelectorAll('#ssLang button').forEach(x => x.classList.toggle('on', x === b));
+          markDirty();
         });
         const vEl = body.querySelector('#ssVol');
         vEl.addEventListener('input', () => {
           const pct = parseInt(vEl.value, 10);
           body.querySelector('#ssVolVal').textContent = pct + '%';
-          const v = pct / 100;
-          if (MV) MV.setVol(v, true);
-          state.user = state.user || {};
-          state.user.musicVolume = v;
+          if (MV) MV.setVol(pct / 100, true);
           if (typeof window.__mfVolRefresh === 'function') window.__mfVolRefresh();
+          markDirty();
+        });
+
+        // ----- Enregistrer : commit de tout ce qui est en attente (Compte,
+        // Notifications, Préférences) en une seule fois. -----
+        saveBar.addEventListener('click', () => {
+          state.profile = state.profile || {};
+          state.user = state.user || {};
+          const v = parseInt(ageEl.value, 10);
+          if (v >= 18 && v <= 99) state.profile.age = v;
+          else { ageEl.value = state.profile.age || ''; if (typeof showToast === 'function') showToast('⚠️', 'Âge invalide', '18 ans minimum, 99 ans maximum'); }
+          const genderBtn = genderWrap.querySelector('button.on');
+          if (genderBtn) state.profile.gender = genderBtn.dataset.val;
+          const countrySel = body.querySelector('#ssCountry');
+          if (countrySel && countrySel.value) {
+            state.profile.country = countrySel.value;
+            const opt = countrySel.selectedOptions[0];
+            state.profile.countryFlag = (opt && opt.getAttribute('data-flag')) || '';
+          }
+          state.user.discordWebhook = whEl.value.trim();
+          state.user.notifTypes = { like: notifTg.like.checked, match: notifTg.match.checked, message: notifTg.message.checked };
+          const langBtn = body.querySelector('#ssLang button.on');
+          if (langBtn && typeof window.__mfApplyLang === 'function') window.__mfApplyLang(langBtn.dataset.code);
+          state.user.musicVolume = parseInt(vEl.value, 10) / 100;
           save();
+          if (typeof syncNotifPrefsToSupabase === 'function') syncNotifPrefsToSupabase();
+          saveBar.classList.remove('show');
+          if (typeof showToast === 'function') showToast('✓', 'Paramètres enregistrés', '');
         });
 
         // ----- Zone dangereuse (déconnexion + suppression réelle, logique inchangée) -----
@@ -8591,7 +8593,7 @@
               ? await window.__mfDeleteAccount()
               : { ok:false, error:'Fonction de suppression indisponible.' };
             if (!ok.ok) {
-              delStatus.textContent = '❌ ' + (ok.error || 'Échec — réessaie plus tard.');
+              delStatus.textContent = '❌ ' + (ok.error || 'Échec, réessaie plus tard.');
               delConfirmBtn.disabled = false;
               delConfirmBtn.textContent = 'Supprimer définitivement';
               return;
@@ -8604,7 +8606,7 @@
             setScreen('landing');
             if (typeof refreshLandingCta === 'function') refreshLandingCta();
           } catch (e) {
-            delStatus.textContent = '❌ Erreur — ' + ((e && e.message) ? e.message.slice(0, 90) : 'réessaie.');
+            delStatus.textContent = '❌ Erreur : ' + ((e && e.message) ? e.message.slice(0, 90) : 'réessaie.');
             delConfirmBtn.disabled = false;
             delConfirmBtn.textContent = 'Supprimer définitivement';
           }

@@ -536,7 +536,7 @@
         cta:          'Sign in with Discord',
         online:       'online',
         tags:         'Gaming <span class="sep">·</span> Chat <span class="sep">·</span> Dating',
-        footer:       'POP THE BUBBLES — WHO KNOWS WHAT THEY MIGHT BE HIDING',
+        footer:       'POP THE BUBBLES: WHO KNOWS WHAT THEY MIGHT BE HIDING',
         auth_title:   'Sign in',
         auth_sub:     'Pick your preferred method',
         auth_discord: 'Continue with Discord',
@@ -813,7 +813,7 @@
       e.preventDefault();
       const v = (emailInput.value || '').trim();
       if (!v) { emailInput.focus(); emailInput.classList.add('invalid'); return; }
-      showMsg(t('msg_signed').replace(/[.!]$/, '') + ' — ' + (document.documentElement.lang === 'en' ? 'reset link sent to ' : 'lien envoyé à ') + v, true);
+      showMsg(t('msg_signed').replace(/[.!]$/, '') + ', ' + (document.documentElement.lang === 'en' ? 'reset link sent to ' : 'lien envoyé à ') + v, true);
     });
 
     function showMsg(text, ok){

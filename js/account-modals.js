@@ -308,7 +308,7 @@
         if (upd.error) {
           const err = upd.error;
           const m = ((err.message || '') + ' ' + (err.details || '') + ' ' + (err.hint || '')).toLowerCase();
-          let msg = 'Échec — réessaie.';
+          let msg = 'Échec, réessaie.';
           if (/duplicate|unique/.test(m)) msg = '« ' + slug + ' » est déjà pris, essaie autre chose.';
           else if (/slug|column|schema cache|does not exist/.test(m)) msg = 'Lien pas encore activé côté serveur (SQL à lancer).';
           else if (err.message) msg = err.message.slice(0, 90);
@@ -330,12 +330,12 @@
         refreshDirty();
         if (status) {
           status.className = 'link-status ok';
-          status.textContent = prev ? '✅ Lien mis à jour — prochain changement dans 7 jours.' : '✅ Ton lien est prêt ! Prochain changement possible dans 7 jours.';
+          status.textContent = prev ? '✅ Lien mis à jour, prochain changement dans 7 jours.' : '✅ Ton lien est prêt ! Prochain changement possible dans 7 jours.';
         }
       } catch (e) {
         if (status) {
           status.className = 'link-status err';
-          status.textContent = 'Erreur — ' + ((e && e.message) ? e.message.slice(0, 80) : 'réessaie.');
+          status.textContent = 'Erreur : ' + ((e && e.message) ? e.message.slice(0, 80) : 'réessaie.');
         }
         editSaveBtn.disabled = false;
       }

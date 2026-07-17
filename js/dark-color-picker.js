@@ -56,7 +56,7 @@
   <div class="dk-pick-sv" id="dkPickSv"><div class="dk-pick-cursor" id="dkPickCursor"></div></div>
   <div class="dk-pick-hue" id="dkPickHue"><div class="dk-pick-hue-thumb" id="dkPickHueThumb"></div></div>
   <div class="dk-pick-row">
-    <button type="button" class="dk-pick-drop" id="dkPickDrop" title="Pipette — capturer une couleur à l'écran" aria-label="Pipette">${DROP_SVG}</button>
+    <button type="button" class="dk-pick-drop" id="dkPickDrop" title="Pipette : capturer une couleur à l'écran" aria-label="Pipette">${DROP_SVG}</button>
     <div class="dk-pick-preview" id="dkPickPreview"></div>
     <input class="dk-pick-hex" id="dkPickHex" type="text" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Code hexadécimal">
   </div>
@@ -98,7 +98,7 @@
       if (dropBtn) {
         const hasEye = typeof EyeDropper !== 'undefined';
         dropBtn.disabled = !hasEye;
-        dropBtn.title = hasEye ? 'Pipette — capturer une couleur à l\'écran' : 'Pipette non disponible sur ce navigateur';
+        dropBtn.title = hasEye ? 'Pipette : capturer une couleur à l\'écran' : 'Pipette non disponible sur ce navigateur';
         dropBtn.addEventListener('click', async () => {
           if (typeof EyeDropper === 'undefined') return;
           try {
