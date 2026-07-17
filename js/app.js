@@ -2304,6 +2304,17 @@
       if (_previewMode) ensureDeckSync({ force: true });
     };
 
+    /* Retire presets du blob data (mémoire client). L'egress réseau n'est coupé
+       que si le serveur strip déjà via RPC fetch_profiles_discover — cf. supabase/profiles-discover-slim.sql. */
+    function slimDiscoverRow(r){
+      if (!r || !r.data || typeof r.data !== 'object') return r;
+      if (!('presets' in r.data) && !('sharePresetIdx' in r.data)) return r;
+      const data = Object.assign({}, r.data);
+      delete data.presets;
+      delete data.sharePresetIdx;
+      return Object.assign({}, r, { data });
+    }
+
     /* Convertit une ligne Supabase (data jsonb OU colonnes legacy) en profil pour buildCard. */
     function ensureRemoteDiscordConn(p, r){
       if (!p) return p;
@@ -2399,7 +2410,9 @@
       } catch (_) { return {}; }
     }
 
-    /* SELECT tous les autres profils (cache 30s pour ne pas spam). */
+    /* SELECT tous les autres profils (cache 30s pour ne pas spam).
+       Préfère RPC fetch_profiles_discover (data sans presets → moins d'egress PostgREST).
+       Fallback SELECT * si la RPC n'est pas encore déployée (SQL Editor). */
     let _profilesInFlight = null;
     async function fetchOtherProfiles(force){
       if (!window.__supa) return _remoteProfiles;
@@ -2409,19 +2422,39 @@
         try {
           const { data: { session } } = await window.__supa.auth.getSession();
           const myId = session && session.user && session.user.id;
-          let q = window.__supa.from('profiles').select('*').order('updated_at', { ascending: false }).limit(200);
-          if (myId) q = q.neq('id', myId);
-          // Timeout 8s : un Supabase lent ne doit jamais bloquer indéfiniment.
-          const result = await Promise.race([q, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]);
-          const { data, error } = result;
-          if (error) { console.warn('[Matefindr] fetch profiles failed', error.message || error); return _remoteProfiles; }
+          const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000));
+          let rows = null;
+          // 1) RPC slim (serveur retire presets avant envoi)
+          try {
+            const rpc = window.__supa.rpc('fetch_profiles_discover', {
+              p_exclude: myId || null,
+              p_limit: 200,
+            });
+            const result = await Promise.race([rpc, timeout]);
+            if (!result.error && Array.isArray(result.data)) {
+              rows = result.data;
+            } else if (result.error) {
+              console.warn('[Matefindr] discover RPC unavailable, fallback SELECT *', result.error.message || result.error);
+            }
+          } catch (e) {
+            console.warn('[Matefindr] discover RPC error, fallback SELECT *', e);
+          }
+          // 2) Fallback legacy (plein egress tant que le SQL n'est pas exécuté)
+          if (!rows) {
+            let q = window.__supa.from('profiles').select('*').order('updated_at', { ascending: false }).limit(200);
+            if (myId) q = q.neq('id', myId);
+            const result = await Promise.race([q, timeout]);
+            const { data, error } = result;
+            if (error) { console.warn('[Matefindr] fetch profiles failed', error.message || error); return _remoteProfiles; }
+            rows = (data || []).map(slimDiscoverRow);
+          }
           // Tri découverte : note moyenne (avec aléatoire) + médias.
-          const uids = (data || []).map(r => r.id).filter(Boolean);
+          const uids = (rows || []).map(r => r.id).filter(Boolean);
           const ratingMap = await fetchProfileRatingMap(uids);
           const mediaCount = (p) => (Array.isArray(p.photos) ? p.photos.length : 0) + (Array.isArray(p.gifs) ? p.gifs.length : 0);
           const DISCOVER_RANDOM = 18;
           const seenUid = new Set();
-          _remoteProfiles = (data || []).map(rowToProfile).filter(Boolean).filter(p => p.disabled !== true)
+          _remoteProfiles = (rows || []).map(rowToProfile).filter(Boolean).filter(p => p.disabled !== true)
             .filter(p => {
               if (!p.uid || seenUid.has(p.uid)) return false;
               seenUid.add(p.uid);
@@ -2516,7 +2549,10 @@
         if (!fresh.length) return [];
         const ids = fresh.map(r => r.liker_id);
         const { data: profs } = await window.__supa.from('profiles').select('*').in('id', ids);
-        return fresh.map(r => { const pr = (profs||[]).find(p => p.id === r.liker_id); return pr ? rowToProfile(pr) : null; }).filter(Boolean);
+        return fresh.map(r => {
+          const pr = (profs||[]).find(p => p.id === r.liker_id);
+          return pr ? rowToProfile(slimDiscoverRow(pr)) : null;
+        }).filter(Boolean);
       } catch(e){ console.warn('[Matefindr] fetch likes error', e); return []; }
     }
     async function refreshLikesReceived(){

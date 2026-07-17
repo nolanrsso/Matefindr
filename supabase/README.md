@@ -64,6 +64,20 @@ Exécuter `storage-profile-media.sql` dans **Supabase Dashboard → SQL Editor**
 
 ---
 
+# Matefindr — Deck découverte allégé (anti-egress PostgREST)
+
+Le swipe charge jusqu'à 200 profils. Avant : `SELECT *` envoyait aussi `data.presets` (jusqu'à 5 snapshots complets) → gros egress JSON inutile pour le deck.
+
+## Setup (une fois)
+
+Exécuter `profiles-discover-slim.sql` dans **Supabase Dashboard → SQL Editor**.
+
+Ça crée la RPC `fetch_profiles_discover` (même lignes `profiles`, mais `data` sans `presets`). Le client (`js/app.js` → `fetchOtherProfiles`) l'appelle en priorité ; si absente, fallback sur l'ancien `SELECT *`.
+
+Le lien perso (`openSharedProfile`) continue de faire un `SELECT *` complet (presets nécessaires pour le preset du lien).
+
+---
+
 # Matefindr — Auto-join du serveur Discord à la création de compte
 
 Quand un utilisateur se connecte avec Discord, le **bot l'ajoute automatiquement au serveur** (puis lui envoie un DM de bienvenue). C'est l'Edge Function `discord-join-dm`.
