@@ -479,6 +479,11 @@
     .brand-word{font-size:20px}
     .header-share-link{margin-left:150px}
     .nav{padding-left:150px}
+    /* Pas la place pour 3 icônes + la pastille profil sur un écran de téléphone :
+       Mon lien et Quêtes disparaissent, seuls Paramètres + Mon profil restent (le
+       principal). Sans ça les icônes débordaient carrément hors de l'écran. */
+    #navShareLink,#navQuests{display:none !important}
+    body[data-auth="in"] .nav{padding-left:0}
     /* Contenu de l'accueil centré verticalement (le titre « Matefindr » au milieu
        de l'écran) plutôt que collé en haut. */
     .hero{padding:14px 18px 28px;justify-content:center;gap:2px}
@@ -2251,7 +2256,16 @@
        quelle que soit la hauteur d'écran. Variables → faciles à ajuster + réutilisées
        par les media queries « petit écran » plus bas. */
     #screen-swipe{--swipe-top:62px;--swipe-bottom:94px;padding:var(--swipe-top) 8px var(--swipe-bottom);justify-content:flex-start}
-    .swipe-actions{position:fixed;left:0;right:0;bottom:18px;justify-content:center;z-index:23}
+    .swipe-actions{position:fixed;left:0;right:0;bottom:18px;justify-content:center;gap:6px;z-index:23}
+    /* Passer/Liker + les FAB messages/likes reçus sont sur la même ligne en bas -- sur
+       un téléphone étroit (≈320-360px) leurs tailles desktop (68px + 60px de FAB de
+       chaque côté) se chevauchaient de ~10px. FAB réduits ici comme déjà fait en
+       paysage ; Passer/Liker/react sont réduits plus bas dans ce fichier (après leurs
+       règles de base .swipe-btn/.swipe-btn--react, sinon perdent la cascade à
+       spécificité égale). */
+    #msgFab,.bf-fab--heart{width:52px;height:52px}
+    #msgFab{left:12px}
+    .bf-fab--heart{right:12px}
     .swipe-card{border-radius:18px}
     .swipe-card .banner{height:auto;aspect-ratio:50/17;max-height:none}
     .swipe-card .avatar-wrap{top:calc(34cqi - 47px);left:14px;width:94px;height:94px;padding:5px}
@@ -2266,7 +2280,11 @@
     .card-age-badge .cab-flag img{width:20px;height:14px}
     .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
 
-    .swipe-card .body{padding:44px 14px 62px;gap:6px}
+    /* La carte est volontairement compacte sur mobile (cf. plus haut) -- un profil
+       bien rempli (bio + activité + vocal + connexions + serveurs) peut dépasser
+       cette hauteur. Plutôt que de couper silencieusement le bas (overflow:hidden
+       hérité), on laisse défiler à l'intérieur de la carte pour tout garder accessible. */
+    .swipe-card .body{padding:44px 14px 62px;gap:6px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
     .swipe-card .name{font-size:23px}
     .swipe-card .name-boost-star{width:14px;height:14px}
     .swipe-card .handle{font-size:11.5px;margin-top:-3px}
@@ -2331,7 +2349,7 @@
     .swipe-shell-wrap{width:min(60vh,278px);height:min(96dvh,364px);max-height:100%}
     .swipe-stage{height:auto;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
     .swipe-card{max-height:100%}
-    .swipe-card .body{overflow:hidden}
+    .swipe-card .body{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
     .swipe-actions{position:fixed;left:0;right:0;bottom:10px;justify-content:center;gap:18px;z-index:23}
     #msgFab{left:12px;bottom:10px;width:52px;height:52px}
     .bf-fab--heart{right:12px;bottom:10px;width:52px;height:52px}
@@ -2543,6 +2561,14 @@
   .swipe-actions.dir-right .swipe-btn--yes::before{opacity:1}
   .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
   .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
+  /* Doit rester APRÈS les règles .swipe-btn/.swipe-btn--react ci-dessus : à
+     spécificité égale, la dernière déclarée gagne la cascade -- les placer plus
+     haut (dans le bloc @media portrait avec le reste des tailles mobiles) perdait
+     silencieusement contre ces règles de base. */
+  @media (max-width:600px){
+    .swipe-btn{width:58px;height:58px;padding:11px}
+    .react-wrap .swipe-btn--react{width:28px;height:28px}
+  }
 
   /* My-status floating control — bottom-LEFT, neutral aesthetic */
   .my-status{

@@ -661,10 +661,12 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
   .tool{width:44px;height:44px;border-radius:13px;flex:0 0 auto}
   .tool svg{width:20px;height:20px}
   .tool-wrap{flex:0 0 auto}
-  /* width:auto explicite : sans ça, .tool{width:44px} ci-dessus (même spécificité,
-     déclaré après) écrase leur largeur auto et comprime/superpose leur libellé
-     ("Retour"/"Aperçu") au lieu de le laisser respirer. */
-  .tool--preview,.tool--back{width:auto;height:52px;min-height:52px;padding:0 10px;gap:5px;flex:0 0 auto}
+  /* "Retour"/"Aperçu" avec leur libellé texte étaient les deux boutons les plus
+     larges (~86-88px) et forçaient tout le reste hors champ -- passés en icône
+     seule comme les autres, toute la barre tient sans avoir besoin de scroller
+     (le scroll horizontal ci-dessus reste en secours sur les tout petits écrans). */
+  .tool--preview,.tool--back{width:44px;height:44px;min-height:44px;padding:0;gap:0;flex:0 0 auto}
+  .tool--preview .tool-word,.tool--back .tool-word{display:none}
   .tool-word{font-size:12px}
   .tool-sep{margin:0 1px;flex:0 0 auto}
 }
