@@ -480,9 +480,9 @@
     .header-share-link{margin-left:150px}
     .nav{padding-left:150px}
     /* Pas la place pour 3 icônes + la pastille profil sur un écran de téléphone :
-       Mon lien et Quêtes disparaissent, seuls Paramètres + Mon profil restent (le
-       principal). Sans ça les icônes débordaient carrément hors de l'écran. */
-    #navShareLink,#navQuests{display:none !important}
+       Mon lien disparaît (Quêtes reste, juste à gauche de Paramètres). Sans ça les
+       icônes débordaient carrément hors de l'écran. */
+    #navShareLink{display:none !important}
     body[data-auth="in"] .nav{padding-left:0}
     /* Contenu de l'accueil centré verticalement (le titre « Matefindr » au milieu
        de l'écran) plutôt que collé en haut. */
