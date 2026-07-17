@@ -20,6 +20,7 @@
     {id:'xbox',name:'Xbox',color:'107C10',icon:'xbox',prefix:'xboxgamertag.com/search/',placeholder:'…'},
     {id:'twitch',name:'Twitch',color:'9146FF',prefix:'twitch.tv/',placeholder:'…'},
     {id:'kick',name:'Kick',color:'53FC18',prefix:'kick.com/',placeholder:'…'},
+    {id:'medal',name:'Medal',color:'F23B49',prefix:'medal.tv/users/',placeholder:'…',favicon:'https://www.google.com/s2/favicons?domain=medal.tv&sz=128'},
     {id:'pinterest',name:'Pinterest',color:'BD081C',prefix:'pinterest.com/',placeholder:'…'},
     {id:'facebook',name:'Facebook',color:'1877F2',prefix:'facebook.com/',placeholder:'…'},
     {id:'threads',name:'Threads',color:'ffffff',prefix:'threads.net/@',placeholder:'…'},
@@ -81,6 +82,7 @@
       const fav=connFaviconForEntry(entry);
       if(fav) return `<img src="${fav}" alt=""${dim} loading="lazy" class="conn-favicon">`;
     }
+    if(app.favicon) return `<img src="${app.favicon}" alt=""${dim} loading="lazy" class="conn-favicon">`;
     if(app.icon && ICON_SVG[app.icon]){
       const style = [uCol ? `color:${uCol}` : '', sizeStyle].filter(Boolean).join(';');
       const cls = uCol ? ' conn-ico-uniform' : '';
