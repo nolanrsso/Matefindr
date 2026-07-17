@@ -441,9 +441,11 @@
         email_sub:    'Entre tes identifiants pour continuer',
         email_label:  'Adresse email',
         pw_label:     'Mot de passe',
+        username_label: 'Pseudo',
         remember:     'Se souvenir de moi',
         forgot:       'Mot de passe oublié ?',
         email_submit: 'Se connecter',
+        cta_email_link: 'Se connecter par email',
         no_account:   'Pas encore de compte ?',
         signup:       "S'inscrire",
         signup_title: 'Créer un compte',
@@ -453,6 +455,9 @@
         sign_in:      'Se connecter',
         msg_signed:   'Connexion réussie. Bienvenue !',
         msg_created:  'Compte créé. Bienvenue sur Matefindr !',
+        msg_confirm_email: "Compte créé, vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.",
+        msg_reset_sent: 'Email envoyé, vérifie ta boîte de réception pour réinitialiser ton mot de passe.',
+        msg_username_required: 'Choisis un pseudo pour continuer.',
         msg_invalid:  'Email ou mot de passe invalide.',
         msg_short_pw: 'Le mot de passe doit faire au moins 6 caractères.',
         my_account:   'Mon profil',
@@ -545,9 +550,11 @@
         email_sub:    'Enter your credentials to continue',
         email_label:  'Email address',
         pw_label:     'Password',
+        username_label: 'Username',
         remember:     'Remember me',
         forgot:       'Forgot password?',
         email_submit: 'Sign in',
+        cta_email_link: 'Sign in by email',
         no_account:   'No account yet?',
         signup:       'Sign up',
         signup_title: 'Create an account',
@@ -557,6 +564,9 @@
         sign_in:      'Sign in',
         msg_signed:   'Signed in. Welcome!',
         msg_created:  'Account created. Welcome to Matefindr!',
+        msg_confirm_email: 'Account created, check your inbox to confirm your email before signing in.',
+        msg_reset_sent: 'Email sent, check your inbox to reset your password.',
+        msg_username_required: 'Choose a username to continue.',
         msg_invalid:  'Invalid email or password.',
         msg_short_pw: 'Password must be at least 6 characters.',
         my_account:   'My profile',
@@ -765,15 +775,18 @@
     });
 
     // ----- Email view -----
-    const card        = document.getElementById('authCard');
-    const backBtn     = document.getElementById('authBack');
-    const emailBtn    = document.getElementById('authEmail');
-    const emailForm   = document.getElementById('emailForm');
-    const emailInput  = document.getElementById('emailInput');
-    const pwInput     = document.getElementById('pwInput');
-    const emailMsg    = document.getElementById('emailMsg');
-    const emailSwitch = document.getElementById('emailSwitch');
-    const emailForgot = document.getElementById('emailForgot');
+    const card         = document.getElementById('authCard');
+    const backBtn      = document.getElementById('authBack');
+    const emailBtn     = document.getElementById('authEmail');
+    const emailForm    = document.getElementById('emailForm');
+    const emailInput   = document.getElementById('emailInput');
+    const pwInput      = document.getElementById('pwInput');
+    const usernameField= document.getElementById('usernameField');
+    const usernameInput= document.getElementById('usernameInput');
+    const emailMsg     = document.getElementById('emailMsg');
+    const emailSwitch  = document.getElementById('emailSwitch');
+    const emailForgot  = document.getElementById('emailForgot');
+    const ctaEmailLink = document.getElementById('ctaEmailLink');
 
     let mode = 'signin'; // 'signin' | 'signup'
 
@@ -802,19 +815,16 @@
       card2.querySelector('.auth-footer span').textContent         = t(isSignup ? 'has_account'  : 'no_account');
       emailSwitch.textContent                                       = t(isSignup ? 'sign_in'      : 'signup');
       pwInput.autocomplete = isSignup ? 'new-password' : 'current-password';
+      // Le pseudo n'a de sens qu'à l'inscription (les comptes email n'ont pas
+      // d'identité Discord pour fournir un nom automatiquement).
+      if (usernameField) usernameField.style.display = isSignup ? '' : 'none';
       emailMsg.setAttribute('data-show', 'false');
     }
 
     if (emailBtn) emailBtn.addEventListener('click', () => setView('email'));
+    if (ctaEmailLink) ctaEmailLink.addEventListener('click', (e) => { e.preventDefault(); open(); setView('email'); });
     backBtn.addEventListener('click',  () => { setView('providers'); setMode('signin'); });
     emailSwitch.addEventListener('click', (e) => { e.preventDefault(); setMode(mode === 'signin' ? 'signup' : 'signin'); });
-
-    emailForgot.addEventListener('click', (e) => {
-      e.preventDefault();
-      const v = (emailInput.value || '').trim();
-      if (!v) { emailInput.focus(); emailInput.classList.add('invalid'); return; }
-      showMsg(t('msg_signed').replace(/[.!]$/, '') + ', ' + (document.documentElement.lang === 'en' ? 'reset link sent to ' : 'lien envoyé à ') + v, true);
-    });
 
     function showMsg(text, ok){
       emailMsg.textContent = text;
@@ -824,26 +834,68 @@
       emailMsg.style.color = ok ? '#9CF0BD' : '#FFB1D2';
     }
 
-    emailForm.addEventListener('submit', (e) => {
+    emailForgot.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const v = (emailInput.value || '').trim();
+      const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      if (!okEmail) { emailInput.focus(); emailInput.classList.add('invalid'); showMsg(t('msg_invalid'), false); return; }
+      if (!window.__supa) { showMsg(t('msg_invalid'), false); return; }
+      try {
+        const { error } = await window.__supa.auth.resetPasswordForEmail(v, { redirectTo: location.origin + location.pathname });
+        if (error) { showMsg(error.message || t('msg_invalid'), false); return; }
+        showMsg(t('msg_reset_sent'), true);
+      } catch(err) { showMsg((err && err.message) || t('msg_invalid'), false); }
+    });
+
+    emailForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
       const pw    = pwInput.value;
+      const username = (usernameInput && usernameInput.value.trim()) || '';
+      const isSignup = mode === 'signup';
       const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       emailInput.classList.toggle('invalid', !okEmail);
       pwInput.classList.toggle('invalid', pw.length < 6);
+      if (isSignup && usernameInput) usernameInput.classList.toggle('invalid', username.length < 2);
 
       if (!okEmail) { showMsg(t('msg_invalid'), false); return; }
       if (pw.length < 6) { showMsg(t('msg_short_pw'), false); return; }
+      if (isSignup && username.length < 2) { showMsg(t('msg_username_required'), false); return; }
+      if (!window.__supa) { showMsg(t('msg_invalid'), false); return; }
 
-      // Demo: persist a fake session (no backend)
+      const submitBtn = card.querySelector('.auth-submit');
+      submitBtn.disabled = true;
       try {
-        localStorage.setItem('matefindr_user', JSON.stringify({ email, mode, ts: Date.now() }));
-      } catch(_){}
-      showMsg(mode === 'signup' ? t('msg_created') : t('msg_signed'), true);
-      setTimeout(() => {
-        close(); setView('providers'); setMode('signin'); emailForm.reset();
-        window.__matefindr && window.__matefindr.onLogin({ email, displayName: email.split('@')[0], mode });
-      }, 1100);
+        if (isSignup) {
+          const { data, error } = await window.__supa.auth.signUp({
+            email, password: pw,
+            options: { data: { username } },
+          });
+          if (error) { showMsg(error.message || t('msg_invalid'), false); submitBtn.disabled = false; return; }
+          if (!data.session) {
+            // Confirmation par email activée côté Supabase : pas de session tout de
+            // suite, il faut d'abord cliquer le lien reçu par mail.
+            showMsg(t('msg_confirm_email'), true);
+            submitBtn.disabled = false;
+            return;
+          }
+          showMsg(t('msg_created'), true);
+        } else {
+          const { error } = await window.__supa.auth.signInWithPassword({ email, password: pw });
+          if (error) { showMsg(t('msg_invalid'), false); submitBtn.disabled = false; return; }
+          showMsg(t('msg_signed'), true);
+        }
+        // La vraie session Supabase déclenche onAuthStateChange (app.js), qui
+        // appelle lui-même window.__matefindr.onLogin() -- pas besoin de le
+        // rappeler ici (et surtout pas avec un faux objet utilisateur).
+        setTimeout(() => {
+          close(); setView('providers'); setMode('signin'); emailForm.reset();
+          submitBtn.disabled = false;
+        }, 900);
+      } catch(err) {
+        showMsg((err && err.message) || t('msg_invalid'), false);
+        submitBtn.disabled = false;
+      }
     });
 
     // Reset to providers view whenever modal reopens

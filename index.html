@@ -289,6 +289,10 @@
         <h2 data-i18n="email_title">Connexion par email</h2>
         <p class="auth-sub" data-i18n="email_sub">Entre tes identifiants pour continuer</p>
         <form class="auth-form" id="emailForm" novalidate>
+          <div class="auth-field" id="usernameField" style="display:none">
+            <label for="usernameInput" data-i18n="username_label">Pseudo</label>
+            <input class="auth-input" id="usernameInput" type="text" autocomplete="username" maxlength="32" placeholder="Ton pseudo" />
+          </div>
           <div class="auth-field">
             <label for="emailInput" data-i18n="email_label">Adresse email</label>
             <input class="auth-input" id="emailInput" type="email" autocomplete="email" required placeholder="toi@exemple.com" />
@@ -346,6 +350,8 @@
         <span id="joinLabel" data-i18n="cta">Se connecter avec Discord</span>
       </a>
     </div>
+
+    <button type="button" class="cta-email-link" id="ctaEmailLink" data-i18n="cta_email_link">Se connecter par email</button>
 
     <div class="cta-meta">
       <div class="stack" aria-hidden="true">
@@ -457,7 +463,7 @@
           <option value="OTHER" data-flag="🏳️">🏳️ Autre</option>
         </select>
 
-        <p style="margin:0 0 14px;font-size:12.5px;color:#b9bbbe;text-align:center">
+        <p style="margin:0 0 14px;font-size:12.5px;color:#b9bbbe;text-align:center" id="onbNotifChannel">
           🔔 On t'enverra toutes les notifications de Matefindr (likes, matchs, messages) en message privé sur Discord.
         </p>
         <label class="onb-terms" id="onbTermsRow">

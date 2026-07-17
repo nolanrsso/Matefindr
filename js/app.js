@@ -510,7 +510,14 @@
         // compte (fuite de profil entre comptes : bannière/couleurs/orbes/bio de
         // l'ancien compte qui apparaissent chez le nouveau).
         const rawPrev = state.user || {};
-        const sameAccount = !rawPrev.discordId || !user.discordId || rawPrev.discordId === user.discordId;
+        // uid (identifiant Supabase stable, posé pour tous les modes de connexion) est
+        // le comparateur fiable -- discordId seul ne suffit plus depuis les comptes
+        // email : il est TOUJOURS vide pour ce mode, donc "!rawPrev.discordId ||
+        // !user.discordId" valait systématiquement vrai et aurait fait hériter le
+        // profil d'un autre compte email sur le même navigateur.
+        const sameAccount = (rawPrev.uid && user.uid)
+          ? rawPrev.uid === user.uid
+          : (!rawPrev.discordId || !user.discordId || rawPrev.discordId === user.discordId);
         if (!sameAccount) { state.profile = null; }
         const prev = sameAccount ? rawPrev : {};
         // Serveurs Discord : ne jamais écraser une liste connue par [] (token OAuth absent/expiré).
@@ -528,6 +535,7 @@
         const hadProfile = sameAccount && !!state.profile;
         if (hadProfile) {
           state.user = Object.assign({}, prev, {
+            uid: user.uid || prev.uid,
             discordId: user.discordId || prev.discordId,
             discordTag: user.discordTag || prev.discordTag,
             discordAvatarUrl: user.discordAvatarUrl || prev.discordAvatarUrl,
@@ -951,7 +959,22 @@
       const av = $onb('onbWelcomeAvatar');
       if (av) {
         if (avatarUrl) { av.classList.add('has-img'); av.innerHTML = '<img src="'+avatarUrl+'" alt="">'; }
+        else if (name && name !== 'toi' && name.trim()) {
+          // Pas de photo (compte email, pas de PDP Discord) : 1re lettre du pseudo
+          // donné à l'inscription, comme partout ailleurs sur le site.
+          av.classList.remove('has-img');
+          av.textContent = name.trim().charAt(0).toUpperCase();
+        }
         else { av.classList.remove('has-img'); av.textContent = '🎉'; }
+      }
+      // Canal de notifications annoncé : MP Discord pour un compte Discord, email
+      // pour un compte créé par email (pas d'identité Discord à qui envoyer un MP).
+      const notifEl = $onb('onbNotifChannel');
+      if (notifEl) {
+        const isEmail = (state.user && state.user.mode) === 'email';
+        notifEl.innerHTML = isEmail
+          ? "🔔 On t'enverra toutes les notifications de Matefindr (likes, matchs, messages) par email."
+          : "🔔 On t'enverra toutes les notifications de Matefindr (likes, matchs, messages) en message privé sur Discord.";
       }
       // Préremplit pseudo (depuis Discord) + bio (étape perso)
       try {

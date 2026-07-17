@@ -116,6 +116,31 @@
     if (!session || !session.user) return null;
     const u = session.user;
     const m = u.user_metadata || {};
+    const provider = u.app_metadata && u.app_metadata.provider;
+
+    // Compte email/mot de passe : pas d'identité Discord. Le pseudo choisi à
+    // l'inscription (options.data.username) sert de displayName ; discordId reste
+    // null exprès -- c'est ce qui empêche ensureDiscordConnection() d'ajouter le
+    // badge Discord sur la carte d'un compte qui n'en a pas.
+    if (provider === 'email') {
+      return {
+        uid: u.id,
+        displayName: m.username || (u.email || '').split('@')[0] || 'Toi',
+        discordTag: null,
+        discordId: null,
+        email: u.email || null,
+        avatarUrl: null,
+        discordAvatarUrl: null,
+        bannerUrl: null,
+        decorationUrl: null,
+        publicFlags: 0,
+        premiumType: 0,
+        accentColor: null,
+        guilds: [],
+        mode: 'email',
+      };
+    }
+
     let id = m.provider_id || m.sub || u.id;
 
     // Defaults from Supabase metadata (always present)
@@ -168,6 +193,7 @@
     }
 
     return {
+      uid: u.id,
       displayName,
       discordTag,
       discordId:   id,
