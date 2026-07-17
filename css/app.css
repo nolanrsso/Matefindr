@@ -749,18 +749,9 @@
   .mf-vol-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
   .mf-vol-range::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:none;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer}
   @media(max-width:520px){
-    .mf-vol{--mf-vol-btn-size:46px;--mf-vol-bar:61px;bottom:10px;border-radius:16px}
-    body[data-auth="in"][data-screen="swipe"]:not([data-preview="true"]) .mf-vol{
-      left:calc(12px + 52px + 8px);
-      bottom:calc(10px + (52px - var(--mf-vol-btn-size)) / 2);
-    }
-    body[data-preview="true"] .mf-vol,
-    body[data-shared="true"] .mf-vol{
-      left:10px;
-      bottom:calc(10px + (52px - var(--mf-vol-btn-size)) / 2);
-    }
-    .mf-vol-btn{border-radius:15px}
-    .mf-vol-btn svg{width:22px;height:22px}
+    /* Bouton son retiré sur téléphone : encombrait le bas de l'écran à côté des
+       autres contrôles flottants (messages, likes reçus...). */
+    .mf-vol{display:none !important}
   }
 
   /* Messages panel — slide-out drawer */
