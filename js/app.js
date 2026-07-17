@@ -2151,7 +2151,12 @@
         document.addEventListener('pointerup', onUp);
       });
     }
-    initRatingSlider(document.getElementById('reactSlider'), currentReactTarget, () => {
+    // Cible figée au moment où le popup de note s'ouvre -- pas re-dérivée en direct au
+    // relâchement du slider. Sans ça, si le deck avance (nouveau match, refresh du pool...)
+    // PENDANT que le popup est ouvert, currentReactTarget() renvoie déjà le profil suivant
+    // et la note glissée pour A se retrouvait envoyée sur le profil B.
+    let _reactPopupTarget = null;
+    initRatingSlider(document.getElementById('reactSlider'), () => _reactPopupTarget, () => {
       document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
     });
     initRatingSlider(document.getElementById('sharedSlider'), () => _sharedProfile);
@@ -2162,11 +2167,14 @@
       const opening = pop.getAttribute('data-open') !== 'true';
       pop.setAttribute('data-open', opening ? 'true' : 'false');
       if (opening) {
-        const target = currentReactTarget();
+        _reactPopupTarget = currentReactTarget();
+        const target = _reactPopupTarget;
         if (target && target.uid) {
           setSliderRestState(document.getElementById('reactSlider'), (_reactionsCache[target.uid] || {}).mine ?? null);
           if (!_reactionsCache[target.uid]) loadReactions(target.uid);
         }
+      } else {
+        _reactPopupTarget = null;
       }
     });
     document.addEventListener('click', (e) => {
@@ -2645,6 +2653,10 @@
 
       wrap.innerHTML = '';
       document.body.removeAttribute('data-swipe-empty');
+      // Le popup de note est lié au profil qui était affiché -- s'il reste ouvert
+      // pendant qu'on passe au suivant, il montre un état périmé (et la cible figée
+      // à l'ouverture, cf. _reactPopupTarget, ne correspond plus à la carte visible).
+      document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
       if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
 
       if (_sharedProfile && !_previewMode) {
@@ -6314,13 +6326,26 @@
         document.body.removeAttribute('data-bg');
         const isVideo = /\.(mp4|webm|ogg|mov)(\?|$)/i.test(bg);
         if (layer._src !== bg) {
-          layer._src = bg; layer.innerHTML = '';
+          layer._src = bg;
+          // Repasse par le fond de base pendant le chargement du nouveau fond (masqué
+          // tout de suite) au lieu de laisser l'ancien affiché jusqu'à ce que le nouveau
+          // soit prêt -- sinon le navigateur garde l'ancienne image à l'écran et le
+          // changement de profil donne l'impression que les deux fonds se superposent.
+          layer.classList.remove('on');
+          layer.innerHTML = '';
           if (isVideo) {
-            const v = document.createElement('video'); v.src = bg; v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true;
+            const v = document.createElement('video'); v.muted = true; v.loop = true; v.playsInline = true;
+            v.addEventListener('loadeddata', () => { if (layer._src === bg) { layer.classList.add('on'); positionCustomBgLayer(); } }, { once:true });
+            v.src = bg; v.autoplay = true;
             layer.appendChild(v);
           } else {
-            const im = document.createElement('img'); im.src = bg; layer.appendChild(im);
+            const im = document.createElement('img');
+            im.addEventListener('load', () => { if (layer._src === bg) { layer.classList.add('on'); positionCustomBgLayer(); } }, { once:true });
+            im.src = bg;
+            layer.appendChild(im);
           }
+        } else {
+          layer.classList.add('on');
         }
         // Recadrage (posX/posY/scale, choisi dans l'éditeur) — pas de crop pour une vidéo.
         if (!isVideo) {
@@ -6334,8 +6359,7 @@
             img.style.transform = 'scale(' + scale + ')';
           }
         }
-        layer.classList.add('on');
-        positionCustomBgLayer();
+        if (layer.classList.contains('on')) positionCustomBgLayer();
         if (picker) picker.querySelectorAll('.bg-tile').forEach(t => t.classList.remove('is-active'));
         return;
       }
@@ -8298,6 +8322,7 @@
         // Mot de confirmation attendu pour la suppression — dépend de la langue courante
         // (SUPPRIMER en FR, DELETE en EN), pas figé en dur.
         const DELETE_WORD = lang === 'EN' ? 'DELETE' : 'SUPPRIMER';
+        const fmtBillDate = (d) => { try { return new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }); } catch(_){ return '—'; } };
 
         const displayName = u.displayName || u.email || 'Matefindr user';
         const tagLine = u.discordTag ? '@' + u.discordTag : (u.email || '—');
@@ -8323,6 +8348,7 @@
               <button type="button" class="on" data-sec="compte">Compte</button>
               <button type="button" data-sec="notifs">Notifications</button>
               <button type="button" data-sec="abo">Abonnement</button>
+              <button type="button" data-sec="facturation">Facturation</button>
               <button type="button" data-sec="legal">Confidentialité &amp; légal</button>
               <button type="button" data-sec="prefs">Préférences</button>
             </nav>
@@ -8416,9 +8442,39 @@
               </section>
 
               <section class="set-panel" data-sec="abo">
-                <h2>Abonnement &amp; facturation</h2>
+                <h2>Abonnement</h2>
                 <p class="set-panel-sub">Gère ton abonnement Matefindr Boost : formule, échéance et résiliation.</p>
                 <div class="set-card"><div class="acc-billing" id="accBilling"></div></div>
+              </section>
+
+              <section class="set-panel" data-sec="facturation">
+                <h2>Facturation</h2>
+                <p class="set-panel-sub">Ton moyen de paiement et l'historique de tes achats Matefindr Boost.</p>
+                <div class="set-card">
+                  <h3>Mode de paiement</h3>
+                  ${u.boost ? `
+                    <div class="bill-pm-row">
+                      <span class="bill-pm-ico">💳</span>
+                      <div class="bill-pm-txt"><b>Carte enregistrée à l'achat</b><small>Utilisée pour ton abonnement Boost</small></div>
+                      <span class="bill-pm-badge">Par défaut</span>
+                    </div>
+                    <a href="checkout.html?plan=${u.boostPlan==='lifetime'?'lifetime':'monthly'}" class="acc-btn acc-btn--ghost" style="width:100%;justify-content:center;margin-top:12px">Modifier</a>
+                  ` : `
+                    <p class="set-card-hint">Aucun mode de paiement enregistré pour l'instant.</p>
+                    <a href="checkout.html?plan=monthly" class="acc-btn acc-btn--primary" style="width:100%;justify-content:center">Ajouter un mode de paiement</a>
+                  `}
+                </div>
+                <div class="set-card">
+                  <h3>Historique des transactions</h3>
+                  ${u.boostSince ? `
+                    <div class="bill-tx-head"><span>Date</span><span>Description</span><span>Montant</span></div>
+                    <div class="bill-tx-row">
+                      <span>${fmtBillDate(u.boostSince)}</span>
+                      <span>Matefindr Boost · ${u.boostPlan==='lifetime'?'À vie':'Mensuel'}</span>
+                      <span>${u.boostPromo ? 'Offert' : (u.boostPlan==='lifetime' ? '14,99€' : '3,79€')}</span>
+                    </div>
+                  ` : `<p class="set-card-hint" style="margin:0">Aucune transaction pour le moment.</p>`}
+                </div>
               </section>
 
               <section class="set-panel" data-sec="legal">
