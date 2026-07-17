@@ -2221,7 +2221,7 @@
        height bornée à la fois par 52dvh ET par l'espace réellement disponible
        (max-height:100% de la scène) → la carte RÉTRÉCIT sur les petits écrans
        au lieu de déborder. dvh gère la barre d'adresse mobile. */
-    .swipe-shell-wrap{width:min(71vw,257px);height:min(60dvh,428px);max-height:100%}
+    .swipe-shell-wrap{width:min(89vw,321px);height:min(75dvh,535px);max-height:100%}
     /* La scène remplit la bande entre la barre de son (haut) et les boutons (bas).
        display:flex (au lieu de grid) → le max-height:100% de la carte se résout bien
        contre la hauteur RÉELLE de la scène (une piste grid auto grandissait au contenu
@@ -2276,6 +2276,21 @@
        cette hauteur. Plutôt que de couper silencieusement le bas (overflow:hidden
        hérité), on laisse défiler à l'intérieur de la carte pour tout garder accessible. */
     .swipe-card .body{padding:44px 14px 62px;gap:6px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+    .swipe-card.has-card-connections .body{padding-bottom:62px}
+    /* Vues/inscription + note : sur téléphone, flottaient par-dessus la carte (fixes,
+       hors du scroll) -- déplacées dans le flux du .body (voir buildCard) pour finir
+       tout en bas du profil, scrollables comme le reste. Seuls banner/avatar/nom
+       restent hors de .body donc visuellement fixes pendant le scroll. */
+    .swipe-card .card-body-stats{
+      position:static;display:flex;align-items:flex-end;justify-content:space-between;
+      gap:10px;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
+    }
+    .swipe-card .card-body-stats .card-bottom-left{
+      position:static;left:auto;bottom:auto;max-width:none;pointer-events:auto;
+    }
+    .swipe-card .card-body-stats .card-reactions{
+      position:static;right:auto;bottom:auto;pointer-events:auto;
+    }
     .swipe-card .name{font-size:23px}
     .swipe-card .name-boost-star{width:14px;height:14px}
     .swipe-card .handle{font-size:11.5px;margin-top:-3px}
@@ -2341,6 +2356,13 @@
     .swipe-stage{height:auto;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
     .swipe-card{max-height:100%}
     .swipe-card .body{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+    .swipe-card.has-card-connections .body{padding-bottom:62px}
+    .swipe-card .card-body-stats{
+      position:static;display:flex;align-items:flex-end;justify-content:space-between;
+      gap:10px;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
+    }
+    .swipe-card .card-body-stats .card-bottom-left{position:static;left:auto;bottom:auto;max-width:none;pointer-events:auto}
+    .swipe-card .card-body-stats .card-reactions{position:static;right:auto;bottom:auto;pointer-events:auto}
     .swipe-actions{position:fixed;left:0;right:0;bottom:10px;justify-content:center;gap:18px;z-index:23}
     #msgFab{left:12px;bottom:10px;width:52px;height:52px}
     .bf-fab--heart{right:12px;bottom:10px;width:52px;height:52px}

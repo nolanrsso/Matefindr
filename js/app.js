@@ -3341,12 +3341,11 @@
           ${flagImg ? `<span class="cab-flag" title="${countryCode || ''}">${flagImg}</span>` : ''}
           ${gSym ? `<span class="cab-gender" data-g="${p.gender || ''}">${gSym}</span>` : ''}
         </div>` : '';
+      const reactionHtml = reactionBadgeHtml(p);
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
         <div class="badge-stamp nope">NOPE</div>
         ${p.isMe ? '<span class="me-chip">Moi</span>' : ''}
-        ${bottomLeftHtml}
-        ${reactionBadgeHtml(p)}
         <div class="banner"${bannerStyle ? ` style="${bannerStyle}"` : ''}></div>
         ${ageBadgeHtml}
         ${guildsHtml}
@@ -3383,6 +3382,7 @@
           ${connectionsBlock ? `<div class="card-discord-conn-stack">${connectionsBlock}</div>` : ''}
           ${hasDiscordFloor ? '' : cardDiscordLastSeenHtml(p)}
           ${socialHtml}
+          ${(bottomLeftHtml || reactionHtml) ? `<div class="card-body-stats">${bottomLeftHtml}${reactionHtml}</div>` : ''}
         </div>
       `;
       // Réactions : chargées à la demande (pas encore en cache) puis mises à jour en
