@@ -1492,11 +1492,11 @@ html.perf-lite *{
          Paysage (elle est déjà large, comme un écran d'ordi). -->
     <div class="canvas-modes-spacer" aria-hidden="true"></div>
     <div class="canvas-modes" role="group" aria-label="Écran à éditer">
-      <button class="canvas-mode-btn active" data-mode="desktop" type="button" title="Paysage (écran d'ordinateur)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="cm-word">Paysage</span>
+      <button class="canvas-mode-btn active" data-mode="desktop" type="button" title="Ordinateur">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="cm-word">Ordinateur</span>
       </button>
-      <button class="canvas-mode-btn" data-mode="portrait" type="button" title="Portrait (téléphone)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span class="cm-word">Portrait</span>
+      <button class="canvas-mode-btn" data-mode="portrait" type="button" title="Téléphone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg><span class="cm-word">Téléphone</span>
       </button>
     </div>
     <div class="card-frame">
@@ -2167,8 +2167,11 @@ document.querySelectorAll('.tool[data-tool]').forEach(btn=>{btn.addEventListener
   if(tool==='color'){ if(document.body.classList.contains('color-open')){closeColorPanel();} else {closeSheet();openColorPanel();} return; }
   closeColorPanel(); closeOrbStylePanel();
   if(activeTool===tool){closeSheet();return;}activeTool=tool;document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet(tool);const sb=$('sheetBackdrop');if(sb)sb.hidden=false;$('sheet').classList.add('open');});});
-// Sélecteur d'orientation → bascule le mode d'édition (Bureau / Portrait / Paysage).
-document.querySelectorAll('.canvas-mode-btn').forEach(btn=>{btn.addEventListener('click',()=>setCanvasMode(btn.dataset.mode));});
+// Sélecteur d'écran → bascule le mode d'édition (Ordinateur / Téléphone). Un choix
+// manuel prime définitivement sur l'auto-détection de largeur d'écran (voir
+// syncCanvasModeToRealDevice) -- sinon un simple resize de fenêtre >600px annulait
+// silencieusement le mode Téléphone choisi à la main.
+document.querySelectorAll('.canvas-mode-btn').forEach(btn=>{btn.addEventListener('click',()=>{ userPickedCanvasMode=true; setCanvasMode(btn.dataset.mode); });});
 function closeSheet(){activeTool=null;$('sheet').classList.remove('open');const sb=$('sheetBackdrop');if(sb)sb.hidden=true;document.querySelectorAll('.tool').forEach(b=>b.classList.remove('active'));stopAudition();}
 function openBubblesSheet(){if(isOrbKindSoon(orbKind))orbKind='music';if(typeof closeColorPanel==='function')closeColorPanel();if(typeof closeOrbStylePanel==='function')closeOrbStylePanel();const btn=document.querySelector('.tool[data-tool="bubbles"]');activeTool='bubbles';document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('active',b===btn));renderSheet('bubbles');const sb=$('sheetBackdrop');if(sb)sb.hidden=false;$('sheet').classList.add('open');}
 const sheetHeader=(t,badge='',rightExtra='')=>`<h3><span class="sh-title">${t}${badge}</span>${rightExtra}<button class="close" data-close>✕</button></h3>`;
@@ -2841,11 +2844,12 @@ function setCanvasMode(mode){
   renderOrbs(); renderGifs(); renderPhotos();
   if(typeof positionEditorBg==='function') positionEditorBg();
   persist();
-  const lbl={desktop:'Paysage',portrait:'Portrait'}[mode];
+  const lbl={desktop:'Ordinateur',portrait:'Téléphone'}[mode];
   toast('Mode '+lbl+' : dispose ton profil pour cette taille');
 }
+let userPickedCanvasMode=false;
 // Applique la classe de reframe + l'état actif du sélecteur (sans re-render).
-// NB : ne repositionne PAS le sélecteur Paysage/Portrait (positionCanvasModes) —
+// NB : ne repositionne PAS le sélecteur Ordinateur/Téléphone (positionCanvasModes) —
 // sa position est fixée une fois au chargement et ne doit plus bouger quand on
 // bascule de mode, même si la carte change de hauteur.
 function applyCanvasMode(){
@@ -2858,9 +2862,13 @@ function applyCanvasMode(){
    téléphone étroit affichait quand même la carte 'desktop' (92vw,380px) — taille
    différente du vrai swipe (62vw,240px) → toutes les bulles/GIFs/photos
    (positionnées en % de la carte) atterrissaient ailleurs qu'en aperçu réel.
-   Symétrique (bascule aussi vers 'desktop' si la fenêtre se ré-élargit) : ne casse
-   pas le bouton manuel Portrait/Paysage, qui ne déclenche pas d'évènement resize. */
+   Dès que l'utilisateur clique le bouton Ordinateur/Téléphone à la main
+   (userPickedCanvasMode), son choix est définitif pour la session -- avant ce fix,
+   un simple resize de fenêtre (ex: agrandir la fenêtre >600px après avoir choisi
+   Téléphone) annulait silencieusement le mode manuel, ce qui rendait le bouton
+   inutilisable sur un vrai écran d'ordinateur. */
 function syncCanvasModeToRealDevice(){
+  if(userPickedCanvasMode) return;
   try{
     const want = window.matchMedia('(max-width:600px)').matches ? 'portrait' : 'desktop';
     if(S.canvasMode!==want) setCanvasMode(want);
