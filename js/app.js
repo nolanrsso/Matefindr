@@ -8546,7 +8546,11 @@
             // Tout en bas : la dernière section ne peut pas forcément atteindre le
             // haut du cadre (pas assez de contenu après elle pour la faire remonter),
             // donc la seuiller comme les autres la laisserait jamais "active".
-            const nearBottom = (setContent.scrollTop + setContent.clientHeight) >= (setContent.scrollHeight - 4);
+            // scrollTop>0 est requis : à l'ouverture (scrollTop toujours 0), tant que
+            // le contenu injecté n'a pas fini de se mettre en page, scrollHeight peut
+            // être sous-évalué et déclencher "near bottom" à tort -> Préférences (la
+            // dernière section) s'affichait active au lieu de Compte au chargement.
+            const nearBottom = setContent.scrollTop > 0 && (setContent.scrollTop + setContent.clientHeight) >= (setContent.scrollHeight - 4);
             let current = panelList[0];
             if (nearBottom) {
               current = panelList[panelList.length - 1];
