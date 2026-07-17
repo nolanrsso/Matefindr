@@ -3008,7 +3008,7 @@ $('fileBg').addEventListener('change',e=>{
 // FIXE de la taille de LA CARTE, centré dessus, pas plein viewport -> il scale AVEC la carte
 // (donc avec bulles/GIFs/photos, déjà en % de la carte) comme un seul bloc, à toute
 // résolution/ratio de fenêtre (bandes vides sur les côtés plutôt qu'un recadrage différent).
-const BG_SCALE_W=5.5, BG_SCALE_H=2.0;
+const BG_SCALE_W=5.0, BG_SCALE_H=1.6;
 function positionEditorBg(){
   const layer=$('bgLayer');
   if(!layer||!layer.querySelector('img, video'))return; // preset (dégradé) : reste plein viewport (CSS inset:0)

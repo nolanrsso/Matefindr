@@ -6299,7 +6299,11 @@
     // % de la carte) : fond + carte + bulles + GIFs/photos bougent ENSEMBLE, comme un seul
     // bloc, à n'importe quelle résolution/ratio de fenêtre — bandes vides sur les côtés plutôt
     // qu'un fond qui se recadre différemment tout seul (object-fit:cover plein viewport).
-    const BG_SCALE_W = 5.5, BG_SCALE_H = 2.0;
+    // Valeurs volontairement modestes : à 5.5×2.0 (précédent), la box dépassait ~1.7× la
+    // taille d'un viewport courant -> avec object-fit:cover, seule la portion centrale
+    // (~55-60% de l'image importée, mesuré à 1280×800) restait visible = zoom trop fort,
+    // même sur une image déjà cadrée en 16:9 par l'utilisateur.
+    const BG_SCALE_W = 5.0, BG_SCALE_H = 1.6;
     function positionCustomBgLayer(){
       const layer = document.getElementById('customBgLayer');
       if (!layer || !layer.classList.contains('on')) return;
