@@ -179,6 +179,7 @@
     <label class="chk"><input type="checkbox" id="onlyBanned" /> Bannis seulement</label>
     <label class="chk"><input type="checkbox" id="onlyDisabled" /> Désactivés seulement</label>
     <button class="tbtn" id="migrateBtn" style="display:none">🧹 Migrer images → Storage</button>
+    <button class="tbtn" id="cleanupOrphanMediaBtn" style="display:none" title="Supprime UNIQUEMENT les fichiers Storage orphelins (pas référencés par le profil live NI aucun preset). Ne touche pas aux profils/presets.">🗑️ Orphelins Storage</button>
     <button class="tbtn" id="questsBackfillBtn" style="display:none" title="Recalcule quêtes, pièces et titres Esthétisme pour tous les profils">🎯 Sync quêtes</button>
     <button class="tbtn" id="discordienBackfillBtn" style="display:none" title="Donne le titre Discordien / Discordians à tous les comptes">💬 Titre Discordien</button>
     <button class="tbtn" id="clearSeenBtn">✓ Tout marquer comme vu</button>
@@ -380,6 +381,7 @@
       }
     }catch(_){}
     $('migrateBtn').style.display = FULL ? '' : 'none';
+    $('cleanupOrphanMediaBtn').style.display = FULL ? '' : 'none';
     $('questsBackfillBtn').style.display = FULL ? '' : 'none';
     $('discordienBackfillBtn').style.display = FULL ? '' : 'none';
     renderTable();
@@ -816,6 +818,188 @@
     renderTable();
   }
   $('migrateBtn').addEventListener('click', migrateImages);
+
+  /* ---- Nettoyage Storage orphelin (profil live + TOUS les presets = KEEP) ----
+     Ne modifie JAMAIS profiles / data / presets. Supprime seulement les fichiers
+     dans les buckets `media` et `profile-media` qui ne sont référencés nulle part
+     dans le profil affiché sur le site NI dans aucun snapshot preset cloud. */
+  const STORAGE_BUCKETS = ['media', 'profile-media'];
+  function addKeepUrl(set, url){
+    if (!url || typeof url !== 'string') return;
+    const u = url.trim();
+    if (!u || u.startsWith('data:') || u.startsWith('blob:')) return;
+    if (!/\/storage\/v1\/object\/public\/(media|profile-media)\//i.test(u)) return;
+    set.add(u.split('?')[0]);
+  }
+  function addKeepFromOrb(set, orb){
+    if (!orb || typeof orb !== 'object') return;
+    addKeepUrl(set, orb.cover);
+    addKeepUrl(set, orb.previewUrl);
+    addKeepUrl(set, orb.clipUrl);
+  }
+  function addKeepFromGif(set, g){
+    if (!g || typeof g !== 'object') return;
+    addKeepUrl(set, g.full || g.preview || g.url);
+    addKeepUrl(set, g.url);
+    addKeepUrl(set, g.preview);
+    addKeepUrl(set, g.full);
+  }
+  function addKeepFromPhoto(set, p){
+    if (!p || typeof p !== 'object') return;
+    addKeepUrl(set, p.url);
+  }
+  /** Collecte toutes les URLs Storage d'un snapshot preset éditeur. */
+  function collectKeepFromPreset(set, snap){
+    if (!snap || typeof snap !== 'object') return;
+    if (snap.avatar && snap.avatar.url) addKeepUrl(set, snap.avatar.url);
+    if (snap.banner && snap.banner.url) addKeepUrl(set, snap.banner.url);
+    if (snap.voice && snap.voice.url) addKeepUrl(set, snap.voice.url);
+    if (snap.music && snap.music.url) addKeepUrl(set, snap.music.url);
+    if (snap.bg && snap.bg.type === 'custom' && snap.bg.value) addKeepUrl(set, snap.bg.value);
+    else if (typeof snap.bg === 'string') addKeepUrl(set, snap.bg);
+    (Array.isArray(snap.gifs) ? snap.gifs : []).forEach(g => addKeepFromGif(set, g));
+    (Array.isArray(snap.photos) ? snap.photos : []).forEach(p => addKeepFromPhoto(set, p));
+    (Array.isArray(snap.orbs) ? snap.orbs : []).forEach(o => addKeepFromOrb(set, o));
+  }
+  /** KEEP = colonnes live + data live + CHAQUE preset (pas seulement l'actif). */
+  function collectKeepUrls(row){
+    const set = new Set();
+    if (!row) return set;
+    const p = row.prof || {};
+    const dd = (p.data && typeof p.data === 'object') ? p.data : {};
+    addKeepUrl(set, p.avatar_url);
+    addKeepUrl(set, p.banner_url);
+    addKeepUrl(set, p.decoration_url);
+    addKeepUrl(set, dd.avatarUrl);
+    addKeepUrl(set, dd.bannerUrl);
+    addKeepUrl(set, dd.decorationUrl);
+    addKeepUrl(set, dd.discordAvatarUrl);
+    addKeepUrl(set, dd.profileVoice);
+    addKeepUrl(set, dd.swipeMusic);
+    if (typeof dd.bg === 'string') addKeepUrl(set, dd.bg);
+    (Array.isArray(dd.gifs) ? dd.gifs : []).forEach(g => addKeepFromGif(set, g));
+    (Array.isArray(dd.photos) ? dd.photos : []).forEach(ph => addKeepFromPhoto(set, ph));
+    (Array.isArray(dd.orbs) ? dd.orbs : []).forEach(o => addKeepFromOrb(set, o));
+    (Array.isArray(dd.presets) ? dd.presets : []).forEach(snap => collectKeepFromPreset(set, snap));
+    return set;
+  }
+  function publicUrlFor(bucket, path){
+    try {
+      const { data } = sb.storage.from(bucket).getPublicUrl(path);
+      return data && data.publicUrl ? data.publicUrl.split('?')[0] : null;
+    } catch(_){ return null; }
+  }
+  async function listAllInFolder(bucket, folder){
+    const out = [];
+    let offset = 0;
+    const limit = 100;
+    for (;;) {
+      const { data, error } = await sb.storage.from(bucket).list(folder, {
+        limit, offset, sortBy: { column: 'name', order: 'asc' }
+      });
+      if (error) throw error;
+      const batch = data || [];
+      // Ignorer les "dossiers" vides éventuels (id null + pas de metadata)
+      batch.forEach(f => {
+        if (!f || !f.name) return;
+        if (f.id == null && !f.metadata) return;
+        out.push(f);
+      });
+      if (batch.length < limit) break;
+      offset += limit;
+    }
+    return out;
+  }
+  async function cleanupOrphanMedia(){
+    if (!FULL){ toast('Nécessite la clé service_role'); return; }
+    if (!ACCOUNTS.length){ toast('Aucun compte chargé'); return; }
+    if (!confirm(
+      'Étape 1/2 — SCAN (rien n\'est supprimé).\n\n'
+      + 'Pour chaque compte, on garde TOUT ce qui est :\n'
+      + '• sur le profil affiché sur le site\n'
+      + '• dans N\'IMPORTE QUEL preset cloud (data.presets)\n\n'
+      + 'Seuls les fichiers Storage orphelins (anciens uploads) seront listés.\n'
+      + 'Continuer le scan sur '+ACCOUNTS.length+' compte(s) ?'
+    )) return;
+
+    const btn = $('cleanupOrphanMediaBtn');
+    btn.disabled = true;
+    toast('Scan orphelins en cours…');
+
+    const orphans = []; // { uid, bucket, path, url }
+    let scannedUsers = 0, keepCount = 0, listFail = 0;
+
+    for (const a of ACCOUNTS){
+      const uid = a.id;
+      if (!uid) continue;
+      const keep = collectKeepUrls(a);
+      keepCount += keep.size;
+      for (const bucket of STORAGE_BUCKETS){
+        try {
+          const files = await listAllInFolder(bucket, uid);
+          for (const f of files){
+            const path = uid + '/' + f.name;
+            const url = publicUrlFor(bucket, path);
+            if (!url) continue;
+            if (!keep.has(url)) orphans.push({ uid, bucket, path, url, name: f.name });
+          }
+        } catch (e) {
+          // Dossier inexistant / bucket manquant → ignore
+          console.warn('[cleanup] list', bucket, uid, e);
+          listFail++;
+        }
+      }
+      scannedUsers++;
+    }
+
+    btn.disabled = false;
+
+    if (!orphans.length){
+      toast('✅ Aucun orphelin — '+scannedUsers+' compte(s), '+keepCount+' URL(s) conservée(s)');
+      return;
+    }
+
+    const byBucket = {};
+    orphans.forEach(o => { byBucket[o.bucket] = (byBucket[o.bucket] || 0) + 1; });
+    const detail = Object.keys(byBucket).map(b => b+': '+byBucket[b]).join(', ');
+    console.log('[cleanup] orphelins à supprimer', orphans);
+
+    if (!confirm(
+      'Étape 2/2 — SUPPRESSION.\n\n'
+      + orphans.length+' fichier(s) orphelin(s) trouvé(s) ('+detail+').\n'
+      + 'Profils live + presets : INTACTS (aucune ligne profiles modifiée).\n\n'
+      + 'Supprimer ces fichiers Storage maintenant ?'
+    )){
+      toast('Scan OK — suppression annulée ('+orphans.length+' orphelin(s) listés dans la console)');
+      return;
+    }
+
+    btn.disabled = true;
+    let deleted = 0, fail = 0;
+    // Grouper par bucket pour remove() par lots
+    const groups = {};
+    orphans.forEach(o => {
+      if (!groups[o.bucket]) groups[o.bucket] = [];
+      groups[o.bucket].push(o.path);
+    });
+    for (const bucket of Object.keys(groups)){
+      const paths = groups[bucket];
+      for (let i = 0; i < paths.length; i += 50){
+        const chunk = paths.slice(i, i + 50);
+        try {
+          const { error } = await sb.storage.from(bucket).remove(chunk);
+          if (error) throw error;
+          deleted += chunk.length;
+        } catch (e) {
+          console.warn('[cleanup] remove failed', bucket, chunk, e);
+          fail += chunk.length;
+        }
+      }
+    }
+    btn.disabled = false;
+    toast('✅ '+deleted+' orphelin(s) supprimé(s)'+(fail ? (' · ⚠️ '+fail+' échec(s)') : '')+' · presets/profils inchangés');
+  }
+  $('cleanupOrphanMediaBtn').addEventListener('click', cleanupOrphanMedia);
 
   /* ---- Sync quêtes / pièces / titres Esthétisme pour TOUS les profils ---- */
   async function backfillAllQuests(){
