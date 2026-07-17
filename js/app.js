@@ -4699,8 +4699,50 @@
     if (document.body.getAttribute('data-screen') === 'swipe') refreshMyStatusUI();
 
     // ---------- Messages panel ----------
-    // Conversations mock retirées — sera branche sur Supabase a part
+    // Conversations mock retirées, branchées sur Supabase (cf. RT.* plus bas)
     const CONVOS = [];
+
+    // Horodatage du dernier message d'une convo (message le plus récent avec un
+    // ts connu ; les messages système -- match -- en ont un désormais aussi).
+    function lastMsgTs(c){
+      if (c && Array.isArray(c.msgs)) {
+        for (let i = c.msgs.length - 1; i >= 0; i--) { if (c.msgs[i].ts) return c.msgs[i].ts; }
+      }
+      return 0;
+    }
+    // Le fil de conversations est toujours classé par dernier message (le plus récent en haut).
+    function sortConvos(){ CONVOS.sort((a, b) => lastMsgTs(b) - lastMsgTs(a)); }
+    // Format compact pour la liste des conversations : l'heure si c'est aujourd'hui,
+    // sinon une durée relative courte (1j, 1s, 1mois, 1an...).
+    function fmtConvoTime(ts){
+      if (!ts) return '';
+      const diff = Date.now() - ts;
+      if (diff < 86400000) return new Date(ts).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+      const days = Math.floor(diff / 86400000);
+      if (days < 7) return days + 'j';
+      const weeks = Math.floor(days / 7);
+      if (weeks < 5) return weeks + 's';
+      const months = Math.floor(days / 30);
+      if (months < 12) return months + 'mois';
+      const years = Math.floor(days / 365);
+      return years + 'an' + (years > 1 ? 's' : '');
+    }
+    // Persistance locale de "jusqu'où j'ai lu" par conversation (id du match), pour que
+    // le badge non-lu survive à un rechargement au lieu de se réinitialiser à chaque fois.
+    const CONVO_READS_KEY = 'matefindr_convo_reads';
+    function loadConvoReads(){ try { return JSON.parse(localStorage.getItem(CONVO_READS_KEY) || '{}'); } catch(_){ return {}; } }
+    function saveConvoReads(map){ try { localStorage.setItem(CONVO_READS_KEY, JSON.stringify(map)); } catch(_){} }
+    function markConvoRead(matchId, ts){
+      if (!matchId) return;
+      const map = loadConvoReads();
+      map[matchId] = ts || Date.now();
+      saveConvoReads(map);
+    }
+    function isConvoUnread(matchId, lastTs){
+      if (!matchId || !lastTs) return false;
+      const readTs = loadConvoReads()[matchId] || 0;
+      return lastTs > readTs;
+    }
 
     const panel = document.getElementById('msgPanel');
     const fab   = document.getElementById('msgFab');
@@ -4718,6 +4760,8 @@
     }
 
     function renderMsgList(){
+      // Le fil le plus récent (dernier message, ou dernier match si pas encore de message) en haut.
+      sortConvos();
       const unread = CONVOS.filter(c => c.unread).length;
       if (unread > 0) { fabBadge.textContent = unread; fabBadge.style.display = 'grid'; }
       else fabBadge.style.display = 'none';
@@ -4731,9 +4775,8 @@
         el.type = 'button';
         el.className = 'msg-item' + (c.unread ? '' : ' read');
         el.dataset.id = c.id;
-        // Heure affichée = celle du dernier message (et non « à l'instant »).
-        const lastWithTime = [...c.msgs].reverse().find(m => m.t);
-        const tLabel = lastWithTime ? lastWithTime.t : '';
+        // Heure du dernier message : l'heure si c'est aujourd'hui, sinon 1j/1s/1mois...
+        const tLabel = fmtConvoTime(lastMsgTs(c));
         el.innerHTML = `
           <div class="avi" style="background:linear-gradient(135deg, ${c.c1}, ${c.c2});overflow:hidden">${c.avatarUrl ? `<img src="${c.avatarUrl}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : c.initial}</div>
           <div class="info">
@@ -4751,6 +4794,7 @@
       if (!c) return;
       activeConvo = c;
       c.unread = false;
+      markConvoRead(c.matchId, Date.now());
       panel.setAttribute('data-view', 'chat');
       const chatAvi = document.getElementById('msgChatAvi');
       chatAvi.style.background = `linear-gradient(135deg, ${c.c1}, ${c.c2})`;
@@ -4808,6 +4852,7 @@
       activeConvo.msgs.push(msg);
       activeConvo.last = v;
       activeConvo.t    = t;
+      markConvoRead(activeConvo.matchId, msg.ts);
       msgInputField.value = '';
       renderMsgInto(msg, activeConvo);
       chatBody.scrollTop = chatBody.scrollHeight;
@@ -4913,6 +4958,9 @@
     // Construit/maj une conversation locale liée à un matchId.
     function rtUpsertConvo(matchId, otherId, p, opts){
       opts = opts || {};
+      // Horodatage réel du match (ligne DB si connue), sinon "maintenant" -- sert au
+      // message système et au tri/affichage de la conversation dans la liste.
+      const matchedTs = opts.matchedAt ? new Date(opts.matchedAt).getTime() : Date.now();
       let c = CONVOS.find(x => x.matchId === matchId)
            || (p && CONVOS.find(x => (p.tag && x.tag === p.tag) || (otherId && x.uid === otherId)));
       if (!c) {
@@ -4923,7 +4971,7 @@
               initial:(p&&p.initial)||(((p&&p.name)||'?').charAt(0)), avatarUrl:(p&&p.avatarUrl)||null,
               t:"à l'instant", unread:!!opts.unread,
               last:opts.last || 'Vous venez de matcher 🎉',
-              msgs: (opts.system === false) ? [] : [{ who:'system', text:`🎉 C'est un match${(p&&p.name)?` avec ${p.name}`:''} ! Lancez la conversation.` }] };
+              msgs: (opts.system === false) ? [] : [{ who:'system', text:`🎉 C'est un match${(p&&p.name)?` avec ${p.name}`:''} ! Lancez la conversation.`, t:fmtMsgTime(matchedTs), ts:matchedTs }] };
         CONVOS.unshift(c);
       } else {
         c.matchId = matchId; if (otherId) c.uid = otherId;
@@ -4953,10 +5001,10 @@
       if (!c) { // fallback hors-ligne / sans uid
         const id = 'm_' + Date.now();
         c = CONVOS.find(x => p && p.tag && x.tag === p.tag);
-        if (!c) { c = { id, name:p.name, tag:p.handleBlur?'':p.tag, handleBlur:!!p.handleBlur, uid:p.uid||null, c1:p.c1||'#5865F2', c2:p.c2||'#404EED',
+        if (!c) { const nowTs = Date.now(); c = { id, name:p.name, tag:p.handleBlur?'':p.tag, handleBlur:!!p.handleBlur, uid:p.uid||null, c1:p.c1||'#5865F2', c2:p.c2||'#404EED',
               initial:p.initial||(p.name||'?').charAt(0), avatarUrl:p.avatarUrl||null,
               t:"à l'instant", unread:!!opts.unread, last:'Vous venez de matcher 🎉',
-              msgs:[{ who:'system', text:`🎉 C'est un match avec ${p.name} ! Lancez la conversation.` }] }; CONVOS.unshift(c); }
+              msgs:[{ who:'system', text:`🎉 C'est un match avec ${p.name} ! Lancez la conversation.`, t:fmtMsgTime(nowTs), ts:nowTs }] }; CONVOS.unshift(c); }
       }
       if (typeof renderMsgList === 'function') renderMsgList();
       if (typeof playMatchAnimation === 'function') playMatchAnimation(p, c.id);
@@ -4990,6 +5038,7 @@
           renderMsgInto(msg, c);
           chatBody.scrollTop = chatBody.scrollHeight;
           c.unread = false;
+          markConvoRead(c.matchId, msg.ts);
         } else { c.unread = true; }
         renderMsgList();
       });
@@ -5001,7 +5050,7 @@
         if (RT.convoByMatch.has(row.id)) return; // c'est moi qui l'ai initié → déjà animé
         const other = row.user_a === me ? row.user_b : row.user_a;
         const p = await rtProfile(other) || { name:'Nouveau match', initial:'?', uid:other, c1:'#FF7EB6', c2:'#9146FF' };
-        const c = rtUpsertConvo(row.id, other, p, { unread:true });
+        const c = rtUpsertConvo(row.id, other, p, { unread:true, matchedAt: row.created_at });
         renderMsgList();
         if (typeof playMatchAnimation === 'function') playMatchAnimation(p, c.id);
         if (typeof window.__heartFabRefresh === 'function') window.__heartFabRefresh();
@@ -5017,10 +5066,16 @@
         if (error) { console.warn('[Matefindr] load matches', error.message || error); return; }
         matches = data || [];
       } catch(_){ return; }
+      // Première fois qu'on charge les conversations sur cet appareil depuis l'ajout du
+      // suivi de lecture persistant : pas de "déjà lu" connu pour aucune d'elles. Sans ce
+      // repère, tout redeviendrait non-lu au premier chargement -- on prend donc l'état
+      // actuel comme référence "lu" au lieu de tout marquer non-lu d'un coup.
+      const isFirstEverLoad = localStorage.getItem(CONVO_READS_KEY) === null;
+      const readsMap = isFirstEverLoad ? loadConvoReads() : null;
       for (const m of matches) {
         const other = m.user_a === me ? m.user_b : m.user_a;
         const p = await rtProfile(other);
-        const c = rtUpsertConvo(m.id, other, p, { system:true });
+        const c = rtUpsertConvo(m.id, other, p, { system:true, matchedAt: m.created_at });
         try {
           const { data: msgs } = await window.__supa.from('messages').select('*')
             .eq('match_id', m.id).order('created_at', { ascending:true }).limit(500);
@@ -5029,7 +5084,11 @@
             c.last = msgs[msgs.length-1].body;
           }
         } catch(_){}
+        const lastTs = lastMsgTs(c);
+        if (isFirstEverLoad) { readsMap[m.id] = lastTs; c.unread = false; }
+        else c.unread = isConvoUnread(m.id, lastTs);
       }
+      if (isFirstEverLoad) saveConvoReads(readsMap);
       renderMsgList();
     }
     // Filet de sécurité : sondage toutes les 2 s. Suivi par ID (anti-décalage d'horloge) →
