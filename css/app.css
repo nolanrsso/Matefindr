@@ -1702,8 +1702,10 @@
     animation:mfPageSpin .7s linear infinite;
   }
   @media (prefers-reduced-motion:reduce){
+    /* Le fondu d'apparition (décoratif) respecte la préférence -- pas la rotation
+       elle-même : un indicateur de chargement figé ne dit plus "ça charge" et se
+       lit comme un bug (icône plantée), contrairement à un mouvement de fond. */
     .swipe-card-loader{animation:none}
-    .swipe-card-loader-spin{animation:none;border-color:rgba(255,255,255,.3);border-top-color:#FF7EB6}
   }
 
   /* Discord-style profile card */

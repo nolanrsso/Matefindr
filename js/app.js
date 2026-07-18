@@ -4801,6 +4801,8 @@
       if (_previewMode) return; // pas de swipe en mode aperçu
       if (_swipeBusy || !cardEl) return;
       _swipeBusy = true;
+      // Coupe toute note en cours : markSwiped avance déjà le pool → sinon risque de noter B.
+      if (typeof closeReactPopup === 'function') closeReactPopup();
       // Lien de partage : ❤️/✖️ animent la carte puis déclenchent l'action (compte + replay).
       if (_sharedProfile) {
         const off = dir === 'yes' ? window.innerWidth + 200 : -(window.innerWidth + 200);
