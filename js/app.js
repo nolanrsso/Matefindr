@@ -2150,8 +2150,48 @@
     }
     function currentReactTarget(){
       if (_sharedProfile) return _sharedProfile;
+      if (_previewMode) return (typeof currentSwipeProfile === 'function') ? currentSwipeProfile() : null;
+      // Toujours la carte VISIBLE — pas pool[0]. Après markSwipedUid, pool[0] est déjà
+      // le suivant alors que l'ancienne carte est encore à l'écran → la note partait sur B.
+      const card = visibleSwipeCardEl();
+      const uid = card && card.dataset.profileUid;
+      if (uid) {
+        const hit = profileByUid(uid);
+        if (hit) return hit;
+        return { uid: String(uid) };
+      }
       const pool = (typeof genderFilteredProfiles === 'function') ? genderFilteredProfiles() : [];
       return pool[0] || null;
+    }
+    function visibleSwipeCardEl(){
+      const wrap = document.getElementById('swipeWrap');
+      if (!wrap) return null;
+      const cards = Array.prototype.slice.call(wrap.querySelectorAll('.swipe-card'));
+      if (!cards.length) return null;
+      const solid = cards.find(c => {
+        if (c.style.opacity === '0') return false;
+        const t = c.style.transform || '';
+        if (/translate\([^)]*[1-9]\d{2,}px/.test(t)) return false;
+        return true;
+      });
+      return solid || cards[0];
+    }
+    function profileByUid(uid){
+      if (!uid) return null;
+      const sid = String(uid);
+      if (_sharedProfile && String(_sharedProfile.uid) === sid) return _sharedProfile;
+      const pools = [];
+      try { if (typeof genderFilteredProfiles === 'function') pools.push(genderFilteredProfiles()); } catch(_){}
+      pools.push(_remoteProfiles || []);
+      for (let i = 0; i < pools.length; i++) {
+        const hit = (pools[i] || []).find(p => p && String(p.uid) === sid);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    function closeReactPopup(){
+      document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
+      _reactPopupTarget = null;
     }
     /* ===== Slider à étoiles : glisser la poignée bleue vers la droite par-dessus les
        étoiles (jaunes au fur et à mesure). Note affichée au-dessus pendant le glissé.
@@ -2178,17 +2218,17 @@
       const rec = _reactionsCache[profileId];
       const mine = rec ? rec.mine : null;
       const reactRoot = document.getElementById('reactSlider');
-      const target = currentReactTarget();
-      if (reactRoot && target && target.uid === profileId) setSliderRestState(reactRoot, mine);
+      const target = _reactPopupTarget || currentReactTarget();
+      if (reactRoot && target && String(target.uid) === String(profileId)) setSliderRestState(reactRoot, mine);
       const sharedRoot = document.getElementById('sharedSlider');
-      if (sharedRoot && _sharedProfile && _sharedProfile.uid === profileId) setSliderRestState(sharedRoot, mine);
+      if (sharedRoot && _sharedProfile && String(_sharedProfile.uid) === String(profileId)) setSliderRestState(sharedRoot, mine);
     }
     function initRatingSlider(root, getTarget, onSubmitted){
       if (!root) return;
       const stars = [...root.querySelectorAll('.rate-star')];
       const handle = root.querySelector('.rate-handle');
       const valueLbl = handle.querySelector('.rate-value');
-      let dragging = false, pending = 0;
+      let dragging = false, pending = 0, dragUid = null;
       function maxLeft(){ return Math.max(1, root.clientWidth - handle.offsetWidth); }
       function updateStarsFromHandle(){
         const handleRect = handle.getBoundingClientRect();
@@ -2219,23 +2259,21 @@
         handle.classList.remove('dragging', 'show-rate-value');
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
-        const target = getTarget && getTarget();
-        // Il faut avoir glissé au moins jusqu'à la fin de la 1re étoile (note >= 1.0)
-        // pour valider -- en dessous, on relâche sans rien envoyer (retour de force
-        // "à vide" : la poignée revient à gauche, l'ancien état -- flèche ou note déjà
-        // envoyée -- est restauré tel quel, cf. setSliderRestState).
-        if (target && target.uid && pending >= 1) {
-          sendReaction(target.uid, pending);
+        // UID figé au pointerdown — jamais re-lu au relâchement (deck peut avoir avancé).
+        const uid = dragUid || (getTarget && getTarget() && getTarget().uid) || null;
+        dragUid = null;
+        if (uid && pending >= 1) {
+          sendReaction(uid, pending);
         } else {
-          const rec = target && target.uid ? _reactionsCache[target.uid] : null;
+          const rec = uid ? _reactionsCache[uid] : null;
           setSliderRestState(root, rec ? rec.mine : null);
         }
-        // Retour de force : la poignée revient tout à gauche (setSliderRestState via
-        // sendReaction -> updateSlidersFor s'occupe d'afficher la note envoyée).
         if (typeof onSubmitted === 'function') onSubmitted();
       }
       handle.addEventListener('pointerdown', (e) => {
         e.preventDefault(); e.stopPropagation();
+        const t = getTarget && getTarget();
+        dragUid = (t && t.uid) ? String(t.uid) : null;
         dragging = true;
         handle.classList.add('dragging');
         applyFromClientX(e.clientX);
@@ -2243,37 +2281,32 @@
         document.addEventListener('pointerup', onUp);
       });
     }
-    // Cible figée au moment où le popup de note s'ouvre -- pas re-dérivée en direct au
-    // relâchement du slider. Sans ça, si le deck avance (nouveau match, refresh du pool...)
-    // PENDANT que le popup est ouvert, currentReactTarget() renvoie déjà le profil suivant
-    // et la note glissée pour A se retrouvait envoyée sur le profil B.
+    // Cible figée à l'ouverture du popup (+ encore figée au pointerdown du slider).
     let _reactPopupTarget = null;
     initRatingSlider(document.getElementById('reactSlider'), () => _reactPopupTarget, () => {
-      document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
+      closeReactPopup();
     });
     initRatingSlider(document.getElementById('sharedSlider'), () => _sharedProfile);
     document.getElementById('reactToggleBtn')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const pop = document.getElementById('reactPopup');
       if (!pop) return;
+      // Pendant un swipe : la carte part / le pool a déjà avancé → pas de note ambiguë.
+      if (typeof _swipeBusy !== 'undefined' && _swipeBusy) return;
       const opening = pop.getAttribute('data-open') !== 'true';
-      pop.setAttribute('data-open', opening ? 'true' : 'false');
-      if (opening) {
-        _reactPopupTarget = currentReactTarget();
-        const target = _reactPopupTarget;
-        if (target && target.uid) {
-          setSliderRestState(document.getElementById('reactSlider'), (_reactionsCache[target.uid] || {}).mine ?? null);
-          if (!_reactionsCache[target.uid]) loadReactions(target.uid);
-        }
-      } else {
-        _reactPopupTarget = null;
-      }
+      if (!opening) { closeReactPopup(); return; }
+      _reactPopupTarget = currentReactTarget();
+      const target = _reactPopupTarget;
+      if (!target || !target.uid) return;
+      pop.setAttribute('data-open', 'true');
+      setSliderRestState(document.getElementById('reactSlider'), (_reactionsCache[target.uid] || {}).mine ?? null);
+      if (!_reactionsCache[target.uid]) loadReactions(target.uid);
     });
     document.addEventListener('click', (e) => {
       const pop = document.getElementById('reactPopup');
       if (!pop || pop.getAttribute('data-open') !== 'true') return;
       if (e.target.closest('#reactPopup') || e.target.closest('#reactToggleBtn')) return;
-      pop.setAttribute('data-open', 'false');
+      closeReactPopup();
     });
 
     /* ===== Cloud sync (Supabase) — la liste de profils provient des vrais utilisateurs ===== */
@@ -2826,10 +2859,9 @@
       }
 
       document.body.removeAttribute('data-swipe-empty');
-      // Le popup de note est lié au profil qui était affiché -- s'il reste ouvert
-      // pendant qu'on passe au suivant, il montre un état périmé (et la cible figée
-      // à l'ouverture, cf. _reactPopupTarget, ne correspond plus à la carte visible).
-      document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
+      // Le popup de note est lié au profil affiché — fermer + vider la cible figée.
+      if (typeof closeReactPopup === 'function') closeReactPopup();
+      else document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
 
       const doSwap = () => {
         hideSwipeCardLoader();
