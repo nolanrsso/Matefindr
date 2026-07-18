@@ -3461,6 +3461,9 @@ updateEyeVisibility();
 const MC = () => window.MatefindrConnections;
 const CONN_DEL='<span class="conn-del" title="Retirer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>';
 let _connApp=null;
+// Types "multi" (ex. discordserver) : index de l'entrée en cours d'édition dans
+// connections[app.id] (undefined = nouvelle entrée, on ajoute plutôt qu'écraser).
+let _connEditIndex=undefined;
 
 function connReadUser(){
   try{ const st=readSite(); return st.user||{}; }catch(_){ return {}; }
@@ -3509,17 +3512,25 @@ function renderConnections(){
   box.appendChild(add);
   connIds.forEach(id=>{
     const app=MC().connApp(id); if(!app) return;
-    const entry=MC().connGet(S.connections,id);
+    // Types "multi" (ex. discordserver) : plusieurs entrées sous le même id →
+    // une pastille par entrée, chacune avec son propre index pour édition/retrait.
+    const entries=app.multi?MC().connGetList(S.connections,id):[MC().connGet(S.connections,id)];
+    entries.forEach((entry,idx)=>{
+    if(!entry) return;
+    const isMulti=!!app.multi;
     const locked=id==='discord' && MC().connDiscordLocked(connReadUser());
     const b=document.createElement('button'); b.type='button'; b.className='conn set'+(locked?' conn--locked':'');
-    b.draggable=!locked;
+    b.draggable=!locked&&!isMulti;
     b.dataset.connId=id;
+    if(isMulti) b.dataset.connIdx=String(idx);
     const lbl=MC().connProfileLabel(app,entry,app.id==='discord'?(connReadUser().discordTag||''):'');
     b.title=locked
       ? `${app.name}${lbl?' : '+lbl:''} · lié au compte`
-      : `${app.name}${lbl?' : '+lbl:''} · glisser pour réordonner`;
+      : isMulti
+        ? `${app.name}${lbl?' : '+lbl:''}`
+        : `${app.name}${lbl?' : '+lbl:''} · glisser pour réordonner`;
     b.innerHTML=MC().connIconHtml(app,22,entry,S.connUniformColor)+(locked?'':CONN_DEL);
-    if(!locked){
+    if(!locked&&!isMulti){
       b.addEventListener('dragstart',e=>{
         if(e.target.closest('.conn-del')){ e.preventDefault(); return; }
         _connDragId=id;
@@ -3556,11 +3567,14 @@ function renderConnections(){
       if(e.target.closest('.conn-del')){
         e.stopPropagation();
         if(id==='discord' && MC().connDiscordLocked(connReadUser())){ toast('Le statut Discord est lié à ton compte'); return; }
-        MC().connRemove(S.connections,id); renderConnections(); persist(); toast('Connexion retirée'); return;
+        if(isMulti) MC().connRemoveEntryAt(S.connections,id,idx);
+        else MC().connRemove(S.connections,id);
+        renderConnections(); persist(); toast('Connexion retirée'); return;
       }
-      openConnAdd(app);
+      openConnAdd(app,isMulti?idx:undefined);
     });
     box.appendChild(b);
+    });
   });
   if(typeof renderEditorCardMeta==='function') renderEditorCardMeta();
 }
@@ -3574,9 +3588,11 @@ function openConnPick(){
     const b=document.createElement('button');
     b.type='button';
     b.className='conn-pick-tile'+(app.wide?' conn-pick-tile--wide':'')+(taken?' conn-pick-tile--done':'');
-    // Discord lié au compte : toujours « pris », on ouvre le panneau de prefs au clic
-    b.disabled=taken && app.id!=='custom' && !locked;
+    // Discord lié au compte : toujours « pris », on ouvre le panneau de prefs au clic.
+    // Types "multi" (ex. discordserver) : jamais désactivé, on peut en ajouter plusieurs.
+    b.disabled=taken && app.id!=='custom' && !app.multi && !locked;
     b.title=locked?'Discord, lié au compte (modifier l\'affichage)'
+      :app.multi?(taken?`${app.name} — ajouter un autre`:app.name)
       :(taken?`${app.name}, déjà ajouté`:app.name);
     const doneBadge=taken?'<span class="conn-pick-done">Validé</span>':'';
     if(app.wide){
@@ -3600,13 +3616,17 @@ function syncConnAddUi(){
   const app=_connApp; if(!app) return;
   const isDiscord=app.special==='discord';
   const locked=isDiscord && MC().connDiscordLocked(connReadUser());
+  const isMulti=!!app.multi;
+  // Multi : "Retirer"/"Enregistrer" ne concernent que si on édite une entrée EXISTANTE
+  // (index connu) — un ajout (_connEditIndex undefined) reste "Ajouter" sans Retirer.
+  const editingExisting=isMulti?(_connEditIndex!=null):MC().connIsSet(S.connections,app.id);
   $('connAddDiscordPanel').hidden=!isDiscord;
   $('connAddLinkPanel').hidden=!!isDiscord;
-  $('connAddTitle').textContent=(MC().connIsSet(S.connections,app.id)?'Modifier':'Ajouter')+' le réseau '+app.name;
+  $('connAddTitle').textContent=(editingExisting?'Modifier':'Ajouter')+(isMulti?' un serveur — '+app.name:' le réseau '+app.name);
   // Discord lié au compte : pas de bouton Retirer
-  $('connAddRemove').hidden=locked || !MC().connIsSet(S.connections,app.id);
+  $('connAddRemove').hidden=locked || !editingExisting;
   const submit=$('connAddSubmit');
-  if(submit) submit.textContent=MC().connIsSet(S.connections,app.id)?'Enregistrer':'Ajouter';
+  if(submit) submit.textContent=editingExisting?'Enregistrer':'Ajouter';
   if(isDiscord){
     const u=connReadUser();
     $('connDiscordName').textContent=u.displayName||u.discordTag||'Discord';
@@ -3619,7 +3639,9 @@ function syncConnAddUi(){
     $('connShowLabel').checked=cur?cur.showLabel!==false:true;
     return;
   }
-  const cur=MC().connGet(S.connections,app.id);
+  const cur=isMulti
+    ?(editingExisting?MC().connGetList(S.connections,app.id)[_connEditIndex]:null)
+    :MC().connGet(S.connections,app.id);
   $('connAddIcon').innerHTML=MC().connIconHtml(app,22);
   $('connAddPrefix').textContent=app.prefix||'';
   const inp=$('connAddInput');
@@ -3640,15 +3662,16 @@ function updateCustomConnIconPreview(){
     : MC().connIconHtml(_connApp,22);
 }
 
-function openConnAdd(app){
+function openConnAdd(app,editIndex){
   _connApp=app;
+  _connEditIndex=editIndex;
   syncConnAddUi();
   $('connModalBackdrop').hidden=false;
   $('connAddModal').hidden=false;
   setTimeout(()=>{ if(app.special!=='discord') $('connAddInput').focus(); },50);
 }
-function closeConnAdd(){ $('connAddModal').hidden=true; if($('connPickSheet').hidden) $('connModalBackdrop').hidden=true; _connApp=null; }
-function closeConnAll(){ closeConnAdd(); closeConnPick(); $('connModalBackdrop').hidden=true; _connApp=null; }
+function closeConnAdd(){ $('connAddModal').hidden=true; if($('connPickSheet').hidden) $('connModalBackdrop').hidden=true; _connApp=null; _connEditIndex=undefined; }
+function closeConnAll(){ closeConnAdd(); closeConnPick(); $('connModalBackdrop').hidden=true; _connApp=null; _connEditIndex=undefined; }
 
 function saveConnAdd(){
   if(!_connApp||!MC()) return;
@@ -3674,9 +3697,22 @@ function saveConnAdd(){
       payload.label=MC().connSiteHost(v)||MC().cleanHandle(v);
       payload.favicon=MC().connFaviconUrl(v);
     } else {
-      payload.label=MC().cleanHandle(v);
+      // Si un lien complet est collé (fréquent pour discord.gg/... par ex.), le
+      // label affiché doit rester le handle, pas l'URL entière.
+      let handleSrc=v;
+      const domain=(app.prefix||'').replace(/^https?:\/\//i,'').split('/')[0];
+      if(domain){
+        const stripped=handleSrc.replace(/^https?:\/\//i,'').replace(/^www\./i,'');
+        if(stripped.toLowerCase().startsWith(domain.toLowerCase())) handleSrc=stripped.slice(domain.length);
+      }
+      payload.label=MC().cleanHandle(handleSrc);
     }
-    S.connections[app.id]=payload;
+    if(app.multi){
+      if(_connEditIndex!=null) MC().connUpdateEntry(S.connections,app.id,_connEditIndex,payload);
+      else MC().connAddEntry(S.connections,app.id,payload);
+    } else {
+      S.connections[app.id]=payload;
+    }
   }
   MC().connEnsureOrder(S.connections);
   renderConnections(); persist(); closeConnAll(); toast('Connexion enregistrée');
@@ -3691,7 +3727,9 @@ $('connAddRemove').addEventListener('click',()=>{
   if(_connApp.id==='discord' && MC() && MC().connDiscordLocked(connReadUser())){
     toast('Le statut Discord est lié à ton compte'); return;
   }
-  MC().connRemove(S.connections,_connApp.id); renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
+  if(_connApp.multi && _connEditIndex!=null) MC().connRemoveEntryAt(S.connections,_connApp.id,_connEditIndex);
+  else MC().connRemove(S.connections,_connApp.id);
+  renderConnections(); persist(); closeConnAll(); toast('Connexion retirée');
 });
 $('connAddInput').addEventListener('input',()=>{ if(_connApp&&_connApp.id==='custom') updateCustomConnIconPreview(); });
 $('connAddInput').addEventListener('keydown',e=>{ if(e.key==='Enter') saveConnAdd(); });

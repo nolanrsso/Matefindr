@@ -2,6 +2,7 @@
 (function(global){
   const CONN_APPS = [
     {id:'discord',name:'Discord',color:'5865F2',prefix:'discord.com/users/',special:'discord',placeholder:'…'},
+    {id:'discordserver',name:'Serveur Discord',color:'5865F2',logoId:'discord',prefix:'discord.gg/',placeholder:'code d\'invitation',multi:true},
     {id:'spotify',name:'Spotify',color:'1DB954',prefix:'open.spotify.com/user/',placeholder:'…'},
     {id:'soundcloud',name:'SoundCloud',color:'FF5500',prefix:'soundcloud.com/',placeholder:'…'},
     {id:'applemusic',name:'Apple Music',color:'FA243C',prefix:'music.apple.com/profile/',placeholder:'…'},
@@ -20,7 +21,7 @@
     {id:'xbox',name:'Xbox',color:'107C10',icon:'xbox',prefix:'xboxgamertag.com/search/',placeholder:'…'},
     {id:'twitch',name:'Twitch',color:'9146FF',prefix:'twitch.tv/',placeholder:'…'},
     {id:'kick',name:'Kick',color:'53FC18',prefix:'kick.com/',placeholder:'…'},
-    {id:'medal',name:'Medal',color:'F23B49',prefix:'medal.tv/users/',placeholder:'…',favicon:'https://www.google.com/s2/favicons?domain=medal.tv&sz=128'},
+    {id:'medal',name:'Medal',color:'F23B49',icon:'medal',prefix:'medal.tv/users/',placeholder:'…'},
     {id:'pinterest',name:'Pinterest',color:'BD081C',prefix:'pinterest.com/',placeholder:'…'},
     {id:'facebook',name:'Facebook',color:'1877F2',prefix:'facebook.com/',placeholder:'…'},
     {id:'threads',name:'Threads',color:'ffffff',prefix:'threads.net/@',placeholder:'…'},
@@ -37,6 +38,7 @@
     globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>',
     xbox:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#107C10" d="M4.102 21.033C6.211 22.881 8.977 24 12 24c3.026 0 5.789-1.119 7.902-2.967 1.877-1.912-4.316-8.709-7.902-11.417-3.582 2.708-9.779 9.505-7.898 11.417zm11.16-14.406c2.5 2.961 7.484 10.313 6.076 12.912C23.002 17.48 24 14.861 24 12.004c0-3.34-1.365-6.362-3.57-8.536 0 0-.027-.022-.082-.042-.063-.022-.152-.045-.281-.045-.592 0-1.985.434-4.805 3.246zM3.654 3.426c-.057.02-.082.041-.086.042C1.365 5.642 0 8.664 0 12.004c0 2.854.998 5.473 2.661 7.533-1.401-2.605 3.579-9.951 6.08-12.91-2.82-2.813-4.216-3.245-4.806-3.245-.131 0-.223.021-.281.046v-.002zM12 3.551S9.055 1.828 6.755 1.746c-.903-.033-1.454.295-1.521.339C7.379.646 9.659 0 11.984 0H12c2.334 0 4.605.646 6.766 2.085-.068-.046-.615-.372-1.52-.339C14.946 1.828 12 3.545 12 3.545v.006z"/></svg>',
     paypal:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#003087" d="M7.016 19.198h-4.2a.562.562 0 0 1-.555-.65L5.093.584A.692.692 0 0 1 5.776 0h7.222c3.417 0 5.904 2.488 5.846 5.5-.006.25-.027.5-.066.747A6.794 6.794 0 0 1 12.071 12H8.743a.69.69 0 0 0-.682.583l-.325 2.056-.013.083-.692 4.39-.015.087z"/><path fill="#009cde" d="M19.79 6.142c-.01.087-.01.175-.023.261a7.76 7.76 0 0 1-7.695 6.598H9.007l-.283 1.795-.013.083-.692 4.39-.134.843-.014.088H6.86l-.497 3.15a.562.562 0 0 0 .555.65h3.612c.34 0 .63-.249.683-.585l.952-6.031a.692.692 0 0 1 .683-.584h2.126a6.793 6.793 0 0 0 6.707-5.752c.306-1.95-.466-3.744-1.89-4.906z"/></svg>',
+    medal:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#F23B49"/><path fill="#fff" d="M6.6 16.9V8.3c0-.46.37-.83.83-.83.27 0 .53.13.7.36L12 12.55l3.87-4.72a.9.9 0 0 1 .7-.36c.46 0 .83.37.83.83v8.6a.83.83 0 0 1-1.66 0v-6.1L12.6 14.6a.78.78 0 0 1-1.2 0L8.26 10.8v6.1a.83.83 0 0 1-1.66 0z"/></svg>',
   };
 
   function connApp(id){ return CONN_BY_ID[id] || null; }
@@ -46,7 +48,9 @@
     if(!app) return '';
     if(app.icon && ICON_SVG[app.icon]) return '';
     const col = colorOverride ? String(colorOverride).replace('#','') : app.color;
-    return `https://cdn.simpleicons.org/${app.id}/${col}`;
+    // logoId : réutilise le slug simpleicons d'un autre id (ex. discordserver → discord,
+    // "discordserver" n'existe pas comme slug sur ce CDN).
+    return `https://cdn.simpleicons.org/${app.logoId || app.id}/${col}`;
   }
 
   function connSiteHost(url){
@@ -115,14 +119,49 @@
 
   function connIsMetaKey(id){ return id === CONN_META_ORDER; }
 
+  /** Renvoie la 1re entrée (types "multi" : plusieurs valeurs sous le même id, ex. discordserver). */
   function connGet(connObj, id){
     if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return null;
-    return connNormalize(connObj[id]);
+    const raw = connObj[id];
+    if(Array.isArray(raw)) return raw.length ? connNormalize(raw[0]) : null;
+    return connNormalize(raw);
+  }
+
+  /** Toutes les entrées d'un id (types "multi") — normalisées, entrées invalides filtrées. */
+  function connGetList(connObj, id){
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return [];
+    const raw = connObj[id];
+    if(Array.isArray(raw)) return raw.map(connNormalize).filter(Boolean);
+    const single = connNormalize(raw);
+    return single ? [single] : [];
   }
 
   function connIsSet(connObj, id){
     if(connIsMetaKey(id)) return false;
-    return !!connGet(connObj, id);
+    return connGetList(connObj, id).length > 0;
+  }
+
+  /** Ajoute une entrée à un id "multi" (crée le tableau si besoin) — renvoie son index. */
+  function connAddEntry(connObj, id, payload){
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return -1;
+    if(!Array.isArray(connObj[id])) connObj[id] = [];
+    connObj[id].push(payload);
+    return connObj[id].length - 1;
+  }
+
+  function connUpdateEntry(connObj, id, index, payload){
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return false;
+    if(!Array.isArray(connObj[id]) || !connObj[id][index]) return false;
+    connObj[id][index] = payload;
+    return true;
+  }
+
+  function connRemoveEntryAt(connObj, id, index){
+    if(!connObj || typeof connObj !== 'object' || connIsMetaKey(id)) return false;
+    if(!Array.isArray(connObj[id])) return false;
+    connObj[id].splice(index, 1);
+    if(!connObj[id].length) delete connObj[id];
+    return true;
   }
 
   function connOrderedIds(connObj){
@@ -231,7 +270,15 @@
     if(app.id === 'discord'){
       return /^\d+$/.test(v) ? `https://discord.com/users/${v}` : `https://discord.com/users/${encodeURIComponent(v)}`;
     }
-    const handle = cleanHandle(v);
+    // Lien collé sans protocole (ex. "discord.gg/code") : évite de doubler le
+    // domaine avec le prefix ci-dessous ("https://discord.gg/discord.gg/code").
+    const domain = (app.prefix || '').replace(/^https?:\/\//i, '').split('/')[0];
+    let vNoDomain = v;
+    if(domain){
+      const noWww = v.replace(/^www\./i, '');
+      if(noWww.toLowerCase().startsWith(domain.toLowerCase())) vNoDomain = noWww.slice(domain.length);
+    }
+    const handle = cleanHandle(vNoDomain);
     if(!handle) return null;
     const p = app.prefix || '';
     if(p.startsWith('http')) return p + handle.replace(/^https?:\/\//i, '');
@@ -322,6 +369,10 @@
     connIconHtml,
     connNormalize,
     connGet,
+    connGetList,
+    connAddEntry,
+    connUpdateEntry,
+    connRemoveEntryAt,
     connIsSet,
     connOrderedIds,
     connSetOrder,

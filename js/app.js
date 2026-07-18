@@ -3492,16 +3492,21 @@
       const hasDiscordFloor = !!discordFloorHtml;
       let connKeys = MC ? MC.connOrderedIds(conns) : Object.keys(conns).filter(k => conns[k]);
       if (hasDiscordFloor) connKeys = connKeys.filter(k => k !== 'discord');
-      const connDensity = connKeys.length >= 9 ? ' card-connections--dense' : connKeys.length >= 6 ? ' card-connections--many' : '';
-      const connectionsInner = connKeys.map(k => {
+      // Types "multi" (ex. discordserver) : plusieurs entrées sous le même id → une
+      // pastille par entrée (chacune avec sa propre icône/lien), pas une seule pour le groupe.
+      const connEntries = connKeys.flatMap(k => {
         const app = MC ? MC.connApp(k) : null;
+        if (MC && app && app.multi) return MC.connGetList(conns, k).map(entry => ({ k, app, entry }));
         const entry = MC ? MC.connGet(conns, k) : { v: String(conns[k]), mode: 'link' };
-        if (!entry) return '';
+        return entry ? [{ k, app, entry }] : [];
+      });
+      const connDensity = connEntries.length >= 9 ? ' card-connections--dense' : connEntries.length >= 6 ? ' card-connections--many' : '';
+      const connectionsInner = connEntries.map(({ k, app, entry }) => {
         if (MC && app) return MC.connCardHtml(app, entry, p.tag, escapeHtmlMini, p.connUniformColor);
         const label = String(entry.v || conns[k]);
         return `<span class="card-conn" title="${escapeHtmlMini(k)}"><span class="card-conn-ico"><img src="https://cdn.simpleicons.org/${k}/ffffff" alt="" loading="lazy"></span><span class="card-conn-user">${escapeHtmlMini(label)}</span></span>`;
       }).join('');
-      const connectionsBlock = connKeys.length
+      const connectionsBlock = connEntries.length
         ? `<div class="card-connections-wrap"><div class="card-connections${connDensity}">${connectionsInner}</div></div>` : '';
       // Vues + date d'inscription en bas à gauche (serveurs en commun → zone titre)
       const joinedHtml = p.joinedOn ? `<div class="joined">
