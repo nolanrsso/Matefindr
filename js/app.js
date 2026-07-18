@@ -8745,6 +8745,14 @@
           let tickingSec = false;
           function updateActiveSec(){
             tickingSec = false;
+            // render(body) tourne AVANT que la popup soit affichée (showPop lève
+            // le hidden juste après) -> à cet instant .set-content a une hauteur
+            // de 0 et tous les panneaux ont offsetTop=0, ce qui faisait retomber
+            // la boucle ci-dessous sur le DERNIER panneau (Préférences) au lieu du
+            // premier (Compte). Tant que la modale n'a pas de hauteur réelle, on
+            // ne touche pas à la sélection -> Compte (déjà "on" par défaut dans le
+            // markup) reste actif jusqu'au premier scroll/appel utile.
+            if (!setContent.clientHeight) return;
             // Tout en bas : la dernière section ne peut pas forcément atteindre le
             // haut du cadre (pas assez de contenu après elle pour la faire remonter),
             // donc la seuiller comme les autres la laisserait jamais "active".
@@ -8771,6 +8779,9 @@
             requestAnimationFrame(updateActiveSec);
           }, { passive: true });
           updateActiveSec();
+          // showPop() lève le hidden juste après ce render() -> reprogrammer un
+          // passage une fois la modale réellement visible (frame suivante).
+          requestAnimationFrame(() => requestAnimationFrame(updateActiveSec));
         }
 
         // ----- Bouton "Enregistrer" flottant : tout ce qui suit (Compte, Notifications,
