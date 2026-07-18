@@ -109,6 +109,27 @@
       const code = (document.documentElement.lang || 'fr').toUpperCase();
       return (I18N[code] && I18N[code][k]) || (I18N.FR[k]) || k;
     }
+    /* Username Discord réel uniquement (pas les comptes email / placeholders). */
+    function isEmailAuthUser(u){
+      u = u || state.user || {};
+      return u.mode === 'email' || (!u.discordId && !!u.email);
+    }
+    function discordUsernameOf(u){
+      u = u || state.user || {};
+      if (isEmailAuthUser(u) || !u.discordId) return '';
+      const t = String(u.discordTag || '').replace(/^@+/, '').replace(/#0$/, '').trim();
+      if (!t || /^moi$/i.test(t) || /^matefindr$/i.test(t)) return '';
+      return t;
+    }
+    /** Sur une carte profil (soi ou autre) : @tag Discord seulement si compte Discord lié. */
+    function cardDiscordUsername(p){
+      if (!p) return '';
+      if (!p.discordId) return '';
+      const t = String(p.tag || p.discordTag || '').replace(/^@+/, '').replace(/#0$/, '').trim();
+      if (!t || /^moi$/i.test(t) || /^matefindr$/i.test(t)) return '';
+      return t;
+    }
+
     function revealApp(){
       // Retire le cache anti-flash posé par index.html (lien de partage / retour éditeur).
       document.documentElement.classList.remove('mf-boot-hidden');
@@ -815,6 +836,10 @@
               }
             }
           } catch (e) { console.warn('[Matefindr] cloud profile restore failed', e); }
+        }
+        // Compte email : jamais de username Discord (après restore cloud aussi).
+        if (state.user && (isEmailAuthUser(state.user) || !state.user.discordId)) {
+          state.user.discordTag = null;
         }
         // Compte Discord → statut Discord auto (non retirable). Migre aussi les anciens comptes.
         try {
@@ -1770,7 +1795,7 @@
       const p = state.profile || {};
       return {
         name: u.displayName || u.email?.split('@')[0] || 'Mon profil',
-        tag: u.discordTag || 'moi',
+        tag: discordUsernameOf(u),
         age: p.age || '',
         gender: p.gender || '',
         country: p.country || '',
@@ -1856,7 +1881,7 @@
       }));
       return {
         name: u.displayName || u.email?.split('@')[0] || 'Moi',
-        tag: u.discordTag || 'moi',
+        tag: discordUsernameOf(u),
         age: p.age || '',
         gender: p.gender || '',
         country: p.country || '',
@@ -1915,7 +1940,7 @@
         staffMessage: u.staffMessage || null,
         forceLogoutAt: u.forceLogoutAt || null,
         discordLive: u.discordLive || null,
-        discordTag: u.discordTag || null,
+        discordTag: discordUsernameOf(u) || null,
         publicFlags: u.publicFlags || 0,
         premiumType: u.premiumType || 0,
         socials: u.socials || {},
@@ -3504,6 +3529,10 @@
           ${flagImg ? `<span class="cab-flag" title="${countryCode || ''}">${flagImg}</span>` : ''}
           ${gSym ? `<span class="cab-gender" data-g="${p.gender || ''}">${gSym}</span>` : ''}
         </div>` : '';
+      const discUser = cardDiscordUsername(p);
+      const handleHtml = (discUser || (statusLabel && !hasDiscordFloor))
+        ? `<div class="handle">${discUser ? `<span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}" title="Username Discord">@${escapeHtmlMini(discUser)}</span>` : ''}${discUser && statusLabel && !hasDiscordFloor ? ` <span class="sep">•</span> ` : ''}${statusLabel && !hasDiscordFloor ? statusLabel : ''}</div>`
+        : '';
       const reactionHtml = reactionBadgeHtml(p);
       c.innerHTML = `
         <div class="badge-stamp like">LIKE</div>
@@ -3523,7 +3552,7 @@
             <div class="name-row">
               <span class="name${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? ' name--boost' : ''}"${(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor)) ? ` style="color:${p.nameColor};-webkit-text-fill-color:${p.nameColor}"` : ''}>${p.name}${(p.boost && p.showBoostName !== false && !(p.nameColor && /^#[0-9a-f]{6}$/i.test(p.nameColor))) ? '<span class="name-boost-star" aria-label="Boost"></span>' : ''}</span>
             </div>
-            <div class="handle"><span class="handle-tag${p.handleBlur ? ' handle-tag--blur' : ''}">@${p.tag}</span>${statusLabel && !hasDiscordFloor ? ` <span class="sep">•</span> ${statusLabel}` : ''}</div>
+            ${handleHtml}
             ${titleGuildsRow}
           </div>
           <hr class="div"/>
@@ -4917,7 +4946,7 @@
 
     function convoTagLabel(c){
       if (!c) return '';
-      if (c.handleBlur) return 'Pseudo Discord masqué';
+      if (c.handleBlur) return 'Username Discord masqué';
       return c.tag ? '@' + c.tag : '';
     }
 
@@ -6149,7 +6178,14 @@
       const u = state.user || {};
       const p = state.profile || {};
       document.getElementById('accName').textContent = u.displayName || u.email || 'Matefindr user';
-      document.getElementById('accHandle').textContent = u.discordTag ? '@' + u.discordTag : (u.email || '—');
+      // Username Discord uniquement (comptes Discord) — jamais sur un compte email.
+      const discTag = discordUsernameOf(u);
+      const accHandle = document.getElementById('accHandle');
+      if (accHandle) {
+        if (discTag) { accHandle.textContent = '@' + discTag; accHandle.hidden = false; accHandle.title = 'Username Discord'; }
+        else if (u.email && isEmailAuthUser(u)) { accHandle.textContent = u.email; accHandle.hidden = false; accHandle.title = ''; }
+        else { accHandle.textContent = ''; accHandle.hidden = true; accHandle.title = ''; }
+      }
       const avi = document.getElementById('accAvatar');
       if (u.avatarUrl) {
         avi.innerHTML = `<img src="${u.avatarUrl}" alt="${u.displayName || ''}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block">`;
@@ -8456,7 +8492,8 @@
         const fmtBillDate = (d) => { try { return new Date(d).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }); } catch(_){ return '—'; } };
 
         const displayName = u.displayName || u.email || 'Matefindr user';
-        const tagLine = u.discordTag ? '@' + u.discordTag : (u.email || '—');
+        const discTag = discordUsernameOf(u);
+        const tagLine = discTag ? ('@' + discTag) : (isEmailAuthUser(u) ? (u.email || '') : '');
         const avatarInner = u.avatarUrl
           ? `<img src="${u.avatarUrl}" alt="">`
           : escapeHtmlMini((displayName || 'M').charAt(0).toUpperCase());
@@ -8500,7 +8537,7 @@
                   <div class="si-avatar">${avatarInner}</div>
                   <div class="si-txt">
                     <div class="si-name">${escapeHtmlMini(displayName)}</div>
-                    <div class="si-tag">${escapeHtmlMini(tagLine)}</div>
+                    ${tagLine ? `<div class="si-tag"${discTag ? ' title="Username Discord"' : ''}>${escapeHtmlMini(tagLine)}</div>` : ''}
                     <div class="si-status"><span class="si-status-dot"></span>En ligne</div>
                   </div>
                 </div>

@@ -1499,7 +1499,7 @@ html.perf-lite *{
       <div class="body">
         <div class="card-meta-head">
           <h1 class="username editable" id="usernameSlot">Matefindr_user<span class="ed-badge" aria-hidden="true">✎</span></h1>
-          <div class="tag">@matefindr · en ligne sur Matefindr</div>
+          <div class="tag" hidden title="Username Discord"></div>
           <div id="edProfileTitle"></div>
         </div>
         <div class="divider"></div>
@@ -1886,12 +1886,19 @@ function applyTagBlur(){
   const tag=document.querySelector('.tag'); if(!tag) return;
   tag.classList.toggle('tag--blur', !!S.handleBlur);
 }
-/* Pseudo Discord (@tag) : clic = flou ON/OFF (empêche les autres de t'ajouter) */
+/* Username Discord (@tag) : clic = flou ON/OFF (empêche les autres de t'ajouter).
+   Invisible / inerte sur les comptes email (pas de Discord). */
 (function(){
   const tag=document.querySelector('.tag'); if(!tag) return;
   tag.classList.add('tag--clickable');
-  tag.title='Clique pour flouter ton pseudo Discord (éviter les ajouts)';
-  tag.addEventListener('click',()=>{ S.handleBlur=!S.handleBlur; applyTagBlur(); persist(); toast(S.handleBlur?'Pseudo Discord flouté 🔒':'Pseudo Discord visible'); if(document.body.classList.contains('color-open')) renderColorPanel(); });
+  tag.title='Clique pour flouter ton username Discord (éviter les ajouts)';
+  tag.addEventListener('click',()=>{
+    const u=connReadUser();
+    if((u.mode==='email')||(!u.discordId&&!!u.email)||!u.discordId) return;
+    S.handleBlur=!S.handleBlur; applyTagBlur(); persist();
+    toast(S.handleBlur?'Username Discord flouté 🔒':'Username Discord visible');
+    if(document.body.classList.contains('color-open')) renderColorPanel();
+  });
 })();
 /* Pseudo Matefindr : popup rename + (Boost) retrait du style doré */
 (function(){
@@ -3076,12 +3083,17 @@ function renderColorPanel(){
       <button type="button" class="uname-color-def" id="cpNameDef">Défaut</button>
     </div>
     <div class="cp-div"></div>
-    <div class="cp-title">Pseudo Discord (@tag)</div>
+    ${(() => {
+      const u = connReadUser();
+      const emailAcc = (u.mode==='email') || (!u.discordId && !!u.email);
+      if (emailAcc || !u.discordId) return '';
+      return `<div class="cp-title">Username Discord (@tag)</div>
     <div class="cp-toggle-row">
-      <button type="button" class="sh-contour-tgl${!S.handleBlur?' on':''}" id="cpTagVisible" title="Afficher ou masquer ton @username sur la carte"><span>Afficher le @username</span><span class="sw"></span></button>
+      <button type="button" class="sh-contour-tgl${!S.handleBlur?' on':''}" id="cpTagVisible" title="Afficher ou masquer ton username Discord sur la carte"><span>Afficher le username Discord</span><span class="sw"></span></button>
     </div>
-    <p class="cp-hint">Désactivé = pseudo flouté (évite les ajouts Discord non désirés).</p>
-    <div class="cp-div"></div>
+    <p class="cp-hint">Désactivé = username Discord flouté (évite les ajouts non désirés).</p>
+    <div class="cp-div"></div>`;
+    })()}
     <div class="cp-title">Couleur de la carte</div>
     <div class="cp-grad-wrap">
       <div class="grad-vert" id="gradVert" style="background:linear-gradient(180deg,${S.c1},${S.c2})">
@@ -3115,13 +3127,14 @@ function renderColorPanel(){
   p.querySelector('#colSwap').addEventListener('click',()=>{ applyColors(S.c2,S.c1); sync(); });
   p.querySelectorAll('[data-c1]').forEach(b=>b.addEventListener('click',()=>{ applyColors(b.dataset.c1,b.dataset.c2); sync(); }));
   p.querySelector('#colReset').addEventListener('click',()=>{ applyColors('#242429','#242429'); sync(); toast('Couleur par défaut appliquée'); });
-  p.querySelector('#cpTagVisible').addEventListener('click',()=>{
+  p.querySelector('#cpTagVisible')?.addEventListener('click',()=>{
     const btn=p.querySelector('#cpTagVisible');
+    if(!btn) return;
     const show=!btn.classList.contains('on');
     btn.classList.toggle('on',show);
     S.handleBlur=!show;
     applyTagBlur(); persist();
-    toast(S.handleBlur?'Pseudo Discord flouté 🔒':'Pseudo Discord visible');
+    toast(S.handleBlur?'Username Discord flouté 🔒':'Username Discord visible');
   });
   const cpNC=p.querySelector('#cpNameColor');
   if(cpNC) DarkColorPicker.bindSwatch(cpNC,()=>nameSwatchColor(),hex=>{ applyNameColorVal(hex); DarkColorPicker.setSwatchBg(cpNC,hex); });
@@ -4082,8 +4095,11 @@ function buildDbProfile(st){
     if(o.contour===false) out.contour=false;
     return out;
   });
+  const isEmailAcc=(u.mode==='email')||(!u.discordId&&!!u.email);
+  const rawTag=(!isEmailAcc&&u.discordId&&u.discordTag)?String(u.discordTag).replace(/^@+/,'').replace(/#0$/,'').trim():'';
+  const discTag=(rawTag&&!/^moi$/i.test(rawTag)&&!/^matefindr$/i.test(rawTag))?rawTag:'';
   return {
-    name:u.displayName||'Moi', tag:u.discordTag||'moi',
+    name:u.displayName||'Moi', tag:discTag,
     age:p.age||'', gender:p.gender||'', country:p.country||'', countryFlag:p.countryFlag||'',
     termsAcceptedAt:p.termsAcceptedAt||null,
     looking:p.looking||'game', status:'online',
@@ -4113,6 +4129,7 @@ function buildDbProfile(st){
     lastEditedAt:p.lastEditedAt||null,
     staffMessage:u.staffMessage||null, lastSeenAt:u.lastSeenAt||null,
     discordLive:u.discordLive||null,
+    discordTag:discTag||null,
     titlesData:u.titlesData||null,
     coins:typeof u.coins==='number'?u.coins:0,
     questCoinClaims:Array.isArray(u.questCoinClaims)?u.questCoinClaims:[],
@@ -4388,8 +4405,11 @@ function renderEditorCardMeta(){
   const titleBox=$('edProfileTitle');
   if(!titleBox||!TQ) return;
   const st=readSite(); const u=st.user||{};
+  const isEmailAcc=(u.mode==='email')||(!u.discordId&&!!u.email);
+  const rawTag=(!isEmailAcc&&u.discordId&&u.discordTag)?String(u.discordTag).replace(/^@+/,'').replace(/#0$/,'').trim():'';
+  const discTag=(rawTag&&!/^moi$/i.test(rawTag)&&!/^matefindr$/i.test(rawTag))?rawTag:'';
   const prof={
-    name:u.displayName||'Moi', tag:u.discordTag||'moi',
+    name:u.displayName||'Moi', tag:discTag, discordId:u.discordId||null,
     isMe:true, titlesData:TQ.getTitlesData(u),
   };
   titleBox.innerHTML=TQ.editorTitleSlotHtml(prof, esc);
@@ -4406,11 +4426,25 @@ function hydrateFromSite(){
   showDisabledBanner(u.disabled?u.disabledReason:null);
   if(u.displayName){ S.username=u.displayName; setEditableText($('usernameSlot'),u.displayName); }
   S.nameCustom=!!u.nameCustom;
-  // Comptes email (pas de tag Discord) : pas de faux pseudo à afficher (le HTML
-  // par défaut montrait littéralement "@matefindr", jamais remplacé faute de
-  // discordTag) -- la ligne disparaît entièrement plutôt que de mentir.
+  // Comptes email (pas de Discord) : aucune ligne username Discord.
+  // Ancien HTML par défaut montrait "@matefindr" — jamais ça pour un compte mail.
   const tagEl=document.querySelector('.tag');
-  if(tagEl){ if(u.discordTag){ tagEl.textContent='@'+u.discordTag+' · en ligne sur Matefindr'; tagEl.hidden=false; } else { tagEl.hidden=true; } }
+  const isEmailAcc = (u.mode==='email') || (!u.discordId && !!u.email);
+  const discTag = (!isEmailAcc && u.discordId && u.discordTag)
+    ? String(u.discordTag).replace(/^@+/,'').replace(/#0$/,'').trim()
+    : '';
+  const realDiscTag = discTag && !/^moi$/i.test(discTag) && !/^matefindr$/i.test(discTag) ? discTag : '';
+  if(tagEl){
+    if(realDiscTag){
+      tagEl.textContent='@'+realDiscTag+' · en ligne sur Matefindr';
+      tagEl.hidden=false;
+      tagEl.title='Username Discord';
+    } else {
+      tagEl.textContent='';
+      tagEl.hidden=true;
+      tagEl.title='';
+    }
+  }
   // Âge / genre / pays — posés à l'onboarding (site), affichés en lecture seule ici,
   // sous la forme EXACTE du badge flottant de la vraie carte (.card-age-badge,
   // cf. buildCard() dans js/app.js) : drapeau flagcdn (pas un emoji, invisible sur
