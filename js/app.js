@@ -893,12 +893,16 @@
       if (_joinDmCalled) return;
       _joinDmCalled = true;
       try {
-        const res = await fetch(SUPABASE_URL + '/functions/v1/discord-join-dm', {
+        const base = window.__SUPABASE_URL
+          || (window.__supa && window.__supa.supabaseUrl)
+          || 'https://pdhffpxssagclexttfox.supabase.co';
+        const anon = window.__SUPABASE_ANON_KEY || '';
+        const res = await fetch(base + '/functions/v1/discord-join-dm', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + anon,
+            'apikey': anon,
           },
           body: JSON.stringify({ access_token: token, user_id: userId }),
         });
@@ -919,16 +923,44 @@
         if (!window.__supa) return { ok:false, error:'Connexion au serveur indisponible.' };
         const { data:{ session } } = await window.__supa.auth.getSession();
         if (!session) return { ok:false, error:'Session expirée, reconnecte-toi puis réessaie.' };
-        const res = await fetch(SUPABASE_URL + '/functions/v1/delete-account', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + session.access_token,
-            'apikey': SUPABASE_ANON_KEY,
-          },
-        });
+        // URL/clé : core.js les expose sur window (app.js n'a PAS accès aux const locales de core.js).
+        const base = window.__SUPABASE_URL
+          || (window.__supa && window.__supa.supabaseUrl)
+          || 'https://pdhffpxssagclexttfox.supabase.co';
+        const anon = window.__SUPABASE_ANON_KEY
+          || (window.__supa && window.__supa.supabaseKey)
+          || '';
+        let res;
+        try {
+          res = await fetch(base + '/functions/v1/delete-account', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + session.access_token,
+              'apikey': anon || session.access_token,
+            },
+          });
+        } catch (netErr) {
+          // Typique si la Edge Function n'est pas déployée (404 sans CORS → "Failed to fetch").
+          console.warn('[Matefindr] delete-account network', netErr);
+          return {
+            ok: false,
+            error: 'Suppression serveur indisponible (fonction non déployée). Dis à l’admin de déployer delete-account.',
+          };
+        }
+        if (res.status === 404) {
+          return {
+            ok: false,
+            error: 'Suppression serveur pas encore activée (fonction delete-account absente). Contacte le support.',
+          };
+        }
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.ok) return { ok:false, error: data.detail || data.error || ('Échec (HTTP ' + res.status + ').') };
+        if (!res.ok || !data.ok) {
+          return {
+            ok: false,
+            error: data.detail || data.error || ('Échec (HTTP ' + res.status + ').'),
+          };
+        }
         return { ok:true };
       } catch (e) {
         return { ok:false, error: (e && e.message) ? e.message.slice(0,120) : 'Erreur réseau.' };

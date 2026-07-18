@@ -78,6 +78,25 @@ Le lien perso (`openSharedProfile`) continue de faire un `SELECT *` complet (pre
 
 ---
 
+# Matefindr — Suppression de compte (Edge Function `delete-account`)
+
+Sans cette fonction déployée, le bouton « Supprimer mon compte » affiche **Failed to fetch** (404 sans CORS).
+
+## Setup (une fois)
+
+```bash
+npx supabase login
+npx supabase functions deploy delete-account --project-ref pdhffpxssagclexttfox
+```
+
+**Ne PAS** ajouter `--no-verify-jwt` (la fonction doit vérifier le JWT utilisateur — on ne peut supprimer que son propre compte).
+
+Secrets déjà fournis par Supabase aux Edge Functions : `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+Vérif : `POST https://pdhffpxssagclexttfox.supabase.co/functions/v1/delete-account` ne doit plus renvoyer 404.
+
+---
+
 # Matefindr — Auto-join du serveur Discord à la création de compte
 
 Quand un utilisateur se connecte avec Discord, le **bot l'ajoute automatiquement au serveur** (puis lui envoie un DM de bienvenue). C'est l'Edge Function `discord-join-dm`.

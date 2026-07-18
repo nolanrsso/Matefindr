@@ -5,6 +5,8 @@
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
   window.__supa = supa;
+  window.__SUPABASE_URL = SUPABASE_URL;
+  window.__SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
 
   /* Redimensionne/compresse une image côté client avant upload (évite les
      photos de plusieurs Mo qui gonflaient la base en base64). */
