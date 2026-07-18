@@ -1684,6 +1684,28 @@
     background:transparent;overflow:visible;
   }
 
+  /* Overlay pendant le chargement des médias (avatar/bannière/fond) du PROCHAIN
+     profil -- posé par-dessus la carte + le fond ACTUELS (jamais retirés du DOM
+     tant que le suivant n'est pas prêt), pour ne jamais montrer un profil à moitié
+     chargé. Ignoré entièrement si tout est déjà en cache (voir ensureDeckSync). */
+  .swipe-card-loader{
+    position:absolute;inset:0;z-index:10;border-radius:20px;overflow:hidden;
+    display:grid;place-items:center;
+    background:rgba(13,11,30,.42);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+    animation:swipeCardLoaderIn .15s ease;
+  }
+  @keyframes swipeCardLoaderIn{from{opacity:0}to{opacity:1}}
+  .swipe-card-loader-spin{
+    width:34px;height:34px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.16);
+    border-top-color:#FF7EB6;border-right-color:#9146FF;
+    animation:mfPageSpin .7s linear infinite;
+  }
+  @media (prefers-reduced-motion:reduce){
+    .swipe-card-loader{animation:none}
+    .swipe-card-loader-spin{animation:none;border-color:rgba(255,255,255,.3);border-top-color:#FF7EB6}
+  }
+
   /* Discord-style profile card */
   .swipe-card{
     position:absolute;inset:0;border-radius:20px;overflow:hidden;isolation:isolate;

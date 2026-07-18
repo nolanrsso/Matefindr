@@ -2630,6 +2630,52 @@
         el.style.setProperty('--c2', c2);
       });
     }
+    /* ===== Préchargement du profil suivant avant de basculer la carte =====
+       Sans ça, la carte + le fond changent instantanément avec des <img> pas
+       encore chargées (avatar/bannière vides le temps du fetch réseau), ou pire,
+       avec la bannière prête mais pas l'avatar (demi-chargé, moche). On garde
+       la carte + le fond ACTUELS affichés (avec un petit spinner par-dessus) tant
+       que les médias du prochain profil ne sont pas confirmés prêts -- si tout
+       est déjà en cache navigateur (cas courant : deck déjà survolé), le switch
+       reste instantané, sans jamais montrer le spinner. */
+    function _swipeMediaUrls(p){
+      if (!p) return [];
+      const urls = [];
+      if (p.avatarUrl) urls.push(p.avatarUrl);
+      if (p.bannerUrl) urls.push(p.bannerUrl);
+      if (p.bg && /^https?:\/\//.test(p.bg) && !/\.(mp4|webm|ogg|mov)(\?|$)/i.test(p.bg)) urls.push(p.bg);
+      return urls;
+    }
+    function _swipeImgCached(url){
+      try { const img = new Image(); img.src = url; return img.complete && img.naturalWidth > 0; }
+      catch (_) { return true; }
+    }
+    function _swipeImgLoad(url, timeoutMs){
+      return new Promise(resolve => {
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        try {
+          const img = new Image();
+          img.onload = finish; img.onerror = finish;
+          img.src = url;
+          if (img.complete) { finish(); return; }
+        } catch (_) { finish(); return; }
+        setTimeout(finish, timeoutMs || 2500);
+      });
+    }
+    function swipeProfileMediaReady(p){ return _swipeMediaUrls(p).every(_swipeImgCached); }
+    function preloadSwipeProfileMedia(p){ return Promise.all(_swipeMediaUrls(p).map(u => _swipeImgLoad(u, 2500))); }
+    let _deckSwapToken = 0;
+    function showSwipeCardLoader(wrap){
+      if (!wrap || document.getElementById('swipeCardLoader')) return;
+      const el = document.createElement('div');
+      el.id = 'swipeCardLoader';
+      el.className = 'swipe-card-loader';
+      el.innerHTML = '<span class="swipe-card-loader-spin"></span>';
+      wrap.appendChild(el);
+    }
+    function hideSwipeCardLoader(){ document.getElementById('swipeCardLoader')?.remove(); }
+
     function ensureDeckSync(opts){
       opts = opts || {};
       refreshMyGuildsIfNeeded();
@@ -2687,50 +2733,64 @@
         return;
       }
 
-      wrap.innerHTML = '';
       document.body.removeAttribute('data-swipe-empty');
       // Le popup de note est lié au profil qui était affiché -- s'il reste ouvert
       // pendant qu'on passe au suivant, il montre un état périmé (et la cible figée
       // à l'ouverture, cf. _reactPopupTarget, ne correspond plus à la carte visible).
       document.getElementById('reactPopup')?.setAttribute('data-open', 'false');
-      if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
 
-      if (_sharedProfile && !_previewMode) {
-        try {
-          wrap.appendChild(buildCard(_sharedProfile, true));
-          syncSwipeWrapGradient(_sharedProfile);
-          renderOrbs(_sharedProfile);
-          renderSwipeGifs(_sharedProfile);
-          renderSwipePhotos(_sharedProfile);
-          playProfileEntryMusic(_sharedProfile);
-          try { refreshVisibleDiscordLive(); } catch(_){}
-        } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
-        return;
-      }
-
-      const myP = buildUserProfile() || (_previewMode ? buildMinimalProfile() : null);
-      const previewP = _previewMode ? (_previewProfile || myP) : null;
-      const inPreview = !!(_previewMode && previewP);
-      const pool = _previewMode ? [] : genderFilteredProfiles();
-      const offset = inPreview ? 1 : 0;
-      const total = pool.length + offset;
-      try {
-        wrap.appendChild(buildCard(p, true));
-        syncSwipeWrapGradient(p);
-        renderOrbs(p);
-        renderSwipeGifs(p);
-        renderSwipePhotos(p);
-        playProfileEntryMusic(p);
-        try { refreshVisibleDiscordLive(); } catch(_){}
-      } catch (err) {
-        console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
+      const doSwap = () => {
+        hideSwipeCardLoader();
         wrap.innerHTML = '';
-        if (typeof applyBgChoice === 'function') applyBgChoice(null);
-        if (p && p.uid) markSwipedUid(p.uid);
-        const nextPool = genderFilteredProfiles();
-        if (nextPool.length) { ensureDeckSync({ force: true }); return; }
-        wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
-        document.body.setAttribute('data-swipe-empty', 'true');
+        if (typeof applyBgChoice === 'function') applyBgChoice(p && p.bg, p && p.bgPos);
+
+        if (_sharedProfile && !_previewMode) {
+          try {
+            wrap.appendChild(buildCard(_sharedProfile, true));
+            syncSwipeWrapGradient(_sharedProfile);
+            renderOrbs(_sharedProfile);
+            renderSwipeGifs(_sharedProfile);
+            renderSwipePhotos(_sharedProfile);
+            playProfileEntryMusic(_sharedProfile);
+            try { refreshVisibleDiscordLive(); } catch(_){}
+          } catch (e) { try { wrap.appendChild(buildCard(_sharedProfile, true)); } catch(_){} }
+          return;
+        }
+
+        try {
+          wrap.appendChild(buildCard(p, true));
+          syncSwipeWrapGradient(p);
+          renderOrbs(p);
+          renderSwipeGifs(p);
+          renderSwipePhotos(p);
+          playProfileEntryMusic(p);
+          try { refreshVisibleDiscordLive(); } catch(_){}
+        } catch (err) {
+          console.warn('[Matefindr] profil illisible, on passe au suivant', err, p);
+          wrap.innerHTML = '';
+          if (typeof applyBgChoice === 'function') applyBgChoice(null);
+          if (p && p.uid) markSwipedUid(p.uid);
+          const nextPool = genderFilteredProfiles();
+          if (nextPool.length) { ensureDeckSync({ force: true }); return; }
+          wrap.innerHTML = `<div class="swipe-empty"><h3>${tx('no_more')}</h3><p>${tx('no_more_sub')}</p></div>`;
+          document.body.setAttribute('data-swipe-empty', 'true');
+        }
+      };
+
+      // Tant que les médias du prochain profil ne sont pas prêts, on laisse la
+      // carte + le fond ACTUELS affichés (avec un spinner par-dessus, cf. CSS
+      // .swipe-card-loader) au lieu de basculer sur un profil à moitié chargé.
+      // Déjà tout en cache (cas courant) -> switch instantané, jamais de spinner.
+      const mediaTarget = (_sharedProfile && !_previewMode) ? _sharedProfile : p;
+      const swapToken = ++_deckSwapToken;
+      if (swipeProfileMediaReady(mediaTarget)) {
+        doSwap();
+      } else {
+        showSwipeCardLoader(wrap);
+        preloadSwipeProfileMedia(mediaTarget).then(() => {
+          if (swapToken !== _deckSwapToken) return; // un appel plus récent a pris le relais
+          doSwap();
+        });
       }
     }
 
