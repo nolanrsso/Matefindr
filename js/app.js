@@ -114,6 +114,29 @@
       document.documentElement.classList.remove('mf-boot-hidden');
     }
 
+    /* Compte déjà créé (onboarding fait) — ne JAMAIS montrer « Hey, … ». */
+    function cloudDataLooksLikeExistingProfile(d){
+      if (!d || typeof d !== 'object') return false;
+      return !!(
+        d.name || d.age || d.gender || d.country
+        || d.termsAcceptedAt
+        || (Array.isArray(d.orbs) && d.orbs.length)
+        || (d.dailyLogin && d.dailyLogin.lastClaim)
+        || (Array.isArray(d.gifs) && d.gifs.length)
+        || (Array.isArray(d.photos) && d.photos.length)
+      );
+    }
+    function isExistingMatefindrProfile(){
+      const p = state.profile;
+      if (!p || typeof p !== 'object') return false;
+      return !!(
+        p.age || p.gender || p.country || p.pseudo || p.termsAcceptedAt
+        || (Array.isArray(p.userOrbs) && p.userOrbs.length)
+      );
+    }
+    // true = session locale sans profil encore : on attend onLogin/cloud avant tout écran.
+    let _deferScreenUntilLogin = false;
+
     /* ---- Écran vide pendant le chargement ----
        Min court (connexion rapide). Si ça traîne → logo + spinner (sans carte noire).
        On attend le contenu prêt avant de révéler (max 12 s). */
@@ -261,6 +284,8 @@
       // tente de rouvrir le swipe (onglet déjà ouvert, retour navigateur…), on renvoie
       // systématiquement vers l'éditeur, seul endroit accessible tant que non réactivé.
       if (name === 'swipe' && state.user && state.user.disabled) { location.href = 'editor.html'; return; }
+      // Compte déjà existant → jamais l'écran « Hey, toi ».
+      if (name === 'onboarding' && isExistingMatefindrProfile()) name = 'landing';
       const prev = document.body.getAttribute('data-screen');
       const changing = prev !== name;
       // Premier reveal (boot) : loader même si l'écran HTML est déjà "landing".
@@ -344,7 +369,9 @@
        s'est connecté via Discord (like/réaction) depuis ce lien. window.__mfIsSlugPath
        et window.__mfShowGate sont posés par le script du gate dans index.html. */
     function enterFullApp(){
-      const target = state.profile ? 'landing' : 'onboarding';
+      _deferScreenUntilLogin = false;
+      // Compte déjà créé → accueil, jamais « Hey, toi ».
+      const target = isExistingMatefindrProfile() ? 'landing' : (state.profile ? 'landing' : 'onboarding');
       let gateOk = true;
       try { gateOk = localStorage.getItem('matefindr_gate_ok') === '1'; } catch(_){}
       if (window.__mfIsSlugPath && !gateOk && typeof window.__mfShowGate === 'function') {
@@ -654,13 +681,7 @@
               if (dRaw && dRaw.slugChangedAt) state.user.slugChangedAt = dRaw.slugChangedAt;
               // Compte existant = déjà passé par l'onboarding (âge/genre/pays/orbes…)
               // — pas seulement `data.name` (sinon → "Hey, toi !" à chaque reconnexion).
-              const hasCloudProfile = !!(dRaw && (
-                dRaw.name || dRaw.age || dRaw.gender || dRaw.country
-                || (Array.isArray(dRaw.orbs) && dRaw.orbs.length)
-                || (dRaw.dailyLogin && dRaw.dailyLogin.lastClaim)
-                || (Array.isArray(dRaw.gifs) && dRaw.gifs.length)
-                || (Array.isArray(dRaw.photos) && dRaw.photos.length)
-              ));
+              const hasCloudProfile = cloudDataLooksLikeExistingProfile(dRaw);
               const d = hasCloudProfile ? dRaw : null;
               if (!state.profile && d) {
                 const su = state.user;
@@ -976,26 +997,40 @@
 
     // Populate the welcome "Hey, X !" page from any known name/avatar (priorité au compte Discord connecté)
     function initOnboarding(){
-      let name = 'toi', avatarUrl = null;
+      // Compte déjà existant → sortir immédiatement (aucun flash « Hey, toi »).
+      if (isExistingMatefindrProfile()) {
+        setScreen('landing');
+        return;
+      }
+      let name = '', avatarUrl = null;
       try {
         const u = state.user || {};
-        name = u.displayName
+        name = (u.displayName
             || (window.__discordUser && window.__discordUser.username)
-            || (document.getElementById('accName') && document.getElementById('accName').textContent.trim())
-            || (state.profile && state.profile.pseudo) || 'toi';
+            || (state.profile && state.profile.pseudo)
+            || '').trim();
+        if (name === '—' || name === 'Matefindr_user') name = '';
         avatarUrl = u.avatarUrl
             || (window.__discordUser && window.__discordUser.avatarUrl)
             || null;
       } catch(_){}
-      const nEl = $onb('onbWelcomeName'); if (nEl) nEl.textContent = (name && name !== '—' && name.trim()) ? name : 'toi';
+      const heyEl = $onb('onbHeyLine');
+      const nEl = $onb('onbWelcomeName');
+      // Pas de pseudo encore chargé → on n'affiche PAS « Hey, toi » (ligne cachée).
+      if (!name) {
+        if (heyEl) heyEl.hidden = true;
+        if (nEl) nEl.textContent = '';
+      } else {
+        if (heyEl) heyEl.hidden = false;
+        if (nEl) nEl.textContent = name;
+      }
       const av = $onb('onbWelcomeAvatar');
       if (av) {
         if (avatarUrl) { av.classList.add('has-img'); av.innerHTML = '<img src="'+avatarUrl+'" alt="">'; }
-        else if (name && name !== 'toi' && name.trim()) {
+        else if (name) {
           // Pas de photo (compte email, pas de PDP Discord) : 1re lettre du pseudo
-          // donné à l'inscription, comme partout ailleurs sur le site.
           av.classList.remove('has-img');
-          av.textContent = name.trim().charAt(0).toUpperCase();
+          av.textContent = name.charAt(0).toUpperCase();
         }
         else { av.classList.remove('has-img'); av.textContent = '🎉'; }
       }
@@ -1012,7 +1047,7 @@
       try {
         const u = state.user || {};
         const pseudoEl = $onb('onbPseudo');
-        if (pseudoEl && !pseudoEl.value && (u.displayName || name !== 'toi')) {
+        if (pseudoEl && !pseudoEl.value && name) {
           pseudoEl.value = u.displayName || name;
           draft.pseudo = pseudoEl.value;
         }
@@ -9500,8 +9535,25 @@
       // handleSharedLink/handleEditorReturn appelleront setScreen (donc revealApp)
       // eux-mêmes une fois résolus.
       const willBeOverridden = !!getSharedSlug() || location.hash === '#preview' || location.hash === '#account';
-      if (willBeOverridden) document.body.setAttribute('data-screen', state.profile ? 'landing' : 'onboarding');
-      else setScreen(state.profile ? 'landing' : 'onboarding');
+      if (willBeOverridden) {
+        document.body.setAttribute('data-screen', 'landing');
+      } else if (isExistingMatefindrProfile() || state.profile) {
+        setScreen('landing');
+      } else {
+        // Session locale sans profil : ATTENDRE onLogin + cloud avant d'afficher
+        // quoi que ce soit — sinon flash « Hey, toi » puis bascule landing.
+        _deferScreenUntilLogin = true;
+        document.body.setAttribute('data-screen', 'landing');
+        const gen = showPageLoader();
+        // Ne pas revealApp ici : on reste en mf-boot-hidden jusqu'à enterFullApp,
+        // sauf timeout de sécurité (session morte / cloud lent).
+        setTimeout(() => {
+          if (!_deferScreenUntilLogin) return;
+          _deferScreenUntilLogin = false;
+          enterFullApp();
+          hidePageLoader(gen);
+        }, 8000);
+      }
       backfillCovers();
     } else if (!getSharedSlug()) {
       // Visiteur déconnecté sur / : écran vide jusqu'à contenu prêt (min 0,5 s).
