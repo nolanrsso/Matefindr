@@ -4811,7 +4811,7 @@ function renderPresets(){
     const c1=p.c1||'#7a2bff', c2=p.c2||'#5b1fd0';
     slot.innerHTML='<span class="pset-swatch" style="background:linear-gradient(180deg,'+c1+' 0%,'+c2+' 100%)"></span><span class="pset-num">'+(i+1)+'</span>'
       +'<button class="pset-dup" type="button" title="Dupliquer ce preset" aria-label="Dupliquer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg></button>'
-      +'<button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>';
+      +(i===0?'':'<button class="pset-del" type="button" title="Supprimer ce preset" aria-label="Supprimer">×</button>');
     slot.querySelector('.pset-dup').addEventListener('click',e=>{
       e.stopPropagation();
       if(document.body.classList.contains('not-boost')){ openBoostGate(null,true); return; }
@@ -4824,8 +4824,9 @@ function renderPresets(){
       renderPresets();
       toast('Preset '+PRESETS.length+' créé, copie du preset '+(i+1));
     });
-    slot.querySelector('.pset-del').addEventListener('click',e=>{
+    slot.querySelector('.pset-del')?.addEventListener('click',e=>{
       e.stopPropagation();
+      if(i===0) return;
       PRESETS.splice(i,1);
       // Bascule directement sur le preset PRÉCÉDENT (celui juste avant dans la liste),
       // ou le nouveau premier si on supprimait le tout premier.
