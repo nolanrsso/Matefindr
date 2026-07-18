@@ -8729,6 +8729,7 @@
           // Ne PAS save() ici : ça réécrirait {user:null} puis un autre onglet/éditeur
           // pourrait ressusciter Matefindr_user. L'état mémoire suffit + removeItem.
           setAuth(false);
+          window.__mfForceHomeOnSettingsClose = true;
           AM.closeSettingsPop();
           setScreen('landing');
           if (typeof refreshLandingCta === 'function') refreshLandingCta();
@@ -8771,6 +8772,7 @@
             state = { user: null, profile: null };
             try { localStorage.clear(); } catch (_) {}
             setAuth(false);
+            window.__mfForceHomeOnSettingsClose = true;
             AM.closeSettingsPop();
             setScreen('landing');
             if (typeof refreshLandingCta === 'function') refreshLandingCta();
@@ -8839,7 +8841,16 @@
         });
         const mo = new MutationObserver(() => {
           if (pop.hidden && location.pathname === '/settings') {
-            if (pushedByUs) { pushedByUs = false; try { history.back(); } catch(_){} }
+            // Déconnexion/suppression de compte : ignore le "retour à l'origine"
+            // (editor/checkout) même si /settings y a été ouvert depuis -- sinon on
+            // renvoie l'utilisateur tout juste déconnecté droit sur l'éditeur, qui
+            // affiche alors un faux profil fantôme "Matefindr_user" (pas de session).
+            if (window.__mfForceHomeOnSettingsClose) {
+              window.__mfForceHomeOnSettingsClose = false;
+              pushedByUs = false;
+              try { history.replaceState(null, '', '/'); } catch(_){}
+            }
+            else if (pushedByUs) { pushedByUs = false; try { history.back(); } catch(_){} }
             else if (cameFromPath) { location.href = cameFromPath; }
             else { try { history.replaceState(null, '', '/'); } catch(_){} }
           }
