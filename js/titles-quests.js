@@ -83,7 +83,7 @@
     title: 'Voix du Public', rarity: 2,
   };
 
-  const RATING_MIN_VOTERS = 5;
+  const RATING_MIN_VOTERS = 1;
 
   /** Pièces gagnées à chaque palier terminé (niveau 1 = 36, niveau 2 = 62, …). */
   const QUEST_COIN_REWARD = [
@@ -180,7 +180,22 @@
 
   function $(id) { return document.getElementById(id); }
   function readSite() { try { return JSON.parse(localStorage.getItem(STATE_KEY) || '{}'); } catch (_) { return {}; } }
-  function writeSite(s) { try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (_) {} }
+  // Ce module gère questStats/questCoinClaims en écrivant directement le localStorage,
+  // hors de l'objet `state` interne (en mémoire) d'app.js. Problème : dès qu'un save()
+  // d'app.js se déclenche ensuite (ex: __matefindrSave appelé juste après une
+  // réclamation pour synchroniser le cloud), il réécrit TOUT le localStorage avec SA
+  // propre copie mémoire de `state`, qui n'a jamais connu ces deux champs -> ils
+  // disparaissent aussitôt écrits (le bouton Réclamer semblait ne "rien faire").
+  // __matefindrStateRef() (déjà exposé par app.js) donne une référence live sur ce
+  // `state` : on la patch en même temps que le localStorage pour que les deux copies
+  // restent en phase.
+  function writeSite(s) {
+    try { localStorage.setItem(STATE_KEY, JSON.stringify(s)); } catch (_) {}
+    try {
+      const live = typeof global.__matefindrStateRef === 'function' ? global.__matefindrStateRef() : null;
+      if (live && s && s.user) Object.assign(live.user || (live.user = {}), s.user);
+    } catch (_) {}
+  }
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
   function defaultTitlesData() {
@@ -985,12 +1000,16 @@
   }
 
   /** Réclame les pièces d'un palier terminé (pas de titre de mission). */
-  function claimQuestReward(id) {
+  function claimQuestReward(id, statsOverride) {
     const m = getMission(id);
     if (!m || isRatingTitle(m)) return null;
-    const stats = (readSite().user || {}).questStats || {};
+    // statsOverride = les stats déjà affichées à l'écran (celles qui ont rendu le
+    // bouton "Réclamer" visible), pour ne pas dépendre d'un readSite() qui peut
+    // avoir été réécrit entre-temps (voir writeSite plus bas).
+    const stats = statsOverride || (readSite().user || {}).questStats || {};
     const eligible = listEligibleMissionIds(stats);
     if (!eligible.includes(id)) return null;
+    if (statsOverride) syncStatsLocal(stats);
 
     let gained = 0;
     const claims = getQuestCoinClaims().slice();
@@ -1891,7 +1910,7 @@
     body.querySelectorAll('[data-claim]').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-claim');
-        const res = claimQuestReward(id);
+        const res = claimQuestReward(id, stats);
         if (!res) return;
         if (res.gained > 0) tqToast(`+${res.gained.toLocaleString('fr-FR')} pièces récupérées !`);
         else tqToast('Récompense réclamée');
