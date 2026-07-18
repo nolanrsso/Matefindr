@@ -4406,7 +4406,11 @@ function hydrateFromSite(){
   showDisabledBanner(u.disabled?u.disabledReason:null);
   if(u.displayName){ S.username=u.displayName; setEditableText($('usernameSlot'),u.displayName); }
   S.nameCustom=!!u.nameCustom;
-  if(u.discordTag){ document.querySelector('.tag').textContent='@'+u.discordTag+' · en ligne sur Matefindr'; }
+  // Comptes email (pas de tag Discord) : pas de faux pseudo à afficher (le HTML
+  // par défaut montrait littéralement "@matefindr", jamais remplacé faute de
+  // discordTag) -- la ligne disparaît entièrement plutôt que de mentir.
+  const tagEl=document.querySelector('.tag');
+  if(tagEl){ if(u.discordTag){ tagEl.textContent='@'+u.discordTag+' · en ligne sur Matefindr'; tagEl.hidden=false; } else { tagEl.hidden=true; } }
   // Âge / genre / pays — posés à l'onboarding (site), affichés en lecture seule ici,
   // sous la forme EXACTE du badge flottant de la vraie carte (.card-age-badge,
   // cf. buildCard() dans js/app.js) : drapeau flagcdn (pas un emoji, invisible sur
