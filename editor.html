@@ -2279,6 +2279,39 @@ async function gameCoverOpaque(title){
   for(const p of props){const url=await wikidataImage(qid,[p]);if(!url)continue;if(!firstAny)firstAny=url;if(/\.svg(\?|$)/i.test(url)&&!allowLogo)continue;const transparent=await imageHasTransparency(url);if(!transparent)return url;}
   return firstAny;
 }
+/* Recherche live "jeu" (au-delà de la liste curatée ORB_SUGGESTIONS.game) --
+   iTunes/App Store référence la quasi-totalité des jeux (PC/console/mobile)
+   avec une icône officielle immédiatement disponible (pas de fetch cover à part). */
+async function searchGamesLive(query){
+  try{
+    const r=await withTimeout(fetch('https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&entity=software&limit=8'),2500);
+    if(!r)return [];
+    const d=await r.json();
+    return (d.results||[]).map(it=>{
+      const art=(it.artworkUrl512||it.artworkUrl100||'').replace(/\/100x100bb\.(jpg|png)$/,'/512x512bb.$1');
+      return {name:it.trackName||query,sub:it.artistName||'',cover:art||null};
+    }).filter(r=>r.cover);
+  }catch(_){return [];}
+}
+/* Recherche live "série·film" -- TMDB (multi-search films+series) couvre un
+   catalogue bien plus large que la liste curatée ORB_SUGGESTIONS.film, avec
+   une vraie affiche (personnages/casting) fournie directement par l'API. */
+const TMDB_API_KEY='d9275a6817f46e5e6aa4b489de5e3d1b';
+async function searchFilmsLive(query){
+  try{
+    const r=await withTimeout(fetch('https://api.themoviedb.org/3/search/multi?api_key='+TMDB_API_KEY+'&language=fr-FR&include_adult=false&query='+encodeURIComponent(query)),2500);
+    if(!r)return [];
+    const d=await r.json();
+    return (d.results||[])
+      .filter(it=>(it.media_type==='movie'||it.media_type==='tv')&&it.poster_path)
+      .slice(0,8)
+      .map(it=>{
+        const name=it.title||it.name||query;
+        const date=it.release_date||it.first_air_date||'';
+        return {name,sub:date?date.slice(0,4):'',cover:'https://image.tmdb.org/t/p/w500'+it.poster_path};
+      });
+  }catch(_){return [];}
+}
 const ORB_SUGGESTIONS={
   game:["Minecraft","Valorant","Rocket League","Fortnite","League of Legends","Counter-Strike 2","Grand Theft Auto V","Roblox","Apex Legends","Call of Duty: Warzone","Overwatch 2","Tom Clancy's Rainbow Six Siege","Dota 2","PUBG: Battlegrounds","Genshin Impact","World of Warcraft","Final Fantasy XIV","Destiny 2","Honkai: Star Rail","Diablo IV","The Sims 4","Stardew Valley","Terraria","Among Us","Fall Guys","Marvel Rivals","Sea of Thieves","Dead by Daylight","Phasmophobia","Warframe","Path of Exile 2","Hearthstone","Magic: The Gathering Arena","Elden Ring","Cyberpunk 2077","Baldur's Gate 3","The Witcher 3: Wild Hunt","Red Dead Redemption 2","The Elder Scrolls V: Skyrim","EA Sports FC 24","NBA 2K24","Forza Horizon 5","Mortal Kombat 1","Tekken 8","Street Fighter 6","Lethal Company","Helldivers 2","Lost Ark","New World","Hogwarts Legacy","Palworld"],
   film:["One Piece","Naruto","Dragon Ball Z","Bleach","Hunter x Hunter","Attack on Titan","Jujutsu Kaisen","Demon Slayer","Chainsaw Man","My Hero Academia","Fullmetal Alchemist: Brotherhood","Death Note","JoJo's Bizarre Adventure","Vinland Saga","Spy x Family","Cowboy Bebop","Neon Genesis Evangelion","Steins;Gate","Code Geass","Haikyuu!!","Blue Lock","Re:Zero","Mob Psycho 100","Made in Abyss","Tokyo Ghoul","Fire Force","Black Clover","Frieren","Solo Leveling","Bocchi the Rock!","Spirited Away","Princess Mononoke","Howl's Moving Castle","My Neighbor Totoro","Your Name","Akira","Ghost in the Shell","Breaking Bad","Better Call Saul","The Wire","The Sopranos","Peaky Blinders","Dexter","True Detective","Fargo","Sons of Anarchy","Narcos","Ozark","Mindhunter","Prison Break","The Shield","Boardwalk Empire","The Night Of","Game of Thrones","House of the Dragon","Stranger Things","The X-Files","Black Mirror","The Twilight Zone","Doctor Who","Battlestar Galactica","The Expanse","Westworld","Dark","The Boys","The Umbrella Academy","Lost","Fringe","Foundation","Silo","The Office","Friends","Seinfeld","The Simpsons","South Park","Rick and Morty","It's Always Sunny in Philadelphia","Parks and Recreation","Brooklyn Nine-Nine","How I Met Your Mother","Arrested Development","Community","Curb Your Enthusiasm","Ted Lasso","The Good Place","Silicon Valley","The Godfather","Pulp Fiction","Fight Club","Inception","Interstellar","The Dark Knight","The Matrix","Star Wars: A New Hope","The Empire Strikes Back","Return of the Jedi","The Lord of the Rings: The Fellowship of the Ring","The Two Towers","The Return of the King","Jurassic Park","Terminator","Terminator 2: Judgment Day","Blade Runner","Alien","The Shawshank Redemption","Forrest Gump","Saving Private Ryan","Gladiator","Se7en","Shutter Island","Parasite","The Silence of the Lambs","The Shining","Psycho","Casablanca","Citizen Kane","2001: A Space Odyssey","Apocalypse Now","Taxi Driver","Goodfellas","Reservoir Dogs","The Big Lebowski","No Country for Old Men","There Will Be Blood","Whiplash","Birdman","The Grand Budapest Hotel","The Truman Show","Eternal Sunshine of the Spotless Mind","Memento","Donnie Darko","A Clockwork Orange","Full Metal Jacket","Dr. Strangelove","Lord of War","American Psycho","Scarface","Heat","Casino","The Departed","Dunkirk","Oppenheimer","Tenet","The Prestige","Batman Begins","The Dark Knight Rises","Joker","Logan","Mad Max: Fury Road","Braveheart","Troy","Kingdom of Heaven","300","Sin City","Watchmen","V for Vendetta","Children of Men","District 9","Arrival","Gravity","The Martian","Ad Astra","Moon","Ex Machina","Her","Up","Wall-E","Ratatouille","Finding Nemo","The Incredibles","Toy Story","The Lion King","Aladdin","Beauty and the Beast","Grave of the Fireflies","Weathering With You","Suzume"],
@@ -2426,7 +2459,7 @@ function renderBubblesSheet(sh){
   const allStyleBtn=sh.querySelector('#orbStyleAllBtn');
   if(allStyleBtn) allStyleBtn.addEventListener('click',e=>{e.stopPropagation();openOrbStyleAllPanel();});
   let deb=null;
-  input.addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();deb=setTimeout(()=>runOrbSearch(q),orbKind==='music'?320:80);});
+  input.addEventListener('input',e=>{clearTimeout(deb);const q=e.target.value.trim();deb=setTimeout(()=>runOrbSearch(q),orbKind==='music'?320:(q.length>=2?320:80));});
   // jeu/film : montrer la liste curatée tout de suite
   setTimeout(()=>{input.focus();if(orbKind==='music')runOrbSearch('');else if(isOrbKindSoon(orbKind)){orbKind='music';sh.querySelectorAll('#orbCats button').forEach(x=>x.classList.toggle('active',x.dataset.k==='music'));input.placeholder=ph.music;input.disabled=false;}},250);
 }
@@ -2470,12 +2503,46 @@ async function runOrbSearch(q){
     if(!results.length){sugg.innerHTML='<div class="hint">Aucun résultat</div>';return;}
     renderOrbSugg(sugg,results,'music');return;
   }
-  // jeu / film : liste curatée + covers en différé
-  const titles=curatedMatches(q,orbKind,30);
-  const results=titles.map(t=>({name:t,sub:'',cover:null,orb:{kind:orbKind,title:t,sub:'',cover:null}}));
-  if(!results.length){sugg.innerHTML='<div class="hint">Aucun résultat dans la liste</div>';return;}
-  renderOrbSugg(sugg,results,orbKind);
-  hydrateCovers(sugg,results,orbKind,reqId);
+  // jeu / film : liste curatée (instantanée) + recherche live au-delà de la
+  // liste (iTunes pour les jeux, Jikan + TMDB pour série·film), fusionnées --
+  // sinon un titre absent de la courte liste curatée n'apparaissait jamais.
+  const curatedTitles=curatedMatches(q,orbKind,30);
+  const curatedResults=curatedTitles.map(t=>({name:t,sub:'',cover:null,orb:{kind:orbKind,title:t,sub:'',cover:null}}));
+  if(curatedResults.length){
+    renderOrbSugg(sugg,curatedResults,orbKind);
+    hydrateCovers(sugg,curatedResults,orbKind,reqId);
+  } else if(q.length<2){
+    sugg.innerHTML='';
+  } else {
+    sugg.innerHTML='<div class="hint">Recherche…</div>';
+  }
+  if(q.length>=2){
+    let liveRaw=[];
+    try{
+      liveRaw=orbKind==='game'
+        ? await searchGamesLive(q)
+        : (await Promise.all([searchAnime(q),searchFilmsLive(q)])).flat();
+    }catch(_){}
+    if(reqId!==_orbReqId)return;
+    const seen=new Set(curatedTitles.map(t=>t.toLowerCase()));
+    const liveResults=[];
+    for(const r of liveRaw){
+      if(!r.cover)continue;
+      const key=r.name.toLowerCase();
+      if(seen.has(key))continue;
+      seen.add(key);
+      liveResults.push({name:r.name,sub:r.sub||'',cover:r.cover,orb:{kind:orbKind,title:r.name,sub:r.sub||'',cover:r.cover}});
+    }
+    if(curatedResults.length||liveResults.length){
+      const combined=curatedResults.concat(liveResults);
+      renderOrbSugg(sugg,combined,orbKind);
+      if(combined.some(r=>!r.cover)) hydrateCovers(sugg,combined,orbKind,reqId);
+    } else {
+      sugg.innerHTML='<div class="hint">Aucun résultat</div>';
+    }
+  } else if(!curatedResults.length){
+    sugg.innerHTML='<div class="hint">Aucun résultat dans la liste</div>';
+  }
 }
 function addOrb(o){
   if(isOrbKindSoon(o.kind)){showOrbKindSoonToast();return;}
