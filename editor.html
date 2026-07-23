@@ -2284,13 +2284,18 @@ async function gameCoverOpaque(title){
    avec une icône officielle immédiatement disponible (pas de fetch cover à part). */
 async function searchGamesLive(query){
   try{
-    const r=await withTimeout(fetch('https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&entity=software&limit=8'),2500);
+    const r=await withTimeout(fetch('https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&entity=software&limit=15'),2500);
     if(!r)return [];
     const d=await r.json();
-    return (d.results||[]).map(it=>{
-      const art=(it.artworkUrl512||it.artworkUrl100||'').replace(/\/100x100bb\.(jpg|png)$/,'/512x512bb.$1');
-      return {name:it.trackName||query,sub:it.artistName||'',cover:art||null};
-    }).filter(r=>r.cover);
+    return (d.results||[])
+      // App Store renvoie tous types d'apps (réseaux sociaux, utilitaires…) —
+      // ne garder que les vrais jeux (genre "Games", pas juste catégorisé dedans en 2e/3e position).
+      .filter(it=>it.primaryGenreName==='Games'||(Array.isArray(it.genres)&&it.genres[0]==='Games'))
+      .slice(0,8)
+      .map(it=>{
+        const art=(it.artworkUrl512||it.artworkUrl100||'').replace(/\/100x100bb\.(jpg|png)$/,'/512x512bb.$1');
+        return {name:it.trackName||query,sub:it.artistName||'',cover:art||null};
+      }).filter(r=>r.cover);
   }catch(_){return [];}
 }
 /* Recherche live "série·film" -- TMDB (multi-search films+series) couvre un
