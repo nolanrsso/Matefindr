@@ -2246,7 +2246,7 @@
        height bornée à la fois par 52dvh ET par l'espace réellement disponible
        (max-height:100% de la scène) → la carte RÉTRÉCIT sur les petits écrans
        au lieu de déborder. dvh gère la barre d'adresse mobile. */
-    .swipe-shell-wrap{width:min(89vw,321px);height:min(75dvh,535px);max-height:100%}
+    .swipe-shell-wrap{width:min(89vw,321px);height:min(75dvh,535px);max-height:100%;transform:scale(.667)}
     /* La scène remplit la bande entre la barre de son (haut) et les boutons (bas).
        display:flex (au lieu de grid) → le max-height:100% de la carte se résout bien
        contre la hauteur RÉELLE de la scène (une piste grid auto grandissait au contenu

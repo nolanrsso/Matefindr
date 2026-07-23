@@ -199,6 +199,18 @@ body[data-canvas="portrait"] .card .voice .vmic svg{width:14px;height:14px}
 body[data-canvas="portrait"] .card .voice .empty{font-size:11px}
 body[data-canvas="portrait"] .card .conn{width:32px;height:32px}
 body[data-canvas="portrait"] .card .conn img{width:18px;height:18px}
+/* Sur un VRAI téléphone (viewport ≤600px, portrait déjà auto-appliqué par
+   syncCanvasModeToRealDevice ci-dessus) la carte 321×535 restait trop grande
+   à l'écran -- 1,5x plus petite, comme sur le vrai swipe mobile (voir
+   .swipe-shell-wrap dans app.css). Scale sur .card-frame (pas .card seul) car
+   orb-layer/sticker-layer/eye-dot sont des SIBLINGS de .card sous .card-frame :
+   il faut TOUT rétrécir ensemble, sinon les bulles/GIFs positionnés en % se
+   décalent par rapport à la carte visuellement plus petite. N'affecte jamais
+   le mode Téléphone prévisualisé DEPUIS un écran d'ordinateur (viewport large
+   -> media query inactive, seul le vrai matchMedia(max-width:600px) compte). */
+@media(max-width:600px){
+  body[data-canvas="portrait"] .card-frame{transform:scale(.667)}
+}
 /* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel).
    Sur .card-frame (pas .card-zone) → reste centré sur la carte, pas sur le sélecteur. */
 body[data-canvas="portrait"] .card-frame::before{
