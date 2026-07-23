@@ -477,7 +477,10 @@
     header{margin:10px 15px 0;padding:7px 10px}
     .brand{left:12px}
     .brand .mark{width:38px;height:38px}
-    .brand-word{font-size:20px}
+    /* Le mot "matefindr" chevauchait le bouton Quêtes (~40px de recouvrement,
+       mesuré : texte jusqu'à x=159, icône Quêtes dès x=119) -- juste l'icône
+       sur mobile, comme un favicon d'app. */
+    .brand-word{display:none}
     .header-share-link{margin-left:150px}
     .nav{padding-left:150px}
     /* Pas la place pour 3 icônes + la pastille profil sur un écran de téléphone :
@@ -2253,19 +2256,22 @@
        et laissait la carte déborder sur petit écran). */
     .swipe-stage{height:auto;flex:1 1 auto;min-height:0;overflow:visible;display:flex;align-items:center;justify-content:center}
 
-    /* Bulles à l'échelle de la carte : ~64px (vs 115 sur desktop). */
+    /* Bulles à l'échelle de la carte : ~32px (2x plus petites que la précédente
+       taille mobile de 64px -- la carte ayant elle-même rétréci de 1,5x, les
+       bulles à 64px paraissaient énormes/encombrantes en comparaison). */
     .swipe-stage .orbit .orb,
     .orbit.orbit--dynamic .orb,
     .orbit .orb-wrap--music .orb,
-    .orbit.orbit--dynamic .orb-wrap--music .orb{width:64px;height:64px}
+    .orbit.orbit--dynamic .orb-wrap--music .orb{width:32px;height:32px}
     .swipe-stage .orbit .orb svg,
     .orbit.orbit--dynamic .orb svg,
     .orbit .orb-wrap--music .orb svg,
-    .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:26px;height:26px}
+    .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:13px;height:13px}
     .orbit .orb-label,
-    .orbit.orbit--dynamic .orb-label{font-size:9.5px;max-width:78px}
-    /* Mini-bulle de rang (jeu) proportionnelle à la petite bulle. */
-    .swipe-stage .orbit .orb .orb-rank-orbit{transform:scale(.72)}
+    .orbit.orbit--dynamic .orb-label{font-size:8px;max-width:44px}
+    /* Mini-bulle de rang (jeu) proportionnelle à la petite bulle (32px, moitié
+       des 64px précédents -- l'échelle suit, .72 -> .36). */
+    .swipe-stage .orbit .orb .orb-rank-orbit{transform:scale(.36)}
 
     /* Réserves haut/bas : la carte (dans la scène flex:1) se centre TOUJOURS entre
        la barre de son (haut) et les boutons (bas), sans jamais les chevaucher —

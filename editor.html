@@ -715,14 +715,20 @@ body.not-boost .tool--boost:hover{background:rgba(255,209,92,.16);color:#FFE08A}
 .pset-toggle svg{width:20px;height:20px}
 .pset-toggle:hover{background:rgba(145,70,255,.16)}
 @media(max-width:600px){
-  .ed-bl{left:10px;bottom:18px;gap:8px}
+  /* Le cluster preset+son en bas-gauche chevauchait la barre d'outils (7 boutons,
+     elle aussi coincée en bas-gauche) -- remonté juste sous la navbar plutôt
+     que de rester en bas. */
+  .ed-bl{left:10px;top:78px;bottom:auto;gap:8px}
   .mf-vol{--mf-vol-btn-size:46px;--mf-vol-bar:61px;border-radius:16px}
   .mf-vol-btn{border-radius:15px}
   .mf-vol-btn svg{width:22px;height:22px}
   .pset-panel{padding:0;gap:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   .pset-toggle{display:grid;background:linear-gradient(180deg, rgba(28,22,58,.92), rgba(18,12,42,.92));backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 28px rgba(0,0,0,.45)}
   .pset-panel.open .pset-toggle{border-color:rgba(179,128,255,.9);background:rgba(145,70,255,.22)}
-  .pset-body{display:none;position:absolute;bottom:46px;left:0;padding:8px;border-radius:14px;
+  /* Liste de presets dépliée : s'ouvre vers le BAS (top:46px, pas bottom:46px)
+     puisque le cluster est maintenant en haut d'écran -- ouvrir vers le haut
+     l'aurait fait sortir sous la navbar. */
+  .pset-body{display:none;position:absolute;top:46px;left:0;padding:8px;border-radius:14px;
     background:linear-gradient(180deg, rgba(28,22,58,.94), rgba(18,12,42,.94));border:1px solid var(--stroke-2);backdrop-filter:blur(18px) saturate(150%);box-shadow:0 14px 40px rgba(0,0,0,.5)}
   .pset-panel.open .pset-body{display:block}
   .pset-head{display:none}
@@ -904,7 +910,9 @@ body.not-boost .pset-slot--empty .pset-num{color:#FFD15C}
 }
 .link-panel-btn:active{transform:scale(.97)}
 @media(max-width:600px){
-  .link-panel{right:10px;bottom:18px;padding:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+  /* Chevauchait la barre d'outils (bas-droite elle aussi) -- remonté juste
+     sous la navbar, comme le cluster preset+son (symétrique à droite). */
+  .link-panel{right:10px;top:78px;bottom:auto;padding:0;background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
   .link-panel-btn{
     width:46px;height:46px;min-height:46px;padding:0;justify-content:center;border-radius:14px;
   }
@@ -2702,11 +2710,14 @@ function renderOrbs(){
   const cardW=(card&&card.offsetWidth)||380;
   const cardH=(card&&card.offsetHeight)||(cardW*SWIPE_CARD_ASPECT);
   // Taille de bulle FIXE par mode (comme le vrai site : .orbit.orbit--dynamic .orb
-  // passe de 115px à 64px sous @media max-width:600px — PAS une taille proportionnelle
+  // passe de 115px à 32px sous @media max-width:600px — PAS une taille proportionnelle
   // à la largeur de carte). Utiliser cardW*0.302 dans les deux modes donnait 72px en
-  // portrait (240*0.302) au lieu des 64px réels du site → bulles visiblement plus
-  // grosses/décalées d'environ 8-10px par rapport à l'aperçu réel.
-  const D=(S.canvasMode==='portrait')?64:115;
+  // portrait (240*0.302) au lieu des 32px réels du site → bulles visiblement plus
+  // grosses/décalées par rapport à l'aperçu réel.
+  // 48 (pas 32) en portrait : .card-frame applique déjà transform:scale(.667) sur
+  // TOUT le calque bulles (@media max-width:600px ci-dessus, pour rester aligné
+  // avec la carte elle-même rétrécie) -- 48*.667≈32px rendus, comme le vrai site.
+  const D=(S.canvasMode==='portrait')?48:115;
   // IMPORTANT : rx/ry sont des fractions pures de la carte (largeur/hauteur RÉELLES),
   // exactement comme relToPx() sur la vraie carte de swipe (js/app.js) -- AUCUNE
   // correction d'échelle ici. Un vScale avait été introduit pour "recaler" l'écart

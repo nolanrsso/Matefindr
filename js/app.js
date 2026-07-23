@@ -3946,7 +3946,7 @@
       // quelles positions lire ET la taille des bulles. La disposition compacte
       // portrait est centralisée dans orbRelLayout (source unique éditeur+swipe).
       const layoutMode = activeLayoutMode();
-      const orbRadius = () => layoutMode === 'portrait' ? 32 : layoutMode === 'landscape' ? 38 : 58;
+      const orbRadius = () => layoutMode === 'portrait' ? 16 : layoutMode === 'landscape' ? 38 : 58;
       // Map orb -> {rx, ry} : positions du mode courant (posPortrait/posLandscape/customX).
       const { rel: orbRel } = orbRelLayout(list, false, layoutMode);
       function relToPx(rel, orbR){
