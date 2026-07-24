@@ -2708,6 +2708,38 @@ function spreadOrbs(nodes, D){
 // transform hérité de l'ancêtre).
 const EDITOR_REF_W = 406, EDITOR_REF_H = 663;
 let _editorScale = 1;
+// La RÉFÉRENCE de mise à l'échelle n'est pas que la carte (406×663) -- en mode
+// Ordinateur, les bulles se déploient en colonnes larges (ORB_LAYOUT dans
+// orbLayout(), jusqu'à ~1050px de large pour beaucoup de bulles) bien au-delà
+// de la carte. Scaler seulement pour faire tenir la carte laisse les bulles
+// déborder du cadre quand on force le mode Ordinateur sur un vrai téléphone
+// (c'est justement ce que .card-frame{transform:scale(.3)} codé en dur
+// compensait dans l'ancien système -- ici on calcule l'encombrement RÉEL au
+// lieu d'une constante à deviner). Reprend la même résolution de position que
+// renderOrbs() (formule pour les bulles auto, o.x/o.y sauvegardés pour celles
+// déplacées à la main) pour ne jamais sous-estimer.
+function computeOrbBoundsPx(){
+  const n = S.orbs.length;
+  if (!n) return { w: EDITOR_REF_W, h: EDITOR_REF_H };
+  const pos = orbLayout(n, S.canvasMode);
+  let minRx = 0, maxRx = 0, minRy = 0, maxRy = 0;
+  S.orbs.forEach((o, i) => {
+    let rx, ry;
+    if (o.userPlaced && typeof o.x === 'number' && typeof o.y === 'number') {
+      rx = (o.x - 50) / 100; ry = (o.y - 50) / 100;
+    } else {
+      const p = pos[i] || { rx: 0, ry: 0 };
+      rx = p.rx; ry = p.ry;
+    }
+    minRx = Math.min(minRx, rx); maxRx = Math.max(maxRx, rx);
+    minRy = Math.min(minRy, ry); maxRy = Math.max(maxRy, ry);
+  });
+  const D = 115; // diamètre de bulle de référence, ajouté aux deux bouts
+  return {
+    w: Math.max(EDITOR_REF_W, (maxRx - minRx) * EDITOR_REF_W + D),
+    h: Math.max(EDITOR_REF_H, (maxRy - minRy) * EDITOR_REF_H + D)
+  };
+}
 function computeEditorScale(){
   const stageEl = document.querySelector('.stage');
   let availW = window.innerWidth, availH = window.innerHeight;
@@ -2720,7 +2752,8 @@ function computeEditorScale(){
     availW = stageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     availH = stageEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
   }
-  return Math.min(1, availW / EDITOR_REF_W, availH / EDITOR_REF_H);
+  const bounds = computeOrbBoundsPx();
+  return Math.min(1, availW / bounds.w, availH / bounds.h);
 }
 function applyEditorScale(){
   _editorScale = computeEditorScale();
@@ -2729,12 +2762,17 @@ function applyEditorScale(){
   return _editorScale;
 }
 // Pose l'échelle dès que possible (avant le tout premier rendu) pour éviter un
-// flash à la taille de référence non réduite au premier paint.
+// flash à la taille de référence non réduite au premier paint. Pas encore de
+// bulles chargées ici (S.orbs vide) -> computeOrbBoundsPx() replie sur la carte seule.
 applyEditorScale();
 
 // Position custom de la bulle "+" (Ajouter) une fois déplacée à la main — sinon
 // elle reprend l'emplacement calculé automatiquement (orbLayout).
 function renderOrbs(){
+  // AVANT tout rendu : l'échelle doit tenir compte de l'encombrement RÉEL des
+  // bulles qu'on s'apprête à afficher (ajout/suppression/changement de mode),
+  // pas seulement de la carte -- voir computeOrbBoundsPx/computeEditorScale.
+  applyEditorScale();
   const layer=$('orbLayer'); layer.innerHTML='';
   const card=document.getElementById('card');
   const cardW=(card&&card.offsetWidth)||380;

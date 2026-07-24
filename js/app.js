@@ -3722,16 +3722,47 @@
       return 'desktop';
     }
 
+    // _swipeCurrentP/_swipeRenderedMode/_swipeLastOrbList : déclarés ICI (pas plus bas
+    // avec le reste de l'état bulles) car computeSwipeScale() les lit -- et
+    // applySwipeScale() est appelée immédiatement plus bas, avant même le premier
+    // renderOrbs(). Des `let` référencées avant leur ligne de déclaration lèveraient
+    // une ReferenceError (temporal dead zone) ; les déclarer en premier l'évite.
+    let _swipeCurrentP = null;      // profil actuellement affiché (pour re-render à la rotation)
+    let _swipeRenderedMode = null;  // orientation utilisée au dernier rendu des bulles
+    let _swipeLastOrbList = [];     // dernière liste de bulles rendue (pour recalculer l'échelle au resize)
+
     /* ===== Échelle unique de la carte de swipe =====
        .swipe-shell-wrap a une taille de RÉFÉRENCE fixe (406×663, voir css/app.css) ;
        ici on calcule le facteur d'échelle qui la fait tenir dans l'espace
        réellement disponible (mesuré sur #screen-swipe, qui réserve déjà haut/bas
        via son padding) et on l'applique en transform:scale(). Jamais agrandi
        au-delà de 1 (un grand écran affiche la carte à sa taille de référence,
-       centrée, pas étirée plus grand). */
+       centrée, pas étirée plus grand).
+       IMPORTANT : la RÉFÉRENCE de mise à l'échelle n'est pas que la carte (406×663) --
+       en mode 'desktop', les bulles se déploient en colonnes larges (ORB_LAYOUT,
+       jusqu'à ~1050px de large pour beaucoup de bulles) bien au-delà de la carte.
+       Si on ne scale que pour faire tenir la carte, les bulles débordent du
+       viewport sur un écran de largeur intermédiaire (tablette, ou mode Bureau
+       forcé sur téléphone dans l'éditeur). computeOrbBoundsPx() calcule donc
+       l'encombrement RÉEL des bulles (formule ET positions perso confondues) et
+       computeSwipeScale() scale pour que TOUT (carte + bulles) tienne. */
     const SWIPE_REF_W = 406, SWIPE_REF_H = 663;
     let _swipeScale = 1;
-    function computeSwipeScale(){
+    function computeOrbBoundsPx(orbs, mode){
+      if (!orbs || !orbs.length) return { w: SWIPE_REF_W, h: SWIPE_REF_H };
+      const { rel } = orbRelLayout(orbs, false, mode);
+      let minRx = 0, maxRx = 0, minRy = 0, maxRy = 0;
+      rel.forEach(p => {
+        minRx = Math.min(minRx, p.rx); maxRx = Math.max(maxRx, p.rx);
+        minRy = Math.min(minRy, p.ry); maxRy = Math.max(maxRy, p.ry);
+      });
+      const D = 115; // diamètre de bulle de référence, ajouté aux deux bouts
+      return {
+        w: Math.max(SWIPE_REF_W, (maxRx - minRx) * SWIPE_REF_W + D),
+        h: Math.max(SWIPE_REF_H, (maxRy - minRy) * SWIPE_REF_H + D)
+      };
+    }
+    function computeSwipeScale(orbs, mode){
       const screenEl = document.getElementById('screen-swipe');
       let availW = window.innerWidth, availH = window.innerHeight;
       if (screenEl) {
@@ -3744,16 +3775,18 @@
         availW = screenEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
         availH = screenEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       }
-      return Math.min(1, availW / SWIPE_REF_W, availH / SWIPE_REF_H);
+      const bounds = computeOrbBoundsPx(orbs, mode || activeLayoutMode());
+      return Math.min(1, availW / bounds.w, availH / bounds.h);
     }
-    function applySwipeScale(){
-      _swipeScale = computeSwipeScale();
+    function applySwipeScale(orbs, mode){
+      _swipeScale = computeSwipeScale(orbs, mode);
       const shellWrap = document.querySelector('.swipe-shell-wrap');
       if (shellWrap) shellWrap.style.transform = 'translateZ(0) scale(' + _swipeScale + ')';
       return _swipeScale;
     }
     // Pose l'échelle dès que possible (avant même le premier rendu de carte) pour
     // éviter un flash à la taille de référence non réduite au tout premier paint.
+    // Pas encore de profil chargé ici -> pas de bulles -> repli sur la carte seule.
     applySwipeScale();
 
     function orbRelLayout(orbs, withPlus, mode){
@@ -3822,8 +3855,7 @@
     /* Live physics state for the profile orbs (mouse repulsion + drift) */
     let _orbSim = { items: [], mouse: { x: -9999, y: -9999, has: false }, raf: null };
 
-    let _swipeCurrentP = null;      // profil actuellement affiché (pour re-render à la rotation)
-    let _swipeRenderedMode = null;  // orientation utilisée au dernier rendu des bulles
+    // _swipeCurrentP/_swipeRenderedMode déclarées plus haut (avant computeSwipeScale).
     // Couleur perso choisie dans l'éditeur pour un type de bulle (music/game/film) →
     // dérive les 3 stops du dégradé + les couleurs de bordure/halo en CSS custom
     // properties, lues par les règles .orb[data-kind] de css/app.css (fallback = couleur par défaut).
@@ -3960,7 +3992,16 @@
     function renderOrbs(p){
       _swipeCurrentP = p;
       _swipeRenderedMode = activeLayoutMode();
-      applySwipeScale();
+      // Sur les autres profils on affiche TOUTES leurs bulles (max 14) ; certaines
+      // seront verrouillées. Sur sa propre carte, on garde son budget.
+      const maxOrbs = (p && p.isMe) ? orbBudget() : 16;
+      const list = (p && p.orbs) ? p.orbs.slice(0, maxOrbs) : [];
+      _swipeLastOrbList = list;
+      // AVANT tout rendu : l'échelle doit tenir compte de l'encombrement RÉEL des
+      // bulles qu'on s'apprête à afficher (voir computeSwipeScale) -- pas seulement
+      // de la carte -- sinon orbD (plus bas) est calculé avec une échelle trop
+      // grande et les bulles débordent du viewport.
+      applySwipeScale(list, _swipeRenderedMode);
       const orbit = document.getElementById('swipeOrbit');
       orbit.innerHTML = '';
       _orbSim.items = [];
@@ -3979,10 +4020,6 @@
       const isSharedLink = !!p._showViews;
       const unlimited = true;
 
-      // Sur les autres profils on affiche TOUTES leurs bulles (max 14) ; certaines
-      // seront verrouillées. Sur sa propre carte, on garde son budget.
-      const maxOrbs = p.isMe ? orbBudget() : 16;
-      const list = p.orbs.slice(0, maxOrbs);
       const n = list.length;
       orbit.classList.toggle('orbit--dynamic', n > 0);
 
@@ -4147,7 +4184,7 @@
     // (rx, ry) — keeps bubbles locked to the same spot relative to the card.
     function _swipeOrbsOnResize(){
       const prevScale = _swipeScale;
-      applySwipeScale();
+      applySwipeScale(_swipeLastOrbList, activeLayoutMode());
       // Changement d'orientation (portrait <-> bureau) OU d'échelle (la carte a
       // grandi/rétréci, ex: redimensionnement de fenêtre, zoom navigateur) →
       // re-rendu complet des bulles pour lire la disposition ET la taille à jour
@@ -4187,7 +4224,7 @@
       setTimeout(() => {
         if (!_swipeCurrentP) return;
         const prevScale = _swipeScale;
-        applySwipeScale();
+        applySwipeScale(_swipeLastOrbList, activeLayoutMode());
         if (activeLayoutMode() !== _swipeRenderedMode || Math.abs(_swipeScale - prevScale) > 0.001) renderOrbs(_swipeCurrentP);
       }, 120);
     });
