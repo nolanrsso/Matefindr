@@ -3946,7 +3946,7 @@
       // quelles positions lire ET la taille des bulles. La disposition compacte
       // portrait est centralisée dans orbRelLayout (source unique éditeur+swipe).
       const layoutMode = activeLayoutMode();
-      const orbRadius = () => layoutMode === 'portrait' ? 16 : layoutMode === 'landscape' ? 38 : 58;
+      const orbRadius = () => layoutMode === 'portrait' ? 24 : layoutMode === 'landscape' ? 38 : 58;
       // Map orb -> {rx, ry} : positions du mode courant (posPortrait/posLandscape/customX).
       const { rel: orbRel } = orbRelLayout(list, false, layoutMode);
       function relToPx(rel, orbR){
@@ -6513,7 +6513,11 @@
       if (!wrap) return;
       const card = wrap.getBoundingClientRect();
       const cx = card.left + card.width / 2, cy = card.top + card.height / 2;
-      const bw = card.width * BG_SCALE_W, bh = card.height * BG_SCALE_H;
+      // Taille FIXE, jamais réduite : offsetWidth/Height (LAYOUT, ignore le
+      // transform:scale(.667) de .swipe-shell-wrap en mode portrait mobile)
+      // plutôt que card.width/height (getBoundingClientRect, qui LE reflète)
+      // -- sinon le fond rétrécissait avec la carte sur téléphone.
+      const bw = wrap.offsetWidth * BG_SCALE_W, bh = wrap.offsetHeight * BG_SCALE_H;
       layer.style.left = (cx - bw / 2) + 'px';
       layer.style.top = (cy - bh / 2) + 'px';
       layer.style.width = bw + 'px';

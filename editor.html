@@ -210,6 +210,11 @@ body[data-canvas="portrait"] .card .conn img{width:18px;height:18px}
    -> media query inactive, seul le vrai matchMedia(max-width:600px) compte). */
 @media(max-width:600px){
   body[data-canvas="portrait"] .card-frame{transform:scale(.667)}
+  /* Mode "Ordinateur" choisi À LA MAIN sur un vrai téléphone (userPickedCanvasMode) :
+     la carte desktop (406px) + ses colonnes de bulles (jusqu'à ~1050px de large)
+     débordaient largement d'un écran de 375px -- au lieu de laisser déborder/couper,
+     on zoome toute la scène pour qu'elle tienne entière, quitte à être petite. */
+  body[data-canvas="desktop"] .card-frame{transform:scale(.3)}
 }
 /* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel).
    Sur .card-frame (pas .card-zone) → reste centré sur la carte, pas sur le sélecteur. */
@@ -2710,14 +2715,12 @@ function renderOrbs(){
   const cardW=(card&&card.offsetWidth)||380;
   const cardH=(card&&card.offsetHeight)||(cardW*SWIPE_CARD_ASPECT);
   // Taille de bulle FIXE par mode (comme le vrai site : .orbit.orbit--dynamic .orb
-  // passe de 115px à 32px sous @media max-width:600px — PAS une taille proportionnelle
-  // à la largeur de carte). Utiliser cardW*0.302 dans les deux modes donnait 72px en
-  // portrait (240*0.302) au lieu des 32px réels du site → bulles visiblement plus
-  // grosses/décalées par rapport à l'aperçu réel.
-  // 48 (pas 32) en portrait : .card-frame applique déjà transform:scale(.667) sur
+  // passe de 115px à 48px sous @media max-width:600px — PAS une taille proportionnelle
+  // à la largeur de carte).
+  // 72 (pas 48) en portrait : .card-frame applique déjà transform:scale(.667) sur
   // TOUT le calque bulles (@media max-width:600px ci-dessus, pour rester aligné
-  // avec la carte elle-même rétrécie) -- 48*.667≈32px rendus, comme le vrai site.
-  const D=(S.canvasMode==='portrait')?48:115;
+  // avec la carte elle-même rétrécie) -- 72*.667≈48px rendus, comme le vrai site.
+  const D=(S.canvasMode==='portrait')?72:115;
   // IMPORTANT : rx/ry sont des fractions pures de la carte (largeur/hauteur RÉELLES),
   // exactement comme relToPx() sur la vraie carte de swipe (js/app.js) -- AUCUNE
   // correction d'échelle ici. Un vScale avait été introduit pour "recaler" l'écart
@@ -3117,7 +3120,11 @@ function positionEditorBg(){
   const card=document.getElementById('card'); if(!card)return;
   const c=card.getBoundingClientRect();
   const cx=c.left+c.width/2, cy=c.top+c.height/2;
-  const bw=c.width*BG_SCALE_W, bh=c.height*BG_SCALE_H;
+  // Taille FIXE, jamais réduite : offsetWidth/Height (mesure de LAYOUT, ignore
+  // tout transform:scale ancêtre) plutôt que c.width/height (getBoundingClientRect,
+  // qui elle REFLÈTE le scale(.667) de .card-frame en mode Téléphone) -- sinon le
+  // fond rétrécissait avec la carte au lieu de rester "au même niveau".
+  const bw=card.offsetWidth*BG_SCALE_W, bh=card.offsetHeight*BG_SCALE_H;
   layer.style.left=(cx-bw/2)+'px'; layer.style.top=(cy-bh/2)+'px';
   layer.style.width=bw+'px'; layer.style.height=bh+'px';
 }
