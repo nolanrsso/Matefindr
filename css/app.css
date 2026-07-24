@@ -2141,7 +2141,9 @@
   .swipe-card .card-title-guilds-row .card-title-slot--empty{display:none}
   .swipe-card .card-guilds{display:flex;align-items:center;gap:10px;margin-top:auto;flex-wrap:wrap}
   .swipe-card > .card-guilds--head{
-    position:absolute;right:16px;top:calc(34cqi + 56px);z-index:6;
+    /* right précis (mesuré) posé en JS juste après le rendu — voir
+       positionGuildsBesideAge(). right:16px n'est qu'un repli avant ce calcul. */
+    position:absolute;right:16px;top:calc(34cqi + 8px);z-index:6;
     margin:0;flex-direction:column;align-items:flex-end;gap:3px;
     padding:4px 7px;border-radius:10px;max-width:112px;
     background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.10);
@@ -2357,7 +2359,8 @@
     .card-social{font-size:11px}
 
     .swipe-card .common{font-size:11px;gap:12px}
-    .swipe-card > .card-guilds--head{right:12px;top:calc(34cqi + 44px);padding:3px 5px;gap:2px;max-width:98px}
+    /* right précis posé en JS (positionGuildsBesideAge) ; right:12px = repli. */
+    .swipe-card > .card-guilds--head{right:12px;top:calc(34cqi + 6px);padding:3px 5px;gap:2px;max-width:98px}
     .swipe-card .card-guilds--head .cg-label{font-size:9px}
     .swipe-card .card-guilds--head .cg-icon{width:16px;height:16px}
     .swipe-card .card-guilds--head .cg-more{min-width:16px;height:16px;font-size:7px}
@@ -2515,7 +2518,7 @@
      .swipe-btn--shared-heart, cf. plus haut. */
   .react-wrap .swipe-btn--react{
     position:relative;width:32px;height:32px;padding:0;border-radius:12px;
-    background:rgba(255,255,255,.08);box-shadow:none;opacity:.65;
+    background:rgba(0,0,0,.45);box-shadow:none;opacity:.65;
   }
   .swipe-btn--react svg{width:18px;height:18px}
   .swipe-btn--react::before{display:none}
@@ -2527,7 +2530,7 @@
     font-size:13px;font-weight:800;line-height:18px;text-align:center;
     box-shadow:0 2px 6px rgba(0,0,0,.45);
   }
-  .swipe-btn--react:hover{opacity:1;background:rgba(255,255,255,.14)}
+  .swipe-btn--react:hover{opacity:1;background:rgba(0,0,0,.6)}
   .react-popup{
     position:absolute;left:50%;bottom:calc(100% + 14px);transform:translateX(-50%) translateY(6px);
     z-index:400;

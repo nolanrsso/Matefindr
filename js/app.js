@@ -1430,6 +1430,29 @@
         </div>`;
     }
 
+    /** Pastille "serveurs en commun" collée juste à GAUCHE du badge âge/pays/genre
+     * (même ligne), au lieu d'être empilée dessous -- un pseudo long qui passe sur
+     * 2 lignes ne pousse plus la pastille en dessous de son propre texte (elle est
+     * absolument positionnée, indépendante de la hauteur du pseudo). La largeur du
+     * badge âge varie (âge présent ou non, drapeau, genre masqué…) → mesurée à
+     * chaque rendu plutôt que codée en dur. */
+    function positionGuildsBesideAge(card){
+      const age = card.querySelector(':scope > .card-age-badge');
+      const guilds = card.querySelector(':scope > .card-guilds--head');
+      if (!guilds) return;
+      if (!age) { guilds.style.right = ''; guilds.style.top = ''; return; }
+      const gap = 8;
+      const baseRight = parseFloat(getComputedStyle(age).right) || 16;
+      guilds.style.right = (baseRight + age.offsetWidth + gap) + 'px';
+      // Centré verticalement sur le badge âge (pas juste même "top") : "guilds"
+      // (légende + icônes empilées) est plus haut que la pastille âge (une seule
+      // ligne) -- un top identique laissait son bord bas déborder sous l'âge et
+      // chevaucher le pseudo juste en dessous.
+      const ageTop = parseFloat(getComputedStyle(age).top) || 0;
+      const ageCenter = ageTop + age.offsetHeight / 2;
+      guilds.style.top = (ageCenter - guilds.offsetHeight / 2) + 'px';
+    }
+
     function setGuildsLabelText(guildsEl, short){
       if (!guildsEl) return;
       const label = guildsEl.querySelector('.cg-label');
@@ -1523,6 +1546,7 @@
         const rowG = card.querySelector('.card-title-guilds-row .card-guilds--head');
         if (rowG) rowG.remove();
         card.classList.add('has-common-guilds');
+        positionGuildsBesideAge(card);
       } else {
         if (oldG) oldG.remove();
         card.querySelectorAll('.card-guilds--head').forEach(el => el.remove());
@@ -3628,10 +3652,11 @@
       bindCardVoice(c);
       // Clean up the entering class once the animation completes so future transforms (drag) aren't clobbered
       c.addEventListener('animationend', (ev) => { if (ev.animationName === 'cardIn') c.classList.remove('entering'); }, { once:true });
-      // Titre : plus de pastille serveurs sur cette ligne (elle est sous âge/drapeau)
+      // Titre : plus de pastille serveurs sur cette ligne (elle est à côté d'âge/drapeau)
       if (titleHtml) {
         requestAnimationFrame(() => syncTitleGuildsLayout(c));
       }
+      positionGuildsBesideAge(c);
       const TQ2 = window.MatefindrTitlesQuests;
       if (TQ2 && typeof TQ2.bindDiscordActPopovers === 'function') {
         requestAnimationFrame(() => {
