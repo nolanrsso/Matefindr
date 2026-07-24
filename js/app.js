@@ -3708,18 +3708,54 @@
          max 4 par colonne, nouvelle colonne plus loin si pleine.
        Renvoie { rel: Map(orb -> {rx,ry}), plus: {rx,ry}|null } (plus = emplacement du "+"). */
     const ORB_LAYOUT = { COL0: 0.735, COL_GAP: 0.42, ROW_STEP: 0.215, MAX_PER_COL: 4 };
-    /* Orientation d'affichage courante → détermine quelle disposition de profil
-       utiliser (le profil peut être arrangé séparément par orientation dans l'éditeur).
-       - portrait : téléphone étroit (≤600px)
-       - landscape : téléphone tenu à l'horizontale (pointeur grossier, court en hauteur)
-       - desktop : tout le reste (grand écran). */
+    /* Orientation d'affichage courante → détermine quelle disposition de bulles
+       utiliser (agencement seulement, plus la taille depuis la refonte "échelle
+       unique" -- voir computeSwipeScale). Seulement 2 modes : 'portrait' (colonne
+       étroite, écran haut-et-étroit) vs 'desktop' (colonnes larges symétriques --
+       couvre aussi le téléphone en paysage, qui a autant de largeur qu'un desktop
+       étroit ; orbRelLayout() traite déjà landscape et desktop de façon identique,
+       donc fusionner les deux ne change aucun comportement de placement). */
     function activeLayoutMode(){
       try {
         if (window.matchMedia('(max-width:600px)').matches) return 'portrait';
-        if (window.matchMedia('(pointer:coarse) and (orientation:landscape) and (max-height:600px)').matches) return 'landscape';
       } catch(_){}
       return 'desktop';
     }
+
+    /* ===== Échelle unique de la carte de swipe =====
+       .swipe-shell-wrap a une taille de RÉFÉRENCE fixe (406×663, voir css/app.css) ;
+       ici on calcule le facteur d'échelle qui la fait tenir dans l'espace
+       réellement disponible (mesuré sur #screen-swipe, qui réserve déjà haut/bas
+       via son padding) et on l'applique en transform:scale(). Jamais agrandi
+       au-delà de 1 (un grand écran affiche la carte à sa taille de référence,
+       centrée, pas étirée plus grand). */
+    const SWIPE_REF_W = 406, SWIPE_REF_H = 663;
+    let _swipeScale = 1;
+    function computeSwipeScale(){
+      const screenEl = document.getElementById('screen-swipe');
+      let availW = window.innerWidth, availH = window.innerHeight;
+      if (screenEl) {
+        // clientWidth/Height incluent le padding de #screen-swipe (62px 24px 94px,
+        // réservé pour les boutons d'action fixes) -- il faut le retrancher, sinon
+        // la carte est mise à l'échelle pour remplir TOUT le viewport (padding
+        // compris) et déborde par-dessus les boutons sur la quasi-totalité des
+        // téléphones réels (largeur < 406+48px).
+        const cs = getComputedStyle(screenEl);
+        availW = screenEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        availH = screenEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      }
+      return Math.min(1, availW / SWIPE_REF_W, availH / SWIPE_REF_H);
+    }
+    function applySwipeScale(){
+      _swipeScale = computeSwipeScale();
+      const shellWrap = document.querySelector('.swipe-shell-wrap');
+      if (shellWrap) shellWrap.style.transform = 'translateZ(0) scale(' + _swipeScale + ')';
+      return _swipeScale;
+    }
+    // Pose l'échelle dès que possible (avant même le premier rendu de carte) pour
+    // éviter un flash à la taille de référence non réduite au tout premier paint.
+    applySwipeScale();
+
     function orbRelLayout(orbs, withPlus, mode){
       mode = mode || 'desktop';
       const { COL0, COL_GAP, ROW_STEP, MAX_PER_COL } = ORB_LAYOUT;
@@ -3924,6 +3960,7 @@
     function renderOrbs(p){
       _swipeCurrentP = p;
       _swipeRenderedMode = activeLayoutMode();
+      applySwipeScale();
       const orbit = document.getElementById('swipeOrbit');
       orbit.innerHTML = '';
       _orbSim.items = [];
@@ -3967,11 +4004,16 @@
         : { left: sw/2 - 203, top: sh/2 - 331.5, width: 406, height: 663 };
       const cardCx = cardRect.left + cardRect.width / 2;
       const cardCy = cardRect.top  + cardRect.height / 2;
-      // Orientation active (portrait / paysage téléphone / bureau) → détermine
-      // quelles positions lire ET la taille des bulles. La disposition compacte
-      // portrait est centralisée dans orbRelLayout (source unique éditeur+swipe).
+      // Orientation active (portrait / bureau) → détermine quelles positions
+      // lire (disposition compacte portrait centralisée dans orbRelLayout,
+      // source unique éditeur+swipe). La TAILLE, elle, ne dépend plus du mode :
+      // référence fixe (115px) × _swipeScale (voir computeSwipeScale), posée en
+      // JS sur chaque bulle plus bas -- .orbit est un frère (position:fixed) de
+      // .swipe-shell-wrap, pas un descendant, donc il ne suit pas son
+      // transform:scale automatiquement.
       const layoutMode = activeLayoutMode();
-      const orbRadius = () => layoutMode === 'portrait' ? 24 : layoutMode === 'landscape' ? 38 : 58;
+      const orbD = 115 * _swipeScale;
+      const orbRadius = () => orbD / 2;
       // Map orb -> {rx, ry} : positions du mode courant (posPortrait/posLandscape/customX).
       const { rel: orbRel } = orbRelLayout(list, false, layoutMode);
       function relToPx(rel, orbR){
@@ -3997,6 +4039,10 @@
         btn.type = 'button';
         btn.className = 'orb' + (isCommon ? ' orb--common' : '') + (locked ? ' orb--locked' : '');
         btn.dataset.kind = o.kind;
+        // Taille posée en JS (référence 115px × _swipeScale) -- .orb n'a plus de
+        // taille par breakpoint en CSS, voir le commentaire sur orbD plus haut.
+        btn.style.width = orbD + 'px';
+        btn.style.height = orbD + 'px';
         if (!locked) applyOrbCustomColor(btn, orbDisplayColor(o, p), orbDisplayGlowOff(o, p), orbDisplayContourOff(o, p));
         if (locked) {
           btn.title = 'Bulle verrouillée';
@@ -4005,6 +4051,12 @@
           btn.title = `${o.title} · ${o.sub || ''}${isCommon ? ' · En commun ✨' : ''}${o.kind === 'music' ? ' · Clique pour écouter' : (o.kind === 'game' && o.clipUrl ? ' · Clique pour le clip' : '')}`;
           btn.innerHTML = orbInner(o);
         }
+        const svgEl = btn.querySelector('svg');
+        if (svgEl) {
+          const svgD = orbD * ((o.kind === 'music' ? 44 : 38) / 115);
+          svgEl.style.width = svgD + 'px';
+          svgEl.style.height = svgD + 'px';
+        }
         // Rank as a round mini-bubble (with the tier icon) orbiting around the game orb
         if (!locked && o.kind === 'game' && o.rank) {
           const v = rankVisual(o.rank);
@@ -4012,10 +4064,18 @@
           const iconHtml = iconUrl
             ? `<img class="orb-rank-img" src="${iconUrl}" alt="${escapeHtmlMini(o.rank)}" loading="lazy" decoding="async">`
             : `<span class="orb-rank-ico">${v.ico}</span>`;
+          // Wrapper dédié au scale (statique, JS) : .orb-rank-orbit tourne en
+          // continu via son animation CSS, qui écraserait un transform:scale
+          // posé directement dessus (les deux se battraient sur la même
+          // propriété transform) -- on scale l'enveloppe, pas l'élément animé.
+          const rkScale = document.createElement('span');
+          rkScale.className = 'orb-rank-scale';
+          rkScale.style.cssText = 'position:absolute;inset:0;pointer-events:none;transform:scale(' + (orbD / 115) + ')';
           const rk = document.createElement('span');
           rk.className = 'orb-rank-orbit';
           rk.innerHTML = `<span class="orb-rank-ball${iconUrl ? ' orb-rank-ball--img' : ''}" style="--rc1:${v.c1};--rc2:${v.c2}" title="${escapeHtmlMini(o.rank)}">${iconHtml}</span>`;
-          btn.appendChild(rk);
+          rkScale.appendChild(rk);
+          btn.appendChild(rkScale);
         }
         // Hint centre : toutes les bulles musique + chaque jeu avec clip (cycle sync CSS)
         if (!locked) {
@@ -4042,6 +4102,10 @@
         const label = document.createElement('span');
         label.className = 'orb-label';
         label.textContent = locked ? '' : ((o.title || '').length > 14 ? o.title.slice(0, 13) + '…' : (o.title || ''));
+        // Taille de police proportionnelle (référence 11px), avec un plancher de
+        // lisibilité (8px) pour ne pas devenir illisible sur un tout petit écran.
+        label.style.fontSize = Math.max(8, 11 * (orbD / 115)) + 'px';
+        label.style.maxWidth = (120 * (orbD / 115)) + 'px';
         wrap.appendChild(btn);
         wrap.appendChild(label);
 
@@ -4082,9 +4146,13 @@
     // Recompute anchors on viewport resize from each orb's stored relative position
     // (rx, ry) — keeps bubbles locked to the same spot relative to the card.
     function _swipeOrbsOnResize(){
-      // Changement d'orientation (portrait <-> paysage <-> bureau) → re-rendu complet
-      // des bulles pour lire la disposition ET la taille du nouveau mode.
-      if (activeLayoutMode() !== _swipeRenderedMode) {
+      const prevScale = _swipeScale;
+      applySwipeScale();
+      // Changement d'orientation (portrait <-> bureau) OU d'échelle (la carte a
+      // grandi/rétréci, ex: redimensionnement de fenêtre, zoom navigateur) →
+      // re-rendu complet des bulles pour lire la disposition ET la taille à jour
+      // (la taille des bulles suit _swipeScale en continu, pas juste le mode).
+      if (activeLayoutMode() !== _swipeRenderedMode || Math.abs(_swipeScale - prevScale) > 0.001) {
         if (_swipeCurrentP) renderOrbs(_swipeCurrentP);
         return;
       }
@@ -4113,9 +4181,15 @@
       const _swipeWrapEl = document.getElementById('swipeWrap');
       if (_swipeWrapEl) new ResizeObserver(() => window.dispatchEvent(new Event('resize'))).observe(_swipeWrapEl);
     }
-    // La rotation du téléphone ne déclenche pas toujours 'resize' → on force le re-rendu.
+    // La rotation du téléphone ne déclenche pas toujours 'resize' → on force le re-rendu
+    // (mode ET échelle : une rotation change la place dispo même sans changer de mode).
     window.addEventListener('orientationchange', () => {
-      setTimeout(() => { if (_swipeCurrentP && activeLayoutMode() !== _swipeRenderedMode) renderOrbs(_swipeCurrentP); }, 120);
+      setTimeout(() => {
+        if (!_swipeCurrentP) return;
+        const prevScale = _swipeScale;
+        applySwipeScale();
+        if (activeLayoutMode() !== _swipeRenderedMode || Math.abs(_swipeScale - prevScale) > 0.001) renderOrbs(_swipeCurrentP);
+      }, 120);
     });
 
     /* Mouse tracking on the WHOLE viewport (orbit is fullscreen) */
@@ -6521,11 +6595,12 @@
       if (!l) { l = document.createElement('div'); l.id = 'customBgLayer'; document.body.insertBefore(l, document.body.firstChild); }
       return l;
     }
-    // Fond perso = un multiple FIXE de la taille de LA CARTE, centré dessus (pas le viewport
-    // entier) -> il scale avec la carte, donc avec tout le reste (bulles/gifs/photos déjà en
-    // % de la carte) : fond + carte + bulles + GIFs/photos bougent ENSEMBLE, comme un seul
-    // bloc, à n'importe quelle résolution/ratio de fenêtre — bandes vides sur les côtés plutôt
-    // qu'un fond qui se recadre différemment tout seul (object-fit:cover plein viewport).
+    // Fond perso = un multiple FIXE de la taille de RÉFÉRENCE de la carte (406×663,
+    // pas sa taille visuelle actuelle), centré sur sa position réelle à l'écran --
+    // reste TOUJOURS au même niveau de zoom, que la carte soit affichée pleine
+    // taille ou réduite via computeSwipeScale(). offsetWidth/Height (LAYOUT, ignore
+    // le transform:scale de .swipe-shell-wrap) pour la TAILLE ; getBoundingClientRect
+    // (reflète le scale) seulement pour trouver le CENTRE où le poser.
     // Valeurs volontairement modestes : à 5.5×2.0 (précédent), la box dépassait ~1.7× la
     // taille d'un viewport courant -> avec object-fit:cover, seule la portion centrale
     // (~55-60% de l'image importée, mesuré à 1280×800) restait visible = zoom trop fort,
@@ -6538,10 +6613,6 @@
       if (!wrap) return;
       const card = wrap.getBoundingClientRect();
       const cx = card.left + card.width / 2, cy = card.top + card.height / 2;
-      // Taille FIXE, jamais réduite : offsetWidth/Height (LAYOUT, ignore le
-      // transform:scale(.667) de .swipe-shell-wrap en mode portrait mobile)
-      // plutôt que card.width/height (getBoundingClientRect, qui LE reflète)
-      // -- sinon le fond rétrécissait avec la carte sur téléphone.
       const bw = wrap.offsetWidth * BG_SCALE_W, bh = wrap.offsetHeight * BG_SCALE_H;
       layer.style.left = (cx - bw / 2) + 'px';
       layer.style.top = (cy - bh / 2) + 'px';

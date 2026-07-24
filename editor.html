@@ -173,67 +173,57 @@ h1,h2,h3{font-family:"Clash Display","Inter",sans-serif}
    échelle. (Positions stockées séparément par mode — voir setCanvasMode.)
    Paysage (écran d'ordi) garde la taille fixe d'origine (.card de base,
    min(96vw,406px)) — la réduction d'échelle est spécifique au téléphone. */
-/* Portrait : largeur ET hauteur calées sur la vraie carte du swipe mobile
-   (index.html .swipe-wrap{width:min(71vw,257px);height:min(60dvh,428px)}) —
-   sinon la carte grandit librement dans l'éditeur (contenu qui déborde de son
-   vrai gabarit sur téléphone). .card garde déjà overflow:hidden (clip propre) ;
-   .body défile en interne pour rester accessible (comme sur le vrai swipe). */
-body[data-canvas="portrait"] .card{width:min(89vw,321px);height:min(75dvh,535px);max-height:100%}
-/* Body en flux flex comme le swipe mobile (padding 56px), plus d'inset absolute. */
-body[data-canvas="portrait"] .card .body{position:relative;inset:auto;z-index:5;overflow-y:auto;overflow-x:hidden;padding:44px 14px 62px;gap:6px;flex:1 1 auto;min-height:0}
-/* Contenu de la carte à l'échelle réelle du swipe mobile (index.html, bloc
-   @media max-width:600px .swipe-card ...) — sans ça avatar/texte gardent leur
-   taille "bureau" (140px d'avatar etc.) dans une carte 3x plus étroite = ça
-   déborde et se chevauche. */
-body[data-canvas="portrait"] .card .banner{height:auto;aspect-ratio:50/17;max-height:none;flex:0 0 auto}
-body[data-canvas="portrait"] .card .avatar{top:calc(34cqi - 47px);left:14px;width:94px;height:94px}
-body[data-canvas="portrait"] .card .avatar .ph{font-size:26px}
-body[data-canvas="portrait"] .card .avatar-deco{top:calc(34cqi - 47px);left:14px;width:94px;height:94px}
-body[data-canvas="portrait"] .card .username{font-size:20px}
-body[data-canvas="portrait"] .card .tag{font-size:11px}
-body[data-canvas="portrait"] .card .bio{font-size:11.5px;padding:8px 10px}
-body[data-canvas="portrait"] .card .label-mini{font-size:9px}
-body[data-canvas="portrait"] .card .voice{padding:7px 10px;gap:8px}
-body[data-canvas="portrait"] .card .voice .vmic{width:26px;height:26px}
-body[data-canvas="portrait"] .card .voice .vmic svg{width:14px;height:14px}
-body[data-canvas="portrait"] .card .voice .empty{font-size:11px}
-body[data-canvas="portrait"] .card .conn{width:32px;height:32px}
-body[data-canvas="portrait"] .card .conn img{width:18px;height:18px}
-/* Sur un VRAI téléphone (viewport ≤600px, portrait déjà auto-appliqué par
-   syncCanvasModeToRealDevice ci-dessus) la carte 321×535 restait trop grande
-   à l'écran -- 1,5x plus petite, comme sur le vrai swipe mobile (voir
-   .swipe-shell-wrap dans app.css). Scale sur .card-frame (pas .card seul) car
-   orb-layer/sticker-layer/eye-dot sont des SIBLINGS de .card sous .card-frame :
-   il faut TOUT rétrécir ensemble, sinon les bulles/GIFs positionnés en % se
-   décalent par rapport à la carte visuellement plus petite. N'affecte jamais
-   le mode Téléphone prévisualisé DEPUIS un écran d'ordinateur (viewport large
-   -> media query inactive, seul le vrai matchMedia(max-width:600px) compte). */
-@media(max-width:600px){
-  body[data-canvas="portrait"] .card-frame{transform:scale(.667)}
-  /* Mode "Ordinateur" choisi À LA MAIN sur un vrai téléphone (userPickedCanvasMode) :
-     la carte desktop (406px) + ses colonnes de bulles (jusqu'à ~1050px de large)
-     débordaient largement d'un écran de 375px -- au lieu de laisser déborder/couper,
-     on zoome toute la scène pour qu'elle tienne entière, quitte à être petite. */
-  body[data-canvas="desktop"] .card-frame{transform:scale(.3)}
-}
-/* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel).
-   Sur .card-frame (pas .card-zone) → reste centré sur la carte, pas sur le sélecteur. */
+/* Refonte "échelle unique" (même principe que le swipe, css/app.css) : .card
+   garde TOUJOURS sa taille de référence fixe (406×663, voir règle .card plus
+   bas) -- plus de règle séparée par mode. Ordinateur/Téléphone ne change QUE
+   l'agencement des bulles sauvegardé (posPortrait vs desktop, voir
+   renderOrbs/CANVAS_MODES). computeEditorScale() (JS) calcule l'espace
+   réellement disponible dans .stage et pose un transform:scale() sur
+   .card-frame -- qui contient card + orb-layer + sticker-layer + eye-dot
+   (tous SIBLINGS) donc tout rétrécit ensemble, bulles/GIFs compris. */
+
+/* Cadre-téléphone discret autour de la CARTE en mode Portrait (repère visuel
+   uniquement). Dérivé de la taille RÉELLE de la carte (inset fixe) plutôt que
+   d'une formule vw/dvh séparée -- l'ancienne version (449×813) divergeait du
+   calcul de bornage du drag des bulles (orbBounds(), 420×760), un décalage
+   corrigé en supprimant la duplication à la source. */
 body[data-canvas="portrait"] .card-frame::before{
   content:"";position:absolute;z-index:0;border:2px dashed rgba(145,70,255,.35);border-radius:30px;pointer-events:none;
-  left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,449px);height:min(84vh,813px)}
+  inset:-14px;
+}
 
-/* flex + margin auto = carte centrée quand elle tient, défilable quand elle est trop haute (pas de coupure) */
-.stage{position:fixed;inset:0;z-index:2;display:flex;overflow-y:auto;overflow-x:hidden;padding:70px 16px 110px;-webkit-overflow-scrolling:touch}
-/* Petits écrans : marges réservées resserrées (topbar/toolbar plus compacts en
-   mobile) → plus de place verticale pour la carte avant d'avoir besoin de scroller. */
-@media(max-width:600px){ .stage{padding:64px 12px 92px} }
+/* flex = carte centrée quand elle tient, défilable quand elle est trop haute (pas de
+   coupure). Centrage 100% délégué à align-items/justify-content:center du parent
+   (PAS de margin:auto sur .card-zone, voir plus bas) : transform:scale() ne change
+   JAMAIS la boîte de LAYOUT d'un élément (juste son rendu visuel) -- .card-frame
+   (width:fit-content) garde donc sa largeur de référence 406px pour le calcul de
+   centrage, même visuellement rétréci à l'échelle. Sur un téléphone (zone dispo <
+   406px), .card-zone est alors plus large que .stage : align-items/
+   justify-content:center centrent correctement même dans ce cas (offset négatif
+   autorisé, débordement symétrique des deux côtés). */
+.stage{position:fixed;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;overflow-y:auto;overflow-x:hidden;padding:64px 12px 92px;-webkit-overflow-scrolling:touch}
 /* top:8px = nudge visuel (n'affecte pas le calcul de centrage/scroll de .stage,
    contrairement à un changement de padding) qui compense l'écart constant de 8px
    mesuré entre la carte éditeur et .swipe-wrap du vrai site (topbar en flux réel
    sur index.html vs topbar en position:fixed ici qui ne réserve pas d'espace) —
    constant quelle que soit la hauteur de fenêtre (formule de centrage identique
-   des deux côtés une fois ce décalage retiré). */
-.card-zone{position:relative;margin:auto;top:8px}
+   des deux côtés une fois ce décalage retiré).
+   PAS de margin:auto ici (contrairement à l'ancienne version) : un margin auto sur
+   l'axe transversal (vertical, .stage étant flex-row) qui résout à un écart NÉGATIF
+   (carte plus haute que l'espace dispo, cas fréquent sur petit téléphone maintenant
+   que .card-frame garde sa boîte de LAYOUT à 406×663 même visuellement réduite) est
+   simplement mis à 0 par la spec flexbox -- et sa seule PRÉSENCE désactive
+   align-items sur le parent, quel que soit ce à quoi il se résout. Centrage
+   entièrement délégué à .stage{align-items;justify-content:center}, qui gère
+   correctement même le débordement (offset négatif symétrique).
+   flex-shrink:0 -- .card-zone est un enfant flex de .stage : par défaut un enfant
+   flex peut rétrécir sous sa largeur de contenu (flex-shrink:1) si l'espace manque,
+   ce qui se CUMULERAIT avec le transform:scale() posé par JS sur .card-frame (même
+   ratio appliqué deux fois). En pratique .card-zone ne peut déjà pas rétrécir sous
+   406px (son enfant #card a une largeur FIXE non-relative qui plombe le min-content),
+   mais flex-shrink:0 le garantit explicitement plutôt que de dépendre de ce détail
+   d'implémentation -- exactement le bug qui a touché .swipe-shell-wrap côté swipe. */
+.card-zone{position:relative;top:8px;flex-shrink:0}
 /* Boîte EXACTE de la carte : les layers de bulles/GIFs (inset:0) doivent matcher
    précisément la carte, sinon les positions % enregistrées se décalent.
    width:fit-content + margin:auto → se resserre sur la carte (240/300/380px)
@@ -375,10 +365,12 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 
 /* ===================== CARTE DE PROFIL (style .swipe-card) ===================== */
 .card{
-  /* Hauteur FIXE, identique à .swipe-wrap. Layout FLEX comme .swipe-card
-     (banner → body) pour que pseudo/titre aient EXACTEMENT le même placement
-     que l'aperçu. Gabarit 406×663. */
-  position:relative;z-index:60;width:min(96vw,406px);height:min(calc(100vh - 120px),663px);
+  /* Taille de référence FIXE (406×663), identique à .swipe-shell-wrap (css/app.css) --
+     plus de vw/vh : computeEditorScale() (JS) la met à l'échelle via un
+     transform posé sur .card-frame, pour tenir dans n'importe quelle fenêtre.
+     Layout FLEX comme .swipe-card (banner → body) pour que pseudo/titre aient
+     EXACTEMENT le même placement que l'aperçu. */
+  position:relative;z-index:60;width:406px;height:663px;
   container-type:inline-size;container-name:profile-card;
   display:flex;flex-direction:column;
   border-radius:20px;overflow:hidden;isolation:isolate;
@@ -477,11 +469,6 @@ html.perf-lite .orb[data-kind="music"] img{animation:none}
 .card-age-badge .cab-gender[data-g="female"],.card-age-badge .cab-gender[data-g="elle"]{background:#FF4FA0;color:#fff;font-weight:900}
 .card-age-badge .cab-gender[data-g="nonbinary"],.card-age-badge .cab-gender[data-g="other"],.card-age-badge .cab-gender[data-g="autre"]{background:rgba(255,255,255,.08);color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.30) inset}
 .card-age-badge .cab-gender svg{display:block}
-body[data-canvas="portrait"] .card-age-badge{top:calc(34cqi + 6px);right:12px;padding:5px 11px;gap:6px}
-body[data-canvas="portrait"] .card-age-badge .cab-age{font-size:17px}
-body[data-canvas="portrait"] .card-age-badge .cab-flag{font-size:15px}
-body[data-canvas="portrait"] .card-age-badge .cab-flag img{width:20px;height:14px}
-body[data-canvas="portrait"] .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
 /* Vues du profil : identique à .swipe-card .card-views (css/app.css). */
 .card .card-views{
   position:absolute;left:14px;bottom:14px;z-index:9;
@@ -2614,12 +2601,15 @@ function orbBounds(margin){
   if(!card) return s;
   const c=card.getBoundingClientRect();
   if(document.body.getAttribute('data-canvas')==='portrait'){
-    // Portrait : la zone utilisable = le cadre-téléphone (repère pointillé,
-    // même formule que .card-frame::before : min(94vw,420px) x min(84vh,760px))
-    // centré sur la carte → les bulles peuvent se poser AU-DESSUS/EN-DESSOUS
-    // de la carte, pas seulement sur ses côtés.
+    // Portrait : la zone utilisable = la carte élargie proportionnellement (les
+    // bulles peuvent se poser AU-DESSUS/EN-DESSOUS de la carte, pas seulement
+    // sur ses côtés) -- dérivée de la taille RÉELLE de la carte (c, déjà mise à
+    // l'échelle) plutôt que d'une formule vw/vh séparée : évite la divergence
+    // avec le cadre pointillé .card-frame::before (qui était à 449×813 pendant
+    // que ce calcul-ci utilisait 420×760 -- même bug, deux constantes à tenir
+    // synchronisées à la main, maintenant une seule source : la carte elle-même).
     const cx=c.left+c.width/2, cy=c.top+c.height/2;
-    const fw=Math.min(window.innerWidth*0.94,420), fh=Math.min(window.innerHeight*0.84,760);
+    const fw=c.width*1.3, fh=c.height*1.4;
     const left=Math.max(s.minX,cx-fw/2+margin), right=Math.min(s.maxX,cx+fw/2-margin);
     const top=Math.max(s.minY,cy-fh/2+margin), bottom=Math.min(s.maxY,cy+fh/2-margin);
     return {minX:Math.min(left,right), maxX:Math.max(left,right), minY:Math.min(top,bottom), maxY:Math.max(top,bottom)};
@@ -2707,6 +2697,41 @@ function spreadOrbs(nodes, D){
   }
   nodes.forEach(n=>{ if(n.o){n.o.x=n.x;n.o.y=n.y;} if(n.wrap){n.wrap.style.left=n.x+'%';n.wrap.style.top=n.y+'%';} });
 }
+// Refonte "échelle unique" (même principe que le swipe, css/app.css/computeSwipeScale) :
+// .card-frame contient card + orb-layer + sticker-layer + eye-dot en tant que
+// DESCENDANTS (voir markup ci-dessus) -- contrairement à .orbit sur le swipe (frère
+// de .swipe-shell-wrap, position:fixed, qui n'hérite PAS du transform), tout ici
+// hérite automatiquement du scale posé sur .card-frame. Donc computeEditorScale()
+// ne sert qu'à dimensionner .card-frame lui-même ; D (taille de bulle) reste une
+// constante de RÉFÉRENCE (115px, jamais multipliée par le scale) -- la multiplier
+// aurait doublé la réduction (une fois en dur sur la bulle, une fois via le
+// transform hérité de l'ancêtre).
+const EDITOR_REF_W = 406, EDITOR_REF_H = 663;
+let _editorScale = 1;
+function computeEditorScale(){
+  const stageEl = document.querySelector('.stage');
+  let availW = window.innerWidth, availH = window.innerHeight;
+  if (stageEl) {
+    // clientWidth/Height incluent le padding de .stage (64px 12px 92px, réservé
+    // pour la topbar/toolbar) -- à retrancher, sinon la carte est mise à l'échelle
+    // pour remplir TOUT le viewport (padding compris) et déborde du cadre sur la
+    // quasi-totalité des téléphones réels (largeur < 406+24px).
+    const cs = getComputedStyle(stageEl);
+    availW = stageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    availH = stageEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  }
+  return Math.min(1, availW / EDITOR_REF_W, availH / EDITOR_REF_H);
+}
+function applyEditorScale(){
+  _editorScale = computeEditorScale();
+  const frame = document.querySelector('.card-frame');
+  if (frame) frame.style.transform = 'scale(' + _editorScale + ')';
+  return _editorScale;
+}
+// Pose l'échelle dès que possible (avant le tout premier rendu) pour éviter un
+// flash à la taille de référence non réduite au premier paint.
+applyEditorScale();
+
 // Position custom de la bulle "+" (Ajouter) une fois déplacée à la main — sinon
 // elle reprend l'emplacement calculé automatiquement (orbLayout).
 function renderOrbs(){
@@ -2714,13 +2739,11 @@ function renderOrbs(){
   const card=document.getElementById('card');
   const cardW=(card&&card.offsetWidth)||380;
   const cardH=(card&&card.offsetHeight)||(cardW*SWIPE_CARD_ASPECT);
-  // Taille de bulle FIXE par mode (comme le vrai site : .orbit.orbit--dynamic .orb
-  // passe de 115px à 48px sous @media max-width:600px — PAS une taille proportionnelle
-  // à la largeur de carte).
-  // 72 (pas 48) en portrait : .card-frame applique déjà transform:scale(.667) sur
-  // TOUT le calque bulles (@media max-width:600px ci-dessus, pour rester aligné
-  // avec la carte elle-même rétrécie) -- 72*.667≈48px rendus, comme le vrai site.
-  const D=(S.canvasMode==='portrait')?72:115;
+  // Taille de bulle de RÉFÉRENCE fixe (115px, identique au swipe) : le scale
+  // Ordinateur/Téléphone est déjà appliqué à TOUT le calque bulles via le
+  // transform hérité de .card-frame (applyEditorScale) -- D ne dépend donc plus
+  // du mode ni d'un calcul à la main (72 = 48÷0.667, ancien système).
+  const D=115;
   // IMPORTANT : rx/ry sont des fractions pures de la carte (largeur/hauteur RÉELLES),
   // exactement comme relToPx() sur la vraie carte de swipe (js/app.js) -- AUCUNE
   // correction d'échelle ici. Un vScale avait été introduit pour "recaler" l'écart
@@ -2824,7 +2847,7 @@ function renderOrbs(){
 }
 // Re-render des bulles au resize (garde l'échelle proportionnelle à la carte)
 let _orbRz=null;
-function _syncOnCardResize(){clearTimeout(_orbRz);_orbRz=setTimeout(()=>{renderOrbs();positionCanvasModes();if(typeof positionEditorBg==='function')positionEditorBg();},150);}
+function _syncOnCardResize(){clearTimeout(_orbRz);_orbRz=setTimeout(()=>{applyEditorScale();renderOrbs();positionCanvasModes();if(typeof positionEditorBg==='function')positionEditorBg();},150);}
 window.addEventListener('resize',_syncOnCardResize);
 // Le zoom navigateur (Ctrl +/-) change la taille réelle de la carte (ses dimensions
 // dépendent de vw/vh) mais ne déclenche pas TOUJOURS un window 'resize' de façon
@@ -3109,10 +3132,10 @@ $('fileBg').addEventListener('change',e=>{
   }
   e.target.value='';
 });
-// Même multiplicateur que js/app.js (positionCustomBgLayer) : le fond perso est un multiple
-// FIXE de la taille de LA CARTE, centré dessus, pas plein viewport -> il scale AVEC la carte
-// (donc avec bulles/GIFs/photos, déjà en % de la carte) comme un seul bloc, à toute
-// résolution/ratio de fenêtre (bandes vides sur les côtés plutôt qu'un recadrage différent).
+// Même principe que js/app.js (positionCustomBgLayer) : le fond perso est un multiple
+// FIXE de la taille de RÉFÉRENCE de la carte (406×663, pas sa taille visuelle
+// actuelle), centré sur sa position réelle -- il reste TOUJOURS au même niveau de
+// zoom, que la carte soit affichée pleine taille ou réduite via computeEditorScale().
 const BG_SCALE_W=5.0, BG_SCALE_H=1.6;
 function positionEditorBg(){
   const layer=$('bgLayer');
@@ -3120,10 +3143,10 @@ function positionEditorBg(){
   const card=document.getElementById('card'); if(!card)return;
   const c=card.getBoundingClientRect();
   const cx=c.left+c.width/2, cy=c.top+c.height/2;
-  // Taille FIXE, jamais réduite : offsetWidth/Height (mesure de LAYOUT, ignore
-  // tout transform:scale ancêtre) plutôt que c.width/height (getBoundingClientRect,
-  // qui elle REFLÈTE le scale(.667) de .card-frame en mode Téléphone) -- sinon le
-  // fond rétrécissait avec la carte au lieu de rester "au même niveau".
+  // Taille FIXE, jamais réduite : offsetWidth/Height (mesure de LAYOUT, ignore le
+  // transform:scale de .card-frame) plutôt que c.width/height (getBoundingClientRect,
+  // qui REFLÈTE ce scale) -- sinon le fond rétrécissait avec la carte au lieu de
+  // rester "au même niveau" (exigence explicite : fond FIXE, jamais scalé).
   const bw=card.offsetWidth*BG_SCALE_W, bh=card.offsetHeight*BG_SCALE_H;
   layer.style.left=(cx-bw/2)+'px'; layer.style.top=(cy-bh/2)+'px';
   layer.style.width=bw+'px'; layer.style.height=bh+'px';

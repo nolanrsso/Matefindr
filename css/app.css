@@ -1342,17 +1342,31 @@
   .onb-later span{font-weight:700;font-size:14.5px}
   .onb-later small{font-weight:400;font-size:11px;color:#b9bbbe;max-width:34ch}
 
-  /* ===== Swipe deck ===== */
+  /* ===== Swipe deck =====
+     Marges haut/bas réservées en permanence : .swipe-actions est TOUJOURS
+     position:fixed (voir plus bas) donc hors du flux -- sans cette réserve,
+     .swipe-stage grandirait par-dessus la zone où les boutons flottent. */
   #screen-swipe{
     position:relative;z-index:2;flex:1 1 auto;flex-direction:column;
-    align-items:center;justify-content:flex-start;padding:10px 24px 20px;gap:10px;min-height:0;
+    align-items:center;justify-content:flex-start;padding:62px 24px 94px;gap:10px;min-height:0;
   }
   /* Stage = card + floating orb-bubbles */
+  /* Conteneur souple : occupe tout l'espace dispo, centre .swipe-shell-wrap (qui,
+     lui, a une taille de référence fixe mise à l'échelle via JS -- voir plus bas).
+     flex+align-items/justify-content (PAS grid+place-items) : transform:scale() ne
+     réduit JAMAIS la boîte de LAYOUT de .swipe-shell-wrap (406×663 fixe même
+     visuellement rétréci) -- dès qu'elle est plus grande que l'espace dispo (tout
+     téléphone), elle "déborde" du point de vue du centrage. Testé : grid
+     place-items:center bascule alors en centrage "safe" (repli sur le bord, comme
+     un start-align) et la carte part hors-écran d'un côté ; align-items/
+     justify-content:center en flex, eux, centrent correctement même en
+     débordement (offset négatif symétrique) -- mêmes formules, même bug que
+     .card-zone dans editor.html, corrigé de la même façon. */
   .swipe-stage{
     position:relative;
-    width:min(98vw,920px);
+    width:100%;
     flex:1 1 auto;min-height:0;overflow:visible;
-    display:grid;place-items:center;
+    display:flex;align-items:center;justify-content:center;
     pointer-events:none;
   }
   .swipe-stage .swipe-wrap{pointer-events:auto}
@@ -1556,19 +1570,12 @@
   .orbit.orbit--dynamic .orb-wrap--music .orb{width:115px;height:115px}
   .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:44px;height:44px}
 
-  /* ===== Taille des bulles RESPONSIVE : rétrécit avec la résolution =====
-     De 115px (grand écran) à ~70px (petit desktop / tablette). En dessous de 600px
-     (portrait) et en paysage téléphone, les media queries dédiées prennent le relais
-     (64px / 76px). La physique de collision suit automatiquement (offsetWidth). */
-  .swipe-stage .orbit .orb,
-  .orbit.orbit--dynamic .orb,
-  .orbit .orb-wrap--music .orb,
-  .orbit.orbit--dynamic .orb-wrap--music .orb{width:clamp(70px,8vw,115px);height:clamp(70px,8vw,115px)}
-  .swipe-stage .orbit .orb svg,
-  .orbit.orbit--dynamic .orb svg,
-  .orbit .orb-wrap--music .orb svg,
-  .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:clamp(28px,3vw,44px);height:clamp(28px,3vw,44px)}
-  .orbit .orb-label,.orbit.orbit--dynamic .orb-label{font-size:clamp(9.5px,1vw,11px)}
+  /* ===== Taille des bulles : référence fixe unique =====
+     115px partout (music/game/anime/film), quelle que soit la résolution --
+     renderOrbs() (js/app.js) pose la taille RÉELLEMENT affichée en JS
+     (D = 115 * scale, même "scale" que .swipe-shell-wrap) puisque .orbit est un
+     FRÈRE de .swipe-shell-wrap (position:fixed plein viewport), pas un
+     descendant : il ne suit pas automatiquement son transform:scale. */
 
   /* Hint bulle : icône centre — +50% ; fade JS 1s in → 1s out, puis 7s off */
   .orb-click-hint{
@@ -1630,17 +1637,8 @@
   .orbit .orb-wrap:nth-child(4){top:54%;  right:0;   animation-delay:-2.2s}
   .orbit .orb-wrap:nth-child(5){bottom:4%;left:5%;   animation-delay:-1.6s}
   .orbit .orb-wrap:nth-child(6){bottom:4%;right:5%;  animation-delay:-3s}
-  @media (max-width:780px){
-    .swipe-stage{width:96vw;height:78vh}
-    /* Note : les bulles restent à 115px partout (swipe + éditeur) — la classe
-       .orbit--dynamic appliquée au runtime force 115px et l'éditeur lit
-       cette taille via JS pour rester à la MÊME ÉCHELLE. */
-    .orb-label{font-size:9px;max-width:96px}
-  }
   /* Le swipe est ACTIVÉ dès que l'écran est en portrait (hauteur > largeur) */
   @media (orientation:portrait){
-    .swipe-stage{width:96vw;height:78vh}
-    .swipe-shell-wrap{width:min(96vw,449px);height:min(calc(100vh - 100px),684px)}
     /* Compte aussi en portrait : layout empilé fluide */
     .acc-card{padding:14px}
     .acc-main{flex-direction:column}
@@ -1670,8 +1668,22 @@
   .swipe-toast .t-body b{display:block;font-weight:700;font-size:14px}
   .swipe-toast .t-body span{color:var(--ink-dim);font-size:12.5px}
 
+  /* Taille de référence UNIQUE (plus de vw/vh/dvh ni de formule par breakpoint) --
+     computeSwipeScale() (js/app.js) mesure l'espace réellement disponible et pose
+     un transform:scale() ici pour que TOUT (carte + son contenu) tienne à l'écran,
+     à n'importe quelle résolution/orientation, en gardant exactement les mêmes
+     proportions. Le transform inline posé par JS inclut translateZ(0) (voir
+     computeSwipeScale) pour ne pas perdre l'accélération GPU ci-dessous. */
   .swipe-shell-wrap{
-    position:relative;width:min(96vw,406px);height:min(calc(100vh - 120px),663px);z-index:60;
+    position:relative;width:406px;height:663px;z-index:60;
+    /* flex-shrink:0 -- .swipe-stage est flex (voir plus haut) : par défaut un enfant
+       flex peut rétrécir sous sa largeur/hauteur déclarées (flex-shrink:1) si l'espace
+       manque, ce qui se CUMULAIT avec le transform:scale() posé par JS (le même ratio
+       appliqué deux fois -- une fois via le rétrécissement flex de la boîte de LAYOUT,
+       une fois via le scale visuel) et affichait la carte ~2 fois trop petite. La
+       boîte de layout doit rester STRICTEMENT à 406×663 ; seul le transform la réduit
+       visuellement. */
+    flex-shrink:0;
     margin-top:-1px;padding-top:1px;
     margin-bottom:-1px;padding-bottom:1px;
     border-radius:20px;overflow:visible;
@@ -1795,7 +1807,10 @@
   .swipe-card .body{
     /* ~70px bas avatar − un peu de chevauchement → pseudo au plus près sous la PFP */
     flex:1 1 auto;padding:64px 18px 54px;display:flex;flex-direction:column;gap:8px;
-    overflow:hidden;position:relative;
+    /* Scroll interne (pas overflow:hidden) : un profil bien rempli (bio + activité +
+       vocal + connexions + serveurs) peut dépasser la hauteur de référence de la
+       carte -- on laisse défiler plutôt que couper silencieusement le bas. */
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;
   }
   .swipe-card.has-card-connections .body{padding-bottom:200px}
   .swipe-card .joined{color:#7c7e8c;font-size:11.5px;display:flex;align-items:center;gap:6px;margin-top:2px}
@@ -2239,177 +2254,17 @@
   .swipe-card .badge-stamp.nope {left:18px;color:#ff008c;border-color:#ff008c;transform:rotate(12deg);text-shadow:0 0 14px rgba(255,0,140,.6)}
 
   /* ============================================================
-     MOBILE — dézoom de la carte de profil (≤600px)
-     Toutes les infos du site restent présentes, mais à une échelle
-     réduite pour tenir confortablement sur l'écran d'un téléphone.
-     ============================================================ */
-  @media (max-width:600px){
-    /* Carte volontairement BEAUCOUP plus petite : dégage l'espace autour pour
-       accéder aux bulles / GIFs qui flottent au-dessus et en dessous. */
-    /* Carte plus étroite + centrée : laisse une colonne de bulles de chaque côté,
-       et une bande claire au-dessus / en-dessous (cf. maquette mobile).
-       height bornée à la fois par 52dvh ET par l'espace réellement disponible
-       (max-height:100% de la scène) → la carte RÉTRÉCIT sur les petits écrans
-       au lieu de déborder. dvh gère la barre d'adresse mobile. */
-    .swipe-shell-wrap{width:min(89vw,321px);height:min(75dvh,535px);max-height:100%;transform:scale(.667)}
-    /* La scène remplit la bande entre la barre de son (haut) et les boutons (bas).
-       display:flex (au lieu de grid) → le max-height:100% de la carte se résout bien
-       contre la hauteur RÉELLE de la scène (une piste grid auto grandissait au contenu
-       et laissait la carte déborder sur petit écran). */
-    .swipe-stage{height:auto;flex:1 1 auto;min-height:0;overflow:visible;display:flex;align-items:center;justify-content:center}
-
-    /* Bulles à l'échelle de la carte : ~48px (1,5x la taille de 32px précédente,
-       jugée trop petite une fois testée en usage réel). */
-    .swipe-stage .orbit .orb,
-    .orbit.orbit--dynamic .orb,
-    .orbit .orb-wrap--music .orb,
-    .orbit.orbit--dynamic .orb-wrap--music .orb{width:48px;height:48px}
-    .swipe-stage .orbit .orb svg,
-    .orbit.orbit--dynamic .orb svg,
-    .orbit .orb-wrap--music .orb svg,
-    .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:20px;height:20px}
-    .orbit .orb-label,
-    .orbit.orbit--dynamic .orb-label{font-size:9px;max-width:66px}
-    /* Mini-bulle de rang (jeu) proportionnelle à la bulle (48px -- .36 -> .54). */
-    .swipe-stage .orbit .orb .orb-rank-orbit{transform:scale(.54)}
-
-    /* Réserves haut/bas : la carte (dans la scène flex:1) se centre TOUJOURS entre
-       la barre de son (haut) et les boutons (bas), sans jamais les chevaucher —
-       quelle que soit la hauteur d'écran. Variables → faciles à ajuster + réutilisées
-       par les media queries « petit écran » plus bas. */
-    #screen-swipe{--swipe-top:62px;--swipe-bottom:94px;padding:var(--swipe-top) 8px var(--swipe-bottom);justify-content:flex-start}
-    .swipe-actions{position:fixed;left:0;right:0;bottom:18px;justify-content:center;gap:6px;z-index:23}
-    /* Passer/Liker + les FAB messages/likes reçus sont sur la même ligne en bas -- sur
-       un téléphone étroit (≈320-360px) leurs tailles desktop (68px + 60px de FAB de
-       chaque côté) se chevauchaient de ~10px. FAB réduits ici comme déjà fait en
-       paysage ; Passer/Liker/react sont réduits plus bas dans ce fichier (après leurs
-       règles de base .swipe-btn/.swipe-btn--react, sinon perdent la cascade à
-       spécificité égale). */
-    #msgFab,.bf-fab--heart{width:52px;height:52px}
-    #msgFab{left:12px}
-    .bf-fab--heart{right:12px}
-    .swipe-card{border-radius:18px}
-    .swipe-card .banner{height:auto;aspect-ratio:50/17;max-height:none}
-    .swipe-card .avatar-wrap{top:calc(34cqi - 47px);left:14px;width:94px;height:94px;padding:5px}
-    .swipe-card .avatar-wrap .avi{font-size:34px}
-    .swipe-card .avi-deco{inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px)}
-    .swipe-card .nitro-badge{left:72px;top:calc(34cqi + 8px);font-size:9px;padding:2px 6px}
-
-    /* Badge âge / genre / drapeau — sous la bannière, à l'échelle */
-    .card-age-badge{top:calc(34cqi + 6px);right:12px;padding:5px 11px;gap:6px}
-    .card-age-badge .cab-age{font-size:17px}
-    .card-age-badge .cab-flag{font-size:15px}
-    .card-age-badge .cab-flag img{width:20px;height:14px}
-    .card-age-badge .cab-gender{font-size:14px;width:20px;height:20px}
-
-    /* La carte est volontairement compacte sur mobile (cf. plus haut) -- un profil
-       bien rempli (bio + activité + vocal + connexions + serveurs) peut dépasser
-       cette hauteur. Plutôt que de couper silencieusement le bas (overflow:hidden
-       hérité), on laisse défiler à l'intérieur de la carte pour tout garder accessible. */
-    .swipe-card .body{padding:44px 14px 62px;gap:6px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
-    .swipe-card.has-card-connections .body{padding-bottom:62px}
-    /* Vues/inscription + note : sur téléphone, flottaient par-dessus la carte (fixes,
-       hors du scroll) -- déplacées dans le flux du .body (voir buildCard) pour finir
-       tout en bas du profil, scrollables comme le reste. Seuls banner/avatar/nom
-       restent hors de .body donc visuellement fixes pendant le scroll. */
-    .swipe-card .card-body-stats{
-      position:static;display:flex;align-items:flex-end;justify-content:space-between;
-      gap:10px;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
-    }
-    .swipe-card .card-body-stats .card-bottom-left{
-      position:static;left:auto;bottom:auto;max-width:none;pointer-events:auto;
-    }
-    .swipe-card .card-body-stats .card-reactions{
-      position:static;right:auto;bottom:auto;pointer-events:auto;
-    }
-    .swipe-card .name{font-size:23px}
-    .swipe-card .name-boost-star{width:14px;height:14px}
-    .swipe-card .handle{font-size:11.5px;margin-top:-3px}
-    .swipe-card .joined{font-size:10.5px}
-
-    .swipe-card .bio{font-size:11.5px;padding:8px 10px;line-height:1.45}
-    .swipe-card .bio b{font-size:10px}
-
-    .swipe-card .activity{padding:7px 10px;gap:8px}
-    .swipe-card .activity .icon{width:30px;height:30px}
-    .swipe-card .activity .lbl,
-    .swipe-card .activity .lbl b{font-size:12px}
-    .swipe-card .activity .lbl span{font-size:11.5px}
-
-    .swipe-card .discord-activity{padding:8px 10px;gap:6px}
-    .swipe-card .discord-activity-cover{width:42px;height:42px}
-    .swipe-card .discord-activity-meta b{font-size:12px}
-    .swipe-card .discord-activity-meta > span{font-size:11px}
-    .swipe-card .discord-last-seen{font-size:10.5px}
-
-    .swipe-card .card-voice{padding:7px 10px;gap:8px}
-    .swipe-card .card-voice-play{width:30px;height:30px}
-    .swipe-card .card-voice-info b{font-size:11px}
-
-    .swipe-card .chip{font-size:11px;padding:4px 9px}
-    .swipe-card .me-chip{font-size:9px;padding:2px 7px;top:8px;left:10px}
-
-    .swipe-card .card-conn{width:45px;flex-basis:45px}
-    .swipe-card .card-conn-user{font-size:10px;max-width:68px}
-    .swipe-card .card-conn-ico{width:42px;height:42px}
-    .swipe-card .card-connections--many .card-conn{width:39px;flex-basis:39px}
-    .swipe-card .card-connections--many .card-conn-ico{width:36px;height:36px}
-    .swipe-card .card-connections--dense .card-conn{width:34px;flex-basis:34px}
-    .swipe-card .card-connections--dense .card-conn-ico{width:31px;height:31px}
-    .card-social{font-size:11px}
-
-    .swipe-card .common{font-size:11px;gap:12px}
-    /* right précis posé en JS (positionGuildsBesideAge) ; right:12px = repli. */
-    .swipe-card > .card-guilds--head{right:12px;top:calc(34cqi + 6px);padding:3px 5px;gap:2px;max-width:98px}
-    .swipe-card .card-guilds--head .cg-label{font-size:9px}
-    .swipe-card .card-guilds--head .cg-icon{width:16px;height:16px}
-    .swipe-card .card-guilds--head .cg-more{min-width:16px;height:16px;font-size:7px}
-    .swipe-card .card-guilds{gap:8px}
-    .swipe-card .cg-icon,
-    .swipe-card .cg-more{width:22px;height:22px;font-size:10px}
-    .swipe-card .cg-label{font-size:11px}
-
-    .swipe-card .lookfor{width:40px;height:40px;font-size:18px;right:10px;bottom:10px}
-    .swipe-card .lookfor svg{width:18px;height:18px}
-
-    .swipe-card .badge-stamp{font-size:18px;padding:5px 11px}
-  }
-
-  /* ===== Téléphone en PAYSAGE (écran large et court) — mise en page dédiée =====
-     Les positions bulles/GIFs sont lues depuis le mode 'landscape' (voir
-     activeLayoutMode + orbRelLayout). Carte compacte centrée (scroll interne si
-     besoin), boutons like/skip centrés en bas, FAB messages/likes dans les coins,
-     bulles dans les larges marges latérales. */
-  @media (pointer:coarse) and (orientation:landscape) and (max-height:600px){
-    /* Mêmes principes de robustesse que le portrait : réserves haut/bas, scène flex,
-       carte bornée par l'espace dispo (max-height:100%) + dvh → tient sur tout écran. */
-    #screen-swipe{--swipe-top:54px;--swipe-bottom:70px;padding:var(--swipe-top) 8px var(--swipe-bottom);justify-content:flex-start}
-    .swipe-shell-wrap{width:min(60vh,278px);height:min(96dvh,364px);max-height:100%}
-    .swipe-stage{height:auto;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}
-    .swipe-card{max-height:100%}
-    .swipe-card .body{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
-    .swipe-card.has-card-connections .body{padding-bottom:62px}
-    .swipe-card .card-body-stats{
-      position:static;display:flex;align-items:flex-end;justify-content:space-between;
-      gap:10px;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);
-    }
-    .swipe-card .card-body-stats .card-bottom-left{position:static;left:auto;bottom:auto;max-width:none;pointer-events:auto}
-    .swipe-card .card-body-stats .card-reactions{position:static;right:auto;bottom:auto;pointer-events:auto}
-    .swipe-actions{position:fixed;left:0;right:0;bottom:10px;justify-content:center;gap:18px;z-index:23}
-    #msgFab{left:12px;bottom:10px;width:52px;height:52px}
-    .bf-fab--heart{right:12px;bottom:10px;width:52px;height:52px}
-    /* Bulles ≈76px (rayon 38 côté JS — voir renderOrbs orbRadius). */
-    .swipe-stage .orbit .orb,
-    .orbit.orbit--dynamic .orb,
-    .orbit .orb-wrap--music .orb,
-    .orbit.orbit--dynamic .orb-wrap--music .orb{width:76px;height:76px}
-    .swipe-stage .orbit .orb svg,
-    .orbit.orbit--dynamic .orb svg,
-    .orbit .orb-wrap--music .orb svg,
-    .orbit.orbit--dynamic .orb-wrap--music .orb svg{width:30px;height:30px}
-    .orbit .orb-label,
-    .orbit.orbit--dynamic .orb-label{font-size:10px;max-width:84px}
-  }
+     Refonte "échelle unique" : la carte (.swipe-shell-wrap), les bulles
+     (.orbit .orb) et le fond perso gardent TOUJOURS les mêmes proportions
+     desktop de référence -- computeSwipeScale() (js/app.js) calcule un seul
+     facteur d'échelle (espace réellement disponible ÷ taille de référence)
+     et l'applique via transform:scale() sur .swipe-shell-wrap. Tout élément
+     DESCENDANT de .swipe-card hérite automatiquement de ce scale (plus besoin
+     de dupliquer chaque taille/police par breakpoint -- l'ancien bloc mobile
+     + l'ancien bloc paysage-téléphone, ~90 règles au total, sont supprimés).
+     Seuls les boutons d'action (.swipe-actions/.swipe-btn/#msgFab/.bf-fab)
+     restent à taille FIXE et position:fixed en permanence (cibles tactiles
+     toujours confortables, même quand la carte est zoomée très petite). */
 
   /* Swipe toolbar — floating right side, stacked above msgFab, hover reveals details */
   .swipe-tools{
@@ -2459,8 +2314,11 @@
   .stool-lbl small{font-size:10px;color:#b9bbbe;text-transform:uppercase;letter-spacing:.06em}
   .stool-stats{display:none}
 
-  /* Action buttons — blended with the "draggable gradient icon" aesthetic */
-  .swipe-actions{display:flex;gap:8px;align-items:center;justify-content:center}
+  /* Action buttons — blended with the "draggable gradient icon" aesthetic.
+     Toujours position:fixed (indépendant de la carte, jamais mis à l'échelle
+     avec elle) : reste une cible tactile confortable même quand la carte est
+     zoomée très petite sur un tout petit écran. */
+  .swipe-actions{position:fixed;left:0;right:0;bottom:20px;display:flex;gap:8px;align-items:center;justify-content:center;z-index:23}
   /* Mode APERÇU complet : on cache like/nope et on montre "Quitter l'aperçu" */
   .preview-exit-btn{display:none}
   body[data-preview="true"] .swipe-btn--no,
@@ -2606,14 +2464,8 @@
   .swipe-actions.dir-right .swipe-btn--yes::before{opacity:1}
   .swipe-actions.dir-left  .swipe-btn--no {transform:scale(1.22);box-shadow:0 18px 40px rgba(255,0,140,.55)}
   .swipe-actions.dir-left  .swipe-btn--no::before{opacity:1}
-  /* Doit rester APRÈS les règles .swipe-btn/.swipe-btn--react ci-dessus : à
-     spécificité égale, la dernière déclarée gagne la cascade -- les placer plus
-     haut (dans le bloc @media portrait avec le reste des tailles mobiles) perdait
-     silencieusement contre ces règles de base. */
-  @media (max-width:600px){
-    .swipe-btn{width:58px;height:58px;padding:11px}
-    .react-wrap .swipe-btn--react{width:28px;height:28px}
-  }
+  /* .swipe-btn/.swipe-btn--react gardent une taille FIXE unique (plus de
+     surcharge mobile) : indépendants de la carte, jamais mis à l'échelle. */
 
   /* My-status floating control — bottom-LEFT, neutral aesthetic */
   .my-status{
